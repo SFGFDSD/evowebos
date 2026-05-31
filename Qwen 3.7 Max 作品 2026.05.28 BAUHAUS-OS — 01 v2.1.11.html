@@ -1,0 +1,3975 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>BAUHAUS/OS — 01</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300..900&family=Archivo:wght@300;400;500;700;900&family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet" />
+<style>
+/* ══════════════════════════════════════════════════════════════
+   BAUHAUS/OS — Neo-Swiss Editorial Design System
+   ══════════════════════════════════════════════════════════════ */
+:root {
+  --paper: #EFEAE0;
+  --paper-2: #E6E0D2;
+  --surface: #F7F3EB;
+  --ink: #0E0E0C;
+  --ink-soft: #2A2A28;
+  --red: #E63946;
+  --blue: #1D4ED8;
+  --yellow: #F4C430;
+  --green: #2D7A3E;
+  --muted: #8B857A;
+  --line: #0E0E0C;
+  --bw: 2px;
+  --shadow-hard: 4px 4px 0 0 var(--ink);
+  --shadow-hard-lg: 6px 6px 0 0 var(--ink);
+  --radius: 0px;
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-sans: 'Archivo', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Courier New', monospace;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+button, input, textarea { font-family: inherit; color: inherit; }
+button { border: none; background: none; cursor: pointer; }
+
+/* Selection */
+::selection { background: var(--yellow); color: var(--ink); }
+
+/* ══════════════════════════════════════════════════════════════
+   DESKTOP
+   ══════════════════════════════════════════════════════════════ */
+#desktop {
+  position: fixed;
+  inset: 0;
+  bottom: 52px;
+  overflow: hidden;
+  background-color: var(--paper);
+  background-image:
+    linear-gradient(var(--ink) 1px, transparent 1px),
+    linear-gradient(90deg, var(--ink) 1px, transparent 1px);
+  background-size: 40px 40px;
+  background-position: -1px -1px;
+  opacity: 0.999;
+}
+#desktop::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 15% 25%, rgba(230,57,70,0.06) 0, transparent 35%),
+    radial-gradient(circle at 85% 75%, rgba(29,78,216,0.05) 0, transparent 40%),
+    radial-gradient(circle at 50% 50%, rgba(244,196,48,0.04) 0, transparent 50%);
+  pointer-events: none;
+}
+#desktop::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-color: rgba(239,234,224,0.75);
+  pointer-events: none;
+}
+#desktop.wallpaper-active { background-image: none; }
+#desktop.wallpaper-active::after { background-color: rgba(0,0,0,0.25); }
+#wallpaper-layer {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  z-index: 0;
+  display: none;
+}
+#desktop.wallpaper-active #wallpaper-layer { display: block; }
+
+/* Corner decorations */
+.corner-mark {
+  position: absolute;
+  width: 40px; height: 40px;
+  z-index: 1;
+  pointer-events: none;
+  color: var(--ink);
+  opacity: 0.4;
+}
+.corner-mark.tl { top: 14px; left: 14px; }
+.corner-mark.tr { top: 14px; right: 14px; }
+.corner-mark.bl { bottom: 14px; left: 14px; }
+.corner-mark.br { bottom: 14px; right: 14px; }
+
+#sys-label {
+  position: absolute;
+  top: 18px;
+  left: 70px;
+  z-index: 2;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  color: var(--ink);
+  opacity: 0.55;
+  pointer-events: none;
+  text-transform: uppercase;
+}
+#sys-label b { font-weight: 700; color: var(--red); }
+
+#serial-label {
+  position: absolute;
+  top: 18px;
+  right: 70px;
+  z-index: 2;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  color: var(--ink);
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   DESKTOP ICONS
+   ══════════════════════════════════════════════════════════════ */
+#desktop-icons {
+  position: absolute;
+  inset: 60px 20px 20px 20px;
+  z-index: 5;
+}
+.desk-icon {
+  position: absolute;
+  width: 88px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: transform 0.15s cubic-bezier(.2,.9,.3,1.2);
+  z-index: 5;
+  touch-action: none;
+}
+.desk-icon .icon-box {
+  width: 52px;
+  height: 52px;
+  background: var(--surface);
+  border: var(--bw) solid var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 3px 3px 0 0 var(--ink);
+  transition: all 0.12s ease;
+  position: relative;
+}
+.desk-icon.selected .icon-box {
+  background: var(--yellow);
+  box-shadow: 1px 1px 0 0 var(--ink);
+  transform: translate(2px, 2px);
+}
+.desk-icon:active .icon-box {
+  transform: translate(3px, 3px);
+  box-shadow: 0 0 0 0 var(--ink);
+}
+.desk-icon svg { width: 28px; height: 28px; }
+.desk-icon .icon-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-align: center;
+  background: var(--paper);
+  padding: 1px 4px;
+  border: 1px solid var(--ink);
+  word-break: break-word;
+  line-height: 1.2;
+  max-width: 100%;
+  letter-spacing: 0.02em;
+}
+.desk-icon.selected .icon-label {
+  background: var(--ink);
+  color: var(--paper);
+}
+.desk-icon.drop-target .icon-box {
+  background: var(--blue);
+  color: var(--paper);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   WINDOWS
+   ══════════════════════════════════════════════════════════════ */
+.window {
+  position: absolute;
+  background: var(--surface);
+  border: var(--bw) solid var(--ink);
+  box-shadow: var(--shadow-hard-lg);
+  display: flex;
+  flex-direction: column;
+  min-width: 280px;
+  min-height: 200px;
+  overflow: hidden;
+  animation: windowIn 0.22s cubic-bezier(.2,.9,.3,1.2);
+}
+@keyframes windowIn {
+  from { opacity: 0; transform: translate(-6px,-6px) scale(0.97); }
+  to { opacity: 1; transform: translate(0,0) scale(1); }
+}
+.window.minimizing {
+  animation: windowOut 0.18s ease forwards;
+}
+@keyframes windowOut {
+  to { opacity: 0; transform: translateY(40vh) scale(0.7); }
+}
+.window.maximized { border-radius: 0; }
+.window-titlebar {
+  height: 34px;
+  background: var(--ink);
+  color: var(--paper);
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  gap: 10px;
+  cursor: grab;
+  flex-shrink: 0;
+  border-bottom: var(--bw) solid var(--ink);
+  position: relative;
+}
+.window-titlebar:active { cursor: grabbing; }
+.window.focused .window-titlebar { background: var(--ink); }
+.window:not(.focused) .window-titlebar { background: var(--muted); }
+.window-title-icon {
+  width: 18px; height: 18px;
+  display: flex; align-items: center; justify-content: center;
+}
+.window-title-icon svg { width: 16px; height: 16px; }
+.window-title {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 500;
+}
+.window-controls {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+}
+.win-btn {
+  width: 22px;
+  height: 22px;
+  border: 1.5px solid var(--paper);
+  background: transparent;
+  color: var(--paper);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.1s;
+  padding: 0;
+}
+.win-btn:hover { background: var(--paper); color: var(--ink); }
+.win-btn.close:hover { background: var(--red); color: var(--paper); border-color: var(--red); }
+.win-btn svg { width: 10px; height: 10px; }
+.window-body {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  position: relative;
+}
+
+/* Resize handles */
+.rh { position: absolute; z-index: 10; }
+.rh-n { top: -3px; left: 6px; right: 6px; height: 6px; cursor: ns-resize; }
+.rh-s { bottom: -3px; left: 6px; right: 6px; height: 6px; cursor: ns-resize; }
+.rh-e { right: -3px; top: 6px; bottom: 6px; width: 6px; cursor: ew-resize; }
+.rh-w { left: -3px; top: 6px; bottom: 6px; width: 6px; cursor: ew-resize; }
+.rh-ne { top: -3px; right: -3px; width: 10px; height: 10px; cursor: nesw-resize; }
+.rh-nw { top: -3px; left: -3px; width: 10px; height: 10px; cursor: nwse-resize; }
+.rh-se { bottom: -3px; right: -3px; width: 10px; height: 10px; cursor: nwse-resize; }
+.rh-sw { bottom: -3px; left: -3px; width: 10px; height: 10px; cursor: nesw-resize; }
+
+/* ══════════════════════════════════════════════════════════════
+   TASKBAR / DOCK
+   ══════════════════════════════════════════════════════════════ */
+#taskbar {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  height: 52px;
+  background: var(--ink);
+  color: var(--paper);
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  gap: 8px;
+  z-index: 10000;
+  border-top: var(--bw) solid var(--ink);
+}
+#start-btn {
+  height: 38px;
+  padding: 0 14px;
+  background: var(--red);
+  color: var(--paper);
+  border: 2px solid var(--paper);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-style: italic;
+  font-size: 15px;
+  letter-spacing: 0.02em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+#start-btn:hover { transform: translate(-2px, -2px); box-shadow: 2px 2px 0 var(--paper); }
+#start-btn:active { transform: translate(0, 0); box-shadow: none; }
+
+#task-items {
+  flex: 1;
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  height: 38px;
+  scrollbar-width: none;
+}
+#task-items::-webkit-scrollbar { display: none; }
+.task-item {
+  height: 38px;
+  padding: 0 10px;
+  background: transparent;
+  border: 1.5px solid transparent;
+  color: var(--paper);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  cursor: pointer;
+  flex-shrink: 0;
+  max-width: 180px;
+  text-transform: uppercase;
+}
+.task-item:hover { border-color: var(--paper); }
+.task-item.active {
+  background: var(--paper);
+  color: var(--ink);
+}
+.task-item svg { width: 14px; height: 14px; flex-shrink: 0; }
+.task-item .t-label { overflow: hidden; text-overflow: ellipsis; }
+
+#tray {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 10px;
+  border-left: 1.5px solid rgba(239,234,224,0.3);
+  height: 38px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.05em;
+}
+#clock { font-weight: 700; }
+
+/* ══════════════════════════════════════════════════════════════
+   START MENU
+   ══════════════════════════════════════════════════════════════ */
+#start-menu {
+  position: fixed;
+  left: 10px;
+  bottom: 58px;
+  width: 340px;
+  background: var(--paper);
+  border: var(--bw) solid var(--ink);
+  box-shadow: var(--shadow-hard-lg);
+  z-index: 9999;
+  display: none;
+  animation: startIn 0.18s cubic-bezier(.2,.9,.3,1.2);
+}
+@keyframes startIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+#start-menu.open { display: block; }
+#start-menu-header {
+  padding: 14px 16px;
+  border-bottom: var(--bw) solid var(--ink);
+  background: var(--yellow);
+  position: relative;
+}
+#start-menu-header h1 {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-style: italic;
+  font-size: 28px;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+#start-menu-header .sub {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  margin-top: 4px;
+  text-transform: uppercase;
+}
+#start-menu-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0;
+}
+.start-app {
+  padding: 14px 8px;
+  border-right: 1px solid var(--ink);
+  border-bottom: 1px solid var(--ink);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: background 0.1s;
+  text-align: center;
+}
+.start-app:hover { background: var(--ink); color: var(--paper); }
+.start-app:nth-child(3n) { border-right: none; }
+.start-app svg { width: 26px; height: 26px; }
+.start-app .name {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   CONTEXT MENU
+   ══════════════════════════════════════════════════════════════ */
+#context-menu {
+  position: fixed;
+  background: var(--paper);
+  border: var(--bw) solid var(--ink);
+  box-shadow: var(--shadow-hard);
+  min-width: 200px;
+  z-index: 100000;
+  display: none;
+  padding: 4px;
+}
+#context-menu.open { display: block; }
+.ctx-item {
+  padding: 7px 12px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid transparent;
+}
+.ctx-item:hover { background: var(--ink); color: var(--paper); }
+.ctx-item svg { width: 12px; height: 12px; }
+.ctx-item.danger:hover { background: var(--red); }
+.ctx-sep {
+  height: 1px;
+  background: var(--ink);
+  margin: 3px 0;
+  opacity: 0.4;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SELECTION RECT
+   ══════════════════════════════════════════════════════════════ */
+#sel-rect {
+  position: absolute;
+  background: rgba(244,196,48,0.25);
+  border: 1.5px dashed var(--ink);
+  pointer-events: none;
+  z-index: 100;
+  display: none;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   APP COMMON UI
+   ══════════════════════════════════════════════════════════════ */
+.app-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px;
+  background: var(--paper-2);
+  border-bottom: var(--bw) solid var(--ink);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+.tb-btn {
+  height: 28px;
+  padding: 0 10px;
+  background: var(--surface);
+  border: 1.5px solid var(--ink);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.1s;
+}
+.tb-btn:hover { background: var(--ink); color: var(--paper); }
+.tb-btn.primary { background: var(--red); color: var(--paper); border-color: var(--ink); }
+.tb-btn.primary:hover { background: var(--ink); color: var(--paper); }
+.tb-btn svg { width: 12px; height: 12px; }
+.tb-sep { width: 1.5px; height: 20px; background: var(--ink); opacity: 0.3; margin: 0 4px; }
+.tb-input {
+  height: 28px;
+  padding: 0 8px;
+  border: 1.5px solid var(--ink);
+  background: var(--surface);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  outline: none;
+  min-width: 0;
+}
+.tb-input:focus { background: var(--yellow); }
+
+/* Scrollbars */
+::-webkit-scrollbar { width: 12px; height: 12px; }
+::-webkit-scrollbar-track { background: var(--paper-2); }
+::-webkit-scrollbar-thumb { background: var(--ink); border: 2px solid var(--paper-2); }
+::-webkit-scrollbar-thumb:hover { background: var(--red); }
+::-webkit-scrollbar-corner { background: var(--paper-2); }
+
+/* ══════════════════════════════════════════════════════════════
+   FILE EXPLORER
+   ══════════════════════════════════════════════════════════════ */
+.fe-root { display: flex; flex: 1; min-height: 0; }
+.fe-sidebar {
+  width: 180px;
+  background: var(--paper-2);
+  border-right: var(--bw) solid var(--ink);
+  overflow-y: auto;
+  flex-shrink: 0;
+  padding: 8px 0;
+}
+.fe-sb-group-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-style: italic;
+  font-size: 12px;
+  padding: 8px 12px 4px;
+  color: var(--red);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  border-top: 1px dashed var(--ink);
+  margin-top: 4px;
+}
+.fe-sb-group-title:first-child { border-top: none; margin-top: 0; }
+.fe-sb-item {
+  padding: 5px 12px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-left: 3px solid transparent;
+}
+.fe-sb-item:hover { background: var(--surface); }
+.fe-sb-item.active { background: var(--yellow); border-left-color: var(--red); font-weight: 700; }
+.fe-sb-item svg { width: 14px; height: 14px; flex-shrink: 0; }
+.fe-main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.fe-breadcrumb {
+  padding: 6px 10px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--ink);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+.fe-breadcrumb .bc-seg {
+  padding: 2px 6px;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+.fe-breadcrumb .bc-seg:hover { background: var(--yellow); border-color: var(--ink); }
+.fe-breadcrumb .bc-sep { color: var(--muted); }
+.fe-list-wrap {
+  flex: 1;
+  overflow: auto;
+  background: var(--surface);
+  position: relative;
+}
+.fe-list {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+.fe-list thead th {
+  position: sticky;
+  top: 0;
+  background: var(--paper-2);
+  border-bottom: var(--bw) solid var(--ink);
+  text-align: left;
+  padding: 6px 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 10px;
+  cursor: pointer;
+  user-select: none;
+  border-right: 1px solid var(--ink);
+}
+.fe-list thead th:hover { background: var(--yellow); }
+.fe-list thead th:last-child { border-right: none; }
+.fe-list tbody tr { border-bottom: 1px solid rgba(14,14,12,0.08); cursor: pointer; }
+.fe-list tbody tr:hover { background: var(--paper-2); }
+.fe-list tbody tr.selected { background: var(--yellow); }
+.fe-list td { padding: 5px 10px; white-space: nowrap; }
+.fe-list td .fe-row { display: flex; align-items: center; gap: 8px; }
+.fe-list td svg { width: 16px; height: 16px; flex-shrink: 0; }
+.fe-status {
+  padding: 4px 10px;
+  background: var(--paper-2);
+  border-top: 1px solid var(--ink);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  display: flex;
+  justify-content: space-between;
+  text-transform: uppercase;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   NOTEPAD
+   ══════════════════════════════════════════════════════════════ */
+.np-root { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.np-editor {
+  flex: 1;
+  width: 100%;
+  border: none;
+  outline: none;
+  resize: none;
+  padding: 16px 20px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.6;
+  background: var(--surface);
+  color: var(--ink);
+  tab-size: 4;
+  user-select: text;
+  -webkit-user-select: text;
+}
+.np-status {
+  padding: 4px 12px;
+  background: var(--paper-2);
+  border-top: 1px solid var(--ink);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  display: flex;
+  justify-content: space-between;
+  text-transform: uppercase;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   HTML EDITOR
+   ══════════════════════════════════════════════════════════════ */
+.he-root { flex: 1; display: flex; min-height: 0; }
+.he-editor {
+  flex: 1;
+  border: none;
+  outline: none;
+  resize: none;
+  padding: 12px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.55;
+  background: #0E0E0C;
+  color: #F7F3EB;
+  user-select: text;
+  -webkit-user-select: text;
+  border-right: var(--bw) solid var(--ink);
+}
+.he-preview {
+  flex: 1;
+  border: none;
+  background: white;
+  min-width: 0;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SPREADSHEET
+   ══════════════════════════════════════════════════════════════ */
+.ss-root { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.ss-view { flex: 1; overflow: auto; background: var(--surface); }
+.ss-table {
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  width: max-content;
+  min-width: 100%;
+}
+.ss-table th, .ss-table td {
+  border: 1px solid var(--ink);
+  padding: 3px 8px;
+  min-width: 80px;
+  white-space: nowrap;
+}
+.ss-table th {
+  background: var(--ink);
+  color: var(--paper);
+  font-weight: 700;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  text-align: left;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-size: 10px;
+}
+.ss-table tr:nth-child(even) td { background: var(--paper-2); }
+.ss-text {
+  flex: 1;
+  width: 100%;
+  border: none;
+  outline: none;
+  resize: none;
+  padding: 12px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.5;
+  background: var(--surface);
+  user-select: text;
+  -webkit-user-select: text;
+  display: none;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   CALCULATOR
+   ══════════════════════════════════════════════════════════════ */
+.calc-root {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--paper);
+  padding: 12px;
+}
+.calc-display {
+  background: var(--ink);
+  color: var(--yellow);
+  font-family: var(--font-mono);
+  font-size: 32px;
+  padding: 14px 16px;
+  text-align: right;
+  border: var(--bw) solid var(--ink);
+  min-height: 70px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  overflow: hidden;
+  word-break: break-all;
+}
+.calc-display .expr {
+  font-size: 11px;
+  color: var(--paper);
+  opacity: 0.55;
+  letter-spacing: 0.05em;
+  min-height: 14px;
+}
+.calc-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-auto-rows: 1fr;
+  gap: 6px;
+  margin-top: 10px;
+}
+.calc-btn {
+  background: var(--surface);
+  border: 2px solid var(--ink);
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 3px 3px 0 0 var(--ink);
+  transition: all 0.08s;
+  color: var(--ink);
+}
+.calc-btn:hover { transform: translate(-1px,-1px); box-shadow: 4px 4px 0 0 var(--ink); }
+.calc-btn:active { transform: translate(3px,3px); box-shadow: 0 0 0 0 var(--ink); }
+.calc-btn.op { background: var(--blue); color: var(--paper); }
+.calc-btn.eq { background: var(--red); color: var(--paper); grid-row: span 2; }
+.calc-btn.fn { background: var(--yellow); }
+.calc-btn.clr { background: var(--paper); }
+
+/* ══════════════════════════════════════════════════════════════
+   PAINT
+   ══════════════════════════════════════════════════════════════ */
+.pt-root { flex: 1; display: flex; flex-direction: column; min-height: 0; background: var(--paper-2); }
+.pt-canvas-wrap { flex: 1; overflow: auto; padding: 16px; background:
+  linear-gradient(45deg, var(--paper-2) 25%, transparent 25%),
+  linear-gradient(-45deg, var(--paper-2) 25%, transparent 25%),
+  linear-gradient(45deg, transparent 75%, var(--paper-2) 75%),
+  linear-gradient(-45deg, transparent 75%, var(--paper-2) 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+  background-color: var(--surface);
+}
+.pt-canvas {
+  background: white;
+  border: var(--bw) solid var(--ink);
+  box-shadow: var(--shadow-hard);
+  cursor: crosshair;
+  touch-action: none;
+  display: block;
+  margin: 0 auto;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   BROWSER APP
+   ══════════════════════════════════════════════════════════════ */
+.br-root { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.br-frame { flex: 1; border: none; background: white; }
+
+/* ══════════════════════════════════════════════════════════════
+   IMAGE VIEWER
+   ══════════════════════════════════════════════════════════════ */
+.iv-root { flex: 1; display: flex; flex-direction: column; min-height: 0; background: #0E0E0C; }
+.iv-stage {
+  flex: 1;
+  overflow: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.iv-stage img, .iv-stage video, .iv-stage audio {
+  max-width: 100%;
+  max-height: 100%;
+  border: 2px solid var(--paper);
+}
+.iv-stage img { cursor: zoom-in; transition: transform 0.2s; }
+
+/* ══════════════════════════════════════════════════════════════
+   SETTINGS
+   ══════════════════════════════════════════════════════════════ */
+.set-root { flex: 1; display: flex; min-height: 0; }
+.set-side {
+  width: 170px;
+  background: var(--paper-2);
+  border-right: var(--bw) solid var(--ink);
+  padding: 10px 0;
+  overflow-y: auto;
+}
+.set-tab {
+  padding: 8px 14px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  cursor: pointer;
+  border-left: 3px solid transparent;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.set-tab:hover { background: var(--surface); }
+.set-tab.active { background: var(--yellow); border-left-color: var(--red); font-weight: 700; }
+.set-main { flex: 1; padding: 20px; overflow-y: auto; background: var(--surface); }
+.set-main h2 {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 900;
+  font-size: 28px;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.set-main .set-sub {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+}
+.set-section { margin-bottom: 28px; }
+.set-section h3 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 16px;
+  margin-bottom: 10px;
+  padding-bottom: 4px;
+  border-bottom: 2px solid var(--ink);
+}
+.wp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
+}
+.wp-tile {
+  aspect-ratio: 16/10;
+  border: 2px solid var(--ink);
+  cursor: pointer;
+  background-size: cover;
+  background-position: center;
+  box-shadow: 3px 3px 0 0 var(--ink);
+  position: relative;
+  transition: transform 0.1s;
+}
+.wp-tile:hover { transform: translate(-2px,-2px); box-shadow: 5px 5px 0 0 var(--ink); }
+.wp-tile.active::after {
+  content: "✓";
+  position: absolute;
+  top: 4px; right: 4px;
+  background: var(--red);
+  color: var(--paper);
+  width: 20px; height: 20px;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 900;
+}
+.set-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px dashed var(--ink);
+}
+.set-row:last-child { border-bottom: none; }
+.set-row .lbl { flex: 1; font-family: var(--font-mono); font-size: 12px; }
+.set-row .val { font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+
+/* Storage visualization */
+.storage-bar {
+  height: 28px;
+  background: var(--paper-2);
+  border: 2px solid var(--ink);
+  display: flex;
+  overflow: hidden;
+  position: relative;
+}
+.storage-bar > div {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink);
+  font-weight: 700;
+  min-width: 20px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.storage-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 10px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+.storage-legend span { display: flex; align-items: center; gap: 5px; }
+.storage-legend .sw { width: 12px; height: 12px; border: 1.5px solid var(--ink); }
+
+/* ══════════════════════════════════════════════════════════════
+   DIALOGS
+   ══════════════════════════════════════════════════════════════ */
+.modal-bg {
+  position: fixed;
+  inset: 0;
+  background: rgba(14,14,12,0.5);
+  z-index: 1000000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(2px);
+}
+.modal-box {
+  background: var(--paper);
+  border: var(--bw) solid var(--ink);
+  box-shadow: var(--shadow-hard-lg);
+  min-width: 320px;
+  max-width: 90vw;
+  max-height: 90vh;
+  overflow: auto;
+  animation: startIn 0.15s ease;
+}
+.modal-head {
+  padding: 10px 14px;
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+.modal-body { padding: 16px; }
+.modal-body p { margin-bottom: 10px; font-size: 13px; line-height: 1.5; }
+.modal-body input {
+  width: 100%;
+  padding: 7px 10px;
+  border: 2px solid var(--ink);
+  background: var(--surface);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  outline: none;
+  user-select: text;
+  -webkit-user-select: text;
+}
+.modal-body input:focus { background: var(--yellow); }
+.modal-foot {
+  padding: 10px 14px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  border-top: 1px solid var(--ink);
+  background: var(--paper-2);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   TOAST
+   ══════════════════════════════════════════════════════════════ */
+#toast-host {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  z-index: 1000001;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+.toast {
+  background: var(--ink);
+  color: var(--paper);
+  padding: 8px 14px;
+  border: 2px solid var(--ink);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  box-shadow: 3px 3px 0 0 var(--red);
+  animation: toastIn 0.22s cubic-bezier(.2,.9,.3,1.2);
+  pointer-events: auto;
+  max-width: 320px;
+}
+.toast.err { box-shadow: 3px 3px 0 0 var(--yellow); background: var(--red); }
+.toast.ok { box-shadow: 3px 3px 0 0 var(--blue); background: var(--green); }
+@keyframes toastIn {
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   BOOT
+   ══════════════════════════════════════════════════════════════ */
+#boot {
+  position: fixed;
+  inset: 0;
+  background: var(--ink);
+  color: var(--paper);
+  z-index: 10000000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+}
+#boot .logo {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 900;
+  font-size: 96px;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  margin-bottom: 18px;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+#boot .logo .red { color: var(--red); }
+#boot .logo .yellow { color: var(--yellow); }
+#boot .logo .blue { color: var(--blue); }
+#boot .tag {
+  font-size: 11px;
+  letter-spacing: 0.35em;
+  margin-bottom: 40px;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+#boot .bar {
+  width: 280px;
+  height: 14px;
+  border: 2px solid var(--paper);
+  position: relative;
+  background: var(--ink);
+}
+#boot .bar::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    repeating-linear-gradient(90deg, var(--paper) 0, var(--paper) 10px, transparent 10px, transparent 14px);
+  animation: bootBar 1.4s linear infinite;
+}
+@keyframes bootBar { from { background-position: 0 0; } to { background-position: 14px 0; } }
+#boot .status {
+  margin-top: 18px;
+  font-size: 11px;
+  letter-spacing: 0.15em;
+  opacity: 0.7;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   RESPONSIVE (Mobile & Tablet)
+   ══════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  #desktop { bottom: 60px; }
+  #taskbar { height: 60px; padding: 0 6px; gap: 4px; }
+  #start-btn { padding: 0 10px; font-size: 13px; height: 44px; }
+  #start-btn .s-text { display: none; }
+  .task-item { max-width: 120px; padding: 0 8px; height: 44px; }
+  .task-item .t-label { max-width: 70px; }
+  #tray { padding: 0 6px; font-size: 10px; gap: 6px; }
+  #start-menu { width: calc(100vw - 20px); left: 10px; }
+  .window { min-width: 260px; }
+  .fe-sidebar { width: 130px; }
+  .desk-icon { width: 76px; }
+  .desk-icon .icon-box { width: 46px; height: 46px; }
+  .corner-mark { display: none; }
+  #sys-label, #serial-label { font-size: 9px; }
+  #boot .logo { font-size: 56px; }
+}
+@media (max-width: 480px) {
+  .fe-sidebar { display: none; }
+  .task-item .t-label { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- Boot Screen -->
+<div id="boot">
+  <div class="logo">B<span class="red">·</span>OS</div>
+  <div class="tag">Neo-Bauhaus Operating System — 01.00</div>
+  <div class="bar"></div>
+  <div class="status" id="boot-status">INITIALIZING OPFS...</div>
+</div>
+
+<!-- Desktop -->
+<div id="desktop">
+  <div id="wallpaper-layer"></div>
+
+  <svg class="corner-mark tl" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.5">
+    <path d="M2 20 L2 2 L20 2" /><circle cx="2" cy="2" r="2" fill="currentColor"/>
+  </svg>
+  <svg class="corner-mark tr" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.5">
+    <path d="M20 2 L38 2 L38 20" /><circle cx="38" cy="2" r="2" fill="currentColor"/>
+  </svg>
+  <svg class="corner-mark bl" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.5">
+    <path d="M2 20 L2 38 L20 38" /><circle cx="2" cy="38" r="2" fill="currentColor"/>
+  </svg>
+  <svg class="corner-mark br" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.5">
+    <path d="M20 38 L38 38 L38 20" /><circle cx="38" cy="38" r="2" fill="currentColor"/>
+  </svg>
+
+  <div id="sys-label"><b>■</b> BAUHAUS/OS · REV 01 · OPFS BACKED</div>
+  <div id="serial-label">SN · 1919-2026 · FORM+FUNKTION</div>
+
+  <div id="desktop-icons"></div>
+  <div id="sel-rect"></div>
+</div>
+
+<!-- Start Menu -->
+<div id="start-menu">
+  <div id="start-menu-header">
+    <h1>Start.</h1>
+    <div class="sub">Select an application · BAUHAUS/OS 01.00</div>
+  </div>
+  <div id="start-menu-grid"></div>
+</div>
+
+<!-- Context Menu -->
+<div id="context-menu"></div>
+
+<!-- Taskbar -->
+<div id="taskbar">
+  <button id="start-btn"><span style="font-family:var(--font-display);font-size:18px;line-height:1;">■</span><span class="s-text">Start</span></button>
+  <div id="task-items"></div>
+  <div id="tray">
+    <span id="opfs-indicator" title="OPFS Status">◆ OPFS</span>
+    <span id="clock">--:--</span>
+  </div>
+</div>
+
+<div id="toast-host"></div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════
+   BAUHAUS/OS — Single-File Web OS
+   OPFS + File System Access API unified VFS
+   ══════════════════════════════════════════════════════════════ */
+'use strict';
+
+/* ───────────────────────── SVG Icon Library ───────────────────────── */
+const I = {
+  folder: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-7l-2-2H5a2 2 0 0 0-2 2z"/><path d="M3 9h18" stroke-width="1"/></svg>`,
+  folderOpen: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20h14a2 2 0 0 0 2-2l2-8H6l-2 8a2 2 0 0 1 0 2zM4 20V6a2 2 0 0 1 2-2h4l2 2h6a2 2 0 0 1 2 2v2"/></svg>`,
+  file: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/></svg>`,
+  fileText: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg>`,
+  image: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg>`,
+  video: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="14" height="12"/><path d="m22 8-6 4 6 4V8z"/></svg>`,
+  audio: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>`,
+  code: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/></svg>`,
+  zip: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M12 11v2M12 15v2M12 19v1"/></svg>`,
+  pdf: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/><text x="8" y="17" font-size="5" font-family="monospace" font-weight="900" fill="currentColor" stroke="none">PDF</text></svg>`,
+  explorer: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16"/><path d="M3 9h18M8 4v5"/></svg>`,
+  notepad: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h9l5 5v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v6h6M8 13h8M8 17h5M8 9h3"/></svg>`,
+  calc: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="3" width="16" height="18"/><path d="M8 7h8M8 11h2M12 11h2M16 11h0M8 15h2M12 15h2M16 15h0M8 19h8"/></svg>`,
+  paint: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 0 20c1 0 1.5-.5 1.5-1.2 0-.4-.2-.7-.4-1-.3-.3-.4-.6-.4-1 0-.8.6-1.4 1.4-1.4H16a6 6 0 0 0 6-6c0-5-4.5-9-10-9z"/><circle cx="7.5" cy="10.5" r="1.2" fill="currentColor"/><circle cx="12" cy="7" r="1.2" fill="currentColor"/><circle cx="16.5" cy="10.5" r="1.2" fill="currentColor"/></svg>`,
+  browser: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></svg>`,
+  settings: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>`,
+  close: `<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 2l8 8M10 2l-8 8"/></svg>`,
+  min: `<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 10h8"/></svg>`,
+  max: `<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="8" height="8"/></svg>`,
+  restore: `<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="6" height="6"/><path d="M2 8V2h6"/></svg>`,
+  back: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>`,
+  fwd: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>`,
+  up: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M5 12l7-7 7 7"/></svg>`,
+  home: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2h-4v-7h-6v7H5a2 2 0 0 1-2-2z"/></svg>`,
+  refresh: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5M21 12a9 9 0 0 1-15 6.7L3 16M3 21v-5h5"/></svg>`,
+  newFile: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M12 12v6M9 15h6"/></svg>`,
+  newFolder: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-7l-2-2H5a2 2 0 0 0-2 2z"/><path d="M12 11v6M9 14h6"/></svg>`,
+  upload: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>`,
+  download: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>`,
+  copy: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`,
+  cut: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.12 15.88M14.47 14.48 20 20M8.12 8.12 12 12"/></svg>`,
+  paste: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4"/></svg>`,
+  rename: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4z"/></svg>`,
+  trash: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>`,
+  search: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>`,
+  mount: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14"/><path d="M2 10h20M6 15h2M11 15h2"/></svg>`,
+  info: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>`,
+  save: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>`,
+  play: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 4l14 8-14 8z"/></svg>`,
+  terminal: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16"/><path d="m6 9 3 3-3 3M12 15h6"/></svg>`,
+  html: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/><path d="m14 4-4 16"/></svg>`,
+  table: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>`,
+  view: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`,
+  edit: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.1 2.1 0 1 1 3 3L12 15l-4 1 1-4z"/></svg>`,
+  plus: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>`,
+  minus: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/></svg>`,
+  disk: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18"/><path d="M7 3v5h8V3M7 21v-6h10v6"/></svg>`,
+};
+
+/* ───────────────────────── Utilities ───────────────────────── */
+const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => Array.from(el.querySelectorAll(s));
+const el = (tag, attrs = {}, ...children) => {
+  const e = document.createElement(tag);
+  for (const k in attrs) {
+    if (k === 'class') e.className = attrs[k];
+    else if (k === 'style' && typeof attrs[k] === 'object') Object.assign(e.style, attrs[k]);
+    else if (k.startsWith('on') && typeof attrs[k] === 'function') e.addEventListener(k.slice(2).toLowerCase(), attrs[k]);
+    else if (k === 'html') e.innerHTML = attrs[k];
+    else if (attrs[k] !== undefined && attrs[k] !== null) e.setAttribute(k, attrs[k]);
+  }
+  for (const c of children.flat()) {
+    if (c == null || c === false) continue;
+    if (typeof c === 'string' || typeof c === 'number') e.appendChild(document.createTextNode(c));
+    else if (c instanceof Node) e.appendChild(c);
+  }
+  return e;
+};
+
+const toast = (msg, type = '') => {
+  const t = el('div', { class: 'toast ' + type }, msg);
+  $('#toast-host').appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity .25s'; }, 2500);
+  setTimeout(() => t.remove(), 2900);
+};
+
+const fmtSize = (n) => {
+  if (n == null) return '—';
+  if (n < 1024) return n + ' B';
+  if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';
+  if (n < 1024 * 1024 * 1024) return (n / 1024 / 1024).toFixed(1) + ' MB';
+  return (n / 1024 / 1024 / 1024).toFixed(2) + ' GB';
+};
+const fmtDate = (d) => {
+  if (!d) return '—';
+  const dt = new Date(d);
+  const p = (n) => String(n).padStart(2, '0');
+  return `${dt.getFullYear()}-${p(dt.getMonth() + 1)}-${p(dt.getDate())} ${p(dt.getHours())}:${p(dt.getMinutes())}`;
+};
+const extOf = (name) => {
+  const m = /\.([^.\\/]+)$/.exec(name || '');
+  return m ? m[1].toLowerCase() : '';
+};
+const mimeOf = (name) => {
+  const ext = extOf(name);
+  const map = {
+    png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',gif:'image/gif',webp:'image/webp',bmp:'image/bmp',svg:'image/svg+xml',ico:'image/x-icon',avif:'image/avif',
+    mp3:'audio/mpeg',wav:'audio/wav',ogg:'audio/ogg',flac:'audio/flac',aac:'audio/aac',m4a:'audio/mp4',opus:'audio/opus',weba:'audio/webm',
+    mp4:'video/mp4',webm:'video/webm',ogv:'video/ogg',mov:'video/quicktime',mkv:'video/x-matroska',avi:'video/x-msvideo',
+    txt:'text/plain',md:'text/markdown',html:'text/html',htm:'text/html',css:'text/css',js:'text/javascript',mjs:'text/javascript',
+    json:'application/json',xml:'text/xml',csv:'text/csv',tsv:'text/tab-separated-values',yaml:'text/yaml',yml:'text/yaml',log:'text/plain',
+    pdf:'application/pdf',
+    zip:'application/zip',gz:'application/gzip',tar:'application/x-tar',
+  };
+  return map[ext] || 'application/octet-stream';
+};
+const kindOf = (name, isDir) => {
+  if (isDir) return 'folder';
+  const ext = extOf(name);
+  const kinds = {
+    image: ['png','jpg','jpeg','gif','webp','bmp','svg','ico','avif'],
+    audio: ['mp3','wav','ogg','flac','aac','m4a','opus','weba'],
+    video: ['mp4','webm','ogv','mov','mkv','avi'],
+    text: ['txt','md','log','yaml','yml'],
+    code: ['html','htm','css','js','mjs','json','xml','csv','tsv'],
+    pdf: ['pdf'],
+    archive: ['zip','gz','tar','tgz'],
+  };
+  for (const k in kinds) if (kinds[k].includes(ext)) return k;
+  return 'file';
+};
+
+const pathJoin = (...parts) => {
+  const p = parts.filter(Boolean).join('/').replace(/\/+/g, '/');
+  return p || '/';
+};
+const pathDir = (p) => { const i = p.lastIndexOf('/'); return i <= 0 ? '/' : p.slice(0, i); };
+const pathBase = (p) => { const i = p.lastIndexOf('/'); return i < 0 ? p : p.slice(i + 1); };
+const pathNorm = (p) => {
+  if (!p) return '/';
+  const parts = p.split('/');
+  const out = [];
+  for (const seg of parts) {
+    if (!seg || seg === '.') continue;
+    if (seg === '..') out.pop();
+    else out.push(seg);
+  }
+  return '/' + out.join('/');
+};
+
+/* ───────────────────────── File System (OPFS + Local Mount) ───────────────────────── */
+const fs = {
+  root: null,
+  opfsOk: false,
+  // Fallback in-memory tree if OPFS unavailable (keeps app functional)
+  memRoot: null,
+  // Metadata store (icon positions, settings, etc) — uses localStorage
+  meta: null,
+  // Mounts: Map<path, dirHandle>  (File System Access API)
+  mounts: new Map(),
+  // Mount metadata persisted to localStorage (for re-prompt on boot)
+  mountRecords: [], // { path, name }
+
+  async init() {
+    // Metadata in localStorage
+    try { this.meta = JSON.parse(localStorage.getItem('bauhaus.meta') || '{}'); } catch { this.meta = {}; }
+    try { this.mountRecords = JSON.parse(localStorage.getItem('bauhaus.mounts') || '[]'); } catch { this.mountRecords = []; }
+
+    // Try OPFS
+    try {
+      if (navigator.storage && navigator.storage.getDirectory) {
+        this.root = await navigator.storage.getDirectory();
+        this.opfsOk = true;
+        await this._ensureDefaults();
+      } else throw new Error('no OPFS');
+    } catch (e) {
+      console.warn('OPFS unavailable, using in-memory FS:', e);
+      this.opfsOk = false;
+      this.memRoot = { type: 'dir', children: new Map(), mtime: Date.now() };
+      await this._ensureDefaultsMem();
+    }
+  },
+
+  saveMeta() { localStorage.setItem('bauhaus.meta', JSON.stringify(this.meta)); },
+  saveMounts() { localStorage.setItem('bauhaus.mounts', JSON.stringify(this.mountRecords)); },
+
+  async _ensureDefaults() {
+    const dirs = ['Desktop','Documents','Pictures','Music','Downloads','mnt','mnt/local'];
+    for (const d of dirs) {
+      const segs = d.split('/').filter(Boolean);
+      let dir = this.root;
+      for (const s of segs) dir = await dir.getDirectoryHandle(s, { create: true });
+    }
+    // Welcome README
+    const docDir = await this.root.getDirectoryHandle('Documents', { create: true });
+    try {
+      await docDir.getFileHandle('WELCOME.md');
+    } catch {
+      const f = await docDir.getFileHandle('WELCOME.md', { create: true });
+      const w = await f.createWritable();
+      await w.write(
+`# Welcome to BAUHAUS/OS
+
+A single-file web operating system inspired by the Bauhaus movement and Swiss editorial design.
+
+## Fundamentals
+- Drag icons freely on the desktop
+- Right-click anywhere for context actions
+- Use File Explorer to navigate your OPFS filesystem
+- Mount real folders via Settings > Storage > Mount Local Folder
+- Drag files to/from your physical desktop (on desktop browsers)
+
+## Built-in Applications
+- **File Explorer** — navigate, copy, move, rename
+- **Notepad** — edit text & code
+- **Spreadsheet** — CSV/TSV views
+- **HTML Studio** — live-preview editor
+- **Calculator** — arithmetic with history
+- **Paint** — raster drawing canvas
+- **Browser** — embedded web viewer
+- **Settings** — wallpaper, storage, mounts
+
+> All data is stored in your browser via OPFS (Origin Private File System).
+
+— Form follows function.
+`);
+      await w.close();
+    }
+  },
+  async _ensureDefaultsMem() {
+    // noop — in-memory already empty
+  },
+
+  /* ─── Path Resolution ─── */
+  _isMountPath(p) {
+    for (const mp of this.mounts.keys()) {
+      if (p === mp || p.startsWith(mp + '/')) return mp;
+    }
+    return null;
+  },
+  async _resolveLocal(mountPath, restPath) {
+    const handle = this.mounts.get(mountPath);
+    if (!handle) throw new Error('mount gone: ' + mountPath);
+    const segs = restPath.split('/').filter(Boolean);
+    let cur = handle;
+    for (let i = 0; i < segs.length; i++) {
+      const isLast = i === segs.length - 1;
+      try {
+        if (isLast) {
+          try { cur = await cur.getDirectoryHandle(segs[i]); }
+          catch { cur = await cur.getFileHandle(segs[i]); }
+        } else {
+          cur = await cur.getDirectoryHandle(segs[i]);
+        }
+      } catch (e) {
+        throw new Error('not found: ' + segs[i]);
+      }
+    }
+    return cur;
+  },
+
+  async _resolveOPFS(p, opts = {}) {
+    const segs = p.split('/').filter(Boolean);
+    let cur = this.root;
+    for (let i = 0; i < segs.length; i++) {
+      const isLast = i === segs.length - 1;
+      try {
+        if (isLast && opts.asFile) cur = await cur.getFileHandle(segs[i], opts.create ? { create: true } : undefined);
+        else if (isLast && opts.asDir) cur = await cur.getDirectoryHandle(segs[i], opts.create ? { create: true } : undefined);
+        else if (isLast) {
+          try { cur = await cur.getDirectoryHandle(segs[i]); }
+          catch { cur = await cur.getFileHandle(segs[i]); }
+        } else {
+          cur = await cur.getDirectoryHandle(segs[i]);
+        }
+      } catch (e) {
+        throw e;
+      }
+    }
+    return cur;
+  },
+  async _resolveMem(p) {
+    const segs = p.split('/').filter(Boolean);
+    let cur = this.memRoot;
+    for (const s of segs) {
+      if (cur.type !== 'dir' || !cur.children.has(s)) throw new Error('not found');
+      cur = cur.children.get(s);
+    }
+    return cur;
+  },
+
+  /* ─── Public API ─── */
+  async stat(p, isLstat = false) {
+    p = pathNorm(p);
+    if (p === '/') return { name: '', path: '/', isDirectory: true, size: 0, mtime: Date.now() };
+    const mp = this._isMountPath(p);
+    if (mp) {
+      const rest = p.slice(mp.length);
+      if (!rest) return { name: pathBase(mp), path: mp, isDirectory: true, size: 0, mtime: Date.now(), mount: true };
+      const h = await this._resolveLocal(mp, rest);
+      if (h.kind === 'directory') return { name: h.name, path: p, isDirectory: true, size: 0, mtime: Date.now(), mount: true };
+      const f = await h.getFile();
+      return { name: h.name, path: p, isDirectory: false, size: f.size, mtime: f.lastModified, mount: true };
+    }
+    if (this.opfsOk) {
+      try {
+        const h = await this._resolveOPFS(p);
+        if (h.kind === 'directory') return { name: pathBase(p), path: p, isDirectory: true, size: 0, mtime: Date.now() };
+        const f = await h.getFile();
+        return { name: h.name, path: p, isDirectory: false, size: f.size, mtime: f.lastModified };
+      } catch (e) { throw new Error('ENOENT: ' + p); }
+    } else {
+      const node = await this._resolveMem(p);
+      if (node.type === 'dir') return { name: pathBase(p), path: p, isDirectory: true, size: 0, mtime: node.mtime };
+      return { name: pathBase(p), path: p, isDirectory: false, size: node.data.byteLength, mtime: node.mtime };
+    }
+  },
+
+  async exists(p) { try { await this.stat(p); return true; } catch { return false; } },
+
+  async readdir(p) {
+    p = pathNorm(p);
+    let entries = [];
+    const mp = this._isMountPath(p);
+    if (mp) {
+      const rest = p.slice(mp.length);
+      const h = rest ? await this._resolveLocal(mp, rest) : this.mounts.get(mp);
+      for await (const [name, handle] of h.entries()) {
+        if (handle.kind === 'directory') entries.push({ name, isDirectory: true, size: 0, mtime: Date.now() });
+        else {
+          try {
+            const f = await handle.getFile();
+            entries.push({ name, isDirectory: false, size: f.size, mtime: f.lastModified });
+          } catch { entries.push({ name, isDirectory: false, size: 0, mtime: Date.now() }); }
+        }
+      }
+      return entries;
+    }
+    if (p === '/') {
+      // Root includes mount points as pseudo-dirs
+      for (const [mp] of this.mounts) {
+        const segs = mp.split('/').filter(Boolean);
+        if (segs.length === 1) entries.push({ name: segs[0], isDirectory: true, size: 0, mtime: Date.now(), mount: true });
+      }
+    }
+    // Add /mnt/local/<mountName> entries when listing /mnt or /mnt/local
+    if (p === '/mnt' || p === '/mnt/local') {
+      for (const [mp] of this.mounts) {
+        const rel = mp.replace(/^\/mnt\/local\//, '');
+        if (!rel) continue;
+        if (p === '/mnt/local') entries.push({ name: rel, isDirectory: true, size: 0, mtime: Date.now(), mount: true });
+      }
+    }
+    if (this.opfsOk) {
+      try {
+        const dir = p === '/' ? this.root : await this._resolveOPFS(p);
+        for await (const [name, handle] of dir.entries()) {
+          if (handle.kind === 'directory') entries.push({ name, isDirectory: true, size: 0, mtime: Date.now() });
+          else {
+            try {
+              const f = await handle.getFile();
+              entries.push({ name, isDirectory: false, size: f.size, mtime: f.lastModified });
+            } catch { entries.push({ name, isDirectory: false, size: 0, mtime: Date.now() }); }
+          }
+        }
+      } catch (e) {
+        // root may still return mounts even if OPFS dir missing
+        if (entries.length === 0) throw e;
+      }
+    } else {
+      const node = p === '/' ? this.memRoot : await this._resolveMem(p);
+      if (node.type !== 'dir') throw new Error('not a directory');
+      for (const [name, child] of node.children) {
+        entries.push({ name, isDirectory: child.type === 'dir', size: child.data ? child.data.byteLength : 0, mtime: child.mtime });
+      }
+    }
+    return entries;
+  },
+
+  async readFile(p, flag) {
+    p = pathNorm(p);
+    const mp = this._isMountPath(p);
+    if (mp) {
+      const rest = p.slice(mp.length);
+      const h = await this._resolveLocal(mp, rest);
+      if (h.kind === 'directory') throw new Error('is a directory');
+      const f = await h.getFile();
+      return await f.arrayBuffer();
+    }
+    if (this.opfsOk) {
+      const h = await this._resolveOPFS(p, { asFile: true });
+      const f = await h.getFile();
+      return await f.arrayBuffer();
+    } else {
+      const node = await this._resolveMem(p);
+      if (node.type === 'dir') throw new Error('is a directory');
+      return node.data.slice(0);
+    }
+  },
+  async readFileText(p) {
+    const buf = await this.readFile(p);
+    return new TextDecoder('utf-8').decode(buf);
+  },
+
+  async writeFile(p, data) {
+    p = pathNorm(p);
+    if (typeof data === 'string') data = new TextEncoder().encode(data).buffer;
+    if (data instanceof Uint8Array) data = data.buffer;
+    // Ensure parent exists
+    const parent = pathDir(p);
+    await this.mkdir(parent);
+    const mp = this._isMountPath(p);
+    if (mp) {
+      const rest = p.slice(mp.length);
+      const segs = rest.split('/').filter(Boolean);
+      const name = segs.pop();
+      let dir = this.mounts.get(mp);
+      for (const s of segs) dir = await dir.getDirectoryHandle(s, { create: true });
+      const fh = await dir.getFileHandle(name, { create: true });
+      const w = await fh.createWritable();
+      await w.write(data);
+      await w.close();
+      return;
+    }
+    if (this.opfsOk) {
+      const h = await this._resolveOPFS(p, { asFile: true, create: true });
+      const w = await h.createWritable();
+      await w.write(data);
+      await w.close();
+    } else {
+      const segs = p.split('/').filter(Boolean);
+      const name = segs.pop();
+      let cur = this.memRoot;
+      for (const s of segs) {
+        if (!cur.children.has(s)) cur.children.set(s, { type: 'dir', children: new Map(), mtime: Date.now() });
+        cur = cur.children.get(s);
+      }
+      cur.children.set(name, { type: 'file', data, mtime: Date.now() });
+    }
+  },
+
+  async mkdir(p) {
+    p = pathNorm(p);
+    if (p === '/') return;
+    const mp = this._isMountPath(p);
+    if (mp) {
+      const rest = p.slice(mp.length);
+      if (!rest) return;
+      const segs = rest.split('/').filter(Boolean);
+      let dir = this.mounts.get(mp);
+      for (const s of segs) dir = await dir.getDirectoryHandle(s, { create: true });
+      return;
+    }
+    if (this.opfsOk) {
+      const segs = p.split('/').filter(Boolean);
+      let cur = this.root;
+      for (const s of segs) cur = await cur.getDirectoryHandle(s, { create: true });
+    } else {
+      const segs = p.split('/').filter(Boolean);
+      let cur = this.memRoot;
+      for (const s of segs) {
+        if (!cur.children.has(s)) cur.children.set(s, { type: 'dir', children: new Map(), mtime: Date.now() });
+        cur = cur.children.get(s);
+      }
+    }
+  },
+
+  async unlink(p) {
+    p = pathNorm(p);
+    const mp = this._isMountPath(p);
+    if (mp) {
+      const rest = p.slice(mp.length);
+      const segs = rest.split('/').filter(Boolean);
+      const name = segs.pop();
+      let dir = this.mounts.get(mp);
+      for (const s of segs) dir = await dir.getDirectoryHandle(s);
+      await dir.removeEntry(name, { recursive: true });
+      return;
+    }
+    if (this.opfsOk) {
+      const parent = pathDir(p);
+      const name = pathBase(p);
+      const dir = parent === '/' ? this.root : await this._resolveOPFS(parent);
+      await dir.removeEntry(name, { recursive: true });
+    } else {
+      const segs = p.split('/').filter(Boolean);
+      const name = segs.pop();
+      let cur = this.memRoot;
+      for (const s of segs) cur = cur.children.get(s);
+      cur.children.delete(name);
+    }
+  },
+  async rmdir(p) { return this.unlink(p); },
+
+  async rename(oldPath, newPath) {
+    oldPath = pathNorm(oldPath); newPath = pathNorm(newPath);
+    // Cross-backend: copy + delete
+    const data = await this.readFile(oldPath).catch(() => null);
+    if (data !== null) {
+      await this.writeFile(newPath, data);
+      await this.unlink(oldPath);
+    } else {
+      // directory — recursive copy
+      await this._copyDir(oldPath, newPath);
+      await this.unlink(oldPath);
+    }
+  },
+  async _copyDir(src, dst) {
+    await this.mkdir(dst);
+    const entries = await this.readdir(src);
+    for (const e of entries) {
+      const s = pathJoin(src, e.name), d = pathJoin(dst, e.name);
+      if (e.isDirectory) await this._copyDir(s, d);
+      else {
+        const buf = await this.readFile(s);
+        await this.writeFile(d, buf);
+      }
+    }
+  },
+  async copy(src, dst) {
+    src = pathNorm(src); dst = pathNorm(dst);
+    const st = await this.stat(src);
+    if (st.isDirectory) await this._copyDir(src, dst);
+    else {
+      const buf = await this.readFile(src);
+      await this.writeFile(dst, buf);
+    }
+  },
+
+  /* ─── Mounts ─── */
+  async mountLocal() {
+    if (!window.showDirectoryPicker) { toast('File System Access API not supported', 'err'); return null; }
+    try {
+      const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
+      const name = (handle.name || 'Local').replace(/[^a-zA-Z0-9_\-\u4e00-\u9fa5.]/g, '_');
+      let mp = '/mnt/local/' + name, suffix = 1;
+      while (this.mounts.has(mp)) mp = '/mnt/local/' + name + '_' + (suffix++);
+      this.mounts.set(mp, handle);
+      this.mountRecords.push({ path: mp, name });
+      this.saveMounts();
+      toast('Mounted: ' + mp, 'ok');
+      return mp;
+    } catch (e) {
+      if (e.name !== 'AbortError') toast('Mount failed: ' + e.message, 'err');
+      return null;
+    }
+  },
+  unmount(mp) {
+    this.mounts.delete(mp);
+    this.mountRecords = this.mountRecords.filter(m => m.path !== mp);
+    this.saveMounts();
+  },
+
+  /* ─── Storage Quota ─── */
+  async quota() {
+    if (!navigator.storage || !navigator.storage.estimate) return null;
+    try { return await navigator.storage.estimate(); } catch { return null; }
+  },
+
+  async resetAll() {
+    if (this.opfsOk && this.root) {
+      for await (const [name] of this.root.entries()) await this.root.removeEntry(name, { recursive: true });
+    }
+    localStorage.removeItem('bauhaus.meta');
+    localStorage.removeItem('bauhaus.mounts');
+    this.meta = {};
+    this.mountRecords = [];
+    this.mounts.clear();
+    await this._ensureDefaults();
+  }
+};
+
+/* ───────────────────────── Window Manager ───────────────────────── */
+const WM = {
+  windows: new Map(),
+  zTop: 100,
+  nextId: 1,
+
+  open(opts) {
+    const id = 'w' + (this.nextId++);
+    const w = el('div', { class: 'window focused', 'data-id': id });
+    const vw = window.innerWidth, vh = window.innerHeight - 52;
+    const width = Math.min(opts.width || 720, vw - 20);
+    const height = Math.min(opts.height || 480, vh - 20);
+    const left = Math.max(10, (vw - width) / 2 + ((this.windows.size % 6) * 24) - 60);
+    const top = Math.max(10, (vh - height) / 2 + ((this.windows.size % 6) * 24) - 60);
+    w.style.cssText = `left:${left}px;top:${top}px;width:${width}px;height:${height}px;z-index:${++this.zTop};`;
+
+    const titlebar = el('div', { class: 'window-titlebar' });
+    titlebar.appendChild(el('div', { class: 'window-title-icon', html: opts.icon || I.file }));
+    const titleEl = el('div', { class: 'window-title' }, opts.title || 'Window');
+    titlebar.appendChild(titleEl);
+    const ctrls = el('div', { class: 'window-controls' });
+    const btnMin = el('button', { class: 'win-btn', title: 'Minimize', html: I.min });
+    const btnMax = el('button', { class: 'win-btn', title: 'Maximize', html: I.max });
+    const btnClose = el('button', { class: 'win-btn close', title: 'Close', html: I.close });
+    ctrls.append(btnMin, btnMax, btnClose);
+    titlebar.appendChild(ctrls);
+    w.appendChild(titlebar);
+
+    const body = el('div', { class: 'window-body' });
+    if (opts.content instanceof Node) body.appendChild(opts.content);
+    else if (typeof opts.content === 'string') body.innerHTML = opts.content;
+    w.appendChild(body);
+
+    // Resize handles
+    ['n','s','e','w','ne','nw','se','sw'].forEach(d => {
+      w.appendChild(el('div', { class: 'rh rh-' + d, 'data-dir': d }));
+    });
+
+    document.body.appendChild(w);
+
+    const winObj = { id, el: w, title: opts.title || 'Window', icon: opts.icon, minimized: false, maximized: false, prevRect: null, onClose: opts.onClose, appId: opts.appId, body };
+    this.windows.set(id, winObj);
+
+    // Focus
+    w.addEventListener('pointerdown', () => this.focus(id));
+    this.focus(id);
+
+    // Drag (title bar)
+    titlebar.addEventListener('pointerdown', (e) => {
+      if (e.target.closest('.win-btn')) return;
+      if (winObj.maximized) return;
+      this._startDrag(winObj, e);
+    });
+    // Double click titlebar to max
+    titlebar.addEventListener('dblclick', () => this.toggleMax(id));
+
+    // Resize
+    w.querySelectorAll('.rh').forEach(h => {
+      h.addEventListener('pointerdown', (e) => { e.stopPropagation(); this._startResize(winObj, e, h.dataset.dir); });
+    });
+
+    btnMin.addEventListener('click', () => this.minimize(id));
+    btnMax.addEventListener('click', () => this.toggleMax(id));
+    btnClose.addEventListener('click', () => this.close(id));
+
+    updateTaskbar();
+    if (opts.onReady) opts.onReady({ win: winObj, setTitle: (t) => { winObj.title = t; titleEl.textContent = t; updateTaskbar(); }, body });
+    return winObj;
+  },
+
+  focus(id) {
+    const w = this.windows.get(id); if (!w) return;
+    if (w.minimized) { w.el.style.display = ''; w.minimized = false; }
+    this.windows.forEach(x => x.el.classList.remove('focused'));
+    w.el.classList.add('focused');
+    w.el.style.zIndex = ++this.zTop;
+    updateTaskbar();
+  },
+
+  minimize(id) {
+    const w = this.windows.get(id); if (!w) return;
+    w.el.classList.add('minimizing');
+    setTimeout(() => {
+      w.el.style.display = 'none';
+      w.el.classList.remove('minimizing');
+      w.minimized = true;
+      updateTaskbar();
+    }, 170);
+  },
+
+  toggleMax(id) {
+    const w = this.windows.get(id); if (!w) return;
+    if (w.maximized) {
+      const r = w.prevRect;
+      w.el.style.left = r.left + 'px'; w.el.style.top = r.top + 'px';
+      w.el.style.width = r.width + 'px'; w.el.style.height = r.height + 'px';
+      w.el.classList.remove('maximized');
+      w.maximized = false;
+    } else {
+      w.prevRect = { left: parseInt(w.el.style.left), top: parseInt(w.el.style.top), width: w.el.offsetWidth, height: w.el.offsetHeight };
+      w.el.style.left = '0px'; w.el.style.top = '0px';
+      w.el.style.width = window.innerWidth + 'px';
+      w.el.style.height = (window.innerHeight - 52) + 'px';
+      w.el.classList.add('maximized');
+      w.maximized = true;
+    }
+  },
+
+  close(id) {
+    const w = this.windows.get(id); if (!w) return;
+    try { if (w.onClose) w.onClose(); } catch(e) { console.warn(e); }
+    w.el.classList.add('minimizing');
+    setTimeout(() => {
+      w.el.remove();
+      this.windows.delete(id);
+      updateTaskbar();
+    }, 170);
+  },
+
+  _startDrag(winObj, e) {
+    e.preventDefault();
+    const startX = e.clientX, startY = e.clientY;
+    const sx = parseInt(winObj.el.style.left), sy = parseInt(winObj.el.style.top);
+    const onMove = (ev) => {
+      let nx = sx + (ev.clientX - startX);
+      let ny = sy + (ev.clientY - startY);
+      nx = Math.max(-winObj.el.offsetWidth + 80, Math.min(window.innerWidth - 80, nx));
+      ny = Math.max(0, Math.min(window.innerHeight - 90, ny));
+      winObj.el.style.left = nx + 'px';
+      winObj.el.style.top = ny + 'px';
+    };
+    const onUp = () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  },
+
+  _startResize(winObj, e, dir) {
+    e.preventDefault();
+    const startX = e.clientX, startY = e.clientY;
+    const r = winObj.el.getBoundingClientRect();
+    const sL = r.left, sT = r.top, sW = r.width, sH = r.height;
+    const onMove = (ev) => {
+      const dx = ev.clientX - startX, dy = ev.clientY - startY;
+      let l = sL, t = sT, w = sW, h = sH;
+      if (dir.includes('e')) w = Math.max(280, sW + dx);
+      if (dir.includes('s')) h = Math.max(200, sH + dy);
+      if (dir.includes('w')) { const nw = Math.max(280, sW - dx); l = sL + (sW - nw); w = nw; }
+      if (dir.includes('n')) { const nh = Math.max(200, sH - dy); t = sT + (sH - nh); h = nh; }
+      winObj.el.style.left = l + 'px'; winObj.el.style.top = t + 'px';
+      winObj.el.style.width = w + 'px'; winObj.el.style.height = h + 'px';
+    };
+    const onUp = () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  }
+};
+
+function updateTaskbar() {
+  const tb = $('#task-items');
+  tb.innerHTML = '';
+  WM.windows.forEach((w, id) => {
+    const btn = el('button', {
+      class: 'task-item' + (w.el.classList.contains('focused') && !w.minimized ? ' active' : ''),
+      title: w.title
+    });
+    btn.innerHTML = (w.icon || I.file) + '<span class="t-label">' + escapeHtml(w.title) + '</span>';
+    btn.addEventListener('click', () => {
+      if (w.minimized || !w.el.classList.contains('focused')) WM.focus(id);
+      else WM.minimize(id);
+    });
+    tb.appendChild(btn);
+  });
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+
+/* ───────────────────────── Dialogs ───────────────────────── */
+function modal({ title = 'Dialog', body, ok = 'OK', cancel = 'Cancel', onOk } = {}) {
+  return new Promise((resolve) => {
+    const bg = el('div', { class: 'modal-bg' });
+    const box = el('div', { class: 'modal-box' });
+    box.appendChild(el('div', { class: 'modal-head' }, title));
+    const bodyEl = el('div', { class: 'modal-body' });
+    if (typeof body === 'string') bodyEl.innerHTML = body;
+    else if (body instanceof Node) bodyEl.appendChild(body);
+    box.appendChild(bodyEl);
+    const foot = el('div', { class: 'modal-foot' });
+    if (cancel) {
+      const cBtn = el('button', { class: 'tb-btn' }, cancel);
+      cBtn.addEventListener('click', () => { bg.remove(); resolve(false); });
+      foot.appendChild(cBtn);
+    }
+    const oBtn = el('button', { class: 'tb-btn primary' }, ok);
+    oBtn.addEventListener('click', async () => {
+      let res = true;
+      if (onOk) res = await onOk(bodyEl);
+      if (res !== false) { bg.remove(); resolve(res); }
+    });
+    foot.appendChild(oBtn);
+    box.appendChild(foot);
+    bg.appendChild(box);
+    bg.addEventListener('click', (e) => { if (e.target === bg) { bg.remove(); resolve(false); } });
+    document.body.appendChild(bg);
+    setTimeout(() => {
+      const inp = box.querySelector('input');
+      if (inp) { inp.focus(); inp.select(); }
+    }, 50);
+  });
+}
+
+async function promptText(title, defaultVal = '') {
+  const inp = el('input', { type: 'text', value: defaultVal });
+  const res = await modal({
+    title,
+    body: inp,
+    onOk: () => inp.value
+  });
+  return res === false ? null : res;
+}
+
+async function confirmDlg(title, msg) {
+  return await modal({ title, body: `<p>${msg}</p>`, ok: 'Confirm', cancel: 'Cancel' });
+}
+
+/* ───────────────────────── Desktop Manager ───────────────────────── */
+const Desktop = {
+  icons: new Map(), // path -> {el, x, y, kind, isDir, name}
+  selected: new Set(),
+  dragCache: new Map(), // path -> File object (preloaded for drag-out)
+
+  async init() {
+    await this.loadIcons();
+    this.renderAll();
+    this._setupEvents();
+  },
+
+  async loadIcons() {
+    this.icons = new Map();
+    const layout = fs.meta.desktopIcons || null;
+    // Default: Desktop folder contents + system shortcuts
+    try {
+      const entries = await fs.readdir('/Desktop');
+      const startX = 20, startY = 20;
+      const step = 96;
+      const cols = Math.max(1, Math.floor((window.innerWidth - 40) / step));
+      entries.forEach((e, i) => {
+        const path = '/Desktop/' + e.name;
+        let x = startX, y = startY + step * i;
+        if (layout && layout[path]) { x = layout[path].x; y = layout[path].y; }
+        else { x = startX + (i % cols) * step; y = startY + Math.floor(i / cols) * step; }
+        this.icons.set(path, { path, name: e.name, isDir: e.isDirectory, kind: kindOf(e.name, e.isDirectory), x, y, size: e.size, mtime: e.mtime });
+      });
+    } catch(e) { console.warn(e); }
+    // System shortcuts at leftmost column (always present, saved into layout too)
+    const shortcuts = [
+      { path: '::explorer', name: 'File Explorer', kind: 'app', appId: 'explorer', isDir: false },
+      { path: '::documents', name: 'Documents', kind: 'shortcut', target: '/Documents', isDir: true },
+      { path: '::downloads', name: 'Downloads', kind: 'shortcut', target: '/Downloads', isDir: true },
+      { path: '::settings', name: 'Settings', kind: 'app', appId: 'settings', isDir: false },
+    ];
+    shortcuts.forEach((s, i) => {
+      const x = 20, y = 20 + i * 96;
+      let iconData = layout && layout[s.path] ? layout[s.path] : { x, y };
+      this.icons.set(s.path, { ...s, x: iconData.x, y: iconData.y });
+    });
+  },
+
+  iconSvg(d) {
+    if (d.kind === 'app') {
+      const m = { explorer: I.explorer, settings: I.settings };
+      return m[d.appId] || I.file;
+    }
+    if (d.isDir) return I.folder;
+    const k = d.kind;
+    if (k === 'image') return I.image;
+    if (k === 'audio') return I.audio;
+    if (k === 'video') return I.video;
+    if (k === 'code') return I.code;
+    if (k === 'pdf') return I.pdf;
+    if (k === 'archive') return I.zip;
+    return I.file;
+  },
+
+  renderAll() {
+    const host = $('#desktop-icons');
+    host.innerHTML = '';
+    this.icons.forEach((d, path) => {
+      const icon = el('div', {
+        class: 'desk-icon',
+        'data-path': path,
+        style: { left: d.x + 'px', top: d.y + 'px' },
+        draggable: 'true'
+      });
+      icon.innerHTML = `<div class="icon-box">${this.iconSvg(d)}</div><div class="icon-label">${escapeHtml(d.name)}</div>`;
+      icon.addEventListener('click', (e) => this.onClick(e, path));
+      icon.addEventListener('dblclick', (e) => this.onDblClick(e, path));
+      icon.addEventListener('contextmenu', (e) => { e.preventDefault(); e.stopPropagation(); this.selectOnly(path); openContextMenu(e.clientX, e.clientY, iconMenuItems(path)); });
+      icon.addEventListener('dragstart', (e) => this.onIconDragStart(e, path));
+      icon.addEventListener('dragend', (e) => this.onIconDragEnd(e, path));
+      // Touch: tap to select, double-tap to open
+      let lastTap = 0;
+      icon.addEventListener('touchend', (e) => {
+        const now = Date.now();
+        if (now - lastTap < 320) { this.onDblClick(e, path); lastTap = 0; }
+        else lastTap = now;
+      });
+      host.appendChild(icon);
+      d.el = icon;
+    });
+  },
+
+  selectOnly(path) {
+    this.selected.clear();
+    this.selected.add(path);
+    $$('.desk-icon.selected').forEach(n => n.classList.remove('selected'));
+    const d = this.icons.get(path); if (d && d.el) d.el.classList.add('selected');
+  },
+  addToSelect(path) {
+    this.selected.add(path);
+    const d = this.icons.get(path); if (d && d.el) d.el.classList.add('selected');
+  },
+  clearSelect() {
+    this.selected.clear();
+    $$('.desk-icon.selected').forEach(n => n.classList.remove('selected'));
+  },
+
+  onClick(e, path) {
+    e.stopPropagation();
+    if (e.ctrlKey || e.metaKey) {
+      if (this.selected.has(path)) { this.selected.delete(path); const d = this.icons.get(path); if (d?.el) d.el.classList.remove('selected'); }
+      else this.addToSelect(path);
+    } else this.selectOnly(path);
+  },
+
+  onDblClick(e, path) {
+    const d = this.icons.get(path); if (!d) return;
+    if (d.kind === 'app') { Apps.open(d.appId); return; }
+    if (d.kind === 'shortcut') { Apps.open('explorer', { path: d.target }); return; }
+    if (d.isDir) { Apps.open('explorer', { path: d.path }); return; }
+    Apps.openForFile(d.path);
+  },
+
+  async preloadForDrag(path) {
+    const d = this.icons.get(path);
+    if (!d || d.kind === 'app' || d.kind === 'shortcut' || d.isDir) return;
+    try {
+      const buf = await fs.readFile(path);
+      const file = new File([buf], d.name, { type: mimeOf(d.name) });
+      this.dragCache.set(path, file);
+    } catch(e) { console.warn('preload failed', e); }
+  },
+
+  onIconDragStart(e, path) {
+    const d = this.icons.get(path);
+    if (!d) { e.preventDefault(); return; }
+    if (!this.selected.has(path)) this.selectOnly(path);
+    e.dataTransfer.effectAllowed = 'copyMove';
+
+    // Internal: record path + offset for desktop repositioning
+    e.dataTransfer.setData('application/x-bauhaus-icon', JSON.stringify({
+      paths: Array.from(this.selected),
+      startX: e.clientX, startY: e.clientY
+    }));
+
+    // External (file drag out): sync read cache
+    if (d.kind !== 'app' && d.kind !== 'shortcut' && !d.isDir) {
+      const file = this.dragCache.get(path);
+      if (file) {
+        try { e.dataTransfer.items.add(file); } catch(e){}
+        try {
+          const url = URL.createObjectURL(file);
+          e.dataTransfer.setData('DownloadURL', `${file.type}:${file.name}:${url}`);
+          // Delayed revoke
+          setTimeout(() => URL.revokeObjectURL(url), 8000);
+        } catch(e){}
+      }
+    }
+  },
+
+  onIconDragEnd(e, path) {
+    // Cleanup after a moment
+  },
+
+  _setupEvents() {
+    const desk = $('#desktop');
+    // preload on mouseenter
+    desk.addEventListener('mouseenter', (e) => {
+      const ic = e.target.closest('.desk-icon');
+      if (ic) this.preloadForDrag(ic.dataset.path);
+    }, true);
+
+    // Desktop drop (reposition + external file import)
+    desk.addEventListener('dragover', (e) => {
+      if (e.target.closest('.desk-icon')) return; // let icon handle it
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'copy';
+    });
+    desk.addEventListener('drop', async (e) => {
+      if (e.target.closest('.desk-icon')) return;
+      e.preventDefault();
+      const internal = e.dataTransfer.getData('application/x-bauhaus-icon');
+      if (internal) {
+        // Reposition selected icons
+        try {
+          const data = JSON.parse(internal);
+          const rect = desk.getBoundingClientRect();
+          for (const p of data.paths) {
+            const d = this.icons.get(p);
+            if (!d) continue;
+            const dx = e.clientX - data.startX;
+            const dy = e.clientY - data.startY;
+            // Snap to 8px grid
+            d.x = Math.max(10, Math.round((d.x + dx) / 8) * 8);
+            d.y = Math.max(10, Math.round((d.y + dy) / 8) * 8);
+            if (d.el) { d.el.style.left = d.x + 'px'; d.el.style.top = d.y + 'px'; }
+          }
+          this.saveLayout();
+        } catch(err) { console.warn(err); }
+        return;
+      }
+      // External files
+      if (e.dataTransfer.items && e.dataTransfer.items.length) {
+        await this._importDrop(e.dataTransfer, e.clientX, e.clientY);
+      }
+    });
+
+    // Icon-over drop (move to folder)
+    desk.addEventListener('dragover', (e) => {
+      const ic = e.target.closest('.desk-icon');
+      if (!ic) return;
+      const d = this.icons.get(ic.dataset.path);
+      if (d && (d.isDir || d.kind === 'shortcut')) { e.preventDefault(); ic.classList.add('drop-target'); }
+    });
+    desk.addEventListener('dragleave', (e) => {
+      const ic = e.target.closest('.desk-icon');
+      if (ic) ic.classList.remove('drop-target');
+    });
+    desk.addEventListener('drop', async (e) => {
+      const ic = e.target.closest('.desk-icon');
+      if (!ic) return;
+      ic.classList.remove('drop-target');
+      const d = this.icons.get(ic.dataset.path);
+      if (!d || (!d.isDir && d.kind !== 'shortcut')) return;
+      e.preventDefault();
+      const internal = e.dataTransfer.getData('application/x-bauhaus-icon');
+      const targetPath = d.kind === 'shortcut' ? d.target : d.path;
+      if (internal) {
+        try {
+          const data = JSON.parse(internal);
+          for (const p of data.paths) {
+            if (p === ic.dataset.path) continue;
+            const dd = this.icons.get(p);
+            if (!dd) continue;
+            await fs.rename(p, pathJoin(targetPath, dd.name));
+          }
+          toast('Moved', 'ok');
+          this.loadIcons().then(() => this.renderAll());
+        } catch(err) { toast('Move failed: ' + err.message, 'err'); }
+      } else if (e.dataTransfer.items) {
+        await this._importDrop(e.dataTransfer, e.clientX, e.clientY, targetPath);
+      }
+    });
+
+    // Selection rectangle
+    let selStart = null;
+    desk.addEventListener('pointerdown', (e) => {
+      const t = e.target;
+      const onIcon = !!t.closest('.desk-icon');
+      const onWallpaper = t === desk || t === $('#wallpaper-layer');
+      if (!onWallpaper || onIcon) {
+        if (!onIcon) this.clearSelect();
+        return;
+      }
+      selStart = { x: e.clientX, y: e.clientY };
+      const sr = $('#sel-rect');
+      sr.style.display = 'block';
+      sr.style.left = e.clientX + 'px'; sr.style.top = e.clientY + 'px';
+      sr.style.width = '0px'; sr.style.height = '0px';
+    });
+    window.addEventListener('pointermove', (e) => {
+      if (!selStart) return;
+      const sr = $('#sel-rect');
+      const x = Math.min(e.clientX, selStart.x), y = Math.min(e.clientY, selStart.y);
+      const w = Math.abs(e.clientX - selStart.x), h = Math.abs(e.clientY - selStart.y);
+      sr.style.left = x + 'px'; sr.style.top = y + 'px'; sr.style.width = w + 'px'; sr.style.height = h + 'px';
+      // Check intersection
+      const rect = { x, y, w, h };
+      this.icons.forEach((d, p) => {
+        if (!d.el) return;
+        const r = d.el.getBoundingClientRect();
+        const deskRect = desk.getBoundingClientRect();
+        const ir = { x: r.left - deskRect.left, y: r.top - deskRect.top, w: r.width, h: r.height };
+        if (rect.x < ir.x + ir.w && rect.x + rect.w > ir.x && rect.y < ir.y + ir.h && rect.y + rect.h > ir.y) this.addToSelect(p);
+        else { d.el.classList.remove('selected'); this.selected.delete(p); }
+      });
+    });
+    window.addEventListener('pointerup', () => {
+      if (selStart) {
+        selStart = null;
+        $('#sel-rect').style.display = 'none';
+      }
+    });
+
+    // Desktop context menu
+    desk.addEventListener('contextmenu', (e) => {
+      if (e.target.closest('.desk-icon')) return;
+      e.preventDefault();
+      openContextMenu(e.clientX, e.clientY, desktopMenuItems());
+    });
+
+    // Click empty to clear
+    desk.addEventListener('click', (e) => {
+      if (e.target === desk || e.target === $('#wallpaper-layer')) this.clearSelect();
+    });
+
+    // Global context close
+    document.addEventListener('click', () => closeContextMenu());
+    document.addEventListener('scroll', () => closeContextMenu(), true);
+  },
+
+  async _importDrop(dt, x, y, targetDir = '/Desktop') {
+    try {
+      const entries = [];
+      for (let i = 0; i < dt.items.length; i++) {
+        const item = dt.items[i];
+        let entry = null;
+        if (item.getAsEntry) entry = item.getAsEntry();
+        else if (item.webkitGetAsEntry) entry = item.webkitGetAsEntry();
+        if (entry) entries.push(entry);
+      }
+      if (entries.length) {
+        for (const entry of entries) await this._walkEntry(entry, targetDir);
+        toast('Imported ' + entries.length + ' item(s)', 'ok');
+        this.loadIcons().then(() => this.renderAll());
+        return;
+      }
+      // Fallback
+      const files = dt.files;
+      for (const f of files) {
+        const buf = await f.arrayBuffer();
+        await fs.writeFile(pathJoin(targetDir, f.name), buf);
+      }
+      toast('Imported ' + files.length + ' file(s)', 'ok');
+      this.loadIcons().then(() => this.renderAll());
+    } catch (err) { toast('Import failed: ' + err.message, 'err'); }
+  },
+
+  async _walkEntry(entry, dir) {
+    if (entry.isFile) {
+      const file = await new Promise((res, rej) => entry.file(res, rej));
+      const buf = await file.arrayBuffer();
+      await fs.writeFile(pathJoin(dir, entry.name), buf);
+    } else if (entry.isDirectory) {
+      const sub = pathJoin(dir, entry.name);
+      await fs.mkdir(sub);
+      const reader = entry.createReader();
+      const all = [];
+      let batch;
+      do {
+        batch = await new Promise((res, rej) => reader.readEntries(res, rej));
+        for (const b of batch) all.push(b);
+      } while (batch.length > 0);
+      for (const child of all) await this._walkEntry(child, sub);
+    }
+  },
+
+  saveLayout() {
+    const layout = {};
+    this.icons.forEach((d, p) => { layout[p] = { x: d.x, y: d.y }; });
+    fs.meta.desktopIcons = layout;
+    fs.saveMeta();
+  }
+};
+
+/* ───────────────────────── Context Menu ───────────────────────── */
+function openContextMenu(x, y, items) {
+  const m = $('#context-menu');
+  m.innerHTML = '';
+  for (const it of items) {
+    if (it === '-') { m.appendChild(el('div', { class: 'ctx-sep' })); continue; }
+    const btn = el('div', { class: 'ctx-item' + (it.danger ? ' danger' : '') });
+    btn.innerHTML = (it.icon || '') + '<span>' + escapeHtml(it.label) + '</span>';
+    btn.addEventListener('click', (e) => { e.stopPropagation(); closeContextMenu(); it.action(); });
+    m.appendChild(btn);
+  }
+  m.classList.add('open');
+  // Position
+  m.style.left = x + 'px'; m.style.top = y + 'px';
+  const vw = window.innerWidth, vh = window.innerHeight;
+  requestAnimationFrame(() => {
+    const r = m.getBoundingClientRect();
+    if (r.right > vw - 4) m.style.left = (vw - r.width - 4) + 'px';
+    if (r.bottom > vh - 4) m.style.top = (vh - r.height - 4) + 'px';
+  });
+}
+function closeContextMenu() { $('#context-menu').classList.remove('open'); }
+
+function desktopMenuItems() {
+  return [
+    { label: 'New Folder', icon: I.newFolder, action: async () => {
+      const name = await promptText('New folder name', 'New Folder');
+      if (!name) return;
+      await fs.mkdir('/Desktop/' + name);
+      Desktop.loadIcons().then(() => Desktop.renderAll());
+    }},
+    { label: 'New Text File', icon: I.newFile, action: async () => {
+      const name = await promptText('New file name', 'Untitled.txt');
+      if (!name) return;
+      await fs.writeFile('/Desktop/' + name, '');
+      Desktop.loadIcons().then(() => Desktop.renderAll());
+    }},
+    '-',
+    { label: 'Import Files...', icon: I.upload, action: () => importFiles('/Desktop') },
+    { label: 'Import Folder...', icon: I.folder, action: () => importFolder('/Desktop') },
+    '-',
+    { label: 'Refresh Desktop', icon: I.refresh, action: () => Desktop.loadIcons().then(() => Desktop.renderAll()) },
+    { label: 'Change Wallpaper...', icon: I.image, action: () => Apps.open('settings', { tab: 'appearance' }) },
+    '-',
+    { label: 'Toggle Fullscreen', icon: I.max, action: () => {
+      if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(()=>{});
+      else document.exitFullscreen().catch(()=>{});
+    }}
+  ];
+}
+
+function iconMenuItems(path) {
+  const d = Desktop.icons.get(path);
+  if (!d) return [];
+  if (d.kind === 'app' || d.kind === 'shortcut') {
+    return [
+      { label: 'Open', icon: I.play, action: () => Desktop.onDblClick({}, path) },
+    ];
+  }
+  const items = [
+    { label: 'Open', icon: I.play, action: () => Desktop.onDblClick({}, path) },
+  ];
+  if (!d.isDir) {
+    items.push({ label: 'Open with Notepad', icon: I.notepad, action: () => Apps.open('notepad', { path }) });
+    items.push({ label: 'Download', icon: I.download, action: () => downloadFile(path) });
+  }
+  items.push('-');
+  items.push({ label: 'Rename', icon: I.rename, action: async () => {
+    const n = await promptText('Rename', d.name);
+    if (!n || n === d.name) return;
+    await fs.rename(path, pathJoin(pathDir(path), n));
+    Desktop.loadIcons().then(() => Desktop.renderAll());
+  }});
+  items.push({ label: 'Delete', icon: I.trash, danger: true, action: async () => {
+    if (!(await confirmDlg('Delete', 'Delete "' + d.name + '"?'))) return;
+    await fs.unlink(path);
+    Desktop.loadIcons().then(() => Desktop.renderAll());
+  }});
+  return items;
+}
+
+async function downloadFile(path) {
+  try {
+    const buf = await fs.readFile(path);
+    const name = pathBase(path);
+    const blob = new Blob([buf], { type: mimeOf(name) });
+    const url = URL.createObjectURL(blob);
+    const a = el('a', { href: url, download: name });
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+  } catch(e) { toast('Download failed: ' + e.message, 'err'); }
+}
+
+async function importFiles(targetDir) {
+  const inp = el('input', { type: 'file', multiple: 'true' });
+  inp.addEventListener('change', async () => {
+    for (const f of inp.files) {
+      const buf = await f.arrayBuffer();
+      await fs.writeFile(pathJoin(targetDir, f.name), buf);
+    }
+    toast('Imported ' + inp.files.length + ' file(s)', 'ok');
+    Desktop.loadIcons().then(() => Desktop.renderAll());
+  });
+  inp.click();
+}
+async function importFolder(targetDir) {
+  const inp = el('input', { type: 'file', webkitdirectory: 'true', directory: 'true' });
+  inp.setAttribute('webkitdirectory', '');
+  inp.setAttribute('directory', '');
+  inp.addEventListener('change', async () => {
+    for (const f of inp.files) {
+      const buf = await f.arrayBuffer();
+      const rel = f.webkitRelativePath || f.name;
+      await fs.writeFile(pathJoin(targetDir, rel), buf);
+    }
+    toast('Imported folder', 'ok');
+    Desktop.loadIcons().then(() => Desktop.renderAll());
+  });
+  inp.click();
+}
+
+/* ───────────────────────── Start Menu ───────────────────────── */
+function setupStartMenu() {
+  const grid = $('#start-menu-grid');
+  const apps = [
+    { id: 'explorer', name: 'Explorer', icon: I.explorer },
+    { id: 'notepad', name: 'Notepad', icon: I.notepad },
+    { id: 'html', name: 'HTML Studio', icon: I.html },
+    { id: 'spreadsheet', name: 'Table', icon: I.table },
+    { id: 'calc', name: 'Calculator', icon: I.calc },
+    { id: 'paint', name: 'Paint', icon: I.paint },
+    { id: 'browser', name: 'Browser', icon: I.browser },
+    { id: 'settings', name: 'Settings', icon: I.settings },
+    { id: 'about', name: 'About', icon: I.info },
+  ];
+  for (const a of apps) {
+    const btn = el('div', { class: 'start-app' });
+    btn.innerHTML = a.icon + '<div class="name">' + a.name + '</div>';
+    btn.addEventListener('click', () => {
+      Apps.open(a.id);
+      $('#start-menu').classList.remove('open');
+    });
+    grid.appendChild(btn);
+  }
+  $('#start-btn').addEventListener('click', (e) => {
+    e.stopPropagation();
+    $('#start-menu').classList.toggle('open');
+  });
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('#start-menu') && !e.target.closest('#start-btn')) $('#start-menu').classList.remove('open');
+  });
+}
+
+/* ───────────────────────── Built-in Apps ───────────────────────── */
+const Apps = {
+  open(id, opts = {}) {
+    const app = this.registry[id];
+    if (!app) { toast('Unknown app: ' + id, 'err'); return; }
+    const content = el('div');
+    content.style.cssText = 'flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden;';
+    const win = WM.open({
+      title: app.title || id,
+      icon: app.icon || I.file,
+      width: app.width, height: app.height,
+      content, appId: id,
+      onReady: (api) => {
+        try {
+          const result = app.init(api, opts);
+          if (result && typeof result.catch === 'function') {
+            result.catch(e => { console.error(e); toast('App error: ' + e.message, 'err'); });
+          }
+        } catch(e) { console.error(e); toast('App error: ' + e.message, 'err'); }
+      }
+    });
+  },
+
+  openForFile(path) {
+    const ext = extOf(path);
+    const kind = kindOf(pathBase(path), false);
+    if (['image'].includes(kind)) return this.open('imageviewer', { path });
+    if (['audio','video'].includes(kind)) return this.open('mediaplayer', { path });
+    if (kind === 'pdf') return this.open('pdfviewer', { path });
+    if (ext === 'html' || ext === 'htm') return this.open('html', { path });
+    if (ext === 'csv' || ext === 'tsv') return this.open('spreadsheet', { path });
+    if (['zip','gz','tar','tgz'].includes(ext)) return this.open('archive', { path });
+    if (['text','code'].includes(kind) || ['txt','md','log','yaml','yml','json','xml','css','js','mjs'].includes(ext)) return this.open('notepad', { path });
+    // Fallback: open as text
+    this.open('notepad', { path });
+  },
+
+  registry: {}
+};
+
+/* ── File Explorer ── */
+Apps.registry.explorer = {
+  title: 'File Explorer',
+  icon: I.explorer,
+  width: 860, height: 560,
+  init(api, opts) {
+    const state = {
+      path: opts.path || '/',
+      history: [opts.path || '/'],
+      historyIdx: 0,
+      sort: { by: 'name', dir: 1 },
+      selected: new Set(),
+      clipboard: null, // { paths, op:'copy'|'cut' }
+      search: ''
+    };
+    api.body.innerHTML = `
+      <div class="app-toolbar">
+        <button class="tb-btn" data-act="back">${I.back}</button>
+        <button class="tb-btn" data-act="fwd">${I.fwd}</button>
+        <button class="tb-btn" data-act="up">${I.up}</button>
+        <button class="tb-btn" data-act="home">${I.home}</button>
+        <button class="tb-btn" data-act="refresh">${I.refresh}</button>
+        <div class="tb-sep"></div>
+        <button class="tb-btn" data-act="newfolder">${I.newFolder}<span>New Folder</span></button>
+        <button class="tb-btn" data-act="newfile">${I.newFile}<span>New File</span></button>
+        <button class="tb-btn" data-act="upload">${I.upload}<span>Upload</span></button>
+        <div class="tb-sep"></div>
+        <button class="tb-btn" data-act="paste" style="opacity:.5">${I.paste}</button>
+        <div style="flex:1"></div>
+        <input class="tb-input" placeholder="Search..." data-act="search" style="width:180px"/>
+      </div>
+      <div class="fe-root">
+        <div class="fe-sidebar" id="fe-side"></div>
+        <div class="fe-main">
+          <div class="fe-breadcrumb" id="fe-bc"></div>
+          <div class="fe-list-wrap" id="fe-wrap">
+            <table class="fe-list" id="fe-list">
+              <thead><tr>
+                <th data-sort="name" style="width:55%">Name</th>
+                <th data-sort="mtime" style="width:20%">Modified</th>
+                <th data-sort="type" style="width:15%">Type</th>
+                <th data-sort="size" style="width:10%">Size</th>
+              </tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <div class="fe-status"><span id="fe-status-l">—</span><span id="fe-status-r">—</span></div>
+        </div>
+      </div>`;
+    const render = async () => {
+      renderSidebar();
+      renderBreadcrumb();
+      await renderList();
+    };
+    const renderSidebar = () => {
+      const side = api.body.querySelector('#fe-side');
+      side.innerHTML = '';
+      const groups = [
+        { title: 'Quick', items: [
+          { label: 'Root', path: '/', icon: I.disk },
+          { label: 'Desktop', path: '/Desktop', icon: I.home },
+          { label: 'Documents', path: '/Documents', icon: I.folder },
+          { label: 'Pictures', path: '/Pictures', icon: I.image },
+          { label: 'Music', path: '/Music', icon: I.audio },
+          { label: 'Downloads', path: '/Downloads', icon: I.download },
+        ]},
+        { title: 'Mounts', items: fs.mountRecords.map(m => ({ label: m.name, path: m.path, icon: I.mount })) },
+      ];
+      for (const g of groups) {
+        side.appendChild(el('div', { class: 'fe-sb-group-title' }, g.title));
+        for (const it of g.items) {
+          const e = el('div', { class: 'fe-sb-item' + (state.path === it.path ? ' active' : '') });
+          e.innerHTML = it.icon + '<span>' + escapeHtml(it.label) + '</span>';
+          e.addEventListener('click', async () => {
+            // If it's a mount and handle is missing, re-prompt
+            if (it.path.startsWith('/mnt/local/') && !fs.mounts.has(it.path)) {
+              try {
+                const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
+                fs.mounts.set(it.path, handle);
+                toast('Re-authorized: ' + it.label, 'ok');
+              } catch(err) { if (err.name !== 'AbortError') toast('Authorization failed', 'err'); return; }
+            }
+            navTo(it.path);
+          });
+          side.appendChild(e);
+        }
+      }
+      if (fs.mountRecords.length === 0) {
+        const p = el('div', { style: { padding: '8px 12px', fontSize: '10px', opacity: '.6', fontFamily: 'var(--font-mono)' } }, 'No mounts. Use Settings → Storage to mount local folders.');
+        side.appendChild(p);
+      }
+    };
+    const renderBreadcrumb = () => {
+      const bc = api.body.querySelector('#fe-bc');
+      bc.innerHTML = '';
+      const segs = state.path.split('/').filter(Boolean);
+      const home = el('span', { class: 'bc-seg' }, '/');
+      home.addEventListener('click', () => navTo('/'));
+      bc.appendChild(home);
+      let acc = '';
+      for (const s of segs) {
+        acc += '/' + s;
+        bc.appendChild(el('span', { class: 'bc-sep' }, ' / '));
+        const seg = el('span', { class: 'bc-seg' }, s);
+        const p = acc;
+        seg.addEventListener('click', () => navTo(p));
+        bc.appendChild(seg);
+      }
+    };
+    const renderList = async () => {
+      const tbody = api.body.querySelector('#fe-list tbody');
+      tbody.innerHTML = '';
+      let entries;
+      try { entries = await fs.readdir(state.path); }
+      catch(e) {
+        tbody.innerHTML = `<tr><td colspan="4" style="padding:20px;color:var(--red)">Error: ${escapeHtml(e.message)}</td></tr>`;
+        return;
+      }
+      // Filter
+      if (state.search) {
+        const q = state.search.toLowerCase();
+        entries = entries.filter(e => e.name.toLowerCase().includes(q));
+      }
+      // Sort
+      const { by, dir } = state.sort;
+      entries.sort((a, b) => {
+        // folders first
+        if (a.isDirectory !== b.isDirectory) return a.isDirectory ? -1 : 1;
+        let va = a[by], vb = b[by];
+        if (by === 'type') { va = extOf(a.name); vb = extOf(b.name); }
+        if (by === 'name') { va = a.name.toLowerCase(); vb = b.name.toLowerCase(); }
+        if (va < vb) return -dir; if (va > vb) return dir; return 0;
+      });
+      for (const e of entries) {
+        const tr = el('tr');
+        const p = pathJoin(state.path, e.name);
+        if (state.selected.has(p)) tr.classList.add('selected');
+        const nameCell = el('td');
+        const row = el('div', { class: 'fe-row' });
+        row.innerHTML = iconForEntry(e) + '<span>' + escapeHtml(e.name) + '</span>';
+        nameCell.appendChild(row);
+        tr.appendChild(nameCell);
+        tr.appendChild(el('td', {}, fmtDate(e.mtime)));
+        tr.appendChild(el('td', {}, e.isDirectory ? 'Folder' : (extOf(e.name).toUpperCase() || 'File')));
+        tr.appendChild(el('td', {}, e.isDirectory ? '—' : fmtSize(e.size)));
+        tr.addEventListener('click', (ev) => {
+          if (ev.ctrlKey || ev.metaKey) {
+            if (state.selected.has(p)) { state.selected.delete(p); tr.classList.remove('selected'); }
+            else { state.selected.add(p); tr.classList.add('selected'); }
+          } else {
+            state.selected.clear();
+            api.body.querySelectorAll('.fe-list tbody tr.selected').forEach(n => n.classList.remove('selected'));
+            state.selected.add(p);
+            tr.classList.add('selected');
+          }
+          updateStatus();
+        });
+        tr.addEventListener('dblclick', () => openEntry(e));
+        tr.addEventListener('contextmenu', (ev) => {
+          ev.preventDefault();
+          if (!state.selected.has(p)) { state.selected.clear(); state.selected.add(p); api.body.querySelectorAll('.fe-list tbody tr.selected').forEach(n => n.classList.remove('selected')); tr.classList.add('selected'); }
+          openContextMenu(ev.clientX, ev.clientY, feMenuItems(p, e));
+        });
+        tr.draggable = true;
+        tr.addEventListener('dragstart', (ev) => {
+          ev.dataTransfer.effectAllowed = 'copyMove';
+          const paths = Array.from(state.selected);
+          ev.dataTransfer.setData('application/x-bauhaus-icon', JSON.stringify({ paths, startX: ev.clientX, startY: ev.clientY, source: 'fe' }));
+          // File drag-out for single file
+          if (!e.isDirectory && paths.length === 1) {
+            // preload async but drag-out may fail — best-effort via DownloadURL
+            fs.readFile(p).then(buf => {
+              const file = new File([buf], e.name, { type: mimeOf(e.name) });
+              const url = URL.createObjectURL(file);
+              try { ev.dataTransfer.setData('DownloadURL', `${file.type}:${file.name}:${url}`); } catch(err){}
+              setTimeout(() => URL.revokeObjectURL(url), 8000);
+            }).catch(()=>{});
+          }
+        });
+        // Drop target (move into folder)
+        if (e.isDirectory) {
+          tr.addEventListener('dragover', (ev) => { ev.preventDefault(); tr.style.background = 'var(--blue)'; tr.style.color = 'var(--paper)'; });
+          tr.addEventListener('dragleave', () => { tr.style.background = ''; tr.style.color = ''; });
+          tr.addEventListener('drop', async (ev) => {
+            ev.preventDefault(); tr.style.background = ''; tr.style.color = '';
+            const data = ev.dataTransfer.getData('application/x-bauhaus-icon');
+            if (data) {
+              try {
+                const d = JSON.parse(data);
+                for (const sp of d.paths) {
+                  if (sp === p || p.startsWith(sp + '/')) continue;
+                  await fs.rename(sp, pathJoin(p, pathBase(sp)));
+                }
+                toast('Moved', 'ok'); render(); Desktop.loadIcons().then(() => Desktop.renderAll());
+              } catch(err) { toast(err.message, 'err'); }
+            }
+          });
+        }
+        tbody.appendChild(tr);
+      }
+      updateStatus();
+    };
+    const updateStatus = () => {
+      const n = api.body.querySelectorAll('.fe-list tbody tr').length;
+      const s = state.selected.size;
+      api.body.querySelector('#fe-status-l').textContent = `${n} items · ${s} selected`;
+      api.body.querySelector('#fe-status-r').textContent = state.path;
+    };
+    const iconForEntry = (e) => {
+      if (e.isDirectory) return I.folder;
+      return iconForFile(e.name);
+    };
+    const iconForFile = (name) => {
+      const k = kindOf(name, false);
+      if (k === 'image') return I.image;
+      if (k === 'audio') return I.audio;
+      if (k === 'video') return I.video;
+      if (k === 'pdf') return I.pdf;
+      if (k === 'archive') return I.zip;
+      if (k === 'code' || extOf(name) === 'html' || extOf(name) === 'htm') return I.code;
+      if (k === 'text') return I.fileText;
+      return I.file;
+    };
+    const openEntry = (e) => {
+      const p = pathJoin(state.path, e.name);
+      if (e.isDirectory) navTo(p);
+      else Apps.openForFile(p);
+    };
+    const navTo = (p) => {
+      p = pathNorm(p);
+      if (state.history[state.historyIdx] !== p) {
+        state.history = state.history.slice(0, state.historyIdx + 1);
+        state.history.push(p);
+        state.historyIdx = state.history.length - 1;
+      }
+      state.path = p;
+      state.selected.clear();
+      api.setTitle('Explorer — ' + p);
+      render();
+    };
+
+    // Toolbar actions
+    api.body.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-act]');
+      if (!btn) return;
+      const act = btn.dataset.act;
+      if (act === 'back' && state.historyIdx > 0) { state.historyIdx--; state.path = state.history[state.historyIdx]; state.selected.clear(); render(); }
+      else if (act === 'fwd' && state.historyIdx < state.history.length - 1) { state.historyIdx++; state.path = state.history[state.historyIdx]; state.selected.clear(); render(); }
+      else if (act === 'up') navTo(pathDir(state.path));
+      else if (act === 'home') navTo('/');
+      else if (act === 'refresh') render();
+      else if (act === 'newfolder') (async () => {
+        const n = await promptText('New folder', 'New Folder'); if (!n) return;
+        await fs.mkdir(pathJoin(state.path, n)); render();
+      })();
+      else if (act === 'newfile') (async () => {
+        const n = await promptText('New file', 'Untitled.txt'); if (!n) return;
+        await fs.writeFile(pathJoin(state.path, n), ''); render();
+      })();
+      else if (act === 'upload') importFiles(state.path).then(() => render());
+      else if (act === 'paste') doPaste();
+    });
+    const searchInp = api.body.querySelector('[data-act="search"]');
+    searchInp.addEventListener('input', () => { state.search = searchInp.value; renderList(); });
+    // Sort headers
+    api.body.querySelectorAll('.fe-list thead th[data-sort]').forEach(th => {
+      th.addEventListener('click', () => {
+        const by = th.dataset.sort;
+        if (state.sort.by === by) state.sort.dir = -state.sort.dir;
+        else { state.sort.by = by; state.sort.dir = 1; }
+        renderList();
+      });
+    });
+    // Drop on list-wrap (import files into current dir)
+    const wrap = api.body.querySelector('#fe-wrap');
+    wrap.addEventListener('dragover', (e) => {
+      if (e.target.closest('tr[data-dir]')) return;
+      e.preventDefault();
+    });
+    wrap.addEventListener('drop', async (e) => {
+      if (e.target.closest('tr')) return;
+      e.preventDefault();
+      if (e.dataTransfer.items && e.dataTransfer.items.length) {
+        await Desktop._importDrop(e.dataTransfer, e.clientX, e.clientY, state.path);
+        render();
+      }
+    });
+
+    const doPaste = async () => {
+      if (!state.clipboard) return;
+      for (const p of state.clipboard.paths) {
+        const target = pathJoin(state.path, pathBase(p));
+        try {
+          if (state.clipboard.op === 'cut') await fs.rename(p, target);
+          else await fs.copy(p, target);
+        } catch(e) { toast('Paste failed: ' + e.message, 'err'); }
+      }
+      if (state.clipboard.op === 'cut') state.clipboard = null;
+      updatePasteBtn();
+      render();
+      Desktop.loadIcons().then(() => Desktop.renderAll());
+    };
+    const updatePasteBtn = () => {
+      const btn = api.body.querySelector('[data-act="paste"]');
+      btn.style.opacity = state.clipboard ? '1' : '.5';
+    };
+    // Expose clipboard setter via window for cross-window
+    window._feSetClipboard = (c) => { state.clipboard = c; updatePasteBtn(); };
+
+    function feMenuItems(p, e) {
+      const items = [
+        { label: 'Open', icon: I.play, action: () => openEntry(e) },
+      ];
+      if (!e.isDirectory) {
+        items.push({ label: 'Open with Notepad', icon: I.notepad, action: () => Apps.open('notepad', { path: p }) });
+        items.push({ label: 'Download', icon: I.download, action: () => downloadFile(p) });
+      }
+      items.push('-');
+      items.push({ label: 'Copy', icon: I.copy, action: () => { window._feSetClipboard({ paths: Array.from(state.selected), op: 'copy' }); toast('Copied'); }});
+      items.push({ label: 'Cut', icon: I.cut, action: () => { window._feSetClipboard({ paths: Array.from(state.selected), op: 'cut' }); toast('Cut'); }});
+      if (e.isDirectory) items.push({ label: 'Paste Into', icon: I.paste, action: () => { state.path = p; doPaste(); } });
+      items.push('-');
+      items.push({ label: 'Rename', icon: I.rename, action: async () => {
+        const n = await promptText('Rename', e.name); if (!n) return;
+        await fs.rename(p, pathJoin(state.path, n)); render();
+        Desktop.loadIcons().then(() => Desktop.renderAll());
+      }});
+      items.push({ label: 'Delete', icon: I.trash, danger: true, action: async () => {
+        if (!(await confirmDlg('Delete', 'Delete "' + e.name + '"?'))) return;
+        await fs.unlink(p); render();
+        Desktop.loadIcons().then(() => Desktop.renderAll());
+      }});
+      items.push('-');
+      items.push({ label: 'Info', icon: I.info, action: () => showInfo(p, e) });
+      return items;
+    }
+    async function showInfo(p, e) {
+      let sizeStr = e.isDirectory ? 'Folder' : fmtSize(e.size);
+      if (e.isDirectory) {
+        let count = 0, total = 0;
+        const walk = async (d) => {
+          const es = await fs.readdir(d);
+          for (const c of es) {
+            count++;
+            if (c.isDirectory) await walk(pathJoin(d, c.name));
+            else total += c.size || 0;
+          }
+        };
+        try { await walk(p); sizeStr = `Folder · ${count} items · ${fmtSize(total)}`; } catch {}
+      }
+      modal({ title: 'Info', body: `<p><b>${escapeHtml(e.name)}</b></p><p>Path: <code>${escapeHtml(p)}</code></p><p>${sizeStr}</p><p>Modified: ${fmtDate(e.mtime)}</p>`, cancel: '' });
+    }
+
+    render();
+  }
+};
+
+/* ── Notepad ── */
+Apps.registry.notepad = {
+  title: 'Notepad',
+  icon: I.notepad,
+  width: 700, height: 500,
+  init(api, opts) {
+    api.body.innerHTML = `
+      <div class="app-toolbar">
+        <button class="tb-btn" data-act="open">${I.folder}<span>Open</span></button>
+        <button class="tb-btn primary" data-act="save">${I.save}<span>Save</span></button>
+        <button class="tb-btn" data-act="saveas">${I.save}<span>Save As</span></button>
+        <div class="tb-sep"></div>
+        <button class="tb-btn" data-act="download">${I.download}<span>Export</span></button>
+        <div style="flex:1"></div>
+        <span class="tb-input" id="np-path" style="background:var(--paper-2);min-width:120px">untitled</span>
+      </div>
+      <div class="np-root">
+        <textarea class="np-editor" id="np-editor" spellcheck="false"></textarea>
+        <div class="np-status"><span id="np-stat">0 chars · 0 lines</span><span id="np-dirty"></span></div>
+      </div>`;
+    const editor = api.body.querySelector('#np-editor');
+    const pathEl = api.body.querySelector('#np-path');
+    let currentPath = opts.path || null;
+    let dirty = false;
+    const setDirty = (d) => { dirty = d; api.body.querySelector('#np-dirty').textContent = d ? '● UNSAVED' : '✓ Saved'; };
+
+    const load = async (p) => {
+      try {
+        const txt = await fs.readFileText(p);
+        editor.value = txt;
+        currentPath = p;
+        pathEl.textContent = p;
+        api.setTitle('Notepad — ' + pathBase(p));
+        setDirty(false);
+        updateStat();
+      } catch(e) { toast('Open failed: ' + e.message, 'err'); }
+    };
+    const save = async () => {
+      if (!currentPath) return saveAs();
+      await fs.writeFile(currentPath, editor.value);
+      setDirty(false);
+      toast('Saved', 'ok');
+    };
+    const saveAs = async () => {
+      const name = await promptText('Save as', currentPath ? pathBase(currentPath) : 'Untitled.txt');
+      if (!name) return;
+      const p = pathJoin(pathDir(currentPath || '/Documents'), name);
+      await fs.writeFile(p, editor.value);
+      currentPath = p; pathEl.textContent = p;
+      api.setTitle('Notepad — ' + name);
+      setDirty(false);
+      toast('Saved', 'ok');
+    };
+    const updateStat = () => {
+      const v = editor.value;
+      api.body.querySelector('#np-stat').textContent = `${v.length} chars · ${v.split('\n').length} lines`;
+    };
+    editor.addEventListener('input', () => { setDirty(true); updateStat(); });
+    api.body.addEventListener('click', (e) => {
+      const a = e.target.closest('[data-act]'); if (!a) return;
+      const act = a.dataset.act;
+      if (act === 'save') save();
+      else if (act === 'saveas') saveAs();
+      else if (act === 'open') openFilePicker(load);
+      else if (act === 'download') {
+        const blob = new Blob([editor.value], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = el('a', { href: url, download: currentPath ? pathBase(currentPath) : 'untitled.txt' });
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
+      }
+    });
+    if (opts.path) load(opts.path);
+    else setDirty(false);
+  }
+};
+
+async function openFilePicker(cb) {
+  const entries = await fs.readdir('/');
+  const body = el('div');
+  const browse = el('div', { style: { maxHeight: '300px', overflow: 'auto', border: '2px solid var(--ink)', padding: '4px' } });
+  let selectedPath = null;
+  const render = async (dir) => {
+    browse.innerHTML = '';
+    const list = await fs.readdir(dir);
+    if (dir !== '/') {
+      const up = el('div', { style: { padding: '4px 8px', cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: '11px' } }, '../ (up)');
+      up.addEventListener('click', () => render(pathDir(dir)));
+      browse.appendChild(up);
+    }
+    for (const e of list) {
+      const row = el('div', { style: { padding: '4px 8px', cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: '11px', display: 'flex', gap: '6px', alignItems: 'center' } });
+      row.innerHTML = (e.isDirectory ? I.folder : I.file) + ' ' + escapeHtml(e.name);
+      row.addEventListener('click', () => {
+        if (e.isDirectory) render(pathJoin(dir, e.name));
+        else { selectedPath = pathJoin(dir, e.name); browse.querySelectorAll('div').forEach(n => n.style.background = ''); row.style.background = 'var(--yellow)'; }
+      });
+      row.addEventListener('dblclick', () => {
+        if (!e.isDirectory) { selectedPath = pathJoin(dir, e.name); cb(selectedPath); bg.remove(); }
+      });
+      browse.appendChild(row);
+    }
+    pathLabel.textContent = dir;
+  };
+  const pathLabel = el('div', { style: { fontFamily: 'var(--font-mono)', fontSize: '10px', marginBottom: '6px', opacity: '.7' } });
+  body.appendChild(pathLabel);
+  body.appendChild(browse);
+  render('/');
+  const bg = await modal({ title: 'Open File', body, onOk: () => { if (selectedPath) { cb(selectedPath); return true; } toast('Select a file', 'err'); return false; } });
+}
+
+/* ── HTML Studio ── */
+Apps.registry.html = {
+  title: 'HTML Studio',
+  icon: I.html,
+  width: 900, height: 560,
+  init(api, opts) {
+    api.body.innerHTML = `
+      <div class="app-toolbar">
+        <button class="tb-btn" data-act="open">${I.folder}</button>
+        <button class="tb-btn primary" data-act="save">${I.save}</button>
+        <div class="tb-sep"></div>
+        <button class="tb-btn" data-act="refresh">${I.refresh}<span>Refresh Preview</span></button>
+        <button class="tb-btn" data-act="browse">${I.browser}<span>Open in Browser</span></button>
+        <div style="flex:1"></div>
+        <span class="tb-input" id="he-path" style="background:var(--paper-2)">untitled.html</span>
+      </div>
+      <div class="he-root">
+        <textarea class="he-editor" id="he-edit" spellcheck="false" placeholder="&lt;!DOCTYPE html&gt;..."></textarea>
+        <iframe class="he-preview" id="he-prev" sandbox="allow-scripts allow-forms allow-same-origin"></iframe>
+      </div>`;
+    const editor = api.body.querySelector('#he-edit');
+    const prev = api.body.querySelector('#he-prev');
+    const pathEl = api.body.querySelector('#he-path');
+    let currentPath = opts.path || null;
+    let timer = null;
+    const refresh = () => {
+      const blob = new Blob([editor.value], { type: 'text/html' });
+      prev.src = URL.createObjectURL(blob);
+    };
+    editor.addEventListener('input', () => {
+      clearTimeout(timer);
+      timer = setTimeout(refresh, 400);
+    });
+    const load = async (p) => {
+      const txt = await fs.readFileText(p);
+      editor.value = txt;
+      currentPath = p;
+      pathEl.textContent = p;
+      api.setTitle('HTML — ' + pathBase(p));
+      refresh();
+    };
+    api.body.addEventListener('click', async (e) => {
+      const a = e.target.closest('[data-act]'); if (!a) return;
+      const act = a.dataset.act;
+      if (act === 'open') openFilePicker(load);
+      else if (act === 'save') {
+        if (!currentPath) {
+          const n = await promptText('Save as', 'page.html'); if (!n) return;
+          currentPath = pathJoin('/Documents', n);
+        }
+        await fs.writeFile(currentPath, editor.value);
+        toast('Saved', 'ok');
+      }
+      else if (act === 'refresh') refresh();
+      else if (act === 'browse') {
+        const blob = new Blob([editor.value], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        Apps.open('browser', { url, title: currentPath ? pathBase(currentPath) : 'preview' });
+      }
+    });
+    if (opts.path) load(opts.path);
+    else {
+      editor.value = `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>Hello</title>
+<style>body{font-family:system-ui;padding:40px;background:#E63946;color:white}</style>
+</head>
+<body>
+<h1>Hello from BAUHAUS/OS</h1>
+<p>Start editing to see live preview.</p>
+</body></html>`;
+      refresh();
+    }
+  }
+};
+
+/* ── Spreadsheet ── */
+Apps.registry.spreadsheet = {
+  title: 'Table',
+  icon: I.table,
+  width: 760, height: 500,
+  init(api, opts) {
+    api.body.innerHTML = `
+      <div class="app-toolbar">
+        <button class="tb-btn" data-act="open">${I.folder}</button>
+        <button class="tb-btn primary" data-act="save">${I.save}</button>
+        <div class="tb-sep"></div>
+        <button class="tb-btn" data-act="view-table">Table View</button>
+        <button class="tb-btn" data-act="view-text">Text View</button>
+        <div style="flex:1"></div>
+        <span class="tb-input" id="ss-path" style="background:var(--paper-2)">untitled.csv</span>
+      </div>
+      <div class="ss-root">
+        <div class="ss-view" id="ss-table-view"></div>
+        <textarea class="ss-text" id="ss-text"></textarea>
+      </div>`;
+    const tableWrap = api.body.querySelector('#ss-table-view');
+    const textArea = api.body.querySelector('#ss-text');
+    const pathEl = api.body.querySelector('#ss-path');
+    let currentPath = opts.path || null;
+    let delim = ',';
+    let mode = 'table';
+
+    const parse = (txt, d) => {
+      const rows = [];
+      const lines = txt.split(/\r?\n/);
+      for (const line of lines) {
+        if (!line && lines.indexOf(line) === lines.length - 1) continue;
+        const row = [];
+        let cur = '', inQ = false;
+        for (let i = 0; i < line.length; i++) {
+          const c = line[i];
+          if (inQ) {
+            if (c === '"' && line[i+1] === '"') { cur += '"'; i++; }
+            else if (c === '"') inQ = false;
+            else cur += c;
+          } else {
+            if (c === '"') inQ = true;
+            else if (c === d) { row.push(cur); cur = ''; }
+            else cur += c;
+          }
+        }
+        row.push(cur);
+        rows.push(row);
+      }
+      return rows;
+    };
+    const render = () => {
+      if (mode === 'text') { tableWrap.style.display = 'none'; textArea.style.display = 'block'; return; }
+      tableWrap.style.display = 'block'; textArea.style.display = 'none';
+      const rows = parse(textArea.value, delim);
+      if (!rows.length) { tableWrap.innerHTML = '<p style="padding:20px">Empty</p>'; return; }
+      const table = el('table', { class: 'ss-table' });
+      const thead = el('thead');
+      const trh = el('tr');
+      for (const h of (rows[0] || [])) trh.appendChild(el('th', {}, h));
+      thead.appendChild(trh);
+      table.appendChild(thead);
+      const tbody = el('tbody');
+      for (let i = 1; i < rows.length; i++) {
+        const tr = el('tr');
+        for (const c of rows[i]) tr.appendChild(el('td', {}, c));
+        tbody.appendChild(tr);
+      }
+      table.appendChild(tbody);
+      tableWrap.innerHTML = '';
+      tableWrap.appendChild(table);
+    };
+    const load = async (p) => {
+      const txt = await fs.readFileText(p);
+      textArea.value = txt;
+      currentPath = p;
+      delim = extOf(p) === 'tsv' ? '\t' : ',';
+      pathEl.textContent = p;
+      api.setTitle('Table — ' + pathBase(p));
+      render();
+    };
+    api.body.addEventListener('click', async (e) => {
+      const a = e.target.closest('[data-act]'); if (!a) return;
+      const act = a.dataset.act;
+      if (act === 'open') openFilePicker(load);
+      else if (act === 'save') {
+        if (!currentPath) {
+          const n = await promptText('Save as', 'data.csv'); if (!n) return;
+          currentPath = pathJoin('/Documents', n); delim = extOf(n) === 'tsv' ? '\t' : ',';
+        }
+        await fs.writeFile(currentPath, textArea.value);
+        toast('Saved', 'ok');
+      }
+      else if (act === 'view-table') { mode = 'table'; render(); }
+      else if (act === 'view-text') { mode = 'text'; render(); }
+    });
+    if (opts.path) load(opts.path);
+    else {
+      textArea.value = 'Name,Age,City\nAda,36,London\nAlan,41,Manchester\nGrace,85,Arlington';
+      render();
+    }
+  }
+};
+
+/* ── Calculator ── */
+Apps.registry.calc = {
+  title: 'Calculator',
+  icon: I.calc,
+  width: 320, height: 460,
+  init(api) {
+    api.body.innerHTML = `
+      <div class="calc-root">
+        <div class="calc-display">
+          <div class="expr" id="c-expr"></div>
+          <div id="c-val">0</div>
+        </div>
+        <div class="calc-grid">
+          <button class="calc-btn clr" data-k="C">C</button>
+          <button class="calc-btn fn" data-k="±">±</button>
+          <button class="calc-btn fn" data-k="%">%</button>
+          <button class="calc-btn op" data-k="/">÷</button>
+          <button class="calc-btn" data-k="7">7</button>
+          <button class="calc-btn" data-k="8">8</button>
+          <button class="calc-btn" data-k="9">9</button>
+          <button class="calc-btn op" data-k="*">×</button>
+          <button class="calc-btn" data-k="4">4</button>
+          <button class="calc-btn" data-k="5">5</button>
+          <button class="calc-btn" data-k="6">6</button>
+          <button class="calc-btn op" data-k="-">−</button>
+          <button class="calc-btn" data-k="1">1</button>
+          <button class="calc-btn" data-k="2">2</button>
+          <button class="calc-btn" data-k="3">3</button>
+          <button class="calc-btn op" data-k="+">+</button>
+          <button class="calc-btn" data-k="0" style="grid-column:span 2">0</button>
+          <button class="calc-btn" data-k=".">.</button>
+          <button class="calc-btn eq" data-k="=" style="grid-row:span 1">=</button>
+        </div>
+      </div>`;
+    const valEl = api.body.querySelector('#c-val');
+    const exprEl = api.body.querySelector('#c-expr');
+    let expr = '', val = '0', lastOp = false;
+    const update = () => { valEl.textContent = val; exprEl.textContent = expr; };
+    const calc = () => {
+      try {
+        // Safe eval: only digits, operators, parens, dot
+        const safe = expr.replace(/[^0-9+\-*/().]/g, '');
+        if (!safe) return '0';
+        const r = Function('"use strict";return (' + safe + ')')();
+        if (!isFinite(r)) return 'Err';
+        return String(+r.toFixed(10));
+      } catch { return 'Err'; }
+    };
+    api.body.querySelectorAll('.calc-btn').forEach(b => {
+      b.addEventListener('click', () => {
+        const k = b.dataset.k;
+        if (k === 'C') { expr = ''; val = '0'; lastOp = false; }
+        else if (k === '±') { val = val.startsWith('-') ? val.slice(1) : '-' + val; }
+        else if (k === '%') { val = String(parseFloat(val) / 100); }
+        else if (k === '=') {
+          const full = expr + val;
+          val = calc();
+          expr = '';
+          lastOp = true;
+        }
+        else if (['+','-','*','/'].includes(k)) {
+          expr += val + k;
+          val = '0';
+          lastOp = false;
+        }
+        else {
+          if (lastOp) { val = '0'; lastOp = false; }
+          if (k === '.' && val.includes('.')) { update(); return; }
+          val = (val === '0' && k !== '.') ? k : val + k;
+        }
+        update();
+      });
+    });
+    update();
+  }
+};
+
+/* ── Paint ── */
+Apps.registry.paint = {
+  title: 'Paint',
+  icon: I.paint,
+  width: 780, height: 560,
+  init(api) {
+    api.body.innerHTML = `
+      <div class="app-toolbar">
+        <button class="tb-btn primary" data-act="save">${I.save}<span>Save</span></button>
+        <button class="tb-btn" data-act="clear">Clear</button>
+        <div class="tb-sep"></div>
+        <label style="display:flex;align-items:center;gap:4px;font-family:var(--font-mono);font-size:11px">
+          Color <input type="color" id="pt-color" value="#0E0E0C" style="width:28px;height:24px;border:2px solid var(--ink);padding:0;cursor:pointer">
+        </label>
+        <label style="display:flex;align-items:center;gap:4px;font-family:var(--font-mono);font-size:11px">
+          Size <input type="range" id="pt-size" min="1" max="60" value="4" style="width:100px">
+          <span id="pt-size-v">4</span>
+        </label>
+        <div class="tb-sep"></div>
+        <button class="tb-btn" data-act="tool-pen">Pen</button>
+        <button class="tb-btn" data-act="tool-erase">Erase</button>
+      </div>
+      <div class="pt-root">
+        <div class="pt-canvas-wrap"><canvas class="pt-canvas" width="1024" height="640"></canvas></div>
+      </div>`;
+    const canvas = api.body.querySelector('.pt-canvas');
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = 'white'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    let drawing = false, last = null, color = '#0E0E0C', size = 4, tool = 'pen';
+    const colorInp = api.body.querySelector('#pt-color');
+    const sizeInp = api.body.querySelector('#pt-size');
+    const sizeV = api.body.querySelector('#pt-size-v');
+    colorInp.addEventListener('input', () => color = colorInp.value);
+    sizeInp.addEventListener('input', () => { size = +sizeInp.value; sizeV.textContent = size; });
+
+    const pos = (e) => {
+      const r = canvas.getBoundingClientRect();
+      const sx = canvas.width / r.width, sy = canvas.height / r.height;
+      const cx = (e.touches ? e.touches[0].clientX : e.clientX);
+      const cy = (e.touches ? e.touches[0].clientY : e.clientY);
+      return { x: (cx - r.left) * sx, y: (cy - r.top) * sy };
+    };
+    const start = (e) => { e.preventDefault(); drawing = true; last = pos(e); };
+    const move = (e) => {
+      if (!drawing) return;
+      e.preventDefault();
+      const p = pos(e);
+      ctx.strokeStyle = tool === 'erase' ? 'white' : color;
+      ctx.lineWidth = tool === 'erase' ? size * 3 : size;
+      ctx.beginPath(); ctx.moveTo(last.x, last.y); ctx.lineTo(p.x, p.y); ctx.stroke();
+      last = p;
+    };
+    const end = () => { drawing = false; };
+    canvas.addEventListener('pointerdown', start);
+    canvas.addEventListener('pointermove', move);
+    canvas.addEventListener('pointerup', end);
+    canvas.addEventListener('pointerleave', end);
+    api.body.addEventListener('click', (e) => {
+      const a = e.target.closest('[data-act]'); if (!a) return;
+      const act = a.dataset.act;
+      if (act === 'clear') { ctx.fillStyle = 'white'; ctx.fillRect(0, 0, canvas.width, canvas.height); }
+      else if (act === 'save') (async () => {
+        const name = await promptText('Save as', 'painting.png'); if (!name) return;
+        canvas.toBlob(async (blob) => {
+          const buf = await blob.arrayBuffer();
+          await fs.writeFile(pathJoin('/Pictures', name), buf);
+          toast('Saved to /Pictures/' + name, 'ok');
+          Desktop.loadIcons().then(() => Desktop.renderAll());
+        });
+      })();
+      else if (act === 'tool-pen') tool = 'pen';
+      else if (act === 'tool-erase') tool = 'erase';
+    });
+  }
+};
+
+/* ── Browser ── */
+Apps.registry.browser = {
+  title: 'Browser',
+  icon: I.browser,
+  width: 880, height: 580,
+  init(api, opts) {
+    api.body.innerHTML = `
+      <div class="app-toolbar">
+        <button class="tb-btn" data-act="back">${I.back}</button>
+        <button class="tb-btn" data-act="fwd">${I.fwd}</button>
+        <button class="tb-btn" data-act="refresh">${I.refresh}</button>
+        <div class="tb-sep"></div>
+        <input class="tb-input" id="br-url" style="flex:1;min-width:120px" placeholder="https:// or file://..."/>
+        <button class="tb-btn primary" data-act="go">Go</button>
+      </div>
+      <div class="br-root">
+        <iframe class="br-frame" id="br-frame" sandbox="allow-scripts allow-forms allow-same-origin allow-popups"></iframe>
+      </div>`;
+    const inp = api.body.querySelector('#br-url');
+    const frame = api.body.querySelector('#br-frame');
+    const go = (u) => {
+      if (!u) return;
+      if (!/^https?:\/\//.test(u) && !u.startsWith('blob:') && !u.startsWith('data:')) u = 'https://' + u;
+      inp.value = u;
+      frame.src = u;
+    };
+    api.body.addEventListener('click', (e) => {
+      const a = e.target.closest('[data-act]'); if (!a) return;
+      const act = a.dataset.act;
+      if (act === 'go') go(inp.value);
+      else if (act === 'back') { try { frame.contentWindow.history.back(); } catch {} }
+      else if (act === 'fwd') { try { frame.contentWindow.history.forward(); } catch {} }
+      else if (act === 'refresh') { try { frame.contentWindow.location.reload(); } catch { frame.src = frame.src; } }
+    });
+    inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') go(inp.value); });
+    go(opts.url || 'https://example.com');
+  }
+};
+
+/* ── Image Viewer ── */
+Apps.registry.imageviewer = {
+  title: 'Image Viewer',
+  icon: I.image,
+  width: 700, height: 520,
+  async init(api, opts) {
+    api.body.innerHTML = `
+      <div class="app-toolbar">
+        <button class="tb-btn" data-act="open">${I.folder}</button>
+        <button class="tb-btn" data-act="zoomout">${I.minus}</button>
+        <button class="tb-btn" data-act="zoomin">${I.plus}</button>
+        <button class="tb-btn" data-act="reset">Fit</button>
+        <div class="tb-sep"></div>
+        <button class="tb-btn" data-act="download">${I.download}</button>
+        <div style="flex:1"></div>
+        <span class="tb-input" id="iv-path" style="background:var(--paper-2)">—</span>
+      </div>
+      <div class="iv-root">
+        <div class="iv-stage" id="iv-stage"></div>
+      </div>`;
+    const stage = api.body.querySelector('#iv-stage');
+    const pathEl = api.body.querySelector('#iv-path');
+    let currentUrl = null, currentPath = null, zoom = 1;
+    const show = async (p) => {
+      const buf = await fs.readFile(p);
+      const blob = new Blob([buf], { type: mimeOf(p) });
+      if (currentUrl) URL.revokeObjectURL(currentUrl);
+      currentUrl = URL.createObjectURL(blob);
+      currentPath = p;
+      stage.innerHTML = '';
+      const img = el('img', { src: currentUrl });
+      stage.appendChild(img);
+      pathEl.textContent = p;
+      api.setTitle('Image — ' + pathBase(p));
+      zoom = 1;
+    };
+    api.body.addEventListener('click', async (e) => {
+      const a = e.target.closest('[data-act]'); if (!a) return;
+      const act = a.dataset.act;
+      if (act === 'open') openFilePicker(show);
+      else if (act === 'zoomin') { zoom *= 1.25; const img = stage.querySelector('img'); if (img) img.style.transform = 'scale(' + zoom + ')'; }
+      else if (act === 'zoomout') { zoom /= 1.25; const img = stage.querySelector('img'); if (img) img.style.transform = 'scale(' + zoom + ')'; }
+      else if (act === 'reset') { zoom = 1; const img = stage.querySelector('img'); if (img) img.style.transform = ''; }
+      else if (act === 'download' && currentPath) downloadFile(currentPath);
+    });
+    if (opts.path) await show(opts.path);
+  }
+};
+
+/* ── Media Player ── */
+Apps.registry.mediaplayer = {
+  title: 'Media Player',
+  icon: I.audio,
+  width: 560, height: 420,
+  async init(api, opts) {
+    api.body.innerHTML = `
+      <div class="app-toolbar">
+        <button class="tb-btn" data-act="open">${I.folder}</button>
+        <button class="tb-btn" data-act="download">${I.download}</button>
+        <div style="flex:1"></div>
+        <span class="tb-input" id="mp-path" style="background:var(--paper-2)">—</span>
+      </div>
+      <div class="iv-root">
+        <div class="iv-stage" id="mp-stage"></div>
+      </div>`;
+    const stage = api.body.querySelector('#mp-stage');
+    const pathEl = api.body.querySelector('#mp-path');
+    let currentUrl = null, currentPath = null;
+    const show = async (p) => {
+      const buf = await fs.readFile(p);
+      const kind = kindOf(p, false);
+      const blob = new Blob([buf], { type: mimeOf(p) });
+      if (currentUrl) URL.revokeObjectURL(currentUrl);
+      currentUrl = URL.createObjectURL(blob);
+      currentPath = p;
+      stage.innerHTML = '';
+      const el2 = kind === 'video' ? el('video', { src: currentUrl, controls: 'true' }) : el('audio', { src: currentUrl, controls: 'true' });
+      if (kind === 'video') el2.style.maxWidth = '100%';
+      stage.appendChild(el2);
+      pathEl.textContent = p;
+      api.setTitle((kind === 'video' ? 'Video' : 'Audio') + ' — ' + pathBase(p));
+    };
+    api.body.addEventListener('click', async (e) => {
+      const a = e.target.closest('[data-act]'); if (!a) return;
+      const act = a.dataset.act;
+      if (act === 'open') openFilePicker(show);
+      else if (act === 'download' && currentPath) downloadFile(currentPath);
+    });
+    if (opts.path) await show(opts.path);
+  }
+};
+
+/* ── PDF Viewer ── */
+Apps.registry.pdfviewer = {
+  title: 'PDF Viewer',
+  icon: I.pdf,
+  width: 800, height: 600,
+  async init(api, opts) {
+    api.body.innerHTML = `
+      <div class="app-toolbar">
+        <button class="tb-btn" data-act="open">${I.folder}</button>
+        <button class="tb-btn" data-act="download">${I.download}</button>
+        <div style="flex:1"></div>
+        <span class="tb-input" id="pdf-path" style="background:var(--paper-2)">—</span>
+      </div>
+      <iframe id="pdf-frame" style="flex:1;border:none;background:white"></iframe>`;
+    const frame = api.body.querySelector('#pdf-frame');
+    const pathEl = api.body.querySelector('#pdf-path');
+    let currentUrl = null, currentPath = null;
+    const show = async (p) => {
+      const buf = await fs.readFile(p);
+      const blob = new Blob([buf], { type: 'application/pdf' });
+      if (currentUrl) URL.revokeObjectURL(currentUrl);
+      currentUrl = URL.createObjectURL(blob);
+      currentPath = p;
+      frame.src = currentUrl;
+      pathEl.textContent = p;
+      api.setTitle('PDF — ' + pathBase(p));
+    };
+    api.body.addEventListener('click', async (e) => {
+      const a = e.target.closest('[data-act]'); if (!a) return;
+      if (a.dataset.act === 'open') openFilePicker(show);
+      else if (a.dataset.act === 'download' && currentPath) downloadFile(currentPath);
+    });
+    if (opts.path) await show(opts.path);
+  }
+};
+
+/* ── Archive Viewer ── */
+Apps.registry.archive = {
+  title: 'Archive',
+  icon: I.zip,
+  width: 600, height: 460,
+  async init(api, opts) {
+    api.body.innerHTML = `
+      <div class="app-toolbar">
+        <button class="tb-btn primary" data-act="extract">${I.download}<span>Extract Here</span></button>
+        <div style="flex:1"></div>
+        <span class="tb-input" id="ar-path" style="background:var(--paper-2)">—</span>
+      </div>
+      <div style="flex:1;padding:16px;overflow:auto;font-family:var(--font-mono);font-size:12px" id="ar-out"></div>`;
+    const out = api.body.querySelector('#ar-out');
+    const pathEl = api.body.querySelector('#ar-path');
+    const p = opts.path;
+    pathEl.textContent = p;
+    api.setTitle('Archive — ' + pathBase(p));
+    const ext = extOf(p);
+    if (ext === 'zip') {
+      try {
+        // Try DecompressionStream (won't handle full zip natively, so we do basic zip parsing)
+        // Fallback: prompt user that native zip decompression needs library, use simpler approach
+        out.innerHTML = `<p style="padding:10px;background:var(--yellow);border:2px solid var(--ink)"><b>ZIP archives</b> require a decompression library.<br><br>Native browsers do not include a full ZIP parser without dependencies. Please extract externally and re-import, or use the file as-is.<br><br><code>.gz</code> and <code>.tar</code> are supported natively via DecompressionStream.</p>`;
+      } catch(e) { out.textContent = 'Error: ' + e.message; }
+    } else if (ext === 'gz' || ext === 'tar' || ext === 'tgz') {
+      try {
+        const buf = await fs.readFile(p);
+        let stream = new Response(new Blob([buf])).body;
+        if (ext === 'gz' || ext === 'tgz') stream = stream.pipeThrough(new DecompressionStream('gzip'));
+        const arr = new Uint8Array(await new Response(stream).arrayBuffer());
+        // If tar, parse
+        if (ext === 'tar' || ext === 'tgz') {
+          const files = parseTar(arr);
+          const targetDir = pathDir(p);
+          let log = '';
+          for (const f of files) {
+            if (f.name.endsWith('/')) { await fs.mkdir(pathJoin(targetDir, f.name)); log += '[DIR] ' + f.name + '\n'; }
+            else { await fs.writeFile(pathJoin(targetDir, f.name), f.data); log += '[FILE] ' + f.name + ' (' + f.data.byteLength + ' B)\n'; }
+          }
+          out.innerHTML = '<pre style="white-space:pre-wrap">' + escapeHtml(log) + '</pre><p style="margin-top:10px;color:var(--green)"><b>Extracted to ' + escapeHtml(targetDir) + '</b></p>';
+          Desktop.loadIcons().then(() => Desktop.renderAll());
+        } else {
+          // .gz only (single file)
+          const newName = pathBase(p).replace(/\.gz$/, '');
+          await fs.writeFile(pathJoin(pathDir(p), newName), arr);
+          out.textContent = 'Extracted: ' + newName + ' (' + arr.byteLength + ' bytes)';
+        }
+      } catch(e) { out.textContent = 'Error: ' + e.message; }
+    } else {
+      out.textContent = 'Unsupported archive format.';
+    }
+  }
+};
+
+function parseTar(arr) {
+  const files = [];
+  let offset = 0;
+  const decoder = new TextDecoder('utf-8');
+  while (offset < arr.length) {
+    const header = arr.subarray(offset, offset + 512);
+    if (header.every(b => b === 0)) break;
+    let name = decoder.decode(header.subarray(0, 100)).replace(/\0+$/, '');
+    const sizeStr = decoder.decode(header.subarray(124, 136)).replace(/\0+$/, '').trim();
+    const size = parseInt(sizeStr, 8) || 0;
+    const typeflag = String.fromCharCode(header[156]);
+    const prefix = decoder.decode(header.subarray(345, 500)).replace(/\0+$/, '');
+    if (prefix) name = prefix + '/' + name;
+    offset += 512;
+    const data = arr.subarray(offset, offset + size);
+    offset += Math.ceil(size / 512) * 512;
+    if (typeflag === '0' || typeflag === '\0' || typeflag === '5') {
+      files.push({ name, data: data.slice(0), type: typeflag });
+    }
+  }
+  return files;
+}
+
+/* ── Settings ── */
+Apps.registry.settings = {
+  title: 'Settings',
+  icon: I.settings,
+  width: 760, height: 540,
+  init(api, opts) {
+    api.body.innerHTML = `
+      <div class="set-root">
+        <div class="set-side">
+          <div class="set-tab active" data-tab="appearance">Appearance</div>
+          <div class="set-tab" data-tab="storage">Storage</div>
+          <div class="set-tab" data-tab="mounts">Mounts</div>
+          <div class="set-tab" data-tab="about">About</div>
+        </div>
+        <div class="set-main" id="set-main"></div>
+      </div>`;
+    const main = api.body.querySelector('#set-main');
+    const showTab = async (tab) => {
+      api.body.querySelectorAll('.set-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+      main.innerHTML = '';
+      if (tab === 'appearance') renderAppearance();
+      else if (tab === 'storage') await renderStorage();
+      else if (tab === 'mounts') renderMounts();
+      else if (tab === 'about') renderAbout();
+    };
+    api.body.querySelectorAll('.set-tab').forEach(t => t.addEventListener('click', () => showTab(t.dataset.tab)));
+
+    const renderAppearance = () => {
+      main.innerHTML = `
+        <h2>Appearance.</h2>
+        <div class="set-sub">Wallpaper · Grid · Theme</div>
+        <div class="set-section">
+          <h3>Wallpaper</h3>
+          <div class="wp-grid" id="wp-grid"></div>
+          <div style="margin-top:10px;display:flex;gap:8px">
+            <button class="tb-btn" data-act="upload-wp">${I.upload}<span>Upload Wallpaper</span></button>
+            <button class="tb-btn" data-act="clear-wp">${I.trash}<span>Use Grid (default)</span></button>
+          </div>
+        </div>`;
+      const grid = main.querySelector('#wp-grid');
+      const current = fs.meta.wallpaper;
+      WALLPAPERS.forEach((wp, i) => {
+        const tile = el('div', { class: 'wp-tile' + (current === wp.id ? ' active' : ''), style: { background: wp.css } });
+        tile.addEventListener('click', () => {
+          fs.meta.wallpaper = wp.id;
+          fs.meta.wallpaperData = null;
+          fs.saveMeta();
+          applyWallpaper();
+          renderAppearance();
+        });
+        grid.appendChild(tile);
+      });
+      if (current && current.startsWith('custom:')) {
+        const tile = el('div', { class: 'wp-tile active' });
+        tile.style.backgroundImage = 'var(--custom-wp)';
+        tile.style.backgroundSize = 'cover';
+        grid.appendChild(tile);
+      }
+      main.querySelector('[data-act="upload-wp"]').addEventListener('click', () => {
+        const inp = el('input', { type: 'file', accept: 'image/*' });
+        inp.addEventListener('change', async () => {
+          const f = inp.files[0]; if (!f) return;
+          const buf = await f.arrayBuffer();
+          await fs.writeFile('/Pictures/__wallpaper.' + extOf(f.name), buf);
+          fs.meta.wallpaper = 'custom:' + extOf(f.name);
+          fs.saveMeta();
+          await applyWallpaper();
+          renderAppearance();
+          toast('Wallpaper set', 'ok');
+        });
+        inp.click();
+      });
+      main.querySelector('[data-act="clear-wp"]').addEventListener('click', () => {
+        fs.meta.wallpaper = null; fs.meta.wallpaperData = null; fs.saveMeta();
+        applyWallpaper(); renderAppearance();
+      });
+    };
+
+    const renderStorage = async () => {
+      main.innerHTML = `
+        <h2>Storage.</h2>
+        <div class="set-sub">OPFS Usage · System Quota</div>
+        <div class="set-section">
+          <h3>Quota</h3>
+          <div id="quota-out" style="font-family:var(--font-mono);font-size:12px;line-height:1.8">Loading...</div>
+        </div>
+        <div class="set-section">
+          <h3>Breakdown</h3>
+          <div id="brk-out"></div>
+        </div>
+        <div class="set-section">
+          <h3>Danger Zone</h3>
+          <button class="tb-btn" data-act="reset" style="background:var(--red);color:var(--paper)">${I.trash}<span>Reset System (Delete All Files)</span></button>
+        </div>`;
+      const q = await fs.quota();
+      const qout = main.querySelector('#quota-out');
+      if (q) {
+        const pct = q.quota ? ((q.usage / q.quota) * 100).toFixed(2) : '—';
+        qout.innerHTML = `Usage: <b>${fmtSize(q.usage)}</b> / Quota: <b>${fmtSize(q.quota)}</b> (${pct}%)<br>Backend: <b>${fs.opfsOk ? 'OPFS (Origin Private File System)' : 'In-Memory (fallback)'}</b>`;
+      } else qout.textContent = 'Quota unavailable.';
+      // Breakdown by top-level dir
+      const brk = main.querySelector('#brk-out');
+      const colors = ['var(--red)', 'var(--blue)', 'var(--yellow)', 'var(--green)', '#9333ea', '#ec4899', '#0891b2'];
+      const sizes = {};
+      const walk = async (p, key) => {
+        let total = 0;
+        try {
+          const entries = await fs.readdir(p);
+          for (const e of entries) {
+            const sub = pathJoin(p, e.name);
+            if (e.isDirectory) total += await walk(sub, null);
+            else total += e.size || 0;
+          }
+        } catch {}
+        if (key) sizes[key] = total;
+        return total;
+      };
+      try {
+        const entries = await fs.readdir('/');
+        let grandTotal = 0;
+        for (const e of entries) {
+          const p = '/' + e.name;
+          const s = e.isDirectory ? await walk(p, e.name) : (e.size || 0);
+          sizes[e.name] = s;
+          grandTotal += s;
+        }
+        const bar = el('div', { class: 'storage-bar' });
+        const legend = el('div', { class: 'storage-legend' });
+        let i = 0;
+        const entries2 = Object.entries(sizes).sort((a,b) => b[1] - a[1]);
+        for (const [name, size] of entries2) {
+          if (!size) continue;
+          const c = colors[i % colors.length];
+          const seg = el('div', { style: { flex: size, background: c } }, size > grandTotal * 0.05 ? name : '');
+          seg.title = name + ': ' + fmtSize(size);
+          bar.appendChild(seg);
+          const sw = el('span');
+          sw.innerHTML = `<span class="sw" style="background:${c}"></span> ${escapeHtml(name)} — ${fmtSize(size)}`;
+          legend.appendChild(sw);
+          i++;
+        }
+        brk.appendChild(bar);
+        brk.appendChild(legend);
+        const tot = el('p', { style: { marginTop: '8px', fontFamily: 'var(--font-mono)', fontSize: '11px' } }, 'Total virtual filesystem: ' + fmtSize(grandTotal));
+        brk.appendChild(tot);
+      } catch(e) { brk.textContent = 'Error: ' + e.message; }
+
+      main.querySelector('[data-act="reset"]').addEventListener('click', async () => {
+        if (!(await confirmDlg('Reset System', 'This will delete ALL files in the virtual filesystem and reset settings. Mounts will be preserved but may need re-permission. Continue?'))) return;
+        await fs.resetAll();
+        toast('System reset', 'ok');
+        applyWallpaper();
+        Desktop.loadIcons().then(() => Desktop.renderAll());
+        showTab('storage');
+      });
+    };
+
+    const renderMounts = () => {
+      main.innerHTML = `
+        <h2>Mounts.</h2>
+        <div class="set-sub">File System Access API · Local Folders</div>
+        <div class="set-section">
+          <h3>Mounted Folders</h3>
+          <div id="mnt-list"></div>
+          <div style="margin-top:10px">
+            <button class="tb-btn primary" data-act="mount">${I.mount}<span>Mount New Folder</span></button>
+          </div>
+        </div>
+        <div class="set-section">
+          <h3>Note</h3>
+          <p style="font-family:var(--font-mono);font-size:11px;line-height:1.7;padding:10px;background:var(--paper-2);border:2px solid var(--ink)">
+            Local folder permissions are not persisted by the browser across reloads. You may be asked to re-grant access on next boot. Mounts appear under <b>/mnt/local/</b> in File Explorer.
+          </p>
+        </div>`;
+      const list = main.querySelector('#mnt-list');
+      if (!fs.mountRecords.length) list.innerHTML = '<p style="font-family:var(--font-mono);font-size:12px;opacity:.6">No folders mounted.</p>';
+      else {
+        for (const m of fs.mountRecords) {
+          const row = el('div', { class: 'set-row' });
+          row.innerHTML = `<div class="lbl">${I.mount}<span style="margin-left:8px">${escapeHtml(m.name)}</span></div><div class="val">${escapeHtml(m.path)}</div>`;
+          const btn = el('button', { class: 'tb-btn' }, 'Unmount');
+          btn.addEventListener('click', () => {
+            fs.unmount(m.path);
+            renderMounts();
+            toast('Unmounted');
+          });
+          row.appendChild(btn);
+          list.appendChild(row);
+        }
+      }
+      main.querySelector('[data-act="mount"]').addEventListener('click', async () => {
+        const mp = await fs.mountLocal();
+        if (mp) renderMounts();
+      });
+    };
+
+    const renderAbout = () => {
+      main.innerHTML = `
+        <h2>About.</h2>
+        <div class="set-sub">BAUHAUS/OS · Version 01.00</div>
+        <div class="set-section" style="font-family:var(--font-mono);font-size:12px;line-height:1.8">
+          <p>A single-file browser operating system built on OPFS (Origin Private File System) and the File System Access API.</p>
+          <p style="margin-top:10px"><b>Stack:</b> HTML · CSS · Vanilla JS · OPFS · Drag & Drop · DecompressionStream</p>
+          <p><b>Design:</b> Neo-Bauhaus / Swiss Editorial · Fraunces · Archivo · JetBrains Mono</p>
+          <p style="margin-top:14px;padding:12px;background:var(--yellow);border:2px solid var(--ink)">
+            <b>Manifesto</b><br>
+            Form follows function. Color is structure. Typography is architecture. Everything lives in one file. Nothing is fake.
+          </p>
+        </div>`;
+    };
+
+    showTab(opts.tab || 'appearance');
+  }
+};
+
+/* ── About (quick) ── */
+Apps.registry.about = {
+  title: 'About',
+  icon: I.info,
+  width: 420, height: 380,
+  init(api) {
+    api.body.innerHTML = `
+      <div style="flex:1;padding:30px;overflow:auto;background:var(--surface)">
+        <div style="font-family:var(--font-display);font-style:italic;font-weight:900;font-size:56px;line-height:1;margin-bottom:6px">
+          BAUHAUS<span style="color:var(--red)">/</span>OS
+        </div>
+        <div style="font-family:var(--font-mono);font-size:10px;letter-spacing:.25em;color:var(--muted);text-transform:uppercase;margin-bottom:24px">
+          Neo-Swiss Operating System · Rev 01
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin-bottom:24px">
+          <div style="background:var(--red);height:60px;border:2px solid var(--ink)"></div>
+          <div style="background:var(--yellow);height:60px;border:2px solid var(--ink);border-left:none"></div>
+          <div style="background:var(--blue);height:60px;border:2px solid var(--ink);border-left:none"></div>
+        </div>
+        <p style="font-family:var(--font-mono);font-size:12px;line-height:1.7">
+          All data persists in <b>OPFS</b> (Origin Private File System).<br>
+          Mount real folders via <b>Settings → Mounts</b>.<br>
+          Drag files anywhere to move or export them.
+        </p>
+        <p style="font-family:var(--font-display);font-style:italic;font-size:18px;margin-top:18px">
+          "Less, but better."
+        </p>
+      </div>`;
+  }
+};
+
+/* ───────────────────────── Wallpapers ───────────────────────── */
+const WALLPAPERS = [
+  { id: 'grid', css: 'linear-gradient(var(--paper),var(--paper))' }, // default grid (handled specially)
+  { id: 'bauhaus1', css: 'linear-gradient(135deg, #E63946 0%, #E63946 40%, #F4C430 40%, #F4C430 70%, #1D4ED8 70%, #1D4ED8 100%)' },
+  { id: 'bauhaus2', css: 'radial-gradient(circle at 30% 40%, #E63946 0%, #E63946 20%, transparent 20%), radial-gradient(circle at 70% 70%, #1D4ED8 0%, #1D4ED8 25%, transparent 25%), #F4C430' },
+  { id: 'swiss', css: 'linear-gradient(90deg, #0E0E0C 0%, #0E0E0C 20%, #EFEAE0 20%, #EFEAE0 100%)' },
+  { id: 'construct', css: 'conic-gradient(from 45deg at 50% 50%, #E63946, #F4C430, #1D4ED8, #E63946)' },
+  { id: 'paper', css: 'repeating-linear-gradient(0deg, #EFEAE0 0, #EFEAE0 20px, #E6E0D2 20px, #E6E0D2 21px), repeating-linear-gradient(90deg, transparent 0, transparent 20px, rgba(14,14,12,0.1) 20px, rgba(14,14,12,0.1) 21px)' },
+  { id: 'mono', css: 'linear-gradient(135deg, #0E0E0C 0%, #2A2A28 100%)' },
+];
+async function applyWallpaper() {
+  const layer = $('#wallpaper-layer');
+  const desk = $('#desktop');
+  const id = fs.meta.wallpaper;
+  if (!id) {
+    desk.classList.remove('wallpaper-active');
+    layer.style.display = 'none';
+    return;
+  }
+  if (id === 'grid') {
+    desk.classList.remove('wallpaper-active');
+    layer.style.display = 'none';
+    return;
+  }
+  if (id.startsWith('custom:')) {
+    try {
+      const ext = id.slice(7);
+      const p = '/Pictures/__wallpaper.' + ext;
+      const buf = await fs.readFile(p);
+      const blob = new Blob([buf], { type: 'image/' + (ext === 'jpg' ? 'jpeg' : ext) });
+      const url = URL.createObjectURL(blob);
+      layer.style.backgroundImage = 'url(' + url + ')';
+      desk.classList.add('wallpaper-active');
+    } catch {
+      desk.classList.remove('wallpaper-active');
+    }
+    return;
+  }
+  const wp = WALLPAPERS.find(w => w.id === id);
+  if (wp) {
+    layer.style.backgroundImage = 'none';
+    layer.style.background = wp.css;
+    desk.classList.add('wallpaper-active');
+  }
+}
+
+/* ───────────────────────── Boot ───────────────────────── */
+async function boot() {
+  const statusEl = $('#boot-status');
+  const steps = [
+    ['INITIALIZING OPFS...', async () => await fs.init()],
+    ['LOADING WALLPAPER...', async () => await applyWallpaper()],
+    ['BUILDING DESKTOP...', async () => { await Desktop.init(); }],
+    ['MOUNTING LOCAL FOLDERS...', async () => {
+      // Re-verify mounts — ask user via prompt on first run
+      if (fs.mountRecords.length) {
+        for (const m of fs.mountRecords) {
+          try {
+            // We cannot auto-restore without user gesture; just record.
+            // We'll prompt via toast.
+          } catch {}
+        }
+      }
+    }],
+    ['READY', async () => {
+      $('#boot').style.transition = 'opacity .35s';
+      $('#boot').style.opacity = '0';
+      setTimeout(() => $('#boot').remove(), 400);
+    }],
+  ];
+  for (const [txt, fn] of steps) {
+    statusEl.textContent = txt;
+    try { await fn(); } catch (e) { console.warn(e); statusEl.textContent = txt + ' [FAIL]'; }
+    await new Promise(r => setTimeout(r, 180));
+  }
+  // Remind about mounts
+  if (fs.mountRecords.length) {
+    setTimeout(() => {
+      toast('Click a mount in Explorer to re-authorize local folders.', '');
+    }, 800);
+  }
+  // Clock
+  const updateClock = () => {
+    const d = new Date();
+    const p = n => String(n).padStart(2, '0');
+    $('#clock').textContent = p(d.getHours()) + ':' + p(d.getMinutes());
+  };
+  updateClock(); setInterval(updateClock, 10000);
+  // OPFS indicator
+  $('#opfs-indicator').style.color = fs.opfsOk ? '#90EE90' : 'var(--yellow)';
+  $('#opfs-indicator').title = fs.opfsOk ? 'OPFS: Active' : 'OPFS: Fallback (in-memory)';
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') { closeContextMenu(); $('#start-menu').classList.remove('open'); }
+});
+
+window.addEventListener('load', boot);
+window.addEventListener('resize', () => {
+  // Keep windows on-screen
+  WM.windows.forEach(w => {
+    if (w.maximized) {
+      w.el.style.width = window.innerWidth + 'px';
+      w.el.style.height = (window.innerHeight - 52) + 'px';
+    }
+  });
+});
+</script>
+</body>
+</html>

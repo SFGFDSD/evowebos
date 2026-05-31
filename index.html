@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Web OS Gallery — AI 模型作品集</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Noto+Sans+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0a0a0f;--bg2:#12121a;--bg3:#1a1a28;--bg4:#222236;
+  --border:#2a2a40;--border-hi:#3d3d5c;
+  --text:#e8e8f0;--text-dim:#8888a8;--text-muted:#55556e;
+  --accent:#00e5ff;--accent2:#7c3aed;--accent3:#f43f5e;
+  --glow:rgba(0,229,255,.15);--glow2:rgba(124,58,237,.15);
+  --card-bg:rgba(18,18,28,.85);--card-hover:rgba(26,26,42,.95);
+  --radius:12px;--radius-sm:8px;
+  --font-display:'Orbitron',sans-serif;
+  --font-body:'Noto Sans SC',sans-serif;
+  --font-mono:'JetBrains Mono',monospace;
+}
+html{scroll-behavior:smooth}
+body{
+  font-family:var(--font-body);background:var(--bg);color:var(--text);
+  min-height:100vh;overflow-x:hidden;line-height:1.6;
+}
+/* === 背景氛围 === */
+.bg-atmosphere{
+  position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:
+    radial-gradient(ellipse 80% 50% at 20% 10%,rgba(0,229,255,.06),transparent),
+    radial-gradient(ellipse 60% 40% at 80% 90%,rgba(124,58,237,.06),transparent),
+    radial-gradient(ellipse 50% 50% at 50% 50%,rgba(244,63,94,.03),transparent);
+}
+.bg-grid{
+  position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:
+    linear-gradient(rgba(255,255,255,.015) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.015) 1px,transparent 1px);
+  background-size:60px 60px;
+  mask-image:radial-gradient(ellipse 70% 60% at 50% 40%,black,transparent);
+}
+.scanline{
+  position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.03) 2px,rgba(0,0,0,.03) 4px);
+}
+
+/* === 头部 === */
+.header{
+  position:relative;z-index:10;
+  padding:48px 40px 32px;
+  border-bottom:1px solid var(--border);
+  background:linear-gradient(180deg,rgba(10,10,15,.95),rgba(10,10,15,.7));
+  backdrop-filter:blur(20px);
+}
+.header-inner{max-width:1400px;margin:0 auto}
+.header-top{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:20px}
+.logo-area{display:flex;align-items:center;gap:16px}
+.logo-icon{
+  width:48px;height:48px;border-radius:12px;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-display);font-size:18px;font-weight:900;color:#fff;
+  box-shadow:0 0 24px var(--glow);
+  animation:logoPulse 3s ease-in-out infinite;
+}
+@keyframes logoPulse{
+  0%,100%{box-shadow:0 0 24px var(--glow)}
+  50%{box-shadow:0 0 40px var(--glow),0 0 60px rgba(0,229,255,.08)}
+}
+.logo-text h1{
+  font-family:var(--font-display);font-size:22px;font-weight:700;
+  letter-spacing:2px;
+  background:linear-gradient(135deg,var(--accent),#a78bfa);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+}
+.logo-text p{font-size:12px;color:var(--text-dim);margin-top:2px;letter-spacing:1px}
+
+.header-stats{
+  display:flex;gap:24px;
+}
+.stat{text-align:center}
+.stat-num{
+  font-family:var(--font-display);font-size:24px;font-weight:700;
+  color:var(--accent);
+}
+.stat-label{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-top:2px}
+
+/* === 控制栏 === */
+.controls{
+  position:relative;z-index:10;
+  padding:20px 40px;
+  background:rgba(12,12,18,.8);
+  backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--border);
+  max-width:1400px;margin:0 auto;
+}
+.controls-inner{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.search-box{
+  flex:1;min-width:240px;position:relative;
+}
+.search-box input{
+  width:100%;padding:10px 16px 10px 42px;
+  background:var(--bg3);border:1px solid var(--border);
+  border-radius:var(--radius-sm);color:var(--text);
+  font-family:var(--font-body);font-size:14px;
+  transition:all .3s;
+}
+.search-box input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--glow)}
+.search-box input::placeholder{color:var(--text-muted)}
+.search-icon{
+  position:absolute;left:14px;top:50%;transform:translateY(-50%);
+  color:var(--text-muted);font-size:14px;
+}
+.filter-group{display:flex;gap:8px;flex-wrap:wrap}
+.filter-btn{
+  padding:8px 16px;border:1px solid var(--border);border-radius:20px;
+  background:transparent;color:var(--text-dim);font-size:13px;
+  font-family:var(--font-body);cursor:pointer;transition:all .25s;
+  white-space:nowrap;
+}
+.filter-btn:hover{border-color:var(--border-hi);color:var(--text);background:var(--bg3)}
+.filter-btn.active{
+  border-color:var(--accent);color:var(--accent);
+  background:rgba(0,229,255,.08);box-shadow:0 0 12px var(--glow);
+}
+.mode-toggle{
+  display:flex;border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;
+}
+.mode-btn{
+  padding:8px 14px;background:transparent;border:none;
+  color:var(--text-dim);font-size:13px;font-family:var(--font-body);
+  cursor:pointer;transition:all .25s;display:flex;align-items:center;gap:6px;
+}
+.mode-btn:hover{background:var(--bg3);color:var(--text)}
+.mode-btn.active{background:var(--accent);color:#000;font-weight:500}
+.mode-btn svg{width:16px;height:16px}
+
+/* === 主内容 === */
+.main{position:relative;z-index:10;max-width:1400px;margin:0 auto;padding:32px 40px 60px}
+
+/* === 卡片网格 === */
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(380px,1fr));
+  gap:20px;
+}
+
+/* === 卡片 === */
+.card{
+  position:relative;
+  background:var(--card-bg);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:24px;
+  cursor:pointer;
+  transition:all .35s cubic-bezier(.4,0,.2,1);
+  overflow:hidden;
+  animation:cardIn .5s ease both;
+}
+.card::before{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(135deg,transparent 60%,var(--glow));
+  opacity:0;transition:opacity .35s;
+}
+.card:hover{
+  border-color:var(--border-hi);
+  transform:translateY(-4px);
+  box-shadow:0 12px 40px rgba(0,0,0,.4),0 0 20px var(--glow);
+}
+.card:hover::before{opacity:1}
+
+@keyframes cardIn{
+  from{opacity:0;transform:translateY(20px)}
+  to{opacity:1;transform:translateY(0)}
+}
+
+.card-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px}
+.card-model{
+  font-family:var(--font-mono);font-size:11px;font-weight:500;
+  padding:4px 10px;border-radius:4px;
+  letter-spacing:.5px;
+  white-space:nowrap;
+}
+.model-claude{background:rgba(204,120,50,.15);color:#e8a050;border:1px solid rgba(204,120,50,.25)}
+.model-gpt{background:rgba(16,163,127,.15);color:#10a37f;border:1px solid rgba(16,163,127,.25)}
+.model-qwen{background:rgba(99,102,241,.15);color:#818cf8;border:1px solid rgba(99,102,241,.25)}
+.model-gemini{background:rgba(66,133,244,.15);color:#60a5fa;border:1px solid rgba(66,133,244,.25)}
+.model-deepseek{background:rgba(56,189,248,.15);color:#38bdf8;border:1px solid rgba(56,189,248,.25)}
+.model-glm{background:rgba(168,85,247,.15);color:#c084fc;border:1px solid rgba(168,85,247,.25)}
+.model-collab{background:rgba(244,63,94,.15);color:#fb7185;border:1px solid rgba(244,63,94,.25)}
+
+.card-date{
+  font-family:var(--font-mono);font-size:11px;color:var(--text-muted);
+  white-space:nowrap;
+}
+
+.card-title{
+  font-size:18px;font-weight:700;margin-bottom:6px;
+  line-height:1.3;
+  background:linear-gradient(135deg,var(--text),var(--text-dim));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+}
+.card-version{
+  font-family:var(--font-mono);font-size:12px;color:var(--text-muted);
+  margin-bottom:16px;
+}
+.card-footer{
+  display:flex;align-items:center;justify-content:space-between;
+  padding-top:14px;border-top:1px solid var(--border);
+}
+.card-action{
+  font-size:12px;color:var(--accent);font-weight:500;
+  display:flex;align-items:center;gap:6px;
+  transition:gap .25s;
+}
+.card:hover .card-action{gap:10px}
+.card-action svg{width:14px;height:14px;transition:transform .25s}
+.card:hover .card-action svg{transform:translateX(2px)}
+
+.card-tags{display:flex;gap:6px;flex-wrap:wrap}
+.tag{
+  font-size:10px;padding:2px 8px;border-radius:3px;
+  background:var(--bg3);color:var(--text-dim);
+  border:1px solid rgba(255,255,255,.04);
+}
+
+/* === 窗口模式 === */
+.window-overlay{
+  position:fixed;inset:0;z-index:1000;
+  background:rgba(0,0,0,.7);
+  backdrop-filter:blur(8px);
+  display:none;
+  animation:fadeIn .3s ease;
+}
+.window-overlay.active{display:flex;align-items:center;justify-content:center}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+
+.window-container{
+  width:92vw;height:88vh;
+  background:var(--bg2);
+  border:1px solid var(--border-hi);
+  border-radius:16px;
+  overflow:hidden;
+  display:flex;flex-direction:column;
+  box-shadow:0 24px 80px rgba(0,0,0,.6),0 0 40px var(--glow);
+  animation:windowIn .4s cubic-bezier(.4,0,.2,1);
+}
+@keyframes windowIn{
+  from{opacity:0;transform:scale(.92) translateY(20px)}
+  to{opacity:1;transform:scale(1) translateY(0)}
+}
+
+.window-titlebar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 20px;
+  background:var(--bg3);
+  border-bottom:1px solid var(--border);
+  flex-shrink:0;
+}
+.window-title{
+  font-family:var(--font-mono);font-size:13px;color:var(--text);
+  display:flex;align-items:center;gap:8px;
+}
+.window-title .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--glow)}
+.window-controls{display:flex;gap:8px}
+.window-btn{
+  width:32px;height:32px;border-radius:8px;border:1px solid var(--border);
+  background:var(--bg2);color:var(--text-dim);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:all .2s;font-size:14px;
+}
+.window-btn:hover{background:var(--bg4);color:var(--text);border-color:var(--border-hi)}
+.window-btn.close:hover{background:var(--accent3);color:#fff;border-color:var(--accent3)}
+.window-btn.maximize:hover{background:var(--accent);color:#000;border-color:var(--accent)}
+.window-iframe{flex:1;border:none;background:#000}
+
+/* === 空状态 === */
+.empty-state{
+  text-align:center;padding:80px 20px;
+  color:var(--text-muted);
+}
+.empty-state svg{width:64px;height:64px;margin-bottom:16px;opacity:.3}
+.empty-state p{font-size:16px}
+
+/* === 底部 === */
+.footer{
+  position:relative;z-index:10;
+  text-align:center;padding:32px 40px;
+  border-top:1px solid var(--border);
+  color:var(--text-muted);font-size:12px;
+  max-width:1400px;margin:0 auto;
+}
+.footer a{color:var(--accent);text-decoration:none}
+
+/* === 滚动条 === */
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border-hi);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--text-muted)}
+
+/* === 响应式 === */
+@media(max-width:768px){
+  .header{padding:24px 20px 20px}
+  .header-top{flex-direction:column;align-items:flex-start}
+  .controls{padding:16px 20px}
+  .controls-inner{flex-direction:column}
+  .search-box{min-width:100%}
+  .main{padding:20px 16px 40px}
+  .grid{grid-template-columns:1fr}
+  .window-container{width:98vw;height:94vh;border-radius:8px}
+}
+
+/* === 动画延迟 === */
+.card:nth-child(1){animation-delay:.02s}
+.card:nth-child(2){animation-delay:.04s}
+.card:nth-child(3){animation-delay:.06s}
+.card:nth-child(4){animation-delay:.08s}
+.card:nth-child(5){animation-delay:.10s}
+.card:nth-child(6){animation-delay:.12s}
+.card:nth-child(7){animation-delay:.14s}
+.card:nth-child(8){animation-delay:.16s}
+.card:nth-child(9){animation-delay:.18s}
+.card:nth-child(10){animation-delay:.20s}
+.card:nth-child(11){animation-delay:.22s}
+.card:nth-child(12){animation-delay:.24s}
+.card:nth-child(13){animation-delay:.26s}
+.card:nth-child(14){animation-delay:.28s}
+.card:nth-child(15){animation-delay:.30s}
+.card:nth-child(16){animation-delay:.32s}
+.card:nth-child(17){animation-delay:.34s}
+.card:nth-child(18){animation-delay:.36s}
+.card:nth-child(19){animation-delay:.38s}
+.card:nth-child(20){animation-delay:.40s}
+.card:nth-child(21){animation-delay:.42s}
+.card:nth-child(22){animation-delay:.44s}
+.card:nth-child(23){animation-delay:.46s}
+.card:nth-child(24){animation-delay:.48s}
+.card:nth-child(25){animation-delay:.50s}
+.card:nth-child(26){animation-delay:.52s}
+.card:nth-child(27){animation-delay:.54s}
+</style>
+</head>
+<body>
+
+<div class="bg-atmosphere"></div>
+<div class="bg-grid"></div>
+<div class="scanline"></div>
+
+<!-- 头部 -->
+<header class="header">
+  <div class="header-inner">
+    <div class="header-top">
+      <div class="logo-area">
+        <div class="logo-icon">W</div>
+        <div class="logo-text">
+          <h1>WEB OS GALLERY</h1>
+          <p>AI 模型 Web OS 作品集 — 27 件作品 · 7 个模型系列</p>
+        </div>
+      </div>
+      <div class="header-stats">
+        <div class="stat"><div class="stat-num">27</div><div class="stat-label">作品</div></div>
+        <div class="stat"><div class="stat-num">7</div><div class="stat-label">模型</div></div>
+        <div class="stat"><div class="stat-num">2026</div><div class="stat-label">年度</div></div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- 控制栏 -->
+<div class="controls">
+  <div class="controls-inner">
+    <div class="search-box">
+      <span class="search-icon">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      </span>
+      <input type="text" id="searchInput" placeholder="搜索作品名称、模型、版本...">
+    </div>
+    <div class="filter-group" id="filterGroup">
+      <button class="filter-btn active" data-filter="all">全部</button>
+      <button class="filter-btn" data-filter="Claude">Claude</button>
+      <button class="filter-btn" data-filter="GPT">GPT</button>
+      <button class="filter-btn" data-filter="Qwen">Qwen</button>
+      <button class="filter-btn" data-filter="Gemini">Gemini</button>
+      <button class="filter-btn" data-filter="DeepSeek">DeepSeek</button>
+      <button class="filter-btn" data-filter="GLM">GLM</button>
+    </div>
+    <div class="mode-toggle">
+      <button class="mode-btn active" id="modeNewTab" title="新标签页打开">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        新标签
+      </button>
+      <button class="mode-btn" id="modeWindow" title="窗口内打开">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+        窗口
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- 主内容 -->
+<main class="main">
+  <div class="grid" id="cardGrid"></div>
+  <div class="empty-state" id="emptyState" style="display:none">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+    <p>没有找到匹配的作品</p>
+  </div>
+</main>
+
+<!-- 窗口模式 -->
+<div class="window-overlay" id="windowOverlay">
+  <div class="window-container">
+    <div class="window-titlebar">
+      <div class="window-title">
+        <span class="dot"></span>
+        <span id="windowTitle">加载中...</span>
+      </div>
+      <div class="window-controls">
+        <button class="window-btn maximize" id="btnMaximize" title="最大化">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+        </button>
+        <button class="window-btn close" id="btnClose" title="关闭">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+    </div>
+    <iframe class="window-iframe" id="windowIframe" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
+  </div>
+</div>
+
+<!-- 底部 -->
+<footer class="footer">
+  Web OS Gallery — AI 模型 Web 操作系统作品合集
+</footer>
+
+<script>
+// === 数据 ===
+const projects = [
+  {model:"Claude Opus 4.8",modelClass:"claude",name:"VERDANT OS",version:"v2.1.11",date:"2026.05.28",file:"Claude Opus 4.8 作品 2026.05.28 VERDANT OS v2.1.11.html",tags:["Web OS","桌面"]},
+  {model:"Claude Opus 4.8",modelClass:"claude",name:"NOCTA · Web OS",version:"v2.1.11",date:"2026.05.28",file:"Claude Opus 4.8 作品 2026.05.28 NOCTA · Web OS v2.1.11.html",tags:["Web OS","桌面"]},
+  {model:"Claude Opus 4.8",modelClass:"claude",name:"EMBER OS",version:"v2.1.11",date:"2026.05.28",file:"Claude Opus 4.8 作品 2026.05.28 EMBER OS v2.1.11.html",tags:["Web OS","桌面"]},
+  {model:"Claude Opus 4.8 Thinking",modelClass:"claude",name:"NIMBUS OS",version:"v2.1.12",date:"2026.05.30",file:"Claude Opus 4.8 Thinking 作品 2026.05.30 NIMBUS OS v2.1.12.html",tags:["Web OS","桌面","Thinking"]},
+  {model:"Claude Opus 4.7 Thinking",modelClass:"claude",name:"Atelier — A Paper Operating System",version:"v2.1.2",date:"2026.05.08",file:"Claude Opus 4.7 Thinking 作品 2026.05.08 Atelier — A Paper Operating System v2.1.2.html",tags:["Web OS","纸面","Thinking"]},
+  {model:"Claude Opus 4.7",modelClass:"claude",name:"Meadow OS",version:"v2.1",date:"2026.05.03",file:"Claude Opus 4.7 作品 2026.05.03 Meadow OS v2.1.html",tags:["Web OS","桌面"]},
+  {model:"Claude Opus 4.5",modelClass:"claude",name:"AeroOS",version:"v1",date:"2026.01.14",file:"Claude Opus 4.5 作品 2026.01.14 AeroOS v1.html",tags:["Web OS","桌面"]},
+  {model:"Claude Opus 4.5",modelClass:"claude",name:"AuroraOS",version:"v1",date:"2026.01.14",file:"Claude Opus 4.5 作品 2026.01.14 AuroraOS v1.html",tags:["Web OS","桌面"]},
+  {model:"Claude Sonnet 4.6",modelClass:"claude",name:"NEXUS OS",version:"v2",date:"2026.05.01",file:"Claude Sonnet 4.6 作品 2026.05.01 NEXUS OS v2.html",tags:["Web OS","桌面"]},
+  {model:"Claude Sonnet 4.6",modelClass:"claude",name:"StormOS",version:"v2.1",date:"2026.05.02",file:"Claude Sonnet 4.6 作品 2026.05.02 StormOS v2.1.html",tags:["Web OS","桌面"]},
+  {model:"Claude Sonnet 4.6",modelClass:"claude",name:"青丝 OS",version:"v特殊提示词",date:"2026.04.17",file:"Claude Sonnet 4.6 作品 2026.04.17 青丝 OS v特殊提示词.html",tags:["Web OS","桌面","中文"]},
+  {model:"Claude Sonnet 4.6",modelClass:"claude",name:"VOLT OS",version:"v特殊提示词",date:"2026.04.20",file:"Claude Sonnet 4.6 作品 2026.04.20 VOLT OS v特殊提示词.html",tags:["Web OS","桌面"]},
+  {model:"GPT-5.5 X-High",modelClass:"gpt",name:"Noctilux Web OS",version:"v2.1.11",date:"2026.05.29",file:"GPT-5.5 X-High 作品 2026.05.29 Noctilux Web OS v2.1.11.html",tags:["Web OS","桌面"]},
+  {model:"GPT-5.5 X-High",modelClass:"gpt",name:"Monsoon OS - OPFS Web Desktop",version:"v2.1.2",date:"2026.05.06",file:"GPT-5.5 X-High 作品 2026.05.06 Monsoon OS - OPFS Web Desktop v2.1.2.html",tags:["Web OS","OPFS"]},
+  {model:"GPT-5.5 X-High",modelClass:"gpt",name:"Monsoon OS",version:"v2.1",date:"2026.05.02",file:"GPT-5.5 X-High 作品 2026.05.02 Monsoon OS v2.1.html",tags:["Web OS","桌面"]},
+  {model:"GPT-5.5 High",modelClass:"gpt",name:"Aster FS - Web OS",version:"v2.1.2",date:"2026.05.05",file:"GPT-5.5 High 作品 2026.05.05 Aster FS - Web OS v2.1.2.html",tags:["Web OS","文件系统"]},
+  {model:"GPT-5.4 High",modelClass:"gpt",name:"Noir Grid OS",version:"v2.1.7",date:"2026.05.27",file:"GPT-5.4 High 作品 2026.05.27 Noir Grid OS v2.1.7.html",tags:["Web OS","桌面"]},
+  {model:"GPT-5.2",modelClass:"gpt",name:"Kintsugi OS",version:"v1",date:"2026.01.14",file:"GPT-5.2 作品 2026.01.14 Kintsugi OS v1.html",tags:["Web OS","桌面"]},
+  {model:"GPT-5.2 x Gemini 3 Pro",modelClass:"collab",name:"NOCTUA WebOS",version:"v1",date:"2026.01.14",file:"GPT-5.2 x Gemini 3 Pro 作品 2026.01.14 NOCTUA WebOS v1.html",tags:["Web OS","协作"]},
+  {model:"Qwen 3.7 Max",modelClass:"qwen",name:"BAUHAUS-OS — 01",version:"v2.1.11",date:"2026.05.28",file:"Qwen 3.7 Max 作品 2026.05.28 BAUHAUS-OS — 01 v2.1.11.html",tags:["Web OS","包豪斯"]},
+  {model:"Qwen 3.7 Max",modelClass:"qwen",name:"WebOS · OPFS",version:"v2.1.7",date:"2026.05.27",file:"Qwen 3.7 Max 作品 2026.05.27 WebOS · OPFS v2.1.7.html",tags:["Web OS","OPFS"]},
+  {model:"Qwen 3.7 Max",modelClass:"qwen",name:"Halcyon OS — a quiet desktop",version:"v2.1.7",date:"2026.05.22",file:"Qwen 3.7 Max 作品 2026.05.22 Halcyon OS — a quiet desktop v2.1.7.html",tags:["Web OS","桌面"]},
+  {model:"Qwen 3.6 Max Preview",modelClass:"qwen",name:"AetherOS",version:"v2.1",date:"2026.05.02",file:"Qwen 3.6 Max Preview 作品 2026.05.02 AetherOS v2.1.html",tags:["Web OS","桌面"]},
+  {model:"Qwen 3.6 Plus",modelClass:"qwen",name:"Aether OS",version:"v2.1",date:"2026.05.03",file:"Qwen 3.6 Plus 作品 2026.05.03 Aether OS v2.1.html",tags:["Web OS","桌面"]},
+  {model:"Gemini 3 Pro",modelClass:"gemini",name:"NOSTROMO",version:"v2.1",date:"2026.05.04",file:"Gemini 3 Pro 作品 2026.05.04 NOSTROMO v2.1.html",tags:["Web OS","桌面"]},
+  {model:"DeepSeek V4 Pro",modelClass:"deepseek",name:"Billiard Web OS",version:"v2",date:"2026.04.23",file:"DeepSeek V4 Pro 作品 2026.04.23 Billiard Web OS v2.html",tags:["Web OS","桌面"]},
+  {model:"GLM-4.7",modelClass:"glm",name:"Yozakura OS",version:"v1",date:"2026.01.14",file:"GLM-4.7 作品 2026.01.14 Yozakura OS v1.html",tags:["Web OS","桌面"]},
+];
+
+// === 状态 ===
+let currentMode = 'newtab'; // 'newtab' | 'window'
+let currentFilter = 'all';
+let searchQuery = '';
+
+// === 渲染卡片 ===
+function renderCards() {
+  const grid = document.getElementById('cardGrid');
+  const empty = document.getElementById('emptyState');
+  const filtered = projects.filter(p => {
+    const matchFilter = currentFilter === 'all' || p.model.includes(currentFilter);
+    const q = searchQuery.toLowerCase();
+    const matchSearch = !q ||
+      p.name.toLowerCase().includes(q) ||
+      p.model.toLowerCase().includes(q) ||
+      p.version.toLowerCase().includes(q) ||
+      p.date.includes(q) ||
+      p.tags.some(t => t.toLowerCase().includes(q));
+    return matchFilter && matchSearch;
+  });
+
+  if (filtered.length === 0) {
+    grid.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  grid.innerHTML = filtered.map((p, i) => `
+    <div class="card" data-index="${i}" onclick="openProject('${encodeURIComponent(p.file)}','${p.name}')" style="animation-delay:${i * 0.03}s">
+      <div class="card-header">
+        <span class="card-model model-${p.modelClass}">${p.model}</span>
+        <span class="card-date">${p.date}</span>
+      </div>
+      <div class="card-title">${p.name}</div>
+      <div class="card-version">${p.version}</div>
+      <div class="card-footer">
+        <div class="card-tags">${p.tags.map(t => `<span class="tag">${t}</span>`).join('')}</div>
+        <div class="card-action">
+          ${currentMode === 'newtab' ? '打开' : '在窗口中打开'}
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// === 打开项目 ===
+function openProject(file, name) {
+  if (currentMode === 'newtab') {
+    window.open(file, '_blank');
+  } else {
+    openWindow(file, name);
+  }
+}
+
+// === 窗口模式 ===
+function openWindow(file, name) {
+  const overlay = document.getElementById('windowOverlay');
+  const iframe = document.getElementById('windowIframe');
+  const title = document.getElementById('windowTitle');
+  title.textContent = name;
+  iframe.src = file;
+  overlay.classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeWindow() {
+  const overlay = document.getElementById('windowOverlay');
+  const iframe = document.getElementById('windowIframe');
+  overlay.classList.remove('active');
+  iframe.src = '';
+  document.body.style.overflow = '';
+}
+
+function toggleMaximize() {
+  const container = document.querySelector('.window-container');
+  container.classList.toggle('maximized');
+  if (container.classList.contains('maximized')) {
+    container.style.width = '100vw';
+    container.style.height = '100vh';
+    container.style.borderRadius = '0';
+  } else {
+    container.style.width = '92vw';
+    container.style.height = '88vh';
+    container.style.borderRadius = '16px';
+  }
+}
+
+// === 事件绑定 ===
+document.getElementById('modeNewTab').addEventListener('click', function() {
+  currentMode = 'newtab';
+  this.classList.add('active');
+  document.getElementById('modeWindow').classList.remove('active');
+  renderCards();
+});
+document.getElementById('modeWindow').addEventListener('click', function() {
+  currentMode = 'window';
+  this.classList.add('active');
+  document.getElementById('modeNewTab').classList.remove('active');
+  renderCards();
+});
+document.getElementById('btnClose').addEventListener('click', closeWindow);
+document.getElementById('btnMaximize').addEventListener('click', toggleMaximize);
+document.getElementById('windowOverlay').addEventListener('click', function(e) {
+  if (e.target === this) closeWindow();
+});
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeWindow();
+});
+
+// === 搜索 ===
+document.getElementById('searchInput').addEventListener('input', function() {
+  searchQuery = this.value;
+  renderCards();
+});
+
+// === 筛选 ===
+document.getElementById('filterGroup').addEventListener('click', function(e) {
+  if (!e.target.classList.contains('filter-btn')) return;
+  this.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  e.target.classList.add('active');
+  currentFilter = e.target.dataset.filter;
+  renderCards();
+});
+
+// === 初始化 ===
+renderCards();
+</script>
+</body>
+</html>

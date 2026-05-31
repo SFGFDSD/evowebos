@@ -1,0 +1,3246 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Noir Grid OS</title>
+  <meta name="theme-color" content="#0b0a10" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fragment+Mono:ital@0;1&family=Instrument+Serif:ital@0;1&family=Unbounded:wght@300;500;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <script src="https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.js" onerror="window.fflateUnavailable=true"></script>
+  <style>
+    :root {
+      --bg: #09070d;
+      --bg-soft: rgba(17, 14, 25, 0.7);
+      --panel: rgba(17, 15, 24, 0.82);
+      --panel-2: rgba(30, 25, 39, 0.75);
+      --panel-3: rgba(9, 9, 14, 0.65);
+      --text: #f3ecdc;
+      --muted: #bba894;
+      --line: rgba(255, 238, 209, 0.12);
+      --line-strong: rgba(255, 238, 209, 0.22);
+      --accent: #ff9f5a;
+      --accent-2: #f2d06b;
+      --accent-3: #7dd3c7;
+      --danger: #ff6b73;
+      --good: #7ce2a2;
+      --shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
+      --radius: 24px;
+      --dock-h: 72px;
+      --font-ui: 'Unbounded', sans-serif;
+      --font-serif: 'Instrument Serif', serif;
+      --font-mono: 'Fragment Mono', monospace;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; overflow: hidden; background: var(--bg); color: var(--text); }
+    body {
+      font-family: var(--font-ui);
+      letter-spacing: 0.02em;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+      background:
+        radial-gradient(circle at 15% 15%, rgba(244, 162, 97, 0.12), transparent 24%),
+        radial-gradient(circle at 78% 18%, rgba(125, 211, 199, 0.11), transparent 25%),
+        linear-gradient(135deg, #060508, #09070d 45%, #140f19 100%);
+    }
+    button, input, textarea, select { font: inherit; color: inherit; }
+    textarea, input { user-select: text; -webkit-user-select: text; }
+    #os { position: relative; height: 100%; width: 100%; overflow: hidden; }
+    #wallpaperLayer, .atmosphere, #desktop, #windowLayer, #promptLayer, #toastArea { position: absolute; inset: 0; }
+    #wallpaperLayer {
+      background-size: cover;
+      background-position: center;
+      transition: background 500ms ease, filter 500ms ease;
+      filter: saturate(1.04) contrast(1.06);
+    }
+    .atmosphere {
+      pointer-events: none;
+      background:
+        linear-gradient(180deg, rgba(6, 5, 8, 0.24), rgba(6, 5, 8, 0.08) 18%, rgba(6, 5, 8, 0.35) 100%),
+        radial-gradient(circle at top, rgba(255, 159, 90, 0.10), transparent 28%),
+        radial-gradient(circle at 80% 15%, rgba(125, 211, 199, 0.08), transparent 25%),
+        repeating-linear-gradient(0deg, rgba(255,255,255,0.03) 0 1px, transparent 1px 26px),
+        repeating-linear-gradient(90deg, rgba(255,255,255,0.03) 0 1px, transparent 1px 26px);
+      mix-blend-mode: screen;
+      opacity: 0.38;
+    }
+    #desktop {
+      padding: 18px 18px calc(var(--dock-h) + env(safe-area-inset-bottom) + 18px) 18px;
+      overflow: hidden;
+      touch-action: none;
+    }
+    .desktop-grid {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background:
+        linear-gradient(90deg, transparent 0 calc(100% - 1px), rgba(255,255,255,0.025) calc(100% - 1px)),
+        linear-gradient(180deg, transparent 0 calc(100% - 1px), rgba(255,255,255,0.025) calc(100% - 1px));
+      background-size: 104px 104px;
+      opacity: 0.2;
+      mask-image: radial-gradient(circle at center, black 60%, transparent 100%);
+    }
+    #desktopIcons { position: absolute; inset: 0; }
+    .desktop-icon {
+      position: absolute;
+      width: 92px;
+      min-height: 102px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 8px;
+      border-radius: 22px;
+      transition: transform 180ms ease, background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+      border: 1px solid transparent;
+      cursor: default;
+      touch-action: none;
+      animation: riseIn 540ms cubic-bezier(.2,.8,.2,1) both;
+      transform-origin: center;
+    }
+    .desktop-icon:hover { background: rgba(255,255,255,0.06); transform: translateY(-2px) scale(1.01); }
+    .desktop-icon.selected {
+      background: rgba(255, 159, 90, 0.12);
+      border-color: rgba(255, 159, 90, 0.36);
+      box-shadow: 0 14px 32px rgba(0,0,0,0.25), inset 0 0 0 1px rgba(255, 209, 128, 0.08);
+    }
+    .desktop-icon .glyph {
+      width: 58px;
+      height: 58px;
+      display: grid;
+      place-items: center;
+      border-radius: 18px;
+      color: var(--accent-2);
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02)),
+        linear-gradient(135deg, rgba(255,159,90,0.18), rgba(125,211,199,0.10));
+      border: 1px solid rgba(255,255,255,0.1);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.03), 0 12px 24px rgba(0,0,0,0.18);
+      backdrop-filter: blur(8px);
+    }
+    .desktop-icon .label {
+      text-align: center;
+      font-size: 11px;
+      line-height: 1.4;
+      color: #f8f0e1;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.55);
+      word-break: break-word;
+      max-width: 100%;
+    }
+
+    .frost {
+      background: linear-gradient(180deg, rgba(26, 22, 34, 0.82), rgba(12, 11, 18, 0.76));
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(22px) saturate(1.2);
+    }
+    .panel {
+      background: linear-gradient(180deg, rgba(24, 20, 30, 0.92), rgba(12, 11, 18, 0.88));
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(24px) saturate(1.2);
+    }
+
+    #dock {
+      position: absolute;
+      left: 18px;
+      right: 18px;
+      bottom: calc(18px + env(safe-area-inset-bottom));
+      height: var(--dock-h);
+      border-radius: 28px;
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      z-index: 1500;
+      animation: riseIn 700ms 120ms both;
+    }
+    .dock-left, .dock-right { display: flex; align-items: center; gap: 10px; }
+    .dock-center { min-width: 0; flex: 1; display: flex; align-items: center; gap: 10px; overflow-x: auto; scrollbar-width: none; }
+    .dock-center::-webkit-scrollbar { display: none; }
+    .dock-btn, .window-chip, .start-card, .ctx-btn, .toolbar-btn, .seg-btn, .soft-btn {
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+      color: var(--text);
+      border-radius: 18px;
+      transition: transform 160ms ease, border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+    }
+    .dock-btn, .toolbar-btn, .soft-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 0 14px;
+      min-height: 48px;
+      cursor: pointer;
+    }
+    .dock-btn:hover, .window-chip:hover, .start-card:hover, .ctx-btn:hover, .toolbar-btn:hover, .seg-btn:hover, .soft-btn:hover {
+      transform: translateY(-1px);
+      border-color: rgba(255,159,90,0.42);
+      background: linear-gradient(180deg, rgba(255,159,90,0.12), rgba(255,255,255,0.05));
+    }
+    .window-chip {
+      min-width: 96px;
+      max-width: 220px;
+      padding: 10px 14px;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .window-chip.active { border-color: rgba(255,159,90,0.48); background: linear-gradient(180deg, rgba(255,159,90,0.18), rgba(255,255,255,0.05)); }
+    .window-chip.minimized { opacity: 0.6; }
+    .status-pill {
+      padding: 10px 14px;
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 11px;
+      background: rgba(255,255,255,0.03);
+      white-space: nowrap;
+    }
+
+    #startMenu {
+      position: absolute;
+      left: 18px;
+      bottom: calc(var(--dock-h) + 34px + env(safe-area-inset-bottom));
+      width: min(560px, calc(100vw - 36px));
+      max-height: min(72vh, 840px);
+      border-radius: 30px;
+      padding: 18px;
+      z-index: 1600;
+      overflow: auto;
+      transform-origin: bottom left;
+      animation: menuIn 240ms ease;
+    }
+    .menu-title {
+      font-family: var(--font-serif);
+      font-size: 28px;
+      letter-spacing: 0.02em;
+    }
+    .menu-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 12px;
+      margin-top: 14px;
+    }
+    .start-card {
+      min-height: 106px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: flex-start;
+      cursor: pointer;
+    }
+    .start-card .small { font-size: 11px; color: var(--muted); }
+    .start-card .big { font-size: 13px; line-height: 1.4; }
+
+    #contextMenu {
+      position: absolute;
+      min-width: 220px;
+      border-radius: 22px;
+      padding: 8px;
+      z-index: 2200;
+      display: none;
+      animation: menuIn 180ms ease;
+    }
+    .ctx-btn {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 14px;
+      margin: 4px 0;
+      cursor: pointer;
+      text-align: left;
+    }
+    .ctx-btn .hint { margin-left: auto; color: var(--muted); font-size: 10px; }
+
+    #windowLayer { pointer-events: none; z-index: 1200; }
+    .window {
+      position: absolute;
+      min-width: 320px;
+      min-height: 220px;
+      border-radius: 28px;
+      overflow: hidden;
+      pointer-events: auto;
+      transform-origin: center;
+      animation: windowIn 260ms cubic-bezier(.2,.8,.2,1);
+      box-shadow: var(--shadow);
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(26,21,34,0.9), rgba(12,11,18,0.86));
+      backdrop-filter: blur(28px) saturate(1.2);
+    }
+    .window.maximized {
+      border-radius: 20px;
+    }
+    .window.minimized {
+      opacity: 0;
+      transform: translateY(16px) scale(0.98);
+      pointer-events: none;
+    }
+    .window-titlebar {
+      height: 58px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 14px 0 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.02)),
+        linear-gradient(90deg, rgba(255,159,90,0.06), transparent 26%, transparent 74%, rgba(125,211,199,0.06));
+      cursor: grab;
+      touch-action: none;
+    }
+    .window-titlebar:active { cursor: grabbing; }
+    .window-title {
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 12px;
+    }
+    .window-title .name {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .window-controls { display: flex; align-items: center; gap: 8px; }
+    .control-btn {
+      width: 34px;
+      height: 34px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.05);
+      cursor: pointer;
+      transition: transform 160ms ease, background 160ms ease, border-color 160ms ease;
+    }
+    .control-btn:hover { transform: translateY(-1px); border-color: rgba(255,159,90,0.4); background: rgba(255,159,90,0.12); }
+    .control-btn.close:hover { background: rgba(255,107,115,0.16); border-color: rgba(255,107,115,0.38); }
+    .window-content {
+      position: absolute;
+      inset: 58px 0 0 0;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .resize-handle { position: absolute; z-index: 2; }
+    .resize-handle.n, .resize-handle.s { left: 14px; right: 14px; height: 10px; cursor: ns-resize; }
+    .resize-handle.n { top: -4px; }
+    .resize-handle.s { bottom: -4px; }
+    .resize-handle.e, .resize-handle.w { top: 14px; bottom: 14px; width: 10px; cursor: ew-resize; }
+    .resize-handle.e { right: -4px; }
+    .resize-handle.w { left: -4px; }
+    .resize-handle.ne, .resize-handle.nw, .resize-handle.se, .resize-handle.sw { width: 14px; height: 14px; }
+    .resize-handle.ne { top: -4px; right: -4px; cursor: nesw-resize; }
+    .resize-handle.nw { top: -4px; left: -4px; cursor: nwse-resize; }
+    .resize-handle.se { bottom: -4px; right: -4px; cursor: nwse-resize; }
+    .resize-handle.sw { bottom: -4px; left: -4px; cursor: nesw-resize; }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      padding: 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+      background: rgba(255,255,255,0.03);
+    }
+    .toolbar-group { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .toolbar-input {
+      min-height: 42px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--line);
+      color: var(--text);
+      border-radius: 16px;
+      padding: 0 14px;
+      outline: none;
+    }
+    .toolbar-input:focus { border-color: rgba(255,159,90,0.4); box-shadow: 0 0 0 3px rgba(255,159,90,0.09); }
+    .toolbar-btn.small, .soft-btn.small { min-height: 42px; padding: 0 12px; }
+    .toolbar-spacer { flex: 1; }
+    .toolbar-path {
+      min-width: min(220px, 44vw);
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .app-shell { flex: 1; min-height: 0; display: flex; }
+    .sidebar {
+      width: 220px;
+      min-width: 180px;
+      border-right: 1px solid rgba(255,255,255,0.07);
+      background: rgba(255,255,255,0.03);
+      padding: 12px;
+      overflow: auto;
+    }
+    .nav-item {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 12px;
+      border-radius: 16px;
+      border: 1px solid transparent;
+      cursor: pointer;
+      color: var(--muted);
+    }
+    .nav-item.active, .nav-item:hover {
+      color: var(--text);
+      border-color: rgba(255,159,90,0.28);
+      background: rgba(255,159,90,0.08);
+    }
+    .main-pane { flex: 1; min-width: 0; display: flex; flex-direction: column; background: rgba(255,255,255,0.01); }
+    .breadcrumbs { display: flex; align-items: center; gap: 8px; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+    .breadcrumbs::-webkit-scrollbar { display: none; }
+    .crumb {
+      padding: 8px 10px;
+      border-radius: 14px;
+      border: 1px solid transparent;
+      cursor: pointer;
+      white-space: nowrap;
+      color: var(--muted);
+    }
+    .crumb:hover { border-color: rgba(255,159,90,0.28); color: var(--text); background: rgba(255,159,90,0.08); }
+    .file-list-wrap { position: relative; flex: 1; min-height: 0; overflow: auto; }
+    .file-head, .file-row {
+      display: grid;
+      grid-template-columns: minmax(240px, 1.9fr) 1fr 0.8fr 0.7fr;
+      gap: 12px;
+      align-items: center;
+      padding: 0 16px;
+      min-width: 720px;
+    }
+    .file-head {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      min-height: 48px;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+      background: rgba(11, 10, 15, 0.86);
+      backdrop-filter: blur(10px);
+      color: var(--muted);
+      font-size: 11px;
+    }
+    .file-head button {
+      all: unset;
+      cursor: pointer;
+      padding: 10px 0;
+      color: inherit;
+    }
+    .file-row {
+      min-height: 54px;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      cursor: default;
+      transition: background 120ms ease, border-color 120ms ease;
+    }
+    .file-row:hover { background: rgba(255,255,255,0.03); }
+    .file-row.selected { background: rgba(255,159,90,0.10); }
+    .file-cell {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 12px;
+    }
+    .file-name { display: flex; align-items: center; gap: 10px; color: var(--text); }
+    .file-muted { color: var(--muted); }
+
+    .editor-shell, .browser-shell, .viewer-shell, .settings-shell, .archive-shell { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+    .editor-main { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr; }
+    .editor-main.html-mode { grid-template-columns: 1fr 1fr; }
+    .editor-text {
+      width: 100%;
+      height: 100%;
+      padding: 18px;
+      resize: none;
+      border: 0;
+      outline: none;
+      background: rgba(7,7,11,0.55);
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 13px;
+      line-height: 1.7;
+    }
+    .editor-preview, .browser-frame, .pdf-frame {
+      width: 100%;
+      height: 100%;
+      border: 0;
+      background: white;
+    }
+    .table-view { flex: 1; min-height: 0; overflow: auto; background: rgba(7,7,11,0.35); }
+    .sheet-table { min-width: 100%; border-collapse: collapse; }
+    .sheet-table td, .sheet-table th {
+      border: 1px solid rgba(255,255,255,0.08);
+      padding: 0;
+      min-width: 140px;
+    }
+    .sheet-input {
+      width: 100%;
+      min-height: 42px;
+      border: 0;
+      outline: none;
+      background: transparent;
+      padding: 10px 12px;
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 12px;
+    }
+    .segmented {
+      display: inline-flex;
+      gap: 8px;
+      padding: 4px;
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.03);
+    }
+    .seg-btn {
+      padding: 8px 12px;
+      cursor: pointer;
+      border-radius: 12px;
+    }
+    .seg-btn.active { background: rgba(255,159,90,0.14); border-color: rgba(255,159,90,0.32); }
+
+    .browser-shell .toolbar { gap: 8px; }
+    .browser-status { font-size: 11px; color: var(--muted); padding: 8px 14px; border-top: 1px solid rgba(255,255,255,0.07); }
+    .home-splash {
+      min-height: 100%;
+      background:
+        radial-gradient(circle at 16% 18%, rgba(255,159,90,0.25), transparent 24%),
+        radial-gradient(circle at 84% 24%, rgba(125,211,199,0.20), transparent 22%),
+        linear-gradient(135deg, #0a0810, #14101b 50%, #0a0a0f 100%);
+      color: #f4ead8;
+      padding: 36px;
+      font-family: var(--font-ui);
+    }
+    .home-splash h1 { font-family: var(--font-serif); font-size: 52px; margin: 0 0 12px; font-weight: 400; }
+    .home-splash p { max-width: 760px; line-height: 1.8; color: #d7c3aa; }
+    .home-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-top: 26px; }
+    .home-card { border: 1px solid rgba(255,255,255,0.09); border-radius: 22px; padding: 16px; background: rgba(255,255,255,0.04); }
+
+    .viewer-stage {
+      flex: 1;
+      min-height: 0;
+      display: grid;
+      place-items: center;
+      background: radial-gradient(circle at center, rgba(255,255,255,0.05), transparent 55%), rgba(0,0,0,0.25);
+      overflow: auto;
+    }
+    .viewer-stage img {
+      max-width: 100%;
+      max-height: 100%;
+      transform-origin: center center;
+      transition: transform 160ms ease;
+      filter: drop-shadow(0 20px 50px rgba(0,0,0,0.45));
+    }
+    .media-element { max-width: 100%; max-height: 100%; }
+    .generic-text {
+      flex: 1;
+      min-height: 0;
+      margin: 0;
+      padding: 18px;
+      overflow: auto;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      line-height: 1.7;
+      background: rgba(7,7,11,0.55);
+      white-space: pre-wrap;
+    }
+
+    .calculator {
+      flex: 1;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      min-height: 0;
+      background: radial-gradient(circle at top, rgba(255,159,90,0.07), transparent 30%), transparent;
+    }
+    .calc-display {
+      padding: 22px 18px 8px;
+      text-align: right;
+      font-family: var(--font-mono);
+    }
+    .calc-expression { color: var(--muted); min-height: 24px; font-size: 14px; }
+    .calc-result { font-size: clamp(28px, 6vw, 48px); word-break: break-all; }
+    .calc-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 18px; }
+    .calc-key {
+      min-height: 58px;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.04);
+      cursor: pointer;
+      font-size: 16px;
+    }
+    .calc-key.op { background: rgba(255,159,90,0.11); }
+    .calc-key.eq { background: linear-gradient(180deg, rgba(255,159,90,0.22), rgba(242,208,107,0.18)); }
+
+    .paint-wrap { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+    .paint-stage { flex: 1; min-height: 0; position: relative; background: #fff; overflow: auto; }
+    .paint-canvas { display: block; background: white; touch-action: none; margin: 0 auto; box-shadow: 0 10px 40px rgba(0,0,0,0.15); }
+
+    .settings-shell { overflow: auto; }
+    .settings-grid { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 16px; padding: 16px; }
+    .settings-card {
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      background: rgba(255,255,255,0.03);
+      padding: 16px;
+    }
+    .settings-card h3 { margin: 0 0 12px; font-size: 14px; font-weight: 500; }
+    .settings-card .hero { font-family: var(--font-serif); font-size: 34px; line-height: 1; margin: 0 0 10px; }
+    .progress {
+      height: 12px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.07);
+    }
+    .progress > span {
+      display: block;
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent-2), var(--accent-3));
+      width: 0%;
+      transition: width 360ms ease;
+    }
+    .usage-row, .mount-row, .archive-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto auto;
+      gap: 10px;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      font-size: 12px;
+    }
+    .usage-row:last-child, .mount-row:last-child, .archive-row:last-child { border-bottom: none; }
+    .wallpaper-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; }
+    .wallpaper-card {
+      border-radius: 18px;
+      height: 84px;
+      border: 1px solid var(--line);
+      overflow: hidden;
+      cursor: pointer;
+      position: relative;
+    }
+    .wallpaper-card.active::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border: 2px solid rgba(255,159,90,0.8);
+      border-radius: 18px;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.2);
+    }
+
+    .archive-list { flex: 1; min-height: 0; overflow: auto; padding: 0 16px 16px; }
+    .archive-row { grid-template-columns: minmax(0, 1fr) auto; }
+
+    .selection-box {
+      position: absolute;
+      border: 1px solid rgba(255,159,90,0.66);
+      background: rgba(255,159,90,0.12);
+      border-radius: 12px;
+      pointer-events: none;
+      display: none;
+      z-index: 10;
+    }
+
+    #promptLayer {
+      z-index: 2500;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(4,3,7,0.56);
+      backdrop-filter: blur(16px);
+    }
+    .prompt-card {
+      width: min(460px, calc(100vw - 30px));
+      border-radius: 28px;
+      padding: 20px;
+    }
+    .prompt-card h3 { margin: 0 0 8px; font-size: 16px; }
+    .prompt-card p { margin: 0 0 16px; color: var(--muted); font-size: 12px; line-height: 1.6; }
+    .prompt-card .actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
+    .prompt-input {
+      width: 100%;
+      min-height: 48px;
+      padding: 0 14px;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.04);
+      outline: none;
+    }
+
+    #toastArea {
+      pointer-events: none;
+      display: flex;
+      align-items: flex-end;
+      justify-content: flex-end;
+      padding: 18px;
+      z-index: 2600;
+    }
+    .toast-stack { display: flex; flex-direction: column; gap: 10px; }
+    .toast {
+      min-width: 240px;
+      max-width: min(420px, calc(100vw - 36px));
+      padding: 14px 16px;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(25, 20, 32, 0.92), rgba(12, 11, 18, 0.88));
+      color: var(--text);
+      box-shadow: var(--shadow);
+      animation: toastIn 220ms ease;
+      pointer-events: auto;
+    }
+    .toast .muted { color: var(--muted); font-size: 11px; margin-top: 4px; }
+
+    .mono { font-family: var(--font-mono); }
+    .muted { color: var(--muted); }
+    .danger { color: var(--danger); }
+    .good { color: var(--good); }
+    .hidden { display: none !important; }
+
+    @keyframes riseIn {
+      from { opacity: 0; transform: translateY(10px) scale(0.985); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    @keyframes menuIn {
+      from { opacity: 0; transform: translateY(12px) scale(0.98); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    @keyframes windowIn {
+      from { opacity: 0; transform: scale(0.98) translateY(10px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateY(8px) scale(0.98); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    @media (max-width: 900px) {
+      :root { --dock-h: 78px; }
+      #dock {
+        left: 10px;
+        right: 10px;
+        bottom: calc(10px + env(safe-area-inset-bottom));
+        border-radius: 24px;
+        padding: 8px;
+      }
+      .dock-right .status-pill:nth-child(1) { display: none; }
+      #startMenu {
+        left: 10px;
+        right: 10px;
+        width: auto;
+        bottom: calc(var(--dock-h) + 20px + env(safe-area-inset-bottom));
+        max-height: 74vh;
+      }
+      .window {
+        min-width: 0;
+        min-height: 0;
+      }
+      .editor-main.html-mode,
+      .settings-grid,
+      .app-shell {
+        grid-template-columns: 1fr;
+      }
+      .sidebar {
+        display: none;
+      }
+      .file-head, .file-row {
+        grid-template-columns: minmax(220px, 1.4fr) 0.95fr 0.8fr 0.7fr;
+        min-width: 680px;
+      }
+    }
+
+    @media (max-width: 640px) {
+      #desktop { padding: 10px 10px calc(var(--dock-h) + env(safe-area-inset-bottom) + 12px) 10px; }
+      .desktop-icon { width: 82px; min-height: 96px; }
+      .desktop-icon .glyph { width: 52px; height: 52px; }
+      .window-titlebar { height: 54px; }
+      .window-content { inset: 54px 0 0 0; }
+      .toolbar { padding: 10px; }
+      .toolbar-input { min-height: 40px; }
+      .dock-btn, .toolbar-btn, .soft-btn { min-height: 44px; }
+      .file-head, .file-row { min-width: 600px; }
+      .home-splash h1 { font-size: 38px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="os">
+    <div id="wallpaperLayer"></div>
+    <div class="atmosphere"></div>
+    <div id="desktop">
+      <div class="desktop-grid"></div>
+      <div id="desktopIcons"></div>
+      <div id="desktopSelection" class="selection-box"></div>
+    </div>
+    <div id="windowLayer"></div>
+    <div id="startMenu" class="panel hidden"></div>
+    <div id="contextMenu" class="panel"></div>
+    <div id="promptLayer"></div>
+    <div id="toastArea"><div class="toast-stack" id="toastStack"></div></div>
+    <div id="dock" class="frost">
+      <div class="dock-left">
+        <button id="startButton" class="dock-btn" title="开始菜单"></button>
+        <button id="dockUpload" class="dock-btn" title="导入文件"></button>
+      </div>
+      <div class="dock-center" id="dockWindows"></div>
+      <div class="dock-right">
+        <div class="status-pill" id="storageQuick">储存 --</div>
+        <div class="status-pill" id="clockQuick">--:--</div>
+      </div>
+    </div>
+    <input id="fileUploadInput" type="file" multiple class="hidden" />
+    <input id="folderUploadInput" type="file" webkitdirectory directory multiple class="hidden" />
+    <input id="wallpaperUploadInput" type="file" accept="image/*" class="hidden" />
+  </div>
+
+  <script>
+  (async () => {
+    'use strict';
+
+    const $ = (s, root = document) => root.querySelector(s);
+    const $$ = (s, root = document) => [...root.querySelectorAll(s)];
+    const el = (tag, cls = '', html = '') => {
+      const node = document.createElement(tag);
+      if (cls) node.className = cls;
+      if (html) node.innerHTML = html;
+      return node;
+    };
+
+    const TEXT_EXTS = new Set(['txt','md','log','html','htm','css','js','mjs','cjs','json','xml','yml','yaml','svg','ts','tsx','jsx','py','java','c','cpp','h','hpp','rs','go','php','sql','sh','ini','cfg','toml','lock','env']);
+    const IMAGE_EXTS = new Set(['png','jpg','jpeg','gif','svg','webp','bmp','ico','avif']);
+    const AUDIO_EXTS = new Set(['mp3','wav','ogg','flac','aac','m4a']);
+    const VIDEO_EXTS = new Set(['mp4','webm','ogv','mov']);
+    const PDF_EXTS = new Set(['pdf']);
+    const TABLE_EXTS = new Set(['csv','tsv']);
+    const ARCHIVE_EXTS = new Set(['zip','gz','tar','tgz']);
+
+    const WALLPAPERS = [
+      {
+        id: 'velour',
+        name: 'Velour Veins',
+        css: 'radial-gradient(circle at 20% 18%, rgba(255, 180, 126, 0.55), transparent 22%), radial-gradient(circle at 84% 18%, rgba(125, 211, 199, 0.45), transparent 18%), radial-gradient(circle at 48% 82%, rgba(150, 108, 255, 0.18), transparent 22%), linear-gradient(135deg, #09070d, #161019 45%, #0b0b12 100%)'
+      },
+      {
+        id: 'brass',
+        name: 'Brass Dawn',
+        css: 'radial-gradient(circle at 22% 30%, rgba(255, 222, 173, 0.42), transparent 20%), radial-gradient(circle at 72% 26%, rgba(255, 159, 90, 0.38), transparent 18%), linear-gradient(155deg, #130d0d, #2a1910 45%, #0d0a10 100%)'
+      },
+      {
+        id: 'lagoon',
+        name: 'Lagoon Bloom',
+        css: 'radial-gradient(circle at 18% 18%, rgba(125, 211, 199, 0.42), transparent 20%), radial-gradient(circle at 82% 22%, rgba(64, 116, 255, 0.24), transparent 18%), linear-gradient(150deg, #06090b, #0c1b22 45%, #06070d 100%)'
+      },
+      {
+        id: 'ember',
+        name: 'Ember Screen',
+        css: 'radial-gradient(circle at 18% 18%, rgba(255, 98, 69, 0.36), transparent 18%), radial-gradient(circle at 82% 30%, rgba(255, 208, 107, 0.24), transparent 16%), linear-gradient(135deg, #080607, #1b0e12 48%, #05060a 100%)'
+      }
+    ];
+
+    const APPS = [
+      { id: 'explorer', name: '资源管理器', description: '浏览、搜索、排序、复制与挂载目录', icon: 'explorer' },
+      { id: 'notepad', name: '记事本', description: '编辑文本、代码、CSV/TSV 与 HTML 实时预览', icon: 'editor' },
+      { id: 'browser', name: '浏览器', description: '地址栏、导航按钮与 iframe 页面容器', icon: 'browser' },
+      { id: 'calculator', name: '计算器', description: '表达式运算与历史式显示', icon: 'calculator' },
+      { id: 'paint', name: '画板', description: '本地绘制并保存为 PNG 到文件系统', icon: 'paint' },
+      { id: 'settings', name: '设置', description: '储存可视化、壁纸、挂载管理与重置', icon: 'settings' }
+    ];
+
+    const DEFAULT_PREFS = {
+      wallpaper: { kind: 'builtin', id: 'velour' },
+      desktopLayout: {},
+      shortcuts: [
+        { id: 'app:explorer', kind: 'app', app: 'explorer', name: '资源管理器' },
+        { id: 'app:notepad', kind: 'app', app: 'notepad', name: '记事本' },
+        { id: 'app:browser', kind: 'app', app: 'browser', name: '浏览器' },
+        { id: 'app:calculator', kind: 'app', app: 'calculator', name: '计算器' },
+        { id: 'app:paint', kind: 'app', app: 'paint', name: '画板' },
+        { id: 'app:settings', kind: 'app', app: 'settings', name: '设置' }
+      ],
+      lastExplorerPath: '/Desktop',
+      booted: false
+    };
+
+    const state = {
+      db: null,
+      fs: null,
+      prefs: structuredClone(DEFAULT_PREFS),
+      windows: new Map(),
+      z: 30,
+      activeWindowId: null,
+      startMenuOpen: false,
+      contextMenuOpen: false,
+      desktopSelection: new Set(),
+      explorerSelections: new Map(),
+      clipboard: null,
+      uploadTarget: '/Desktop',
+      objectUrls: new Map(),
+      lastTap: 0,
+      lastTapId: '',
+      mountReminders: [],
+      bootComplete: false,
+      draggingDesktop: null
+    };
+
+    const startMenu = $('#startMenu');
+    const contextMenu = $('#contextMenu');
+    const windowLayer = $('#windowLayer');
+    const desktop = $('#desktop');
+    const desktopIcons = $('#desktopIcons');
+    const desktopSelection = $('#desktopSelection');
+    const fileUploadInput = $('#fileUploadInput');
+    const folderUploadInput = $('#folderUploadInput');
+    const wallpaperUploadInput = $('#wallpaperUploadInput');
+
+    function icon(name, cls = 'w-5 h-5') {
+      const common = `class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"`;
+      const map = {
+        start: `<svg ${common}><path d="M4 4h6v6H4z"/><path d="M14 4h6v4h-6z"/><path d="M4 14h4v6H4z"/><path d="M10 10h10v10H10z"/></svg>`,
+        upload: `<svg ${common}><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M4 18v2h16v-2"/></svg>`,
+        explorer: `<svg ${common}><path d="M3 7h6l2 2h10v8a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3z"/><path d="M3 10h18"/></svg>`,
+        folder: `<svg ${common}><path d="M3 8h6l2 2h10v7a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3z"/></svg>`,
+        file: `<svg ${common}><path d="M7 3h7l5 5v11a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M14 3v6h6"/></svg>`,
+        editor: `<svg ${common}><path d="M4 19h16"/><path d="M8 15 17 6l2 2-9 9-4 1z"/></svg>`,
+        browser: `<svg ${common}><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 8h18"/><path d="M7 6h.01"/><path d="M10 6h.01"/></svg>`,
+        calculator: `<svg ${common}><rect x="5" y="3" width="14" height="18" rx="3"/><path d="M8 7h8"/><path d="M8 12h2"/><path d="M14 12h2"/><path d="M8 16h2"/><path d="M14 16h2"/></svg>`,
+        paint: `<svg ${common}><path d="M12 3c5 0 9 3 9 7 0 3-2 4-4 4h-2a2 2 0 0 0-2 2c0 .6.2 1.2.5 1.7.7 1.2-.2 2.3-1.7 2.3C6.4 20 3 16.4 3 12c0-5 4-9 9-9z"/><path d="M8 10h.01"/><path d="M12 8h.01"/><path d="M16 10h.01"/></svg>`,
+        settings: `<svg ${common}><path d="M12 3v3"/><path d="M12 18v3"/><path d="M3 12h3"/><path d="M18 12h3"/><path d="m5.6 5.6 2.1 2.1"/><path d="m16.3 16.3 2.1 2.1"/><path d="m18.4 5.6-2.1 2.1"/><path d="m7.7 16.3-2.1 2.1"/><circle cx="12" cy="12" r="3.4"/></svg>`,
+        image: `<svg ${common}><rect x="3" y="4" width="18" height="16" rx="3"/><path d="m7 15 3-3 3 3 4-5 3 4"/><circle cx="9" cy="9" r="1.5"/></svg>`,
+        audio: `<svg ${common}><path d="M12 5v14"/><path d="M12 7c4 0 7 2 7 5s-3 5-7 5"/><path d="M12 9c-4 0-7 1.5-7 3.5S8 16 12 16"/></svg>`,
+        video: `<svg ${common}><rect x="3" y="5" width="14" height="14" rx="2"/><path d="m17 10 4-2v8l-4-2z"/><path d="m9 10 4 2-4 2z"/></svg>`,
+        pdf: `<svg ${common}><path d="M7 3h7l5 5v11a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M14 3v6h6"/><path d="M8 15h2.5a1.5 1.5 0 0 0 0-3H8v6"/><path d="M13 18v-6h2a1.5 1.5 0 0 1 0 3h-2"/></svg>`,
+        archive: `<svg ${common}><path d="M7 3h10l3 4v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7z"/><path d="M9 3v4h6V3"/><path d="M12 10v8"/><path d="M10 13h4"/></svg>`,
+        code: `<svg ${common}><path d="m9 7-5 5 5 5"/><path d="m15 7 5 5-5 5"/></svg>`,
+        refresh: `<svg ${common}><path d="M20 11a8 8 0 1 0 2 5.5"/><path d="M20 4v7h-7"/></svg>`,
+        plus: `<svg ${common}><path d="M12 5v14"/><path d="M5 12h14"/></svg>`,
+        delete: `<svg ${common}><path d="M4 7h16"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13"/><path d="M9 7V4h6v3"/></svg>`,
+        rename: `<svg ${common}><path d="M4 19h6"/><path d="M7 16 18 5l2 2-11 11-4 1z"/></svg>`,
+        copy: `<svg ${common}><rect x="9" y="9" width="11" height="11" rx="2"/><rect x="4" y="4" width="11" height="11" rx="2"/></svg>`,
+        paste: `<svg ${common}><path d="M9 4h6"/><path d="M10 2h4v4h-4z"/><rect x="5" y="6" width="14" height="15" rx="2"/></svg>`,
+        open: `<svg ${common}><path d="M14 4h6v6"/><path d="M10 14 20 4"/><path d="M20 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h4"/></svg>`,
+        fullscreen: `<svg ${common}><path d="M8 3H3v5"/><path d="m3 3 6 6"/><path d="M16 3h5v5"/><path d="m21 3-6 6"/><path d="M8 21H3v-5"/><path d="m3 21 6-6"/><path d="M16 21h5v-5"/><path d="m21 21-6-6"/></svg>`,
+        mount: `<svg ${common}><path d="M5 18h14"/><path d="M7 18V6h10v12"/><path d="M10 10h4"/><path d="M12 8v4"/></svg>`,
+        table: `<svg ${common}><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/><path d="M8 4v16"/><path d="M15 4v16"/></svg>`,
+        download: `<svg ${common}><path d="M12 4v12"/><path d="m7 11 5 5 5-5"/><path d="M4 20h16"/></svg>`,
+        search: `<svg ${common}><circle cx="11" cy="11" r="6"/><path d="m20 20-4-4"/></svg>`,
+        back: `<svg ${common}><path d="m14 6-6 6 6 6"/></svg>`,
+        forward: `<svg ${common}><path d="m10 6 6 6-6 6"/></svg>`,
+        up: `<svg ${common}><path d="m12 6-6 6h12z"/></svg>`,
+        home: `<svg ${common}><path d="m4 12 8-7 8 7"/><path d="M7 10v10h10V10"/></svg>`,
+        save: `<svg ${common}><path d="M5 5h11l3 3v11a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2z"/><path d="M8 5v6h8"/><path d="M9 16h6"/></svg>`,
+        zoomIn: `<svg ${common}><circle cx="11" cy="11" r="6"/><path d="M11 8v6"/><path d="M8 11h6"/><path d="m20 20-4-4"/></svg>`,
+        zoomOut: `<svg ${common}><circle cx="11" cy="11" r="6"/><path d="M8 11h6"/><path d="m20 20-4-4"/></svg>`
+      };
+      return map[name] || map.file;
+    }
+
+    function escapeHtml(text = '') {
+      return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function normalizePath(input = '/') {
+      const raw = String(input || '/').replace(/\\/g, '/').trim();
+      const parts = [];
+      const source = raw.startsWith('/') ? raw : `/${raw}`;
+      for (const part of source.split('/')) {
+        if (!part || part === '.') continue;
+        if (part === '..') parts.pop(); else parts.push(part);
+      }
+      return '/' + parts.join('/');
+    }
+
+    function dirname(path) {
+      path = normalizePath(path);
+      if (path === '/') return '/';
+      const parts = path.split('/').filter(Boolean);
+      parts.pop();
+      return parts.length ? '/' + parts.join('/') : '/';
+    }
+
+    function basename(path) {
+      path = normalizePath(path);
+      if (path === '/') return '/';
+      return path.split('/').filter(Boolean).pop() || '/';
+    }
+
+    function joinPath(...parts) {
+      return normalizePath(parts.join('/'));
+    }
+
+    function extname(path) {
+      const base = basename(path);
+      if (base.endsWith('.tar.gz')) return 'tar.gz';
+      const idx = base.lastIndexOf('.');
+      return idx === -1 ? '' : base.slice(idx + 1).toLowerCase();
+    }
+
+    function stem(path) {
+      const base = basename(path);
+      if (base.endsWith('.tar.gz')) return base.slice(0, -7);
+      const idx = base.lastIndexOf('.');
+      return idx === -1 ? base : base.slice(0, idx);
+    }
+
+    function isSubPath(candidate, parent) {
+      candidate = normalizePath(candidate);
+      parent = normalizePath(parent);
+      return candidate === parent || candidate.startsWith(parent + '/');
+    }
+
+    function formatBytes(bytes = 0) {
+      if (bytes === 0) return '0 B';
+      const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+      const i = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+      return `${(bytes / Math.pow(1024, i)).toFixed(i < 2 ? 0 : 1)} ${units[i]}`;
+    }
+
+    function formatDate(ts) {
+      if (!ts) return '—';
+      const d = new Date(ts);
+      return d.toLocaleString('zh-CN', { hour12: false });
+    }
+
+    function mimeFromName(name = '') {
+      const ext = extname(name);
+      const map = {
+        txt: 'text/plain', md: 'text/markdown', html: 'text/html', htm: 'text/html', css: 'text/css', js: 'text/javascript', json: 'application/json', xml: 'application/xml', yml: 'text/yaml', yaml: 'text/yaml', log: 'text/plain', svg: 'image/svg+xml', csv: 'text/csv', tsv: 'text/tab-separated-values', pdf: 'application/pdf', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp', bmp: 'image/bmp', ico: 'image/x-icon', mp3: 'audio/mpeg', wav: 'audio/wav', ogg: 'audio/ogg', flac: 'audio/flac', aac: 'audio/aac', mp4: 'video/mp4', webm: 'video/webm', ogv: 'video/ogg', zip: 'application/zip', gz: 'application/gzip', tar: 'application/x-tar'
+      };
+      return map[ext] || 'application/octet-stream';
+    }
+
+    function blobFromData(data, type) {
+      if (data instanceof Blob) return data;
+      if (data instanceof ArrayBuffer) return new Blob([data], { type });
+      if (ArrayBuffer.isView(data)) return new Blob([data], { type });
+      return new Blob([String(data ?? '')], { type: type || 'text/plain;charset=utf-8' });
+    }
+
+    function decodeText(buffer) {
+      try {
+        return new TextDecoder('utf-8', { fatal: false }).decode(buffer);
+      } catch {
+        return new TextDecoder().decode(buffer);
+      }
+    }
+
+    function isProbablyText(entry) {
+      if (!entry) return true;
+      if (entry.type && entry.type.startsWith('text/')) return true;
+      const ext = extname(entry.name || entry.path || '');
+      return TEXT_EXTS.has(ext) || TABLE_EXTS.has(ext) || ext === 'svg';
+    }
+
+    function fileKindIcon(entry) {
+      if (entry.kind === 'dir') return 'folder';
+      const ext = extname(entry.name || entry.path || '');
+      if (TABLE_EXTS.has(ext)) return 'table';
+      if (IMAGE_EXTS.has(ext)) return 'image';
+      if (AUDIO_EXTS.has(ext)) return 'audio';
+      if (VIDEO_EXTS.has(ext)) return 'video';
+      if (PDF_EXTS.has(ext)) return 'pdf';
+      if (ARCHIVE_EXTS.has(ext) || ext === 'tar.gz') return 'archive';
+      if (TEXT_EXTS.has(ext)) return ext === 'html' || ext === 'htm' ? 'browser' : 'code';
+      return 'file';
+    }
+
+    function setCookie(name, value, days = 365) {
+      const maxAge = days * 24 * 60 * 60;
+      document.cookie = `${encodeURIComponent(name)}=${encodeURIComponent(value)}; path=/; max-age=${maxAge}; SameSite=Lax`;
+    }
+
+    function getCookie(name) {
+      const key = encodeURIComponent(name) + '=';
+      const row = document.cookie.split('; ').find(r => r.startsWith(key));
+      return row ? decodeURIComponent(row.slice(key.length)) : null;
+    }
+
+    const tinyStore = {
+      get(key) {
+        try {
+          const ls = localStorage.getItem(key);
+          if (ls) return ls;
+        } catch {}
+        return getCookie(key);
+      },
+      set(key, value) {
+        try { localStorage.setItem(key, value); } catch {}
+        setCookie(key, value);
+      },
+      clear(key) {
+        try { localStorage.removeItem(key); } catch {}
+        setCookie(key, '', -1);
+      }
+    };
+
+    function toast(title, detail = '', timeout = 3200) {
+      const node = el('div', 'toast', `<div>${escapeHtml(title)}</div>${detail ? `<div class="muted">${escapeHtml(detail)}</div>` : ''}`);
+      $('#toastStack').appendChild(node);
+      setTimeout(() => node.remove(), timeout);
+    }
+
+    async function openDB() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open('noir-grid-os', 3);
+        req.onupgradeneeded = () => {
+          const db = req.result;
+          if (!db.objectStoreNames.contains('kv')) db.createObjectStore('kv');
+          if (!db.objectStoreNames.contains('mounts')) db.createObjectStore('mounts', { keyPath: 'mountPath' });
+          if (!db.objectStoreNames.contains('fsnodes')) db.createObjectStore('fsnodes', { keyPath: 'path' });
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    function idbRequest(req) {
+      return new Promise((resolve, reject) => {
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    function idbStore(storeName, mode = 'readonly') {
+      return state.db.transaction(storeName, mode).objectStore(storeName);
+    }
+
+    async function idbGet(storeName, key) {
+      return idbRequest(idbStore(storeName).get(key));
+    }
+
+    async function idbSet(storeName, key, value) {
+      const store = idbStore(storeName, 'readwrite');
+      const req = store.put(value, key);
+      return idbRequest(req);
+    }
+
+    async function idbPut(storeName, value) {
+      const store = idbStore(storeName, 'readwrite');
+      return idbRequest(store.put(value));
+    }
+
+    async function idbDelete(storeName, key) {
+      const store = idbStore(storeName, 'readwrite');
+      return idbRequest(store.delete(key));
+    }
+
+    async function idbGetAll(storeName) {
+      return idbRequest(idbStore(storeName).getAll());
+    }
+
+    async function idbClear(storeName) {
+      return idbRequest(idbStore(storeName, 'readwrite').clear());
+    }
+
+    class AbstractBackend {
+      async copy(src, dst) {
+        const info = await this.stat(src);
+        if (info.kind === 'dir') {
+          await this.mkdir(dst, { recursive: true });
+          const entries = await this.readdir(src);
+          for (const entry of entries) {
+            await this.copy(joinPath(src, entry.name), joinPath(dst, entry.name));
+          }
+        } else {
+          const blob = await this.readFile(src, 'blob');
+          await this.writeFile(dst, blob, { type: info.type || mimeFromName(dst) });
+        }
+      }
+      async remove(path) {
+        const info = await this.stat(path);
+        if (info.kind === 'dir') return this.rmdir(path, { recursive: true });
+        return this.unlink(path);
+      }
+      async rename(src, dst) {
+        await this.copy(src, dst);
+        await this.remove(src);
+      }
+    }
+
+    class HandleTreeBackend extends AbstractBackend {
+      constructor(rootHandle, label = 'HandleFS') {
+        super();
+        this.root = rootHandle;
+        this.label = label;
+      }
+      async init() {
+        return true;
+      }
+      parts(path) {
+        return normalizePath(path).split('/').filter(Boolean);
+      }
+      async getDirHandle(path, create = false) {
+        const parts = this.parts(path);
+        let handle = this.root;
+        for (const part of parts) {
+          handle = await handle.getDirectoryHandle(part, { create });
+        }
+        return handle;
+      }
+      async getFileHandle(path, create = false) {
+        const parent = await this.getDirHandle(dirname(path), create);
+        return parent.getFileHandle(basename(path), { create });
+      }
+      async exists(path, ..._rest) {
+        try { await this.stat(path); return true; } catch { return false; }
+      }
+      async mkdir(path, options = { recursive: true }, ..._rest) {
+        const recursive = options?.recursive !== false;
+        if (normalizePath(path) === '/') return;
+        const parts = this.parts(path);
+        if (!recursive && parts.length > 1) {
+          await this.getDirHandle(dirname(path), false);
+        }
+        await this.getDirHandle(path, true);
+      }
+      async stat(path, ..._rest) {
+        path = normalizePath(path);
+        if (path === '/') return { kind: 'dir', name: '/', path, size: 0, type: 'folder', lastModified: 0 };
+        const parent = await this.getDirHandle(dirname(path), false);
+        const name = basename(path);
+        try {
+          const fh = await parent.getFileHandle(name);
+          const file = await fh.getFile();
+          return { kind: 'file', name, path, size: file.size, type: file.type || mimeFromName(name), lastModified: file.lastModified };
+        } catch {}
+        const dh = await parent.getDirectoryHandle(name);
+        return { kind: 'dir', name, path, size: 0, type: 'folder', lastModified: 0 };
+      }
+      async readdir(path, ..._rest) {
+        const dir = await this.getDirHandle(path, false);
+        const out = [];
+        for await (const [name, handle] of dir.entries()) {
+          if (handle.kind === 'directory') {
+            out.push({ name, path: joinPath(path, name), kind: 'dir', size: 0, type: 'folder', lastModified: 0 });
+          } else {
+            const file = await handle.getFile();
+            out.push({ name, path: joinPath(path, name), kind: 'file', size: file.size, type: file.type || mimeFromName(name), lastModified: file.lastModified });
+          }
+        }
+        return out;
+      }
+      async readFile(path, mode = 'text', ..._rest) {
+        const handle = await this.getFileHandle(path, false);
+        const file = await handle.getFile();
+        if (mode === 'blob') return file;
+        if (mode === 'arrayBuffer') return file.arrayBuffer();
+        return file.text();
+      }
+      async writeFile(path, data, options = {}, ..._rest) {
+        await this.mkdir(dirname(path), { recursive: true });
+        const handle = await this.getFileHandle(path, true);
+        const writer = await handle.createWritable();
+        await writer.write(data instanceof Blob ? data : blobFromData(data, options?.type || mimeFromName(path)));
+        await writer.close();
+      }
+      async unlink(path, ..._rest) {
+        const parent = await this.getDirHandle(dirname(path), false);
+        await parent.removeEntry(basename(path));
+      }
+      async rmdir(path, options = { recursive: true }, ..._rest) {
+        if (normalizePath(path) === '/') throw new Error('无法删除根目录');
+        const parent = await this.getDirHandle(dirname(path), false);
+        await parent.removeEntry(basename(path), { recursive: options?.recursive !== false });
+      }
+    }
+
+    class IDBFSBackend extends AbstractBackend {
+      constructor() { super(); }
+      async init() {
+        if (!(await this.exists('/'))) {
+          await idbPut('fsnodes', { path: '/', kind: 'dir', lastModified: Date.now(), mime: 'folder', blob: null });
+        }
+      }
+      async all() {
+        return idbGetAll('fsnodes');
+      }
+      async record(path) {
+        return idbGet('fsnodes', normalizePath(path));
+      }
+      async exists(path, ..._rest) {
+        return !!(await this.record(path));
+      }
+      async mkdir(path, options = { recursive: true }, ..._rest) {
+        path = normalizePath(path);
+        if (path === '/') return;
+        const parts = path.split('/').filter(Boolean);
+        let cur = '';
+        for (let i = 0; i < parts.length; i++) {
+          cur = normalizePath(cur + '/' + parts[i]);
+          const exists = await this.record(cur);
+          if (!exists) {
+            if (options?.recursive === false && i < parts.length - 1) throw new Error('父目录不存在');
+            await idbPut('fsnodes', { path: cur, kind: 'dir', lastModified: Date.now(), mime: 'folder', blob: null });
+          }
+        }
+      }
+      async stat(path, ..._rest) {
+        path = normalizePath(path);
+        const rec = await this.record(path);
+        if (!rec) throw new Error('路径不存在');
+        return { kind: rec.kind, name: basename(path), path, size: rec.blob ? rec.blob.size : 0, type: rec.mime || (rec.kind === 'dir' ? 'folder' : mimeFromName(path)), lastModified: rec.lastModified || 0 };
+      }
+      async readdir(path, ..._rest) {
+        path = normalizePath(path);
+        const items = await this.all();
+        const out = [];
+        for (const rec of items) {
+          if (rec.path === path || rec.path === '/') continue;
+          if (dirname(rec.path) === path) {
+            out.push({ name: basename(rec.path), path: rec.path, kind: rec.kind, size: rec.blob ? rec.blob.size : 0, type: rec.mime || (rec.kind === 'dir' ? 'folder' : mimeFromName(rec.path)), lastModified: rec.lastModified || 0 });
+          }
+        }
+        return out;
+      }
+      async readFile(path, mode = 'text', ..._rest) {
+        const rec = await this.record(path);
+        if (!rec || rec.kind !== 'file') throw new Error('文件不存在');
+        const blob = rec.blob || new Blob([]);
+        if (mode === 'blob') return blob;
+        if (mode === 'arrayBuffer') return blob.arrayBuffer();
+        return blob.text();
+      }
+      async writeFile(path, data, options = {}, ..._rest) {
+        path = normalizePath(path);
+        await this.mkdir(dirname(path), { recursive: true });
+        const blob = data instanceof Blob ? data : blobFromData(data, options?.type || mimeFromName(path));
+        await idbPut('fsnodes', { path, kind: 'file', lastModified: Date.now(), mime: blob.type || options?.type || mimeFromName(path), blob });
+      }
+      async unlink(path, ..._rest) {
+        const rec = await this.record(path);
+        if (!rec || rec.kind !== 'file') throw new Error('文件不存在');
+        await idbDelete('fsnodes', normalizePath(path));
+      }
+      async rmdir(path, options = { recursive: true }, ..._rest) {
+        path = normalizePath(path);
+        if (path === '/') throw new Error('无法删除根目录');
+        const rec = await this.record(path);
+        if (!rec || rec.kind !== 'dir') throw new Error('文件夹不存在');
+        const all = await this.all();
+        const descendants = all.filter(item => item.path === path || item.path.startsWith(path + '/'));
+        if (options?.recursive === false && descendants.length > 1) throw new Error('目录非空');
+        for (const item of descendants) await idbDelete('fsnodes', item.path);
+      }
+    }
+
+    class UnifiedFS {
+      constructor(rootBackend) {
+        this.root = rootBackend;
+        this.mounts = [];
+      }
+      normalize(path) { return normalizePath(path); }
+      dirname(path) { return dirname(path); }
+      basename(path) { return basename(path); }
+      join(...parts) { return joinPath(...parts); }
+      extname(path) { return extname(path); }
+      async init() {
+        if (this.root.init) await this.root.init();
+      }
+      addMount(mountPath, backend, meta = {}) {
+        mountPath = normalizePath(mountPath);
+        this.mounts = this.mounts.filter(m => m.path !== mountPath);
+        this.mounts.push({ path: mountPath, backend, meta });
+        this.mounts.sort((a, b) => b.path.length - a.path.length);
+      }
+      removeMount(mountPath) {
+        mountPath = normalizePath(mountPath);
+        this.mounts = this.mounts.filter(m => m.path !== mountPath);
+      }
+      resolve(path) {
+        path = normalizePath(path);
+        const mount = this.mounts.find(m => path === m.path || path.startsWith(m.path + '/'));
+        if (!mount) return { backend: this.root, path, mount: null };
+        const sub = path.slice(mount.path.length) || '/';
+        return { backend: mount.backend, path: normalizePath(sub), mount };
+      }
+      virtualMountChildren(path) {
+        path = normalizePath(path);
+        const out = [];
+        for (const mount of this.mounts) {
+          const parent = dirname(mount.path);
+          if (parent === path) {
+            out.push({ name: basename(mount.path), path: mount.path, kind: 'dir', size: 0, type: 'mount', lastModified: 0, mount: true });
+          }
+        }
+        return out;
+      }
+      async exists(path, ...rest) {
+        path = normalizePath(path);
+        if (this.mounts.some(m => m.path === path)) return true;
+        const { backend, path: sub } = this.resolve(path);
+        return backend.exists(sub, ...rest);
+      }
+      async stat(path, ...rest) {
+        path = normalizePath(path);
+        const exact = this.mounts.find(m => m.path === path);
+        if (exact) return { kind: 'dir', name: basename(path), path, size: 0, type: 'mount', lastModified: 0, mount: true };
+        const { backend, path: sub } = this.resolve(path);
+        const st = await backend.stat(sub, ...rest);
+        return { ...st, path, name: basename(path) };
+      }
+      async readdir(path, ...rest) {
+        path = normalizePath(path);
+        const { backend, path: sub, mount } = this.resolve(path);
+        let items = mount && path === mount.path ? await backend.readdir('/', ...rest) : await backend.readdir(sub, ...rest);
+        items = items.map(item => ({ ...item, path: mount ? joinPath(mount.path, item.name) : item.path }));
+        const virtuals = this.virtualMountChildren(path);
+        const map = new Map();
+        [...items, ...virtuals].forEach(item => map.set(item.path, item));
+        return [...map.values()];
+      }
+      async mkdir(path, ...rest) {
+        const { backend, path: sub } = this.resolve(path);
+        return backend.mkdir(sub, ...(rest.length ? rest : [{ recursive: true }]));
+      }
+      async readFile(path, mode = 'text', ...rest) {
+        const { backend, path: sub } = this.resolve(path);
+        return backend.readFile(sub, mode, ...rest);
+      }
+      async writeFile(path, data, options = {}, ...rest) {
+        const { backend, path: sub } = this.resolve(path);
+        return backend.writeFile(sub, data, options, ...rest);
+      }
+      async unlink(path, ...rest) {
+        const { backend, path: sub } = this.resolve(path);
+        return backend.unlink(sub, ...rest);
+      }
+      async rmdir(path, ...rest) {
+        const { backend, path: sub } = this.resolve(path);
+        return backend.rmdir(sub, ...(rest.length ? rest : [{ recursive: true }]));
+      }
+      async remove(path, ...rest) {
+        const { backend, path: sub } = this.resolve(path);
+        return backend.remove(sub, ...rest);
+      }
+      async copy(src, dst, ...rest) {
+        const from = this.resolve(src);
+        const to = this.resolve(dst);
+        if (from.backend === to.backend) return from.backend.copy(from.path, to.path, ...rest);
+        const st = await this.stat(src);
+        if (st.kind === 'dir') {
+          await this.mkdir(dst, { recursive: true });
+          const entries = await this.readdir(src);
+          for (const entry of entries) await this.copy(joinPath(src, entry.name), joinPath(dst, entry.name));
+        } else {
+          const blob = await this.readFile(src, 'blob');
+          await this.writeFile(dst, blob, { type: st.type || mimeFromName(dst) });
+        }
+      }
+      async rename(src, dst, ...rest) {
+        const from = this.resolve(src);
+        const to = this.resolve(dst);
+        if (from.backend === to.backend) return from.backend.rename(from.path, to.path, ...rest);
+        await this.copy(src, dst);
+        await this.remove(src);
+      }
+      async ensureUniquePath(targetPath) {
+        targetPath = normalizePath(targetPath);
+        if (!(await this.exists(targetPath))) return targetPath;
+        const dir = dirname(targetPath);
+        const base = basename(targetPath);
+        const ext = extname(base);
+        const head = ext ? base.slice(0, -(ext.length + 1)) : base;
+        let index = 2;
+        while (true) {
+          const name = ext ? `${head} (${index}).${ext}` : `${head} (${index})`;
+          const next = joinPath(dir, name);
+          if (!(await this.exists(next))) return next;
+          index++;
+        }
+      }
+    }
+
+    async function createRootBackend() {
+      if (navigator.storage?.getDirectory) {
+        try {
+          const handle = await navigator.storage.getDirectory();
+          toast('已启用 OPFS', '文件系统将持久化保存在浏览器私有空间');
+          return new HandleTreeBackend(handle, 'OPFS');
+        } catch (error) {
+          console.warn(error);
+          toast('OPFS 初始化失败', '自动降级到 IndexedDB 文件后端');
+        }
+      } else {
+        toast('浏览器不支持 OPFS', '自动降级到 IndexedDB + LocalStorage + Cookie 组合存储');
+      }
+      return new IDBFSBackend();
+    }
+
+    async function loadPrefs() {
+      let prefs = null;
+      try { prefs = await idbGet('kv', 'prefs'); } catch {}
+      if (!prefs) {
+        const tiny = tinyStore.get('noir-prefs');
+        if (tiny) {
+          try { prefs = JSON.parse(tiny); } catch {}
+        }
+      }
+      state.prefs = { ...structuredClone(DEFAULT_PREFS), ...(prefs || {}) };
+      state.prefs.shortcuts = state.prefs.shortcuts?.length ? state.prefs.shortcuts : structuredClone(DEFAULT_PREFS.shortcuts);
+    }
+
+    async function savePrefs() {
+      await idbSet('kv', 'prefs', state.prefs);
+      tinyStore.set('noir-prefs', JSON.stringify({ wallpaper: state.prefs.wallpaper, desktopLayout: state.prefs.desktopLayout, lastExplorerPath: state.prefs.lastExplorerPath, shortcuts: state.prefs.shortcuts }));
+    }
+
+    async function ensureSystemFolders() {
+      const dirs = ['/Desktop', '/Documents', '/Downloads', '/Pictures', '/Music', '/Videos', '/System', '/System/Wallpapers', '/mnt', '/mnt/local'];
+      for (const dir of dirs) {
+        if (!(await state.fs.exists(dir))) await state.fs.mkdir(dir, { recursive: true });
+      }
+    }
+
+    async function seedSystem() {
+      await ensureSystemFolders();
+      if (await state.fs.exists('/System/.booted')) return;
+      await state.fs.writeFile('/Desktop/Read Me.txt', `Noir Grid OS\n\n- OPFS 为主存储后端\n- 文件管理器支持排序、复制/粘贴、重命名、删除\n- HTML 文件支持源代码编辑 + 实时预览 + 浏览器打开\n- CSV/TSV 自动切换文本/表格双视图\n- 支持挂载本地文件夹到 /mnt/local\n- 支持拖拽导入文件与目录\n\n尝试：\n1. 打开 /Desktop/Playground.html\n2. 打开 /Documents/Tasks.csv\n3. 进入设置查看存储占用\n`);
+      await state.fs.writeFile('/Desktop/Playground.html', `<!doctype html>\n<html lang="zh-CN">\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0">\n<title>Playground</title>\n<style>\n  body{margin:0;min-height:100vh;display:grid;place-items:center;background:linear-gradient(135deg,#0f172a,#111827 50%,#1f2937);font-family:Georgia,serif;color:#fff;}\n  .card{padding:32px;border-radius:24px;background:rgba(255,255,255,.08);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.12);}\n  h1{font-size:clamp(2rem,5vw,4rem);margin:0 0 12px;}\n</style>\n</head>\n<body>\n  <div class="card">\n    <h1>Preview inside the OS</h1>\n    <p>编辑这个 HTML 文件，右侧会实时更新预览。</p>\n  </div>\n</body>\n</html>`);
+      await state.fs.writeFile('/Documents/Tasks.csv', '任务,负责人,状态,截止日期\n挂载本地目录,系统,完成,2026-01-04\n测试 CSV 双视图,编辑器,进行中,2026-01-09\n更换壁纸,设置,待办,2026-01-11');
+      await state.fs.writeFile('/Documents/Manifesto.md', '# Noir Grid OS\n\n这是一个单文件浏览器桌面系统。\n\n- OPFS 作为主文件后端\n- IndexedDB 用于元数据与挂载句柄\n- LocalStorage / Cookie 保存轻量镜像配置\n');
+      await state.fs.writeFile('/Pictures/Signal.svg', `<svg xmlns="http://www.w3.org/2000/svg" width="960" height="640" viewBox="0 0 960 640">\n<defs>\n<linearGradient id="g" x1="0" x2="1" y1="0" y2="1">\n<stop stop-color="#12101a"/>\n<stop offset="1" stop-color="#281813"/>\n</linearGradient>\n</defs>\n<rect width="960" height="640" fill="url(#g)"/>\n<circle cx="160" cy="130" r="120" fill="#ff9f5a" fill-opacity=".25"/>\n<circle cx="760" cy="110" r="96" fill="#7dd3c7" fill-opacity=".18"/>\n<g stroke="#f8e9d3" stroke-opacity=".38" fill="none">\n<path d="M90 520c80-96 180-156 300-178 110-20 248 0 480 90" stroke-width="2"/>\n<path d="M120 450c70-62 146-100 220-112 112-18 240 28 420 148" stroke-width="1.5"/>\n<path d="M210 290h480" stroke-width="1" stroke-dasharray="8 8"/>\n</g>\n</svg>`);
+      await state.fs.writeFile('/System/.booted', '1');
+      state.prefs.booted = true;
+      await savePrefs();
+    }
+
+    async function applyWallpaper() {
+      const layer = $('#wallpaperLayer');
+      const wp = state.prefs.wallpaper || DEFAULT_PREFS.wallpaper;
+      if (wp.kind === 'custom' && wp.path && await state.fs.exists(wp.path)) {
+        const blob = await state.fs.readFile(wp.path, 'blob');
+        const url = URL.createObjectURL(blob);
+        layer.style.background = `linear-gradient(180deg, rgba(6,5,8,0.18), rgba(6,5,8,0.24)), url(${url}) center/cover no-repeat`;
+        rememberObjectUrl('__wallpaper__', url, true);
+        return;
+      }
+      const builtin = WALLPAPERS.find(item => item.id === wp.id) || WALLPAPERS[0];
+      layer.style.background = builtin.css;
+    }
+
+    function rememberObjectUrl(key, url, single = false) {
+      const old = state.objectUrls.get(key);
+      if (single && old) {
+        try { URL.revokeObjectURL(old); } catch {}
+      }
+      state.objectUrls.set(key, url);
+      return url;
+    }
+
+    async function getBlobUrl(path) {
+      const blob = await state.fs.readFile(path, 'blob');
+      const url = URL.createObjectURL(blob);
+      return rememberObjectUrl(`blob:${path}:${Date.now()}`, url);
+    }
+
+    function appName(appId) {
+      return APPS.find(a => a.id === appId)?.name || appId;
+    }
+
+    async function restoreMounts() {
+      const records = await idbGetAll('mounts');
+      state.mountReminders = [];
+      for (const rec of records) {
+        try {
+          const handle = rec.handle;
+          if (!handle) continue;
+          const perm = handle.queryPermission ? await handle.queryPermission({ mode: 'readwrite' }) : 'granted';
+          if (perm === 'granted') {
+            state.fs.addMount(rec.mountPath, new HandleTreeBackend(handle, 'LocalMount'), { name: rec.name, persisted: true, handle });
+          } else {
+            state.mountReminders.push(rec);
+          }
+        } catch (error) {
+          console.warn(error);
+          state.mountReminders.push(rec);
+        }
+      }
+      if (state.mountReminders.length) {
+        toast('检测到需要重新授权的本地挂载', '请在设置中重新挂载这些目录');
+      }
+    }
+
+    async function persistMountRecord(mountPath, name, handle) {
+      await idbPut('mounts', { mountPath, name, handle, ts: Date.now() });
+    }
+
+    async function mountLocalFolder() {
+      if (!window.showDirectoryPicker) {
+        toast('当前浏览器不支持目录挂载', '需要 File System Access API');
+        return;
+      }
+      try {
+        const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
+        const name = handle.name || 'mounted';
+        const mountPath = await state.fs.ensureUniquePath(`/mnt/local/${name}`);
+        state.fs.addMount(mountPath, new HandleTreeBackend(handle, 'LocalMount'), { name, handle });
+        await persistMountRecord(mountPath, basename(mountPath), handle);
+        renderDesktop();
+        renderStartMenu();
+        toast('本地文件夹已挂载', mountPath);
+      } catch (error) {
+        if (error?.name !== 'AbortError') toast('挂载失败', error.message || '无法挂载该目录');
+      }
+    }
+
+    async function unmountPath(mountPath) {
+      state.fs.removeMount(mountPath);
+      await idbDelete('mounts', mountPath);
+      renderDesktop();
+      renderDock();
+      toast('已卸载挂载点', mountPath);
+    }
+
+    function clockTick() {
+      $('#clockQuick').textContent = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    async function refreshStorageQuick() {
+      if (!navigator.storage?.estimate) return;
+      const { usage = 0, quota = 0 } = await navigator.storage.estimate();
+      $('#storageQuick').textContent = `储存 ${formatBytes(usage)} / ${formatBytes(quota)}`;
+    }
+
+    function hideMenus() {
+      startMenu.classList.add('hidden');
+      contextMenu.style.display = 'none';
+      state.startMenuOpen = false;
+      state.contextMenuOpen = false;
+    }
+
+    function showContextMenu(x, y, items = []) {
+      contextMenu.innerHTML = '';
+      items.forEach(item => {
+        if (item.type === 'divider') {
+          const hr = el('div');
+          hr.style.height = '1px';
+          hr.style.background = 'rgba(255,255,255,0.08)';
+          hr.style.margin = '6px 4px';
+          contextMenu.appendChild(hr);
+          return;
+        }
+        const btn = el('button', 'ctx-btn', `${icon(item.icon || 'file')}<span>${escapeHtml(item.label)}</span>${item.hint ? `<span class="hint">${escapeHtml(item.hint)}</span>` : ''}`);
+        btn.onclick = async () => {
+          hideMenus();
+          await item.action?.();
+        };
+        contextMenu.appendChild(btn);
+      });
+      contextMenu.style.display = 'block';
+      const maxX = window.innerWidth - 240;
+      const maxY = window.innerHeight - 280;
+      contextMenu.style.left = Math.max(12, Math.min(x, maxX)) + 'px';
+      contextMenu.style.top = Math.max(12, Math.min(y, maxY)) + 'px';
+      state.contextMenuOpen = true;
+    }
+
+    function desktopItemActions(item) {
+      if (item.kind === 'app') {
+        return [
+          { label: '打开', icon: 'open', action: () => openDesktopItem(item) },
+          { label: '重新排列图标', icon: 'refresh', action: async () => { delete state.prefs.desktopLayout[item.id]; await savePrefs(); renderDesktop(); } }
+        ];
+      }
+      return [
+        { label: '打开', icon: 'open', action: () => openPath(item.path) },
+        { label: '复制', icon: 'copy', action: () => { state.clipboard = { mode: 'copy', paths: [item.path] }; toast('已复制到剪贴板', item.path); } },
+        { label: '重命名', icon: 'rename', action: async () => renamePath(item.path) },
+        { label: '下载到本地', icon: 'download', action: () => downloadPath(item.path) },
+        { type: 'divider' },
+        { label: '删除', icon: 'delete', action: async () => { await state.fs.remove(item.path); toast('已删除', item.path); renderDesktop(); } }
+      ];
+    }
+
+    async function showPrompt({ title = '输入', message = '', value = '', confirmText = '确认', cancelText = '取消', placeholder = '' } = {}) {
+      return new Promise(resolve => {
+        const layer = $('#promptLayer');
+        layer.style.display = 'flex';
+        layer.innerHTML = `
+          <div class="prompt-card panel">
+            <h3>${escapeHtml(title)}</h3>
+            <p>${escapeHtml(message)}</p>
+            <input class="prompt-input" value="${escapeHtml(value)}" placeholder="${escapeHtml(placeholder)}" />
+            <div class="actions">
+              <button class="soft-btn small" data-role="cancel">${escapeHtml(cancelText)}</button>
+              <button class="toolbar-btn small" data-role="ok">${escapeHtml(confirmText)}</button>
+            </div>
+          </div>
+        `;
+        const input = $('.prompt-input', layer);
+        const close = (val) => {
+          layer.style.display = 'none';
+          layer.innerHTML = '';
+          resolve(val);
+        };
+        $('[data-role="cancel"]', layer).onclick = () => close(null);
+        $('[data-role="ok"]', layer).onclick = () => close(input.value.trim());
+        input.onkeydown = (e) => {
+          if (e.key === 'Enter') close(input.value.trim());
+          if (e.key === 'Escape') close(null);
+        };
+        setTimeout(() => input.focus(), 30);
+      });
+    }
+
+    async function showConfirm({ title = '确认操作', message = '确定继续吗？', confirmText = '确认', cancelText = '取消' } = {}) {
+      return new Promise(resolve => {
+        const layer = $('#promptLayer');
+        layer.style.display = 'flex';
+        layer.innerHTML = `
+          <div class="prompt-card panel">
+            <h3>${escapeHtml(title)}</h3>
+            <p>${escapeHtml(message)}</p>
+            <div class="actions">
+              <button class="soft-btn small" data-role="cancel">${escapeHtml(cancelText)}</button>
+              <button class="toolbar-btn small" data-role="ok">${escapeHtml(confirmText)}</button>
+            </div>
+          </div>
+        `;
+        const close = (val) => {
+          layer.style.display = 'none';
+          layer.innerHTML = '';
+          resolve(val);
+        };
+        $('[data-role="cancel"]', layer).onclick = () => close(false);
+        $('[data-role="ok"]', layer).onclick = () => close(true);
+      });
+    }
+
+    function defaultDesktopPosition(index) {
+      const columns = Math.max(1, Math.floor((window.innerWidth - 80) / 108));
+      const col = index % columns;
+      const row = Math.floor(index / columns);
+      return { x: 22 + col * 100, y: 24 + row * 112 };
+    }
+
+    async function desktopItems() {
+      const files = await state.fs.readdir('/Desktop');
+      const fileItems = files.map(entry => ({ id: `path:${entry.path}`, kind: 'path', path: entry.path, name: entry.name, icon: fileKindIcon(entry) }));
+      const shortcutItems = (state.prefs.shortcuts || []).map(item => ({ ...item, icon: APPS.find(app => app.id === item.app)?.icon || 'file' }));
+      return [...shortcutItems, ...fileItems];
+    }
+
+    async function renderDesktop() {
+      const items = await desktopItems();
+      desktopIcons.innerHTML = '';
+      items.forEach((item, index) => {
+        const pos = state.prefs.desktopLayout[item.id] || defaultDesktopPosition(index);
+        const node = el('div', `desktop-icon ${state.desktopSelection.has(item.id) ? 'selected' : ''}`, `
+          <div class="glyph">${icon(item.icon || 'file', 'w-8 h-8')}</div>
+          <div class="label">${escapeHtml(item.name)}</div>
+        `);
+        node.style.left = pos.x + 'px';
+        node.style.top = pos.y + 'px';
+        node.style.animationDelay = `${(index % 8) * 45}ms`;
+        node.dataset.id = item.id;
+        node.dataset.kind = item.kind;
+        node.dataset.path = item.path || '';
+        node.dataset.app = item.app || '';
+        node.draggable = item.kind === 'path';
+        bindDesktopIcon(node, item);
+        desktopIcons.appendChild(node);
+        if (item.kind === 'path') prepareDragExport(node, item.path);
+      });
+    }
+
+    function setDesktopSelection(ids) {
+      state.desktopSelection = new Set(ids);
+      $$('.desktop-icon').forEach(node => node.classList.toggle('selected', state.desktopSelection.has(node.dataset.id)));
+    }
+
+    function openDesktopItem(item) {
+      if (item.kind === 'app') {
+        return openApp(item.app);
+      }
+      return openPath(item.path);
+    }
+
+    function bindDesktopIcon(node, item) {
+      let startX = 0, startY = 0, origin = null, dragging = false;
+      node.addEventListener('pointerdown', (e) => {
+        hideMenus();
+        if (e.button === 2) return;
+        e.stopPropagation();
+        node.setPointerCapture(e.pointerId);
+        startX = e.clientX;
+        startY = e.clientY;
+        origin = state.prefs.desktopLayout[item.id] || { x: node.offsetLeft, y: node.offsetTop };
+        dragging = false;
+        if (!e.shiftKey && !e.metaKey && !e.ctrlKey && !state.desktopSelection.has(item.id)) {
+          setDesktopSelection([item.id]);
+        } else if ((e.metaKey || e.ctrlKey) && state.desktopSelection.has(item.id)) {
+          const next = new Set(state.desktopSelection);
+          next.delete(item.id);
+          setDesktopSelection(next);
+        } else if (e.metaKey || e.ctrlKey) {
+          const next = new Set(state.desktopSelection);
+          next.add(item.id);
+          setDesktopSelection(next);
+        }
+      });
+      node.addEventListener('pointermove', (e) => {
+        if (!node.hasPointerCapture(e.pointerId)) return;
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+        if (!dragging && Math.hypot(dx, dy) > 6) dragging = true;
+        if (!dragging) return;
+        const next = { x: Math.max(10, origin.x + dx), y: Math.max(10, origin.y + dy) };
+        node.style.left = next.x + 'px';
+        node.style.top = next.y + 'px';
+        state.prefs.desktopLayout[item.id] = next;
+      });
+      node.addEventListener('pointerup', async (e) => {
+        if (node.hasPointerCapture(e.pointerId)) node.releasePointerCapture(e.pointerId);
+        if (dragging) {
+          await savePrefs();
+          return;
+        }
+        const now = Date.now();
+        if (state.lastTapId === item.id && now - state.lastTap < 330) {
+          state.lastTapId = '';
+          openDesktopItem(item);
+        } else {
+          state.lastTap = now;
+          state.lastTapId = item.id;
+        }
+      });
+      node.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        if (!state.desktopSelection.has(item.id)) setDesktopSelection([item.id]);
+        showContextMenu(e.clientX, e.clientY, desktopItemActions(item));
+      });
+      node.addEventListener('dragstart', (e) => {
+        if (item.kind !== 'path') {
+          e.preventDefault();
+          return;
+        }
+        const selectedPaths = state.desktopSelection.size && state.desktopSelection.has(item.id)
+          ? [...state.desktopSelection].filter(id => id.startsWith('path:')).map(id => id.replace(/^path:/, ''))
+          : [item.path];
+        e.dataTransfer.setData('application/x-webos-paths', JSON.stringify(selectedPaths));
+        const downloadUrl = node.dataset.downloadurl;
+        if (downloadUrl && selectedPaths.length === 1) {
+          e.dataTransfer.setData('DownloadURL', downloadUrl);
+          e.dataTransfer.effectAllowed = 'copyMove';
+        }
+      });
+    }
+
+    async function prepareDragExport(node, path) {
+      try {
+        const info = await state.fs.stat(path);
+        if (info.kind !== 'file') return;
+        const blob = await state.fs.readFile(path, 'blob');
+        const url = URL.createObjectURL(blob);
+        rememberObjectUrl(`drag:${path}:${Math.random().toString(36).slice(2)}`, url);
+        node.dataset.downloadurl = `${info.type || 'application/octet-stream'}:${basename(path)}:${url}`;
+      } catch {}
+    }
+
+    function setupDesktopSurface() {
+      desktop.addEventListener('pointerdown', (e) => {
+        if (e.target.closest('.desktop-icon') || e.button === 2) return;
+        hideMenus();
+        const rect = desktop.getBoundingClientRect();
+        const start = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+        desktopSelection.style.display = 'block';
+        desktopSelection.style.left = start.x + 'px';
+        desktopSelection.style.top = start.y + 'px';
+        desktopSelection.style.width = '0px';
+        desktopSelection.style.height = '0px';
+        const additive = e.metaKey || e.ctrlKey;
+        const base = additive ? new Set(state.desktopSelection) : new Set();
+        const move = (ev) => {
+          const x = ev.clientX - rect.left;
+          const y = ev.clientY - rect.top;
+          const left = Math.min(start.x, x);
+          const top = Math.min(start.y, y);
+          const width = Math.abs(start.x - x);
+          const height = Math.abs(start.y - y);
+          Object.assign(desktopSelection.style, { left: left + 'px', top: top + 'px', width: width + 'px', height: height + 'px' });
+          const box = { left: rect.left + left, top: rect.top + top, right: rect.left + left + width, bottom: rect.top + top + height };
+          const next = new Set(base);
+          $$('.desktop-icon').forEach(iconNode => {
+            const r = iconNode.getBoundingClientRect();
+            const intersects = !(r.right < box.left || r.left > box.right || r.bottom < box.top || r.top > box.bottom);
+            if (intersects) next.add(iconNode.dataset.id);
+          });
+          setDesktopSelection(next);
+        };
+        const up = async () => {
+          desktopSelection.style.display = 'none';
+          window.removeEventListener('pointermove', move);
+          window.removeEventListener('pointerup', up);
+        };
+        window.addEventListener('pointermove', move);
+        window.addEventListener('pointerup', up, { once: true });
+      });
+
+      desktop.addEventListener('contextmenu', (e) => {
+        if (e.target.closest('.desktop-icon')) return;
+        e.preventDefault();
+        showContextMenu(e.clientX, e.clientY, [
+          { label: '刷新桌面', icon: 'refresh', action: renderDesktop },
+          { label: '新建文件夹', icon: 'plus', action: async () => { const name = await showPrompt({ title: '新建文件夹', value: '新建文件夹' }); if (name) { await state.fs.mkdir(await state.fs.ensureUniquePath(`/Desktop/${name}`), { recursive: true }); renderDesktop(); } } },
+          { label: '上传文件到桌面', icon: 'upload', action: () => { state.uploadTarget = '/Desktop'; fileUploadInput.click(); } },
+          { label: '上传文件夹到桌面', icon: 'mount', action: () => { state.uploadTarget = '/Desktop'; folderUploadInput.click(); } },
+          { label: '更换壁纸', icon: 'image', action: () => wallpaperUploadInput.click() },
+          { label: '挂载本地文件夹', icon: 'mount', action: mountLocalFolder },
+          { type: 'divider' },
+          { label: '全屏模式', icon: 'fullscreen', action: async () => { if (!document.fullscreenElement) await document.documentElement.requestFullscreen(); else await document.exitFullscreen(); } }
+        ]);
+      });
+
+      desktop.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'copy';
+      });
+      desktop.addEventListener('drop', async (e) => {
+        e.preventDefault();
+        await handleDropInto('/Desktop', e.dataTransfer, true);
+      });
+    }
+
+    async function renamePath(path) {
+      const name = await showPrompt({ title: '重命名', value: basename(path) });
+      if (!name) return;
+      const target = joinPath(dirname(path), name);
+      if (normalizePath(path) === normalizePath(target)) return;
+      const unique = await state.fs.ensureUniquePath(target);
+      await state.fs.rename(path, unique);
+      toast('已重命名', `${basename(path)} → ${basename(unique)}`);
+      renderDesktop();
+      rerenderExplorerWindows();
+    }
+
+    async function downloadPath(path) {
+      const info = await state.fs.stat(path);
+      if (info.kind !== 'file') {
+        toast('文件夹暂不支持直接下载拖出', '可先压缩或进入目录逐项导出');
+        return;
+      }
+      const blob = await state.fs.readFile(path, 'blob');
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = basename(path);
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1200);
+    }
+
+    function createWindow({ title, iconName = 'file', width = 920, height = 620, appId = 'window' } = {}) {
+      const id = `win-${Math.random().toString(36).slice(2, 9)}`;
+      const mobile = window.innerWidth < 700;
+      const win = el('div', 'window');
+      win.dataset.id = id;
+      win.dataset.appId = appId;
+      const w = mobile ? Math.max(320, window.innerWidth - 16) : Math.min(width, window.innerWidth - 40);
+      const h = mobile ? Math.max(300, window.innerHeight - 120) : Math.min(height, window.innerHeight - 70);
+      const x = mobile ? 8 : Math.max(20, 34 + state.windows.size * 18);
+      const y = mobile ? 10 : Math.max(16, 22 + state.windows.size * 18);
+      Object.assign(win.style, { width: w + 'px', height: h + 'px', left: x + 'px', top: y + 'px', zIndex: ++state.z });
+      win.innerHTML = `
+        <div class="window-titlebar">
+          <div class="window-title">${icon(iconName, 'w-5 h-5')}<div class="name">${escapeHtml(title)}</div></div>
+          <div class="window-controls">
+            <button class="control-btn" data-action="min">${icon('download', 'w-4 h-4')}</button>
+            <button class="control-btn" data-action="max">${icon('fullscreen', 'w-4 h-4')}</button>
+            <button class="control-btn close" data-action="close">${icon('delete', 'w-4 h-4')}</button>
+          </div>
+        </div>
+        <div class="window-content"></div>
+        <div class="resize-handle n" data-dir="n"></div>
+        <div class="resize-handle s" data-dir="s"></div>
+        <div class="resize-handle e" data-dir="e"></div>
+        <div class="resize-handle w" data-dir="w"></div>
+        <div class="resize-handle ne" data-dir="ne"></div>
+        <div class="resize-handle nw" data-dir="nw"></div>
+        <div class="resize-handle se" data-dir="se"></div>
+        <div class="resize-handle sw" data-dir="sw"></div>
+      `;
+      windowLayer.appendChild(win);
+      const body = $('.window-content', win);
+      const titleNode = $('.name', win);
+      const obj = {
+        id,
+        el: win,
+        body,
+        setTitle(text) { titleNode.textContent = text; renderDock(); },
+        title,
+        iconName,
+        appId,
+        minimized: false,
+        maximized: false,
+        restoreRect: null,
+        onClose: null,
+        rerender: null
+      };
+      state.windows.set(id, obj);
+      focusWindow(id);
+      renderDock();
+      bindWindow(obj);
+      return obj;
+    }
+
+    function focusWindow(id) {
+      const win = state.windows.get(id);
+      if (!win) return;
+      state.activeWindowId = id;
+      win.el.style.zIndex = ++state.z;
+      state.windows.forEach(w => w.el.classList.toggle('focused', w.id === id));
+      renderDock();
+    }
+
+    function clampWindow(win) {
+      const rect = win.el.getBoundingClientRect();
+      const maxW = window.innerWidth - 10;
+      const maxH = window.innerHeight - 10 - (window.innerWidth < 700 ? 70 : 0);
+      let w = Math.min(rect.width, maxW);
+      let h = Math.min(rect.height, maxH);
+      let x = Math.min(Math.max(4, rect.left), window.innerWidth - w - 4);
+      let y = Math.min(Math.max(4, rect.top), window.innerHeight - h - 4);
+      Object.assign(win.el.style, { width: w + 'px', height: h + 'px', left: x + 'px', top: y + 'px' });
+    }
+
+    function maximizeWindow(win) {
+      if (win.maximized) {
+        const r = win.restoreRect;
+        if (r) Object.assign(win.el.style, { left: r.x + 'px', top: r.y + 'px', width: r.w + 'px', height: r.h + 'px' });
+        win.maximized = false;
+        win.el.classList.remove('maximized');
+      } else {
+        const rect = win.el.getBoundingClientRect();
+        win.restoreRect = { x: rect.left, y: rect.top, w: rect.width, h: rect.height };
+        const pad = window.innerWidth < 700 ? 6 : 10;
+        Object.assign(win.el.style, { left: pad + 'px', top: pad + 'px', width: (window.innerWidth - pad * 2) + 'px', height: (window.innerHeight - (window.innerWidth < 700 ? 96 : 26) - pad) + 'px' });
+        win.maximized = true;
+        win.el.classList.add('maximized');
+      }
+      focusWindow(win.id);
+    }
+
+    function minimizeWindow(win) {
+      win.minimized = true;
+      win.el.classList.add('minimized');
+      renderDock();
+    }
+
+    function restoreWindow(win) {
+      win.minimized = false;
+      win.el.classList.remove('minimized');
+      focusWindow(win.id);
+    }
+
+    async function closeWindow(id) {
+      const win = state.windows.get(id);
+      if (!win) return;
+      try {
+        const result = await win.onClose?.();
+        if (result === false) return;
+      } catch (error) {
+        console.warn(error);
+      }
+      win.el.remove();
+      state.windows.delete(id);
+      if (state.activeWindowId === id) state.activeWindowId = [...state.windows.keys()].pop() || null;
+      renderDock();
+    }
+
+    function bindWindow(win) {
+      const titlebar = $('.window-titlebar', win.el);
+      titlebar.addEventListener('pointerdown', (e) => {
+        if (e.target.closest('.window-controls')) return;
+        if (win.maximized && window.innerWidth >= 700) return;
+        focusWindow(win.id);
+        const rect = win.el.getBoundingClientRect();
+        const startX = e.clientX, startY = e.clientY;
+        const originX = rect.left, originY = rect.top;
+        const move = (ev) => {
+          Object.assign(win.el.style, {
+            left: Math.max(4, Math.min(window.innerWidth - rect.width - 4, originX + ev.clientX - startX)) + 'px',
+            top: Math.max(4, Math.min(window.innerHeight - rect.height - 8, originY + ev.clientY - startY)) + 'px'
+          });
+        };
+        const up = () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); };
+        window.addEventListener('pointermove', move);
+        window.addEventListener('pointerup', up, { once: true });
+      });
+      win.el.addEventListener('pointerdown', () => focusWindow(win.id));
+      $('[data-action="min"]', win.el).onclick = () => minimizeWindow(win);
+      $('[data-action="max"]', win.el).onclick = () => maximizeWindow(win);
+      $('[data-action="close"]', win.el).onclick = () => closeWindow(win.id);
+      $$('.resize-handle', win.el).forEach(handle => {
+        handle.addEventListener('pointerdown', (e) => {
+          e.stopPropagation();
+          if (win.maximized) return;
+          focusWindow(win.id);
+          const dir = handle.dataset.dir;
+          const rect = win.el.getBoundingClientRect();
+          const startX = e.clientX, startY = e.clientY;
+          const move = (ev) => {
+            let left = rect.left, top = rect.top, width = rect.width, height = rect.height;
+            const dx = ev.clientX - startX, dy = ev.clientY - startY;
+            if (dir.includes('e')) width = Math.max(320, rect.width + dx);
+            if (dir.includes('s')) height = Math.max(220, rect.height + dy);
+            if (dir.includes('w')) { width = Math.max(320, rect.width - dx); left = rect.right - width; }
+            if (dir.includes('n')) { height = Math.max(220, rect.height - dy); top = rect.bottom - height; }
+            Object.assign(win.el.style, { left: left + 'px', top: top + 'px', width: width + 'px', height: height + 'px' });
+          };
+          const up = () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); clampWindow(win); };
+          window.addEventListener('pointermove', move);
+          window.addEventListener('pointerup', up, { once: true });
+        });
+      });
+    }
+
+    function renderDock() {
+      $('#startButton').innerHTML = icon('start');
+      $('#dockUpload').innerHTML = icon('upload');
+      const dockWindows = $('#dockWindows');
+      dockWindows.innerHTML = '';
+      for (const win of state.windows.values()) {
+        const chip = el('button', `window-chip ${win.id === state.activeWindowId ? 'active' : ''} ${win.minimized ? 'minimized' : ''}`, `${icon(win.iconName, 'w-4 h-4')}<span style="overflow:hidden;text-overflow:ellipsis;">${escapeHtml($('.name', win.el).textContent)}</span>`);
+        chip.onclick = () => win.minimized ? restoreWindow(win) : (win.id === state.activeWindowId ? minimizeWindow(win) : restoreWindow(win));
+        dockWindows.appendChild(chip);
+      }
+    }
+
+    function renderStartMenu(filter = '') {
+      const q = filter.trim().toLowerCase();
+      const appCards = APPS.filter(app => !q || app.name.toLowerCase().includes(q) || app.description.toLowerCase().includes(q));
+      startMenu.innerHTML = `
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <div class="menu-title">Noir Grid OS</div>
+            <div class="muted" style="font-size:12px;margin-top:6px;">Browser-native Web OS · OPFS-first VFS · Windowed SPA</div>
+          </div>
+          <div class="status-pill">${state.fs.root instanceof HandleTreeBackend ? 'OPFS primary' : 'IndexedDB fallback'}</div>
+        </div>
+        <div class="toolbar" style="margin-top:14px;padding:0;border:0;background:none;">
+          <div class="toolbar-group" style="width:100%;">
+            <div style="position:relative;flex:1;min-width:180px;">
+              <div style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--muted)">${icon('search')}</div>
+              <input id="startSearch" class="toolbar-input" style="width:100%;padding-left:42px;" placeholder="搜索应用与入口" value="${escapeHtml(filter)}" />
+            </div>
+            <button class="toolbar-btn small" data-action="mount">${icon('mount')}挂载目录</button>
+            <button class="toolbar-btn small" data-action="settings">${icon('settings')}设置</button>
+          </div>
+        </div>
+        ${state.mountReminders.length ? `<div class="settings-card" style="margin-top:14px;"><div class="small muted">需要重新授权</div><div style="margin-top:8px;font-size:12px;line-height:1.8;">${state.mountReminders.map(m => escapeHtml(m.mountPath)).join('<br>')}</div></div>` : ''}
+        <div class="menu-grid">
+          ${appCards.map((app, i) => `<button class="start-card" data-app="${app.id}" style="animation:riseIn 500ms ${(i * 50)}ms both"> <div>${icon(app.icon, 'w-8 h-8')}</div><div><div class="big">${escapeHtml(app.name)}</div><div class="small">${escapeHtml(app.description)}</div></div></button>`).join('')}
+        </div>
+      `;
+      $('#startSearch', startMenu).oninput = (e) => renderStartMenu(e.target.value);
+      $$('[data-app]', startMenu).forEach(btn => btn.onclick = () => { hideMenus(); openApp(btn.dataset.app); });
+      $('[data-action="mount"]', startMenu).onclick = async () => { hideMenus(); await mountLocalFolder(); };
+      $('[data-action="settings"]', startMenu).onclick = () => { hideMenus(); openSettings(); };
+    }
+
+    async function openApp(appId, payload = {}) {
+      if (appId === 'explorer') return openExplorer(payload.path || state.prefs.lastExplorerPath || '/Desktop');
+      if (appId === 'notepad') return openEditor(payload.path || '/Desktop/Read Me.txt');
+      if (appId === 'browser') return openBrowser(payload.url || 'about:noir');
+      if (appId === 'calculator') return openCalculator();
+      if (appId === 'paint') return openPaint();
+      if (appId === 'settings') return openSettings();
+    }
+
+    async function openPath(path) {
+      const info = await state.fs.stat(path);
+      if (info.kind === 'dir') return openExplorer(path);
+      const ext = extname(path);
+      if (IMAGE_EXTS.has(ext)) return openImageViewer(path);
+      if (AUDIO_EXTS.has(ext) || VIDEO_EXTS.has(ext)) return openMediaViewer(path);
+      if (PDF_EXTS.has(ext)) return openPdfViewer(path);
+      if (ARCHIVE_EXTS.has(ext) || path.endsWith('.tar.gz')) return openArchive(path);
+      if (TABLE_EXTS.has(ext) || TEXT_EXTS.has(ext)) return openEditor(path);
+      return openGenericViewer(path);
+    }
+
+    function sortEntries(entries, key, dir) {
+      const factor = dir === 'desc' ? -1 : 1;
+      const copy = [...entries];
+      copy.sort((a, b) => {
+        if (a.kind !== b.kind) return a.kind === 'dir' ? -1 : 1;
+        if (key === 'name') return a.name.localeCompare(b.name, 'zh-CN') * factor;
+        if (key === 'lastModified') return ((a.lastModified || 0) - (b.lastModified || 0)) * factor;
+        if (key === 'type') return String(a.type || '').localeCompare(String(b.type || ''), 'zh-CN') * factor;
+        if (key === 'size') return ((a.size || 0) - (b.size || 0)) * factor;
+        return 0;
+      });
+      return copy;
+    }
+
+    async function openExplorer(startPath = '/Desktop') {
+      const info = await state.fs.stat(startPath);
+      if (info.kind !== 'dir') return openPath(startPath);
+      state.prefs.lastExplorerPath = startPath;
+      await savePrefs();
+      const win = createWindow({ title: `资源管理器 · ${basename(startPath)}`, iconName: 'explorer', width: 1080, height: 720, appId: 'explorer' });
+      const app = {
+        currentPath: startPath,
+        history: [startPath],
+        historyIndex: 0,
+        sortKey: 'name',
+        sortDir: 'asc',
+        query: '',
+        selection: new Set()
+      };
+      state.explorerSelections.set(win.id, app.selection);
+      win.body.innerHTML = `
+        <div class="toolbar">
+          <div class="toolbar-group">
+            <button class="toolbar-btn small" data-act="back">${icon('back')}返回</button>
+            <button class="toolbar-btn small" data-act="forward">${icon('forward')}前进</button>
+            <button class="toolbar-btn small" data-act="up">${icon('up')}上级</button>
+            <button class="toolbar-btn small" data-act="refresh">${icon('refresh')}刷新</button>
+          </div>
+          <div class="breadcrumbs" data-role="crumbs"></div>
+          <div class="toolbar-spacer"></div>
+          <div class="toolbar-group">
+            <button class="toolbar-btn small" data-act="newfolder">${icon('plus')}文件夹</button>
+            <button class="toolbar-btn small" data-act="upload">${icon('upload')}导入</button>
+            <button class="toolbar-btn small" data-act="mount">${icon('mount')}挂载</button>
+            <input class="toolbar-input" data-role="search" placeholder="搜索当前目录" />
+          </div>
+        </div>
+        <div class="toolbar" style="padding-top:10px;">
+          <div class="toolbar-group">
+            <button class="toolbar-btn small" data-act="copy">${icon('copy')}复制</button>
+            <button class="toolbar-btn small" data-act="paste">${icon('paste')}粘贴</button>
+            <button class="toolbar-btn small" data-act="rename">${icon('rename')}重命名</button>
+            <button class="toolbar-btn small" data-act="delete">${icon('delete')}删除</button>
+          </div>
+          <div class="toolbar-path" data-role="pathLabel"></div>
+        </div>
+        <div class="app-shell">
+          <aside class="sidebar" data-role="sidebar"></aside>
+          <section class="main-pane">
+            <div class="file-list-wrap" data-role="listWrap">
+              <div class="selection-box" data-role="selectBox"></div>
+              <div class="file-head">
+                <div class="file-cell"><button data-sort="name">名称</button></div>
+                <div class="file-cell"><button data-sort="lastModified">修改日期</button></div>
+                <div class="file-cell"><button data-sort="type">类型</button></div>
+                <div class="file-cell"><button data-sort="size">大小</button></div>
+              </div>
+              <div data-role="rows"></div>
+            </div>
+          </section>
+        </div>
+      `;
+
+      const root = win.body;
+      const refs = {
+        crumbs: $('[data-role="crumbs"]', root),
+        sidebar: $('[data-role="sidebar"]', root),
+        rows: $('[data-role="rows"]', root),
+        listWrap: $('[data-role="listWrap"]', root),
+        selectBox: $('[data-role="selectBox"]', root),
+        search: $('[data-role="search"]', root),
+        pathLabel: $('[data-role="pathLabel"]', root)
+      };
+
+      async function navigate(path, push = true) {
+        const st = await state.fs.stat(path);
+        if (st.kind !== 'dir') return openPath(path);
+        app.currentPath = path;
+        if (push) {
+          app.history = app.history.slice(0, app.historyIndex + 1);
+          app.history.push(path);
+          app.historyIndex = app.history.length - 1;
+        }
+        app.selection = new Set();
+        state.explorerSelections.set(win.id, app.selection);
+        state.prefs.lastExplorerPath = path;
+        await savePrefs();
+        await render();
+      }
+
+      async function renderSidebar() {
+        const quick = ['/Desktop', '/Documents', '/Downloads', '/Pictures', '/Music', '/Videos', '/mnt/local'];
+        const mounted = state.fs.mounts.map(m => m.path).filter(p => p.startsWith('/mnt/local/'));
+        refs.sidebar.innerHTML = [...quick, ...mounted.filter(p => !quick.includes(p))].map(path => `
+          <button class="nav-item ${app.currentPath === path ? 'active' : ''}" data-path="${escapeHtml(path)}">${icon(path.includes('/mnt/local') ? 'mount' : (path === '/Desktop' ? 'start' : 'folder'))}<span>${escapeHtml(path === '/mnt/local' ? '本地挂载根' : basename(path))}</span></button>
+        `).join('');
+        $$('[data-path]', refs.sidebar).forEach(btn => btn.onclick = () => navigate(btn.dataset.path));
+      }
+
+      function renderCrumbs() {
+        const parts = app.currentPath.split('/').filter(Boolean);
+        const paths = ['/'];
+        let accum = '';
+        for (const part of parts) {
+          accum += '/' + part;
+          paths.push(accum);
+        }
+        refs.crumbs.innerHTML = paths.map(path => `<button class="crumb" data-path="${escapeHtml(path)}">${escapeHtml(path === '/' ? '根目录' : basename(path))}</button>`).join('');
+        $$('[data-path]', refs.crumbs).forEach(btn => btn.onclick = () => navigate(btn.dataset.path));
+      }
+
+      async function refreshRows() {
+        let entries = await state.fs.readdir(app.currentPath);
+        const q = app.query.trim().toLowerCase();
+        if (q) entries = entries.filter(item => item.name.toLowerCase().includes(q));
+        entries = sortEntries(entries, app.sortKey, app.sortDir);
+        refs.rows.innerHTML = entries.map(entry => `
+          <div class="file-row ${app.selection.has(entry.path) ? 'selected' : ''}" data-path="${escapeHtml(entry.path)}" data-kind="${entry.kind}" draggable="true">
+            <div class="file-cell file-name">${icon(fileKindIcon(entry), 'w-5 h-5')}<span>${escapeHtml(entry.name)}</span></div>
+            <div class="file-cell file-muted">${escapeHtml(formatDate(entry.lastModified))}</div>
+            <div class="file-cell file-muted">${escapeHtml(entry.kind === 'dir' ? '文件夹' : (entry.type || mimeFromName(entry.name)))}</div>
+            <div class="file-cell file-muted">${escapeHtml(entry.kind === 'dir' ? '—' : formatBytes(entry.size || 0))}</div>
+          </div>
+        `).join('');
+        const rows = $$('.file-row', refs.rows);
+        for (const row of rows) {
+          const path = row.dataset.path;
+          const item = entries.find(e => e.path === path);
+          row.onclick = (e) => {
+            if (e.metaKey || e.ctrlKey) {
+              if (app.selection.has(path)) app.selection.delete(path); else app.selection.add(path);
+            } else {
+              app.selection = new Set([path]);
+            }
+            state.explorerSelections.set(win.id, app.selection);
+            refreshRows();
+          };
+          row.ondblclick = () => openPath(path);
+          row.oncontextmenu = (e) => {
+            e.preventDefault();
+            if (!app.selection.has(path)) app.selection = new Set([path]);
+            state.explorerSelections.set(win.id, app.selection);
+            refreshRows();
+            showContextMenu(e.clientX, e.clientY, explorerContextActions(app, win));
+          };
+          row.addEventListener('dragstart', (e) => {
+            const paths = app.selection.size && app.selection.has(path) ? [...app.selection] : [path];
+            e.dataTransfer.setData('application/x-webos-paths', JSON.stringify(paths));
+            if ((item?.kind || row.dataset.kind) === 'file' && paths.length === 1 && row.dataset.downloadurl) {
+              e.dataTransfer.setData('DownloadURL', row.dataset.downloadurl);
+            }
+          });
+          row.addEventListener('dragover', (e) => {
+            if (row.dataset.kind === 'dir') e.preventDefault();
+          });
+          row.addEventListener('drop', async (e) => {
+            if (row.dataset.kind !== 'dir') return;
+            e.preventDefault();
+            await handleDropInto(path, e.dataTransfer, false);
+            await render();
+          });
+          if (row.dataset.kind === 'file') prepareDragExport(row, path);
+        }
+      }
+
+      async function render() {
+        win.setTitle(`资源管理器 · ${basename(app.currentPath) || '根目录'}`);
+        refs.pathLabel.textContent = app.currentPath;
+        renderCrumbs();
+        await renderSidebar();
+        await refreshRows();
+      }
+
+      win.rerender = render;
+      refs.search.oninput = async (e) => { app.query = e.target.value; await refreshRows(); };
+      $$('[data-sort]', root).forEach(btn => btn.onclick = async () => {
+        const key = btn.dataset.sort;
+        if (app.sortKey === key) app.sortDir = app.sortDir === 'asc' ? 'desc' : 'asc';
+        else { app.sortKey = key; app.sortDir = 'asc'; }
+        await refreshRows();
+      });
+      $('[data-act="back"]', root).onclick = async () => { if (app.historyIndex > 0) { app.historyIndex--; await navigate(app.history[app.historyIndex], false); } };
+      $('[data-act="forward"]', root).onclick = async () => { if (app.historyIndex < app.history.length - 1) { app.historyIndex++; await navigate(app.history[app.historyIndex], false); } };
+      $('[data-act="up"]', root).onclick = async () => { if (app.currentPath !== '/') await navigate(dirname(app.currentPath)); };
+      $('[data-act="refresh"]', root).onclick = render;
+      $('[data-act="newfolder"]', root).onclick = async () => { const name = await showPrompt({ title: '新建文件夹', value: '新建文件夹' }); if (name) { await state.fs.mkdir(await state.fs.ensureUniquePath(joinPath(app.currentPath, name)), { recursive: true }); await render(); renderDesktop(); } };
+      $('[data-act="upload"]', root).onclick = () => { state.uploadTarget = app.currentPath; fileUploadInput.click(); };
+      $('[data-act="mount"]', root).onclick = async () => { await mountLocalFolder(); await render(); };
+      $('[data-act="copy"]', root).onclick = () => { if (app.selection.size) { state.clipboard = { mode: 'copy', paths: [...app.selection] }; toast('已复制', `${app.selection.size} 项`); } };
+      $('[data-act="paste"]', root).onclick = async () => { await pasteInto(app.currentPath); await render(); };
+      $('[data-act="rename"]', root).onclick = async () => { if (app.selection.size === 1) await renamePath([...app.selection][0]); await render(); };
+      $('[data-act="delete"]', root).onclick = async () => { await deleteSelection([...app.selection]); app.selection.clear(); await render(); renderDesktop(); };
+      refs.listWrap.addEventListener('contextmenu', (e) => {
+        if (e.target.closest('.file-row')) return;
+        e.preventDefault();
+        showContextMenu(e.clientX, e.clientY, explorerBackgroundActions(app, render));
+      });
+      refs.listWrap.addEventListener('dragover', (e) => { e.preventDefault(); });
+      refs.listWrap.addEventListener('drop', async (e) => { e.preventDefault(); await handleDropInto(app.currentPath, e.dataTransfer, false); await render(); });
+      setupSelectionBox(refs.listWrap, refs.rows, refs.selectBox, () => {
+        const next = new Set();
+        $$('.file-row', refs.rows).forEach(row => next.add(row.dataset.path));
+        return next;
+      }, (selectedPaths) => {
+        app.selection = new Set(selectedPaths);
+        state.explorerSelections.set(win.id, app.selection);
+        refreshRows();
+      });
+      await render();
+      return win;
+    }
+
+    function explorerContextActions(app, win) {
+      const paths = [...app.selection];
+      const single = paths[0];
+      return [
+        { label: '打开', icon: 'open', action: () => single && openPath(single) },
+        { label: '复制', icon: 'copy', action: () => { if (paths.length) { state.clipboard = { mode: 'copy', paths }; toast('已复制', `${paths.length} 项`); } } },
+        { label: '重命名', icon: 'rename', action: () => single && renamePath(single).then(() => win.rerender?.()) },
+        { label: '删除', icon: 'delete', action: () => deleteSelection(paths).then(() => { app.selection.clear(); win.rerender?.(); renderDesktop(); }) },
+        { label: '下载到本地', icon: 'download', action: () => single && downloadPath(single) },
+        ...(single && (ARCHIVE_EXTS.has(extname(single)) || single.endsWith('.tar.gz')) ? [{ label: '解压归档', icon: 'archive', action: () => extractArchiveDialog(single).then(() => win.rerender?.()) }] : [])
+      ];
+    }
+
+    function explorerBackgroundActions(app, render) {
+      return [
+        { label: '刷新', icon: 'refresh', action: render },
+        { label: '新建文件夹', icon: 'plus', action: async () => { const name = await showPrompt({ title: '新建文件夹', value: '新建文件夹' }); if (name) { await state.fs.mkdir(await state.fs.ensureUniquePath(joinPath(app.currentPath, name)), { recursive: true }); render(); renderDesktop(); } } },
+        { label: '导入文件', icon: 'upload', action: () => { state.uploadTarget = app.currentPath; fileUploadInput.click(); } },
+        { label: '粘贴', icon: 'paste', action: async () => { await pasteInto(app.currentPath); render(); } },
+        { label: '挂载本地目录', icon: 'mount', action: mountLocalFolder }
+      ];
+    }
+
+    function setupSelectionBox(surface, container, boxNode, allItemsGetter, applySelection) {
+      surface.addEventListener('pointerdown', (e) => {
+        if (e.target.closest('.file-row') || e.button === 2) return;
+        const rect = surface.getBoundingClientRect();
+        const start = { x: e.clientX - rect.left + surface.scrollLeft, y: e.clientY - rect.top + surface.scrollTop };
+        boxNode.style.display = 'block';
+        const move = () => {};
+        const pointerMove = (ev) => {
+          const x = ev.clientX - rect.left + surface.scrollLeft;
+          const y = ev.clientY - rect.top + surface.scrollTop;
+          const left = Math.min(start.x, x);
+          const top = Math.min(start.y, y);
+          const width = Math.abs(start.x - x);
+          const height = Math.abs(start.y - y);
+          Object.assign(boxNode.style, { left: left + 'px', top: top + 'px', width: width + 'px', height: height + 'px' });
+          const selectionRect = { left: rect.left + left - surface.scrollLeft, top: rect.top + top - surface.scrollTop, right: rect.left + left + width - surface.scrollLeft, bottom: rect.top + top + height - surface.scrollTop };
+          const selected = [];
+          $$('.file-row', container).forEach(row => {
+            const r = row.getBoundingClientRect();
+            if (!(r.right < selectionRect.left || r.left > selectionRect.right || r.bottom < selectionRect.top || r.top > selectionRect.bottom)) selected.push(row.dataset.path);
+          });
+          applySelection(selected);
+        };
+        const up = () => {
+          boxNode.style.display = 'none';
+          window.removeEventListener('pointermove', pointerMove);
+          window.removeEventListener('pointerup', up);
+        };
+        window.addEventListener('pointermove', pointerMove);
+        window.addEventListener('pointerup', up, { once: true });
+      });
+    }
+
+    async function pasteInto(targetDir) {
+      if (!state.clipboard?.paths?.length) { toast('剪贴板为空'); return; }
+      for (const src of state.clipboard.paths) {
+        const candidate = await state.fs.ensureUniquePath(joinPath(targetDir, basename(src)));
+        await state.fs.copy(src, candidate);
+      }
+      toast('已粘贴到', targetDir);
+      rerenderExplorerWindows();
+      renderDesktop();
+    }
+
+    async function deleteSelection(paths) {
+      if (!paths.length) return;
+      const yes = await showConfirm({ title: '删除所选项目', message: `将删除 ${paths.length} 个项目，此操作不可撤销。`, confirmText: '删除' });
+      if (!yes) return;
+      for (const path of paths) await state.fs.remove(path);
+      toast('已删除', `${paths.length} 项`);
+      renderDesktop();
+      rerenderExplorerWindows();
+    }
+
+    function rerenderExplorerWindows() {
+      state.windows.forEach(win => { if (win.appId === 'explorer') win.rerender?.(); });
+    }
+
+    function parseDelimited(text, delimiter = ',') {
+      const rows = [];
+      let row = [], value = '', quote = false;
+      for (let i = 0; i < text.length; i++) {
+        const ch = text[i];
+        if (quote) {
+          if (ch === '"' && text[i + 1] === '"') { value += '"'; i++; }
+          else if (ch === '"') quote = false;
+          else value += ch;
+          continue;
+        }
+        if (ch === '"') { quote = true; continue; }
+        if (ch === delimiter) { row.push(value); value = ''; continue; }
+        if (ch === '\n') { row.push(value); rows.push(row); row = []; value = ''; continue; }
+        if (ch === '\r') continue;
+        value += ch;
+      }
+      row.push(value);
+      if (row.length > 1 || row[0] !== '') rows.push(row);
+      return rows;
+    }
+
+    function serializeDelimited(rows, delimiter = ',') {
+      return rows.map(row => row.map(cell => {
+        const text = String(cell ?? '');
+        return /["\n\r]/.test(text) || text.includes(delimiter) ? '"' + text.replace(/"/g, '""') + '"' : text;
+      }).join(delimiter)).join('\n');
+    }
+
+    async function openEditor(path) {
+      const win = createWindow({ title: `记事本 · ${basename(path)}`, iconName: 'editor', width: 1040, height: 720, appId: 'notepad' });
+      const ext = extname(path);
+      const delimiter = ext === 'tsv' ? '\t' : ',';
+      let text;
+      try {
+        text = await state.fs.readFile(path, 'text');
+      } catch {
+        const buffer = await state.fs.readFile(path, 'arrayBuffer');
+        text = decodeText(buffer);
+      }
+      const htmlMode = ext === 'html' || ext === 'htm';
+      const tableMode = TABLE_EXTS.has(ext);
+      win.body.innerHTML = `
+        <div class="editor-shell">
+          <div class="toolbar">
+            <div class="toolbar-group">
+              <button class="toolbar-btn small" data-act="save">${icon('save')}保存</button>
+              ${htmlMode ? `<button class="toolbar-btn small" data-act="browser">${icon('browser')}浏览器打开</button>` : ''}
+              <div class="status-pill">${escapeHtml(path)}</div>
+            </div>
+            <div class="toolbar-spacer"></div>
+            ${tableMode ? `<div class="segmented"><button class="seg-btn active" data-view="text">文本</button><button class="seg-btn" data-view="table">表格</button></div>` : htmlMode ? `<div class="status-pill">实时预览已开启</div>` : ''}
+          </div>
+          <div class="editor-main ${htmlMode ? 'html-mode' : ''}" data-role="main">
+            <textarea class="editor-text" data-role="text"></textarea>
+            ${htmlMode ? `<iframe class="editor-preview" data-role="preview"></iframe>` : ''}
+            ${tableMode ? `<div class="table-view hidden" data-role="table"></div>` : ''}
+          </div>
+        </div>
+      `;
+      const textarea = $('[data-role="text"]', win.body);
+      textarea.value = text;
+      const preview = $('[data-role="preview"]', win.body);
+      const table = $('[data-role="table"]', win.body);
+      let dirty = false;
+
+      function refreshPreview() {
+        if (preview) preview.srcdoc = textarea.value;
+      }
+
+      function renderTable() {
+        if (!table) return;
+        const rows = parseDelimited(textarea.value, delimiter);
+        const maxCols = Math.max(1, ...rows.map(r => r.length));
+        table.innerHTML = `<table class="sheet-table"><tbody>${rows.map((row, rIndex) => `<tr>${Array.from({ length: maxCols }, (_, cIndex) => `<td><input class="sheet-input" data-r="${rIndex}" data-c="${cIndex}" value="${escapeHtml(row[cIndex] ?? '')}" /></td>`).join('')}</tr>`).join('')}</tbody></table>`;
+        $$('input.sheet-input', table).forEach(input => input.oninput = () => {
+          const grid = parseDelimited(textarea.value, delimiter);
+          const r = Number(input.dataset.r), c = Number(input.dataset.c);
+          grid[r] = grid[r] || [];
+          grid[r][c] = input.value;
+          textarea.value = serializeDelimited(grid, delimiter);
+          dirty = true;
+        });
+      }
+
+      if (preview) refreshPreview();
+      if (table) renderTable();
+      textarea.addEventListener('input', () => {
+        dirty = true;
+        if (preview) refreshPreview();
+      });
+      $('[data-act="save"]', win.body).onclick = async () => {
+        await state.fs.writeFile(path, textarea.value, { type: mimeFromName(path) });
+        dirty = false;
+        toast('文件已保存', path);
+        renderDesktop();
+        rerenderExplorerWindows();
+      };
+      if (htmlMode) {
+        $('[data-act="browser"]', win.body).onclick = async () => {
+          const blob = new Blob([textarea.value], { type: 'text/html' });
+          const url = rememberObjectUrl(`html-preview:${path}`, URL.createObjectURL(blob), true);
+          openBrowser(url, basename(path));
+        };
+      }
+      if (tableMode) {
+        $$('[data-view]', win.body).forEach(btn => btn.onclick = () => {
+          $$('[data-view]', win.body).forEach(b => b.classList.toggle('active', b === btn));
+          const showTable = btn.dataset.view === 'table';
+          textarea.classList.toggle('hidden', showTable);
+          table.classList.toggle('hidden', !showTable);
+          if (showTable) renderTable();
+        });
+      }
+      win.onClose = async () => {
+        if (dirty) {
+          const save = await showConfirm({ title: '未保存更改', message: `是否保存 ${basename(path)} 的修改？`, confirmText: '保存', cancelText: '忽略' });
+          if (save) await state.fs.writeFile(path, textarea.value, { type: mimeFromName(path) });
+        }
+      };
+      return win;
+    }
+
+    function browserHomeDoc() {
+      return `<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0;font-family:'Unbounded',sans-serif;background:radial-gradient(circle at 16% 20%,rgba(255,159,90,.22),transparent 22%),radial-gradient(circle at 86% 22%,rgba(125,211,199,.18),transparent 20%),linear-gradient(135deg,#09070d,#15111a 48%,#07070c);color:#f4ead8}.wrap{padding:40px}.sub{color:#d6c2ab;max-width:760px;line-height:1.8}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-top:22px}.card{padding:16px;border:1px solid rgba(255,255,255,.08);border-radius:22px;background:rgba(255,255,255,.04)}h1{font-family:'Instrument Serif',serif;font-size:56px;margin:0 0 12px;font-weight:400}</style><div class="wrap"><h1>Noir Browser</h1><div class="sub">可打开远程网址、Blob URL 与系统中的 HTML 文件。注意：部分外部站点会因为 X-Frame-Options 拒绝嵌入 iframe。</div><div class="grid"><div class="card">输入 /Desktop/Playground.html 的 Blob 预览由编辑器按钮直接触发</div><div class="card">支持后退、前进、刷新与地址栏</div><div class="card">本应用也是 .html 文件的主要预览入口</div></div></div>`;
+    }
+
+    function normalizeBrowserUrl(input) {
+      const value = String(input || '').trim();
+      if (!value || value === 'about:noir') return 'about:noir';
+      if (value.startsWith('blob:') || value.startsWith('data:') || value.startsWith('http://') || value.startsWith('https://') || value.startsWith('file:')) return value;
+      return 'https://' + value;
+    }
+
+    function openBrowser(url = 'about:noir', customTitle = '浏览器') {
+      const win = createWindow({ title: customTitle, iconName: 'browser', width: 1080, height: 760, appId: 'browser' });
+      const stateBrowser = { history: [], index: -1 };
+      win.body.innerHTML = `
+        <div class="browser-shell">
+          <div class="toolbar">
+            <div class="toolbar-group">
+              <button class="toolbar-btn small" data-act="back">${icon('back')}</button>
+              <button class="toolbar-btn small" data-act="forward">${icon('forward')}</button>
+              <button class="toolbar-btn small" data-act="home">${icon('home')}</button>
+              <button class="toolbar-btn small" data-act="reload">${icon('refresh')}</button>
+            </div>
+            <input class="toolbar-input" data-role="url" style="flex:1;min-width:180px;" placeholder="输入 URL" />
+            <button class="toolbar-btn small" data-act="go">${icon('open')}打开</button>
+          </div>
+          <iframe class="browser-frame" data-role="frame" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-downloads"></iframe>
+          <div class="browser-status" data-role="status">就绪</div>
+        </div>
+      `;
+      const frame = $('[data-role="frame"]', win.body);
+      const urlInput = $('[data-role="url"]', win.body);
+      const status = $('[data-role="status"]', win.body);
+
+      const navigate = (target, push = true) => {
+        const normalized = normalizeBrowserUrl(target);
+        urlInput.value = normalized;
+        if (normalized === 'about:noir') {
+          frame.srcdoc = browserHomeDoc();
+          status.textContent = '内部主页';
+        } else {
+          frame.srcdoc = '';
+          frame.src = normalized;
+          status.textContent = normalized;
+        }
+        if (push) {
+          stateBrowser.history = stateBrowser.history.slice(0, stateBrowser.index + 1);
+          stateBrowser.history.push(normalized);
+          stateBrowser.index = stateBrowser.history.length - 1;
+        }
+      };
+
+      $('[data-act="back"]', win.body).onclick = () => { if (stateBrowser.index > 0) { stateBrowser.index--; navigate(stateBrowser.history[stateBrowser.index], false); } };
+      $('[data-act="forward"]', win.body).onclick = () => { if (stateBrowser.index < stateBrowser.history.length - 1) { stateBrowser.index++; navigate(stateBrowser.history[stateBrowser.index], false); } };
+      $('[data-act="home"]', win.body).onclick = () => navigate('about:noir');
+      $('[data-act="reload"]', win.body).onclick = () => navigate(urlInput.value || 'about:noir', false);
+      $('[data-act="go"]', win.body).onclick = () => navigate(urlInput.value);
+      urlInput.onkeydown = (e) => { if (e.key === 'Enter') navigate(urlInput.value); };
+      navigate(url);
+      return win;
+    }
+
+    async function openImageViewer(path) {
+      const win = createWindow({ title: `图片查看器 · ${basename(path)}`, iconName: 'image', width: 980, height: 720, appId: 'image' });
+      const url = await getBlobUrl(path);
+      let scale = 1;
+      win.body.innerHTML = `
+        <div class="viewer-shell">
+          <div class="toolbar">
+            <div class="toolbar-group">
+              <button class="toolbar-btn small" data-act="minus">${icon('zoomOut')}缩小</button>
+              <button class="toolbar-btn small" data-act="plus">${icon('zoomIn')}放大</button>
+              <button class="toolbar-btn small" data-act="fit">${icon('fullscreen')}适应</button>
+              <button class="toolbar-btn small" data-act="download">${icon('download')}导出</button>
+            </div>
+            <div class="toolbar-spacer"></div>
+            <div class="status-pill" data-role="zoom">100%</div>
+          </div>
+          <div class="viewer-stage"><img data-role="img" src="${url}" alt="${escapeHtml(basename(path))}" /></div>
+        </div>
+      `;
+      const img = $('[data-role="img"]', win.body);
+      const zoom = $('[data-role="zoom"]', win.body);
+      const update = () => { img.style.transform = `scale(${scale})`; zoom.textContent = Math.round(scale * 100) + '%'; };
+      $('[data-act="minus"]', win.body).onclick = () => { scale = Math.max(0.2, scale - 0.1); update(); };
+      $('[data-act="plus"]', win.body).onclick = () => { scale = Math.min(5, scale + 0.1); update(); };
+      $('[data-act="fit"]', win.body).onclick = () => { scale = 1; update(); };
+      $('[data-act="download"]', win.body).onclick = () => downloadPath(path);
+      update();
+      return win;
+    }
+
+    async function openMediaViewer(path) {
+      const ext = extname(path);
+      const audio = AUDIO_EXTS.has(ext);
+      const win = createWindow({ title: `${audio ? '音频' : '视频'}播放器 · ${basename(path)}`, iconName: audio ? 'audio' : 'video', width: 960, height: audio ? 300 : 700, appId: 'media' });
+      const url = await getBlobUrl(path);
+      win.body.innerHTML = `
+        <div class="viewer-shell">
+          <div class="toolbar">
+            <div class="toolbar-group"><button class="toolbar-btn small" data-act="download">${icon('download')}导出</button></div>
+            <div class="toolbar-spacer"></div>
+            <div class="status-pill">${escapeHtml(path)}</div>
+          </div>
+          <div class="viewer-stage">${audio ? `<audio class="media-element" controls autoplay src="${url}"></audio>` : `<video class="media-element" controls autoplay src="${url}"></video>`}</div>
+        </div>
+      `;
+      $('[data-act="download"]', win.body).onclick = () => downloadPath(path);
+      return win;
+    }
+
+    async function openPdfViewer(path) {
+      const win = createWindow({ title: `PDF 预览 · ${basename(path)}`, iconName: 'pdf', width: 980, height: 760, appId: 'pdf' });
+      const url = await getBlobUrl(path);
+      win.body.innerHTML = `
+        <div class="viewer-shell">
+          <div class="toolbar"><button class="toolbar-btn small" data-act="download">${icon('download')}导出</button><div class="toolbar-spacer"></div><div class="status-pill">${escapeHtml(path)}</div></div>
+          <iframe class="pdf-frame" src="${url}"></iframe>
+        </div>
+      `;
+      $('[data-act="download"]', win.body).onclick = () => downloadPath(path);
+      return win;
+    }
+
+    async function openGenericViewer(path) {
+      const win = createWindow({ title: `原始查看 · ${basename(path)}`, iconName: 'file', width: 920, height: 680, appId: 'generic' });
+      const buffer = await state.fs.readFile(path, 'arrayBuffer');
+      const text = decodeText(buffer);
+      win.body.innerHTML = `
+        <div class="viewer-shell">
+          <div class="toolbar"><button class="toolbar-btn small" data-act="download">${icon('download')}导出</button><button class="toolbar-btn small" data-act="edit">${icon('editor')}按文本编辑</button><div class="toolbar-spacer"></div><div class="status-pill">二进制未知类型 · 已尝试纯文本读取</div></div>
+          <pre class="generic-text">${escapeHtml(text)}</pre>
+        </div>
+      `;
+      $('[data-act="download"]', win.body).onclick = () => downloadPath(path);
+      $('[data-act="edit"]', win.body).onclick = () => openEditor(path);
+      return win;
+    }
+
+    function parseTar(buffer) {
+      const bytes = new Uint8Array(buffer);
+      const out = [];
+      let offset = 0;
+      const td = new TextDecoder();
+      const readString = (start, length) => td.decode(bytes.slice(start, start + length)).replace(/\0.*$/, '').trim();
+      while (offset + 512 <= bytes.length) {
+        const block = bytes.slice(offset, offset + 512);
+        const empty = block.every(v => v === 0);
+        if (empty) break;
+        const name = readString(offset, 100);
+        const sizeText = readString(offset + 124, 12).replace(/\0/g, '').trim();
+        const size = parseInt(sizeText || '0', 8) || 0;
+        const type = String.fromCharCode(bytes[offset + 156] || 48);
+        const prefix = readString(offset + 345, 155);
+        const fullName = prefix ? `${prefix}/${name}` : name;
+        const dataStart = offset + 512;
+        const dataEnd = dataStart + size;
+        if (fullName) out.push({ name: fullName, type, data: bytes.slice(dataStart, dataEnd) });
+        offset = dataStart + Math.ceil(size / 512) * 512;
+      }
+      return out;
+    }
+
+    async function gunzipBuffer(buffer) {
+      if (!window.DecompressionStream) throw new Error('当前浏览器不支持 DecompressionStream');
+      const ds = new DecompressionStream('gzip');
+      return new Response(new Blob([buffer]).stream().pipeThrough(ds)).arrayBuffer();
+    }
+
+    function parseGzipOriginalName(buffer) {
+      const bytes = new Uint8Array(buffer);
+      if (bytes[0] !== 0x1f || bytes[1] !== 0x8b) return null;
+      const flags = bytes[3];
+      let i = 10;
+      if (flags & 4) { const xlen = bytes[i] | (bytes[i + 1] << 8); i += 2 + xlen; }
+      if (flags & 8) {
+        let name = '';
+        while (i < bytes.length && bytes[i] !== 0) name += String.fromCharCode(bytes[i++]);
+        return name || null;
+      }
+      return null;
+    }
+
+    async function analyzeArchive(path) {
+      const ext = extname(path);
+      const buffer = await state.fs.readFile(path, 'arrayBuffer');
+      if (path.endsWith('.tar.gz') || ext === 'tgz') {
+        const tarBuffer = await gunzipBuffer(buffer);
+        const entries = parseTar(tarBuffer).filter(e => e.name);
+        return { type: 'tgz', entries };
+      }
+      if (ext === 'tar') {
+        const entries = parseTar(buffer).filter(e => e.name);
+        return { type: 'tar', entries };
+      }
+      if (ext === 'gz') {
+        const name = parseGzipOriginalName(buffer) || stem(path);
+        return { type: 'gz', entries: [{ name, type: '0', data: new Uint8Array(await gunzipBuffer(buffer)) }] };
+      }
+      if (ext === 'zip') {
+        if (!window.fflate) throw new Error('zip 解压库未加载');
+        const files = window.fflate.unzipSync(new Uint8Array(buffer));
+        const entries = Object.entries(files).map(([name, data]) => ({ name, type: name.endsWith('/') ? '5' : '0', data }));
+        return { type: 'zip', entries };
+      }
+      throw new Error('暂不支持的归档类型');
+    }
+
+    async function extractArchiveDialog(path) {
+      const target = await showPrompt({ title: '解压到目录', message: '输入目标目录，系统会自动创建。', value: joinPath(dirname(path), stem(path)) });
+      if (!target) return;
+      await extractArchive(path, target);
+    }
+
+    async function extractArchive(path, targetDir) {
+      const pack = await analyzeArchive(path);
+      await state.fs.mkdir(targetDir, { recursive: true });
+      for (const entry of pack.entries) {
+        const clean = normalizePath('/' + entry.name.replace(/^\/+/, ''));
+        if (entry.type === '5' || entry.name.endsWith('/')) {
+          await state.fs.mkdir(joinPath(targetDir, clean), { recursive: true });
+        } else {
+          await state.fs.mkdir(dirname(joinPath(targetDir, clean)), { recursive: true });
+          await state.fs.writeFile(joinPath(targetDir, clean), entry.data, { type: mimeFromName(entry.name) });
+        }
+      }
+      toast('归档已解压', targetDir);
+      rerenderExplorerWindows();
+    }
+
+    async function openArchive(path) {
+      const win = createWindow({ title: `归档查看 · ${basename(path)}`, iconName: 'archive', width: 900, height: 700, appId: 'archive' });
+      win.body.innerHTML = `
+        <div class="archive-shell">
+          <div class="toolbar">
+            <div class="toolbar-group">
+              <button class="toolbar-btn small" data-act="extract">${icon('archive')}解压</button>
+              <button class="toolbar-btn small" data-act="download">${icon('download')}导出</button>
+            </div>
+            <div class="toolbar-spacer"></div>
+            <div class="status-pill" data-role="summary">正在分析归档...</div>
+          </div>
+          <div class="archive-list" data-role="list"></div>
+        </div>
+      `;
+      $('[data-act="download"]', win.body).onclick = () => downloadPath(path);
+      $('[data-act="extract"]', win.body).onclick = () => extractArchiveDialog(path);
+      try {
+        const pack = await analyzeArchive(path);
+        $('[data-role="summary"]', win.body).textContent = `${pack.type.toUpperCase()} · ${pack.entries.length} 个条目`;
+        $('[data-role="list"]', win.body).innerHTML = pack.entries.map(entry => `<div class="archive-row"><div class="mono">${escapeHtml(entry.name)}</div><div class="muted">${entry.type === '5' || entry.name.endsWith('/') ? '目录' : formatBytes(entry.data?.byteLength || entry.data?.length || 0)}</div></div>`).join('');
+      } catch (error) {
+        $('[data-role="summary"]', win.body).textContent = '分析失败';
+        $('[data-role="list"]', win.body).innerHTML = `<div class="settings-card"><div class="danger">${escapeHtml(error.message || '无法解析该归档')}</div><div class="muted" style="margin-top:8px;">ZIP 依赖 fflate CDN；gzip/tar/tgz 会优先使用浏览器原生能力。</div></div>`;
+      }
+      return win;
+    }
+
+    function openCalculator() {
+      const win = createWindow({ title: '计算器', iconName: 'calculator', width: 380, height: 560, appId: 'calculator' });
+      win.body.innerHTML = `
+        <div class="calculator">
+          <div class="calc-display">
+            <div class="calc-expression" data-role="expr"></div>
+            <div class="calc-result" data-role="result">0</div>
+          </div>
+          <div class="calc-grid">
+            ${['C','(',')','/','7','8','9','*','4','5','6','-','1','2','3','+','0','.','⌫','='].map(key => `<button class="calc-key ${['/','*','-','+'].includes(key) ? 'op' : ''} ${key === '=' ? 'eq' : ''}" data-key="${escapeHtml(key)}">${escapeHtml(key)}</button>`).join('')}
+          </div>
+        </div>
+      `;
+      const expr = $('[data-role="expr"]', win.body);
+      const result = $('[data-role="result"]', win.body);
+      let value = '';
+      const render = () => { expr.textContent = value; result.textContent = value || '0'; };
+      $$('[data-key]', win.body).forEach(btn => btn.onclick = () => {
+        const key = btn.dataset.key;
+        if (key === 'C') value = '';
+        else if (key === '⌫') value = value.slice(0, -1);
+        else if (key === '=') {
+          try {
+            if (!/^[0-9+\-*/().\s]+$/.test(value)) throw new Error('非法表达式');
+            value = String(Function(`return (${value})`)());
+          } catch {
+            value = '错误';
+          }
+        } else {
+          value += key;
+        }
+        render();
+      });
+      render();
+      return win;
+    }
+
+    function openPaint() {
+      const win = createWindow({ title: '画板', iconName: 'paint', width: 1080, height: 760, appId: 'paint' });
+      win.body.innerHTML = `
+        <div class="paint-wrap">
+          <div class="toolbar">
+            <div class="toolbar-group">
+              <input type="color" data-role="color" class="toolbar-input" value="#0f172a" style="width:54px;padding:4px;" />
+              <input type="range" min="1" max="40" value="4" data-role="size" />
+              <button class="toolbar-btn small" data-act="clear">${icon('delete')}清空</button>
+              <button class="toolbar-btn small" data-act="save">${icon('save')}保存 PNG</button>
+            </div>
+            <div class="toolbar-spacer"></div>
+            <div class="status-pill">触摸与鼠标均可绘制</div>
+          </div>
+          <div class="paint-stage"><canvas class="paint-canvas" width="1600" height="900"></canvas></div>
+        </div>
+      `;
+      const canvas = $('.paint-canvas', win.body);
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      let drawing = false;
+      const color = $('[data-role="color"]', win.body);
+      const size = $('[data-role="size"]', win.body);
+      const point = (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+        const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+        return { x, y };
+      };
+      canvas.addEventListener('pointerdown', (e) => {
+        drawing = true;
+        const p = point(e);
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+      });
+      canvas.addEventListener('pointermove', (e) => {
+        if (!drawing) return;
+        const p = point(e);
+        ctx.strokeStyle = color.value;
+        ctx.lineWidth = Number(size.value);
+        ctx.lineTo(p.x, p.y);
+        ctx.stroke();
+      });
+      window.addEventListener('pointerup', () => drawing = false);
+      $('[data-act="clear"]', win.body).onclick = () => {
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      };
+      $('[data-act="save"]', win.body).onclick = async () => {
+        const name = await showPrompt({ title: '保存到文件系统', value: `/Pictures/Sketch-${new Date().toISOString().slice(0,19).replace(/[T:]/g,'-')}.png` });
+        if (!name) return;
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+        await state.fs.writeFile(name, blob, { type: 'image/png' });
+        toast('画板已保存', name);
+        renderDesktop();
+        rerenderExplorerWindows();
+      };
+      return win;
+    }
+
+    async function directorySizes(base = '/') {
+      const entries = await state.fs.readdir(base);
+      const out = [];
+      for (const entry of entries) {
+        const size = entry.kind === 'file' ? entry.size || 0 : await sumDir(entry.path);
+        out.push({ name: entry.name, path: entry.path, size });
+      }
+      return out.sort((a, b) => b.size - a.size);
+    }
+
+    async function sumDir(path) {
+      const entries = await state.fs.readdir(path);
+      let total = 0;
+      for (const entry of entries) {
+        total += entry.kind === 'file' ? (entry.size || 0) : await sumDir(entry.path);
+      }
+      return total;
+    }
+
+    async function openSettings() {
+      const win = createWindow({ title: '设置', iconName: 'settings', width: 1040, height: 760, appId: 'settings' });
+      win.body.innerHTML = `
+        <div class="settings-shell">
+          <div class="toolbar">
+            <div class="toolbar-group">
+              <button class="toolbar-btn small" data-act="persist">${icon('save')}请求持久化</button>
+              <button class="toolbar-btn small" data-act="mount">${icon('mount')}挂载目录</button>
+              <button class="toolbar-btn small" data-act="refresh">${icon('refresh')}刷新统计</button>
+              <button class="toolbar-btn small" data-act="reset">${icon('delete')}重置系统</button>
+            </div>
+          </div>
+          <div class="settings-grid">
+            <section class="settings-card">
+              <div class="hero">Storage</div>
+              <div class="muted" style="margin-bottom:12px;">OPFS / IndexedDB 使用量与目录占用可视化</div>
+              <div class="progress"><span data-role="usageBar"></span></div>
+              <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:12px;"><span data-role="usageText">正在读取...</span><span class="muted" data-role="persistText"></span></div>
+              <div style="margin-top:18px;" data-role="usageList"></div>
+            </section>
+            <section class="settings-card">
+              <h3>壁纸系统</h3>
+              <div class="wallpaper-grid" data-role="wallpapers"></div>
+              <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;">
+                <button class="toolbar-btn small" data-act="uploadWallpaper">${icon('upload')}上传壁纸</button>
+                <div class="status-pill">自定义图片将保存到 /System/Wallpapers</div>
+              </div>
+            </section>
+            <section class="settings-card">
+              <h3>挂载管理</h3>
+              <div class="muted" style="font-size:12px;margin-bottom:8px;">本地文件夹统一挂载到 /mnt/local；刷新后权限可能需要重新获取。</div>
+              <div data-role="mountList"></div>
+            </section>
+            <section class="settings-card">
+              <h3>系统能力</h3>
+              <div class="usage-row"><div>OPFS</div><div>${navigator.storage?.getDirectory ? '可用' : '不可用'}</div><div class="muted">主后端</div></div>
+              <div class="usage-row"><div>File System Access API</div><div>${window.showDirectoryPicker ? '可用' : '不可用'}</div><div class="muted">本地挂载</div></div>
+              <div class="usage-row"><div>Compression Streams</div><div>${window.DecompressionStream ? '可用' : '不可用'}</div><div class="muted">gzip / tgz</div></div>
+              <div class="usage-row"><div>ZIP 解压库</div><div>${window.fflate ? '已加载' : '未加载'}</div><div class="muted">zip</div></div>
+            </section>
+          </div>
+        </div>
+      `;
+
+      async function renderUsage() {
+        const estimate = navigator.storage?.estimate ? await navigator.storage.estimate() : { usage: 0, quota: 0 };
+        const used = estimate.usage || 0;
+        const quota = estimate.quota || 0;
+        $('[data-role="usageBar"]', win.body).style.width = quota ? `${Math.min(100, (used / quota) * 100)}%` : '0%';
+        $('[data-role="usageText"]', win.body).textContent = `${formatBytes(used)} / ${formatBytes(quota)} 已使用`;
+        let persisted = false;
+        try { persisted = await navigator.storage?.persisted?.(); } catch {}
+        $('[data-role="persistText"]', win.body).textContent = persisted ? '持久化已启用' : '持久化未确认';
+        const sizes = await directorySizes('/');
+        $('[data-role="usageList"]', win.body).innerHTML = sizes.map(item => `<div class="usage-row"><div>${escapeHtml(item.path)}</div><div>${formatBytes(item.size)}</div><div class="muted">${item.size ? Math.max(1, Math.round(item.size / Math.max(1, sizes[0]?.size || 1) * 100)) : 0}%</div></div>`).join('') || '<div class="muted">暂无文件</div>';
+      }
+
+      function renderWallpapers() {
+        $('[data-role="wallpapers"]', win.body).innerHTML = WALLPAPERS.map(wp => `<button class="wallpaper-card ${state.prefs.wallpaper?.id === wp.id && state.prefs.wallpaper?.kind === 'builtin' ? 'active' : ''}" data-id="${wp.id}" style="background:${wp.css}"></button>`).join('');
+        $$('[data-id]', win.body).forEach(btn => btn.onclick = async () => {
+          state.prefs.wallpaper = { kind: 'builtin', id: btn.dataset.id };
+          await savePrefs();
+          await applyWallpaper();
+          renderWallpapers();
+        });
+      }
+
+      function renderMounts() {
+        const live = state.fs.mounts.map(m => `<div class="mount-row"><div>${escapeHtml(m.path)}</div><div class="good">已挂载</div><button class="toolbar-btn small" data-unmount="${escapeHtml(m.path)}">卸载</button></div>`).join('');
+        const stale = state.mountReminders.map(m => `<div class="mount-row"><div>${escapeHtml(m.mountPath)}</div><div class="danger">待重新授权</div><button class="toolbar-btn small" data-remount="${escapeHtml(m.mountPath)}">重新挂载</button></div>`).join('');
+        $('[data-role="mountList"]', win.body).innerHTML = live + stale || '<div class="muted">暂无挂载</div>';
+        $$('[data-unmount]', win.body).forEach(btn => btn.onclick = () => unmountPath(btn.dataset.unmount).then(() => { renderMounts(); rerenderExplorerWindows(); }));
+        $$('[data-remount]', win.body).forEach(btn => btn.onclick = async () => { await mountLocalFolder(); renderMounts(); rerenderExplorerWindows(); });
+      }
+
+      $('[data-act="persist"]', win.body).onclick = async () => {
+        try {
+          const result = await navigator.storage?.persist?.();
+          toast(result ? '已请求持久化成功' : '浏览器未确认持久化');
+          renderUsage();
+        } catch (error) { toast('持久化请求失败', error.message || ''); }
+      };
+      $('[data-act="mount"]', win.body).onclick = async () => { await mountLocalFolder(); renderMounts(); rerenderExplorerWindows(); };
+      $('[data-act="refresh"]', win.body).onclick = () => { renderUsage(); renderMounts(); renderWallpapers(); };
+      $('[data-act="uploadWallpaper"]', win.body).onclick = () => wallpaperUploadInput.click();
+      $('[data-act="reset"]', win.body).onclick = async () => {
+        const yes = await showConfirm({ title: '重置整个系统', message: '将清空 OPFS/IndexedDB 虚拟文件系统、偏好与挂载记录。', confirmText: '彻底重置' });
+        if (!yes) return;
+        await resetSystem();
+      };
+
+      renderWallpapers();
+      renderMounts();
+      renderUsage();
+      return win;
+    }
+
+    async function clearRootBackend(path = '/') {
+      const items = await state.fs.root.readdir(path);
+      for (const item of items) {
+        if (item.kind === 'dir') await state.fs.root.rmdir(item.path, { recursive: true });
+        else await state.fs.root.unlink(item.path);
+      }
+    }
+
+    async function resetSystem() {
+      try {
+        await clearRootBackend('/');
+      } catch (error) {
+        console.warn(error);
+      }
+      await idbClear('kv');
+      await idbClear('mounts');
+      if (!(state.fs.root instanceof HandleTreeBackend)) await idbClear('fsnodes');
+      state.fs.mounts = [];
+      state.mountReminders = [];
+      state.prefs = structuredClone(DEFAULT_PREFS);
+      tinyStore.clear('noir-prefs');
+      await state.fs.root.init?.();
+      await ensureSystemFolders();
+      await seedSystem();
+      await savePrefs();
+      await applyWallpaper();
+      renderDesktop();
+      rerenderExplorerWindows();
+      state.windows.forEach(win => { win.onClose = null; win.el.remove(); });
+      state.windows.clear();
+      state.activeWindowId = null;
+      renderDock();
+      toast('系统已重置', '已恢复默认桌面与文件结构');
+    }
+
+    async function importFileObject(file, targetDir) {
+      const path = await state.fs.ensureUniquePath(joinPath(targetDir, file.name));
+      await state.fs.writeFile(path, file, { type: file.type || mimeFromName(file.name) });
+    }
+
+    async function importHandleRecursive(handle, targetDir) {
+      if (handle.kind === 'file') {
+        const file = await handle.getFile();
+        const path = await state.fs.ensureUniquePath(joinPath(targetDir, file.name));
+        await state.fs.writeFile(path, file, { type: file.type || mimeFromName(file.name) });
+        return;
+      }
+      const folderPath = await state.fs.ensureUniquePath(joinPath(targetDir, handle.name));
+      await state.fs.mkdir(folderPath, { recursive: true });
+      for await (const child of handle.values()) {
+        await importHandleRecursive(child, folderPath);
+      }
+    }
+
+    async function handleDropInto(targetDir, dataTransfer, fromDesktop = false) {
+      const internal = dataTransfer.getData('application/x-webos-paths');
+      if (internal) {
+        const paths = JSON.parse(internal);
+        for (const src of paths) {
+          if (isSubPath(targetDir, src)) continue;
+          if (normalizePath(dirname(src)) === normalizePath(targetDir)) continue;
+          const target = await state.fs.ensureUniquePath(joinPath(targetDir, basename(src)));
+          if (normalizePath(src) !== normalizePath(target)) await state.fs.rename(src, target);
+        }
+        toast('已移动到', targetDir);
+        renderDesktop();
+        rerenderExplorerWindows();
+        return;
+      }
+
+      if (dataTransfer.items?.length) {
+        for (const item of dataTransfer.items) {
+          if (item.kind !== 'file') continue;
+          if (item.getAsFileSystemHandle) {
+            const handle = await item.getAsFileSystemHandle();
+            if (handle) { await importHandleRecursive(handle, targetDir); continue; }
+          }
+          const file = item.getAsFile();
+          if (file) await importFileObject(file, targetDir);
+        }
+      } else if (dataTransfer.files?.length) {
+        for (const file of dataTransfer.files) await importFileObject(file, targetDir);
+      }
+      toast('导入完成', targetDir);
+      renderDesktop();
+      rerenderExplorerWindows();
+    }
+
+    $('#startButton').onclick = () => {
+      state.startMenuOpen = !state.startMenuOpen;
+      startMenu.classList.toggle('hidden', !state.startMenuOpen);
+      if (state.startMenuOpen) renderStartMenu();
+    };
+    $('#dockUpload').onclick = () => { state.uploadTarget = '/Desktop'; fileUploadInput.click(); };
+
+    document.addEventListener('pointerdown', (e) => {
+      if (!e.target.closest('#startMenu') && !e.target.closest('#startButton')) {
+        startMenu.classList.add('hidden');
+        state.startMenuOpen = false;
+      }
+      if (!e.target.closest('#contextMenu')) {
+        contextMenu.style.display = 'none';
+        state.contextMenuOpen = false;
+      }
+    });
+    window.addEventListener('resize', () => { state.windows.forEach(clampWindow); renderDesktop(); });
+
+    fileUploadInput.addEventListener('change', async () => {
+      const files = [...fileUploadInput.files];
+      for (const file of files) await importFileObject(file, state.uploadTarget || '/Desktop');
+      fileUploadInput.value = '';
+      renderDesktop();
+      rerenderExplorerWindows();
+      toast('文件已导入', `${files.length} 个项目`);
+    });
+
+    folderUploadInput.addEventListener('change', async () => {
+      const files = [...folderUploadInput.files];
+      const groups = new Map();
+      for (const file of files) {
+        const rel = file.webkitRelativePath || file.name;
+        groups.set(rel, file);
+      }
+      for (const [rel, file] of groups) {
+        const target = joinPath(state.uploadTarget || '/Desktop', rel);
+        await state.fs.mkdir(dirname(target), { recursive: true });
+        await state.fs.writeFile(target, file, { type: file.type || mimeFromName(file.name) });
+      }
+      folderUploadInput.value = '';
+      renderDesktop();
+      rerenderExplorerWindows();
+      toast('文件夹已导入', `${files.length} 个文件`);
+    });
+
+    wallpaperUploadInput.addEventListener('change', async () => {
+      const file = wallpaperUploadInput.files[0];
+      if (!file) return;
+      const path = await state.fs.ensureUniquePath(`/System/Wallpapers/${file.name}`);
+      await state.fs.writeFile(path, file, { type: file.type || 'image/*' });
+      state.prefs.wallpaper = { kind: 'custom', path };
+      await savePrefs();
+      await applyWallpaper();
+      wallpaperUploadInput.value = '';
+      toast('壁纸已更新', path);
+    });
+
+    setupDesktopSurface();
+
+    state.db = await openDB();
+    await loadPrefs();
+    state.fs = new UnifiedFS(await createRootBackend());
+    await state.fs.init();
+    window.fs = state.fs;
+    await seedSystem();
+    await restoreMounts();
+    await applyWallpaper();
+    await renderDesktop();
+    await refreshStorageQuick();
+    clockTick();
+    setInterval(clockTick, 1000 * 20);
+    setInterval(refreshStorageQuick, 1000 * 25);
+
+    toast('Noir Grid OS 已就绪', '右键桌面可新建文件夹、上传文件或切换壁纸');
+  })();
+  </script>
+</body>
+</html>

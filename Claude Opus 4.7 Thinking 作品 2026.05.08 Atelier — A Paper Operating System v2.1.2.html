@@ -1,0 +1,2264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Atelier — A Paper Operating System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600;9..144,700;9..144,800&family=Newsreader:opsz,ital,wght@6..72,0,300;6..72,0,400;6..72,0,500;6..72,1,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#f1e7d0;
+  --paper-2:#e8dcc0;
+  --paper-3:#dccfae;
+  --ink:#1a1814;
+  --ink-soft:#3d362c;
+  --ink-faint:#7a6f5c;
+  --oxblood:#8b2a1f;
+  --oxblood-dark:#6b1f17;
+  --mustard:#c89211;
+  --sage:#4a6741;
+  --sky:#5a7a99;
+  --line:rgba(26,24,20,0.18);
+  --line-soft:rgba(26,24,20,0.08);
+  --shadow:0 1px 0 rgba(26,24,20,0.1), 0 8px 24px rgba(26,24,20,0.18), 0 32px 80px rgba(26,24,20,0.22);
+  --shadow-sm:0 1px 0 rgba(26,24,20,0.1), 0 4px 12px rgba(26,24,20,0.15);
+  --serif:'Fraunces',Georgia,serif;
+  --body:'Newsreader',Georgia,serif;
+  --mono:'JetBrains Mono',ui-monospace,Menlo,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{width:100%;height:100%;overflow:hidden;user-select:none;-webkit-user-select:none;}
+body{font-family:var(--body);background:#0e0c09;color:var(--ink);font-size:14px;line-height:1.4;overscroll-behavior:none;}
+button{font-family:inherit;color:inherit;background:none;border:none;cursor:pointer;font-size:inherit;}
+input,textarea{font-family:inherit;color:inherit;background:none;border:none;outline:none;font-size:inherit;}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:rgba(26,24,20,0.25);border-radius:10px;border:2px solid transparent;background-clip:content-box;}
+::-webkit-scrollbar-thumb:hover{background:rgba(26,24,20,0.45);background-clip:content-box;border:2px solid transparent;}
+
+/* ============ BOOT ============ */
+#boot{position:fixed;inset:0;background:#0e0c09;color:var(--paper);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:99999;transition:opacity .8s ease;}
+#boot.hidden{opacity:0;pointer-events:none;}
+#boot .logo{font-family:var(--serif);font-weight:300;font-size:80px;font-style:italic;letter-spacing:-3px;}
+#boot .logo span{color:var(--mustard);}
+#boot .tag{font-family:var(--mono);font-size:10px;letter-spacing:8px;text-transform:uppercase;margin-top:18px;color:var(--ink-faint);}
+#boot .bar{margin-top:48px;width:200px;height:1px;background:rgba(241,231,208,0.2);overflow:hidden;}
+#boot .bar::after{content:'';display:block;width:30%;height:100%;background:var(--mustard);animation:bootBar 1.6s ease-in-out infinite;}
+@keyframes bootBar{0%{transform:translateX(-100%);}100%{transform:translateX(400%);}}
+
+/* ============ DESKTOP ============ */
+#desktop{position:fixed;inset:0;overflow:hidden;background-color:var(--paper);background-image:radial-gradient(circle at 20% 30%,rgba(200,146,17,0.15) 0%,transparent 50%),radial-gradient(circle at 80% 70%,rgba(139,42,31,0.12) 0%,transparent 50%),radial-gradient(circle at 50% 100%,rgba(74,103,65,0.1) 0%,transparent 60%);}
+#desktop::before{content:'';position:absolute;inset:0;background-image:radial-gradient(circle,rgba(26,24,20,0.08) 1px,transparent 1px);background-size:18px 18px;opacity:0.5;pointer-events:none;}
+#desktop.wp-1{background-color:#f1e7d0;background-image:radial-gradient(circle at 20% 30%,rgba(200,146,17,0.15),transparent 50%),radial-gradient(circle at 80% 70%,rgba(139,42,31,0.12),transparent 50%);}
+#desktop.wp-2{background-color:#1a1814;background-image:radial-gradient(circle at 30% 20%,rgba(200,146,17,0.25),transparent 60%),radial-gradient(circle at 70% 80%,rgba(90,122,153,0.2),transparent 60%);}
+#desktop.wp-2::before{background-image:radial-gradient(circle,rgba(241,231,208,0.06) 1px,transparent 1px);}
+#desktop.wp-3{background:linear-gradient(135deg,#3d4a3d 0%,#1a2a1a 100%);}
+#desktop.wp-3::before{background-image:linear-gradient(rgba(241,231,208,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(241,231,208,0.04) 1px,transparent 1px);background-size:32px 32px;}
+#desktop.wp-4{background:linear-gradient(180deg,#d96b3a 0%,#c89211 50%,#8b4513 100%);}
+#desktop.wp-4::before{background-image:repeating-linear-gradient(45deg,transparent 0,transparent 20px,rgba(26,24,20,0.05) 20px,rgba(26,24,20,0.05) 21px);background-size:auto;}
+#desktop.wp-5{background:#0e0c09;}
+#desktop.wp-5::before{background-image:radial-gradient(ellipse at 50% 50%,rgba(200,146,17,0.4),transparent 40%),radial-gradient(circle,rgba(241,231,208,0.5) 1px,transparent 1.5px);background-size:auto,40px 40px;}
+#desktop.wp-custom::before{display:none;}
+
+/* desktop icon grid */
+#icon-grid{position:absolute;top:24px;left:24px;right:24px;bottom:80px;display:grid;grid-template-columns:repeat(auto-fill,96px);grid-auto-rows:104px;gap:8px;align-content:start;}
+.dicon{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:8px 4px;border-radius:6px;cursor:pointer;text-align:center;position:relative;transition:background .15s;}
+.dicon:hover{background:rgba(26,24,20,0.06);}
+.dicon.selected{background:rgba(139,42,31,0.18);outline:1px dashed rgba(139,42,31,0.4);}
+.dicon .ic{width:48px;height:48px;display:flex;align-items:center;justify-content:center;color:var(--ink-soft);}
+.dicon .ic svg{width:44px;height:44px;}
+.dicon .nm{margin-top:6px;font-family:var(--body);font-size:12px;color:var(--ink);max-width:88px;word-break:break-all;line-height:1.2;text-shadow:0 1px 0 rgba(241,231,208,0.5);}
+#desktop.wp-2 .dicon .nm,#desktop.wp-3 .dicon .nm,#desktop.wp-4 .dicon .nm,#desktop.wp-5 .dicon .nm{color:var(--paper);text-shadow:0 1px 2px rgba(0,0,0,0.6);}
+#desktop.wp-2 .dicon .ic,#desktop.wp-3 .dicon .ic,#desktop.wp-4 .dicon .ic,#desktop.wp-5 .dicon .ic{color:var(--paper);}
+
+/* selection box */
+#sel-box{position:fixed;border:1px solid var(--oxblood);background:rgba(139,42,31,0.1);pointer-events:none;z-index:5;display:none;}
+
+/* ============ TOPBAR ============ */
+#topbar{position:fixed;top:0;left:0;right:0;height:30px;background:rgba(241,231,208,0.85);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 16px;z-index:1000;font-size:12px;}
+#topbar .brand{font-family:var(--serif);font-style:italic;font-weight:500;font-size:15px;letter-spacing:-0.3px;}
+#topbar .brand .dot{display:inline-block;width:7px;height:7px;background:var(--oxblood);border-radius:50%;margin-right:8px;vertical-align:middle;}
+#topbar .menu{margin-left:24px;display:flex;gap:18px;color:var(--ink-soft);}
+#topbar .menu span{cursor:pointer;}
+#topbar .menu span:hover{color:var(--oxblood);}
+#topbar .right{margin-left:auto;display:flex;align-items:center;gap:14px;color:var(--ink-soft);font-family:var(--mono);font-size:11px;}
+#topbar .right .clock{font-weight:500;color:var(--ink);}
+
+/* ============ DOCK ============ */
+#dock{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);background:rgba(241,231,208,0.88);backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%);border:1px solid var(--line);border-radius:18px;padding:8px;display:flex;gap:4px;z-index:900;box-shadow:var(--shadow);align-items:center;max-width:calc(100vw - 40px);overflow-x:auto;}
+#dock::-webkit-scrollbar{display:none;}
+.dock-item{width:50px;height:50px;border-radius:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;transition:transform .2s cubic-bezier(.34,1.56,.64,1),background .15s;color:var(--ink);flex-shrink:0;}
+.dock-item:hover{background:rgba(26,24,20,0.08);transform:translateY(-4px) scale(1.08);}
+.dock-item svg{width:30px;height:30px;}
+.dock-item .tip{position:absolute;bottom:calc(100% + 12px);left:50%;transform:translateX(-50%) translateY(4px);background:var(--ink);color:var(--paper);padding:4px 10px;border-radius:6px;font-size:11px;font-family:var(--mono);white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .15s,transform .15s;}
+.dock-item:hover .tip{opacity:1;transform:translateX(-50%) translateY(0);}
+.dock-item .running{position:absolute;bottom:-2px;left:50%;transform:translateX(-50%);width:4px;height:4px;background:var(--oxblood);border-radius:50%;}
+.dock-sep{width:1px;height:32px;background:var(--line);margin:0 4px;flex-shrink:0;}
+
+/* ============ START MENU ============ */
+#startmenu{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);width:520px;max-width:calc(100vw - 32px);max-height:60vh;background:var(--paper);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);z-index:950;opacity:0;pointer-events:none;transition:all .25s cubic-bezier(.34,1.56,.64,1);overflow:hidden;display:flex;flex-direction:column;}
+#startmenu.open{opacity:1;pointer-events:auto;transform:translateX(-50%) translateY(0);}
+#startmenu .head{padding:20px 24px 12px;border-bottom:1px solid var(--line-soft);}
+#startmenu .head h2{font-family:var(--serif);font-style:italic;font-weight:400;font-size:24px;letter-spacing:-0.5px;}
+#startmenu .head p{font-family:var(--mono);font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--ink-faint);margin-top:2px;}
+#startmenu .grid{padding:16px;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;overflow-y:auto;}
+@media(max-width:520px){#startmenu .grid{grid-template-columns:repeat(3,1fr);}}
+.app-tile{display:flex;flex-direction:column;align-items:center;gap:8px;padding:14px 8px;border-radius:10px;cursor:pointer;transition:background .15s;color:var(--ink);}
+.app-tile:hover{background:rgba(139,42,31,0.1);}
+.app-tile svg{width:34px;height:34px;}
+.app-tile span{font-size:11px;font-family:var(--body);}
+
+/* ============ WINDOWS ============ */
+.window{position:fixed;background:var(--paper);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden;min-width:320px;min-height:200px;animation:winOpen .25s cubic-bezier(.34,1.56,.64,1);}
+@keyframes winOpen{from{opacity:0;transform:scale(0.94);}to{opacity:1;transform:scale(1);}}
+.window.minimizing{animation:winMin .2s ease forwards;}
+@keyframes winMin{to{opacity:0;transform:scale(0.5) translateY(200px);}}
+.window.maximized{border-radius:0;}
+.win-titlebar{height:34px;background:linear-gradient(180deg,rgba(232,220,192,0.95),rgba(220,207,174,0.95));border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 10px;cursor:grab;flex-shrink:0;gap:8px;}
+.win-titlebar:active{cursor:grabbing;}
+.win-controls{display:flex;gap:6px;}
+.win-btn{width:13px;height:13px;border-radius:50%;border:1px solid rgba(0,0,0,0.15);position:relative;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.win-btn.close{background:#e25c4a;}
+.win-btn.min{background:#e8a72a;}
+.win-btn.max{background:#5fb84a;}
+.win-btn svg{width:7px;height:7px;opacity:0;color:rgba(0,0,0,0.7);}
+.win-controls:hover .win-btn svg{opacity:1;}
+.win-title{flex:1;text-align:center;font-family:var(--serif);font-style:italic;font-size:14px;font-weight:500;color:var(--ink);pointer-events:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 10px;}
+.win-body{flex:1;overflow:auto;background:var(--paper);position:relative;}
+.win-resize{position:absolute;background:transparent;}
+.win-resize.r-r{right:0;top:8px;bottom:8px;width:4px;cursor:ew-resize;}
+.win-resize.r-b{bottom:0;left:8px;right:8px;height:4px;cursor:ns-resize;}
+.win-resize.r-l{left:0;top:8px;bottom:8px;width:4px;cursor:ew-resize;}
+.win-resize.r-br{right:0;bottom:0;width:14px;height:14px;cursor:nwse-resize;}
+.win-resize.r-bl{left:0;bottom:0;width:14px;height:14px;cursor:nesw-resize;}
+.window.maximized .win-resize{display:none;}
+
+/* ============ CONTEXT MENU ============ */
+#contextmenu{position:fixed;background:var(--paper);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow);padding:5px;min-width:200px;z-index:5000;display:none;font-size:13px;}
+.ctx-item{padding:7px 14px;border-radius:5px;cursor:pointer;display:flex;align-items:center;gap:10px;color:var(--ink);}
+.ctx-item:hover{background:var(--oxblood);color:var(--paper);}
+.ctx-item.danger{color:var(--oxblood);}
+.ctx-item.danger:hover{background:var(--oxblood);color:var(--paper);}
+.ctx-item svg{width:14px;height:14px;flex-shrink:0;}
+.ctx-item .key{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--ink-faint);}
+.ctx-item:hover .key{color:rgba(241,231,208,0.7);}
+.ctx-sep{height:1px;background:var(--line-soft);margin:5px 8px;}
+
+/* ============ FILE EXPLORER ============ */
+.fe{display:flex;height:100%;font-family:var(--body);}
+.fe-side{width:200px;background:rgba(220,207,174,0.4);border-right:1px solid var(--line);padding:12px 0;overflow-y:auto;flex-shrink:0;}
+.fe-side h4{font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--ink-faint);padding:14px 16px 6px;}
+.fe-side .item{display:flex;align-items:center;gap:10px;padding:7px 16px;cursor:pointer;color:var(--ink-soft);font-size:13px;}
+.fe-side .item:hover{background:rgba(26,24,20,0.06);color:var(--ink);}
+.fe-side .item.active{background:var(--oxblood);color:var(--paper);}
+.fe-side .item svg{width:14px;height:14px;flex-shrink:0;}
+.fe-side .item .x{margin-left:auto;opacity:0;font-size:14px;color:var(--paper);}
+.fe-side .item:hover .x{opacity:0.7;}
+.fe-side .item .x:hover{opacity:1;}
+.fe-main{flex:1;display:flex;flex-direction:column;min-width:0;}
+.fe-toolbar{padding:8px 12px;border-bottom:1px solid var(--line);display:flex;gap:8px;align-items:center;background:rgba(232,220,192,0.5);flex-wrap:wrap;}
+.fe-tbtn{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--ink-soft);cursor:pointer;}
+.fe-tbtn:hover{background:rgba(26,24,20,0.08);color:var(--ink);}
+.fe-tbtn:disabled{opacity:0.3;cursor:not-allowed;}
+.fe-tbtn svg{width:15px;height:15px;}
+.fe-addr{flex:1;min-width:120px;background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:5px 10px;font-family:var(--mono);font-size:12px;color:var(--ink);}
+.fe-search{width:160px;background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:5px 10px;font-size:12px;}
+.fe-cols{display:grid;grid-template-columns:1fr 140px 80px 80px;gap:8px;padding:6px 16px;border-bottom:1px solid var(--line);background:rgba(232,220,192,0.3);font-family:var(--mono);font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--ink-faint);}
+.fe-col{cursor:pointer;display:flex;align-items:center;gap:4px;}
+.fe-col:hover{color:var(--ink);}
+.fe-col.active{color:var(--oxblood);}
+.fe-list{flex:1;overflow:auto;padding:4px 0;}
+.fe-row{display:grid;grid-template-columns:1fr 140px 80px 80px;gap:8px;padding:5px 16px;cursor:pointer;align-items:center;font-size:13px;}
+.fe-row:hover{background:rgba(26,24,20,0.05);}
+.fe-row.selected{background:rgba(139,42,31,0.2);}
+.fe-row.cut{opacity:0.5;}
+.fe-row .nm{display:flex;align-items:center;gap:10px;min-width:0;}
+.fe-row .nm svg{width:18px;height:18px;flex-shrink:0;color:var(--ink-soft);}
+.fe-row .nm span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.fe-row .nm input{background:var(--paper);border:1px solid var(--oxblood);border-radius:3px;padding:1px 4px;width:100%;}
+.fe-row .meta{font-family:var(--mono);font-size:11px;color:var(--ink-faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.fe-status{padding:5px 16px;border-top:1px solid var(--line);background:rgba(232,220,192,0.3);font-size:11px;color:var(--ink-faint);font-family:var(--mono);display:flex;justify-content:space-between;}
+@media(max-width:600px){.fe-side{display:none;}.fe-cols,.fe-row{grid-template-columns:1fr 70px;}.fe-col:nth-child(2),.fe-col:nth-child(3),.fe-row .meta:nth-child(2),.fe-row .meta:nth-child(3){display:none;}}
+
+/* ============ TEXT EDITOR ============ */
+.te{display:flex;flex-direction:column;height:100%;}
+.te-bar{padding:6px 12px;border-bottom:1px solid var(--line);background:rgba(232,220,192,0.5);display:flex;gap:8px;align-items:center;}
+.te-bar button{padding:4px 10px;border-radius:5px;font-size:12px;color:var(--ink-soft);}
+.te-bar button:hover{background:rgba(26,24,20,0.08);color:var(--ink);}
+.te-bar button.primary{background:var(--oxblood);color:var(--paper);}
+.te-bar button.primary:hover{background:var(--oxblood-dark);}
+.te-bar .name{font-family:var(--serif);font-style:italic;font-size:14px;flex:1;}
+.te-bar .name.dirty::after{content:'●';color:var(--oxblood);margin-left:6px;font-size:10px;}
+.te-area{flex:1;display:flex;overflow:hidden;}
+.te-area textarea{flex:1;width:100%;height:100%;background:var(--paper);color:var(--ink);font-family:var(--mono);font-size:13px;padding:16px 20px;resize:none;line-height:1.6;border:none;outline:none;user-select:text;-webkit-user-select:text;}
+.te-area .preview{flex:1;border-left:1px solid var(--line);background:#fff;}
+.te-area .preview iframe{width:100%;height:100%;border:none;}
+.te-table{flex:1;overflow:auto;padding:12px;}
+.te-table table{border-collapse:collapse;font-family:var(--mono);font-size:12px;}
+.te-table th,.te-table td{border:1px solid var(--line);padding:6px 10px;text-align:left;background:var(--paper);}
+.te-table th{background:var(--paper-3);font-weight:600;}
+
+/* ============ IMAGE / MEDIA VIEWER ============ */
+.iv{height:100%;display:flex;flex-direction:column;background:#1a1814;}
+.iv-bar{padding:8px 12px;background:rgba(26,24,20,0.95);color:var(--paper);display:flex;gap:8px;align-items:center;font-family:var(--mono);font-size:11px;}
+.iv-bar button{padding:4px 8px;border-radius:4px;color:var(--paper);}
+.iv-bar button:hover{background:rgba(241,231,208,0.15);}
+.iv-canvas{flex:1;display:flex;align-items:center;justify-content:center;overflow:auto;background:repeating-conic-gradient(#1a1814 0 25%,#252220 0 50%) 50% / 24px 24px;}
+.iv-canvas img{max-width:100%;max-height:100%;object-fit:contain;transition:transform .2s;user-select:none;-webkit-user-drag:none;}
+.mp{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#1a1814;color:var(--paper);padding:40px;}
+.mp h3{font-family:var(--serif);font-style:italic;font-size:22px;margin-bottom:24px;}
+.mp audio,.mp video{max-width:100%;max-height:80%;}
+
+/* ============ CALCULATOR ============ */
+.calc{display:flex;flex-direction:column;height:100%;background:var(--paper);padding:14px;}
+.calc-disp{background:var(--ink);color:var(--paper);padding:18px 20px;border-radius:8px;text-align:right;font-family:var(--mono);font-size:32px;margin-bottom:12px;min-height:80px;display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden;}
+.calc-disp .hist{font-size:13px;color:var(--ink-faint);min-height:18px;}
+.calc-keys{flex:1;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+.calc-key{background:var(--paper-2);border:1px solid var(--line);border-radius:8px;font-family:var(--serif);font-size:20px;cursor:pointer;transition:all .1s;}
+.calc-key:hover{background:var(--paper-3);}
+.calc-key:active{transform:scale(0.95);}
+.calc-key.op{background:var(--mustard);color:var(--ink);}
+.calc-key.eq{background:var(--oxblood);color:var(--paper);}
+.calc-key.fn{background:var(--ink-soft);color:var(--paper);}
+
+/* ============ PAINT ============ */
+.pt{display:flex;flex-direction:column;height:100%;}
+.pt-bar{padding:8px 12px;border-bottom:1px solid var(--line);background:rgba(232,220,192,0.5);display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+.pt-bar input[type=color]{width:30px;height:24px;border:1px solid var(--line);border-radius:4px;cursor:pointer;background:none;padding:0;}
+.pt-bar input[type=range]{width:100px;}
+.pt-bar button{padding:4px 10px;border-radius:5px;font-size:12px;}
+.pt-bar button:hover{background:rgba(26,24,20,0.08);}
+.pt-canvas-wrap{flex:1;overflow:auto;background:#ddd;display:flex;align-items:center;justify-content:center;padding:20px;}
+.pt-canvas-wrap canvas{background:#fff;box-shadow:var(--shadow-sm);cursor:crosshair;touch-action:none;}
+
+/* ============ BROWSER ============ */
+.br{display:flex;flex-direction:column;height:100%;}
+.br-bar{padding:8px 12px;border-bottom:1px solid var(--line);background:rgba(232,220,192,0.5);display:flex;gap:6px;align-items:center;}
+.br-bar button{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--ink-soft);}
+.br-bar button:hover{background:rgba(26,24,20,0.08);color:var(--ink);}
+.br-bar button svg{width:14px;height:14px;}
+.br-bar input{flex:1;background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:5px 14px;font-family:var(--mono);font-size:12px;}
+.br-frame{flex:1;background:#fff;}
+.br-frame iframe{width:100%;height:100%;border:none;}
+.br-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--ink-faint);font-family:var(--serif);font-style:italic;font-size:18px;background:linear-gradient(180deg,var(--paper) 0%,var(--paper-2) 100%);}
+.br-empty svg{width:80px;height:80px;margin-bottom:18px;opacity:0.4;}
+
+/* ============ SETTINGS ============ */
+.st{padding:24px;height:100%;overflow-y:auto;}
+.st h2{font-family:var(--serif);font-style:italic;font-weight:400;font-size:28px;letter-spacing:-0.5px;margin-bottom:6px;}
+.st .sub{font-family:var(--mono);font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--ink-faint);margin-bottom:24px;}
+.st-section{margin-bottom:32px;border-top:1px solid var(--line-soft);padding-top:18px;}
+.st-section h3{font-family:var(--serif);font-style:italic;font-size:18px;margin-bottom:12px;}
+.st-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;gap:14px;}
+.st-row label{font-size:13px;color:var(--ink-soft);}
+.st-row button{padding:6px 14px;border-radius:6px;background:var(--paper-2);border:1px solid var(--line);font-size:12px;}
+.st-row button:hover{background:var(--paper-3);}
+.st-row button.danger{background:var(--oxblood);color:var(--paper);border-color:var(--oxblood);}
+.wp-grid{display:grid;grid-template-columns:repeat(auto-fill,120px);gap:10px;margin-top:12px;}
+.wp-thumb{aspect-ratio:16/10;border-radius:6px;cursor:pointer;border:2px solid transparent;background-size:cover;background-position:center;}
+.wp-thumb.active{border-color:var(--oxblood);}
+.wp-thumb.t1{background:radial-gradient(circle at 20% 30%,#c89211 0%,#f1e7d0 50%,#8b2a1f 100%);}
+.wp-thumb.t2{background:radial-gradient(circle at 30% 20%,#c89211,#1a1814 60%);}
+.wp-thumb.t3{background:linear-gradient(135deg,#3d4a3d,#1a2a1a);}
+.wp-thumb.t4{background:linear-gradient(180deg,#d96b3a,#c89211 50%,#8b4513);}
+.wp-thumb.t5{background:radial-gradient(ellipse at 50% 50%,#c89211,#0e0c09 40%);}
+.storage-bar{height:18px;background:var(--paper-2);border:1px solid var(--line);border-radius:9px;overflow:hidden;display:flex;margin:8px 0;}
+.storage-seg{height:100%;}
+.storage-seg.used{background:linear-gradient(90deg,var(--oxblood),var(--mustard));}
+.storage-legend{display:flex;gap:14px;font-family:var(--mono);font-size:11px;color:var(--ink-faint);flex-wrap:wrap;}
+.storage-legend span::before{content:'';display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px;vertical-align:middle;background:var(--oxblood);}
+.storage-legend span.free::before{background:var(--paper-3);}
+
+/* dialog */
+.dialog-bg{position:fixed;inset:0;background:rgba(14,12,9,0.5);z-index:8000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);}
+.dialog{background:var(--paper);border-radius:10px;padding:24px;min-width:320px;max-width:90vw;box-shadow:var(--shadow);}
+.dialog h3{font-family:var(--serif);font-style:italic;font-size:20px;margin-bottom:8px;}
+.dialog p{font-size:13px;color:var(--ink-soft);margin-bottom:16px;}
+.dialog input{width:100%;background:var(--paper-2);border:1px solid var(--line);border-radius:6px;padding:8px 12px;font-size:13px;margin-bottom:16px;user-select:text;-webkit-user-select:text;}
+.dialog .btns{display:flex;gap:8px;justify-content:flex-end;}
+.dialog button{padding:7px 16px;border-radius:6px;font-size:13px;background:var(--paper-2);border:1px solid var(--line);}
+.dialog button.primary{background:var(--oxblood);color:var(--paper);border-color:var(--oxblood);}
+.dialog button.primary:hover{background:var(--oxblood-dark);}
+
+/* toast */
+#toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:10px 18px;border-radius:8px;font-family:var(--mono);font-size:12px;z-index:9000;opacity:0;pointer-events:none;transition:all .25s;box-shadow:var(--shadow);}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(-8px);}
+
+@media(max-width:768px){
+  #icon-grid{grid-template-columns:repeat(auto-fill,80px);grid-auto-rows:90px;}
+  .dicon .ic svg{width:38px;height:38px;}
+  .dicon .nm{font-size:11px;max-width:76px;}
+  #topbar .menu{display:none;}
+  .window:not(.maximized){min-width:280px;}
+  .dock-item{width:44px;height:44px;}
+  .dock-item svg{width:26px;height:26px;}
+}
+</style>
+</head>
+<body>
+
+<!-- BOOT -->
+<div id="boot">
+  <div class="logo">A<span>·</span>telier</div>
+  <div class="tag">A Paper Operating System</div>
+  <div class="bar"></div>
+</div>
+
+<!-- DESKTOP -->
+<div id="desktop" class="wp-1">
+  <div id="icon-grid"></div>
+</div>
+
+<!-- TOPBAR -->
+<div id="topbar">
+  <div class="brand"><span class="dot"></span>Atelier</div>
+  <div class="menu">
+    <span data-app="explorer">Files</span>
+    <span data-app="editor">Editor</span>
+    <span data-app="browser">Browser</span>
+    <span data-app="settings">Settings</span>
+  </div>
+  <div class="right">
+    <span id="storage-info">— / —</span>
+    <span class="clock" id="clock">--:--</span>
+  </div>
+</div>
+
+<!-- DOCK -->
+<div id="dock"></div>
+
+<!-- START MENU -->
+<div id="startmenu">
+  <div class="head">
+    <h2>All Applications</h2>
+    <p>choose your tool</p>
+  </div>
+  <div class="grid" id="appgrid"></div>
+</div>
+
+<!-- CONTEXT MENU -->
+<div id="contextmenu"></div>
+
+<!-- SELECTION BOX -->
+<div id="sel-box"></div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- HIDDEN INPUTS -->
+<input type="file" id="file-import" multiple style="display:none">
+<input type="file" id="file-wallpaper" accept="image/*" style="display:none">
+
+<script>
+/* ============================================================
+   ATELIER OS — single-file web operating system
+   ============================================================ */
+'use strict';
+
+/* ---------- ICONS (SVG library) ---------- */
+const ICONS = {
+  folder:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" fill="rgba(200,146,17,0.3)"/></svg>',
+  folderOpen:'<svg viewBox="0 0 24 24" fill="rgba(200,146,17,0.4)" stroke="currentColor" stroke-width="1.5"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v1H3V7z"/><path d="M3 9h18l-2 9a2 2 0 01-2 1.5H5A2 2 0 013 18V9z"/></svg>',
+  file:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9l-6-6z"/><path d="M14 3v6h6"/></svg>',
+  text:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9l-6-6z"/><path d="M14 3v6h6M8 13h8M8 17h6"/></svg>',
+  code:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9l-6-6z"/><path d="M9 14l-2 2 2 2M15 14l2 2-2 2"/></svg>',
+  image:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="M3 17l5-5 5 5 3-3 5 5"/></svg>',
+  music:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 18V6l11-2v11"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="15" r="3"/></svg>',
+  video:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="5" width="14" height="14" rx="2"/><path d="M17 10l4-2v8l-4-2"/></svg>',
+  pdf:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9l-6-6z"/><path d="M14 3v6h6M9 13h2a1 1 0 010 2H9v3M14 13v5M14 13h2M14 16h1.5"/></svg>',
+  archive:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="6" rx="1"/><path d="M5 9v11a1 1 0 001 1h12a1 1 0 001-1V9M10 14h4"/></svg>',
+  explorer:'<svg viewBox="0 0 24 24" fill="rgba(200,146,17,0.3)" stroke="currentColor" stroke-width="1.5"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/></svg>',
+  editor:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l3.5 3.5L21 6 17.5 2.5 3 17z"/><path d="M14 6l4 4M3 17v3.5h3.5"/></svg>',
+  browser:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18"/></svg>',
+  calc:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h.01M12 11h.01M16 11h.01M8 15h.01M12 15h.01M16 15h.01M8 19h8"/></svg>',
+  paint:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M19 11a7 7 0 10-14 0c0 3 1 4 3 4s2-1 2-2 1-2 2-2 2 1 2 2 0 4 3 4 2-3 2-6z"/><circle cx="9" cy="9" r="1" fill="currentColor"/><circle cx="14" cy="8" r="1" fill="currentColor"/></svg>',
+  settings:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 01-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 01-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 010-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 014 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 012.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 010 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg>',
+  back:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>',
+  fwd:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>',
+  up:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M5 12l7-7 7 7"/></svg>',
+  refresh:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 0115.5-6.3L21 8M21 3v5h-5M21 12a9 9 0 01-15.5 6.3L3 16M3 21v-5h5"/></svg>',
+  plus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>',
+  upload:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>',
+  download:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>',
+  trash:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>',
+  edit:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2 2 0 113 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>',
+  copy:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>',
+  cut:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4L8.12 15.88M14.47 14.48L20 20M8.12 8.12L12 12"/></svg>',
+  paste:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>',
+  open:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"/></svg>',
+  hd:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 12H2M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"/></svg>',
+  star:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>',
+  desktop:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>',
+  mount:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5-5 5 5M12 5v12"/></svg>',
+  search:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>',
+  close:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>',
+  min:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/></svg>',
+  max:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16"/></svg>',
+  arrowDown:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>',
+  arrowUp:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 15l-6-6-6 6"/></svg>',
+  save:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>',
+  preview:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>',
+  table:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>'
+};
+
+/* ---------- UTILITY ---------- */
+const $ = (s,p=document)=>p.querySelector(s);
+const $$ = (s,p=document)=>[...p.querySelectorAll(s)];
+const el = (tag, props={}, ...children) => {
+  const e = document.createElement(tag);
+  for(const k in props){
+    if(k==='class') e.className=props[k];
+    else if(k==='html') e.innerHTML=props[k];
+    else if(k.startsWith('on')) e.addEventListener(k.slice(2).toLowerCase(),props[k]);
+    else if(k==='style' && typeof props[k]==='object') Object.assign(e.style,props[k]);
+    else e.setAttribute(k,props[k]);
+  }
+  for(const c of children){if(c==null)continue;e.append(c.nodeType?c:document.createTextNode(c));}
+  return e;
+};
+const fmtSize = b => {
+  if(b<1024) return b+' B';
+  if(b<1048576) return (b/1024).toFixed(1)+' KB';
+  if(b<1073741824) return (b/1048576).toFixed(1)+' MB';
+  return (b/1073741824).toFixed(2)+' GB';
+};
+const fmtDate = d => {
+  if(!d) return '—';
+  const dt = new Date(d);
+  return dt.toLocaleDateString(undefined,{year:'2-digit',month:'short',day:'numeric'})+' '+dt.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'});
+};
+const ext = name => {
+  const i = name.lastIndexOf('.');
+  return i>=0 ? name.slice(i+1).toLowerCase() : '';
+};
+const basename = p => p.split('/').filter(Boolean).pop()||'';
+const dirname = p => {
+  const parts = p.split('/').filter(Boolean);
+  parts.pop();
+  return '/'+parts.join('/');
+};
+const joinPath = (...parts) => {
+  let s = parts.join('/').replace(/\/+/g,'/');
+  if(!s.startsWith('/')) s='/'+s;
+  return s.length>1 && s.endsWith('/') ? s.slice(0,-1) : s;
+};
+const toast = (msg,duration=2200) => {
+  const t = $('#toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(()=>t.classList.remove('show'),duration);
+};
+
+const TEXT_EXTS = ['txt','md','html','htm','css','js','mjs','json','xml','svg','csv','tsv','yaml','yml','log','ini','conf','sh','py','java','c','cpp','h','rb','go','rs','php','ts','tsx','jsx','vue','sql','toml'];
+const IMG_EXTS = ['png','jpg','jpeg','gif','webp','bmp','ico','svg','avif'];
+const AUDIO_EXTS = ['mp3','wav','ogg','flac','aac','m4a','opus'];
+const VIDEO_EXTS = ['mp4','webm','ogv','mov','mkv'];
+const ARCHIVE_EXTS = ['zip','gz','tar','tgz'];
+
+function fileType(name){
+  const e = ext(name);
+  if(IMG_EXTS.includes(e)) return 'image';
+  if(AUDIO_EXTS.includes(e)) return 'audio';
+  if(VIDEO_EXTS.includes(e)) return 'video';
+  if(e==='pdf') return 'pdf';
+  if(ARCHIVE_EXTS.includes(e)) return 'archive';
+  if(TEXT_EXTS.includes(e)) return 'text';
+  return 'file';
+}
+function mimeFor(name){
+  const e = ext(name);
+  const map = {png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',gif:'image/gif',webp:'image/webp',svg:'image/svg+xml',bmp:'image/bmp',ico:'image/x-icon',avif:'image/avif',
+    mp3:'audio/mpeg',wav:'audio/wav',ogg:'audio/ogg',flac:'audio/flac',aac:'audio/aac',m4a:'audio/mp4',opus:'audio/opus',
+    mp4:'video/mp4',webm:'video/webm',ogv:'video/ogg',mov:'video/quicktime',
+    pdf:'application/pdf',zip:'application/zip',gz:'application/gzip',tar:'application/x-tar',
+    txt:'text/plain',md:'text/markdown',html:'text/html',htm:'text/html',css:'text/css',js:'application/javascript',json:'application/json',xml:'application/xml',csv:'text/csv',tsv:'text/tab-separated-values'};
+  return map[e]||'application/octet-stream';
+}
+
+/* ============================================================
+   FILE SYSTEM (OPFS + FSA backends, unified)
+   ============================================================ */
+
+class OPFSBackend {
+  constructor(rootHandle, prefix=''){this.root=rootHandle;this.prefix=prefix;}
+  async _resolve(path, {create=false, dir=false}={}){
+    const parts = path.split('/').filter(Boolean);
+    let h = this.root;
+    for(let i=0;i<parts.length;i++){
+      const p = parts[i];
+      const last = i===parts.length-1;
+      try{
+        if(last && !dir){
+          // Try as file first; if asked dir, get directory
+          try{ return await h.getFileHandle(p,{create}); }
+          catch(e){ return await h.getDirectoryHandle(p,{create:false}); }
+        } else {
+          h = await h.getDirectoryHandle(p,{create});
+        }
+      }catch(e){ throw new Error('ENOENT: '+path); }
+    }
+    return h;
+  }
+  async stat(path){
+    if(path==='/'||path==='') return {isDir:true,size:0,mtime:Date.now(),type:'directory'};
+    const h = await this._resolve(path);
+    if(h.kind==='directory') return {isDir:true,size:0,mtime:Date.now(),type:'directory'};
+    const f = await h.getFile();
+    return {isDir:false,size:f.size,mtime:f.lastModified,type:f.type||mimeFor(path)};
+  }
+  async exists(path){ try{await this.stat(path);return true;}catch(e){return false;} }
+  async readdir(path){
+    const parts = path.split('/').filter(Boolean);
+    let h = this.root;
+    for(const p of parts) h = await h.getDirectoryHandle(p);
+    const out = [];
+    for await(const [name,handle] of h.entries()){
+      if(handle.kind==='directory'){
+        out.push({name,isDir:true,size:0,mtime:0,type:'directory'});
+      } else {
+        try{
+          const f = await handle.getFile();
+          out.push({name,isDir:false,size:f.size,mtime:f.lastModified,type:f.type||mimeFor(name)});
+        }catch(e){ out.push({name,isDir:false,size:0,mtime:0,type:''}); }
+      }
+    }
+    return out;
+  }
+  async readFile(path){
+    const h = await this._resolve(path);
+    if(h.kind!=='file') throw new Error('EISDIR');
+    const f = await h.getFile();
+    return await f.arrayBuffer();
+  }
+  async readFileAsFile(path){
+    const h = await this._resolve(path);
+    const f = await h.getFile();
+    return f;
+  }
+  async writeFile(path, data){
+    const parts = path.split('/').filter(Boolean);
+    const name = parts.pop();
+    let h = this.root;
+    for(const p of parts) h = await h.getDirectoryHandle(p,{create:true});
+    const fh = await h.getFileHandle(name,{create:true});
+    const w = await fh.createWritable();
+    await w.write(data);
+    await w.close();
+  }
+  async mkdir(path){
+    const parts = path.split('/').filter(Boolean);
+    let h = this.root;
+    for(const p of parts) h = await h.getDirectoryHandle(p,{create:true});
+  }
+  async unlink(path){
+    const parts = path.split('/').filter(Boolean);
+    const name = parts.pop();
+    let h = this.root;
+    for(const p of parts) h = await h.getDirectoryHandle(p);
+    await h.removeEntry(name);
+  }
+  async rmdir(path, recursive=true){
+    const parts = path.split('/').filter(Boolean);
+    const name = parts.pop();
+    let h = this.root;
+    for(const p of parts) h = await h.getDirectoryHandle(p);
+    await h.removeEntry(name,{recursive});
+  }
+  async rename(from, to){
+    // Copy + delete (no native rename in OPFS)
+    const stat = await this.stat(from);
+    if(stat.isDir){
+      await this._copyDir(from,to);
+      await this.rmdir(from,true);
+    } else {
+      const data = await this.readFile(from);
+      await this.writeFile(to,data);
+      await this.unlink(from);
+    }
+  }
+  async _copyDir(from,to){
+    await this.mkdir(to);
+    const entries = await this.readdir(from);
+    for(const e of entries){
+      const f = joinPath(from,e.name), t = joinPath(to,e.name);
+      if(e.isDir) await this._copyDir(f,t);
+      else { await this.writeFile(t, await this.readFile(f)); }
+    }
+  }
+}
+
+class FSABackend {
+  constructor(dirHandle){this.root=dirHandle;}
+  async _walk(path, {create=false}={}){
+    const parts = path.split('/').filter(Boolean);
+    let h = this.root;
+    for(let i=0;i<parts.length-1;i++){
+      h = await h.getDirectoryHandle(parts[i],{create});
+    }
+    return {parent:h, name:parts[parts.length-1]||null};
+  }
+  async _resolve(path){
+    if(!path||path==='/') return this.root;
+    const parts = path.split('/').filter(Boolean);
+    let h = this.root;
+    for(let i=0;i<parts.length;i++){
+      const p = parts[i];
+      const last = i===parts.length-1;
+      if(last){
+        try{ return await h.getFileHandle(p); }
+        catch(e){ return await h.getDirectoryHandle(p); }
+      } else {
+        h = await h.getDirectoryHandle(p);
+      }
+    }
+    return h;
+  }
+  async stat(path){
+    if(!path||path==='/') return {isDir:true,size:0,mtime:Date.now(),type:'directory'};
+    const h = await this._resolve(path);
+    if(h.kind==='directory') return {isDir:true,size:0,mtime:Date.now(),type:'directory'};
+    const f = await h.getFile();
+    return {isDir:false,size:f.size,mtime:f.lastModified,type:f.type||mimeFor(path)};
+  }
+  async exists(path){ try{await this.stat(path);return true;}catch(e){return false;} }
+  async readdir(path){
+    const h = await this._resolve(path);
+    const out = [];
+    for await(const [name,handle] of h.entries()){
+      if(handle.kind==='directory') out.push({name,isDir:true,size:0,mtime:0,type:'directory'});
+      else { try{ const f=await handle.getFile(); out.push({name,isDir:false,size:f.size,mtime:f.lastModified,type:f.type||mimeFor(name)}); }catch(e){ out.push({name,isDir:false,size:0,mtime:0}); } }
+    }
+    return out;
+  }
+  async readFile(path){
+    const h = await this._resolve(path);
+    const f = await h.getFile();
+    return await f.arrayBuffer();
+  }
+  async readFileAsFile(path){
+    const h = await this._resolve(path);
+    return await h.getFile();
+  }
+  async writeFile(path, data){
+    const {parent,name} = await this._walk(path,{create:true});
+    const fh = await parent.getFileHandle(name,{create:true});
+    const w = await fh.createWritable();
+    await w.write(data);
+    await w.close();
+  }
+  async mkdir(path){
+    const parts = path.split('/').filter(Boolean);
+    let h = this.root;
+    for(const p of parts) h = await h.getDirectoryHandle(p,{create:true});
+  }
+  async unlink(path){
+    const {parent,name} = await this._walk(path);
+    await parent.removeEntry(name);
+  }
+  async rmdir(path,recursive=true){
+    const {parent,name} = await this._walk(path);
+    await parent.removeEntry(name,{recursive});
+  }
+  async rename(from,to){
+    const stat = await this.stat(from);
+    if(stat.isDir){
+      await this._copyDir(from,to);
+      await this.rmdir(from,true);
+    } else {
+      await this.writeFile(to, await this.readFile(from));
+      await this.unlink(from);
+    }
+  }
+  async _copyDir(from,to){
+    await this.mkdir(to);
+    const entries = await this.readdir(from);
+    for(const e of entries){
+      const f = joinPath(from,e.name), t = joinPath(to,e.name);
+      if(e.isDir) await this._copyDir(f,t);
+      else await this.writeFile(t, await this.readFile(f));
+    }
+  }
+}
+
+/* Unified VFS - routes paths to correct backend */
+const fs = {
+  mounts: new Map(), // mountPath -> backend
+  _route(path){
+    path = joinPath(path);
+    let bestMount = '/';
+    let bestLen = 1;
+    for(const m of this.mounts.keys()){
+      if(path===m || path.startsWith(m+'/')){
+        if(m.length>=bestLen){ bestMount=m; bestLen=m.length; }
+      }
+    }
+    const backend = this.mounts.get(bestMount);
+    const rel = bestMount==='/' ? path : path.slice(bestMount.length)||'/';
+    return {backend, rel, mount: bestMount};
+  },
+  mount(path, backend){ this.mounts.set(joinPath(path),backend); },
+  unmount(path){ this.mounts.delete(joinPath(path)); },
+  isMountRoot(path){ return this.mounts.has(joinPath(path)); },
+  async stat(path){ const r=this._route(path); return await r.backend.stat(r.rel); },
+  async exists(path){ const r=this._route(path); return await r.backend.exists(r.rel); },
+  async readdir(path){
+    const r = this._route(path);
+    let entries = [];
+    try { entries = await r.backend.readdir(r.rel); }
+    catch(e){ /* missing dir — treat as empty (used for synthetic /mnt) */ }
+    // If path is parent of mount points, add virtual dir entries
+    const p = joinPath(path);
+    for(const m of this.mounts.keys()){
+      if(m==='/'||m===p) continue;
+      const pm = dirname(m);
+      if(pm===p){
+        const name = basename(m);
+        if(!entries.find(e=>e.name===name)) entries.push({name,isDir:true,size:0,mtime:0,type:'directory',mount:true});
+      }
+    }
+    // Also handle /mnt synthetic dir
+    if(p==='/' && [...this.mounts.keys()].some(m=>m.startsWith('/mnt/'))){
+      if(!entries.find(e=>e.name==='mnt')) entries.push({name:'mnt',isDir:true,size:0,mtime:0,type:'directory',mount:true});
+    }
+    if(p==='/mnt'){
+      const seen = new Set(entries.map(e=>e.name));
+      for(const m of this.mounts.keys()){
+        if(m.startsWith('/mnt/')){
+          const sub = m.slice(5).split('/')[0];
+          if(!seen.has(sub)){ entries.push({name:sub,isDir:true,size:0,mtime:0,type:'directory',mount:true}); seen.add(sub); }
+        }
+      }
+    }
+    return entries;
+  },
+  async readFile(path){ const r=this._route(path); return await r.backend.readFile(r.rel); },
+  async readFileAsFile(path){ const r=this._route(path); return await r.backend.readFileAsFile(r.rel); },
+  async readText(path){ const buf = await this.readFile(path); return new TextDecoder().decode(buf); },
+  async writeFile(path,data){ const r=this._route(path); return await r.backend.writeFile(r.rel,data); },
+  async writeText(path,text){ return this.writeFile(path,new TextEncoder().encode(text)); },
+  async mkdir(path){ const r=this._route(path); return await r.backend.mkdir(r.rel); },
+  async unlink(path){ const r=this._route(path); return await r.backend.unlink(r.rel); },
+  async rmdir(path,recursive=true){ const r=this._route(path); return await r.backend.rmdir(r.rel,recursive); },
+  async remove(path){
+    const s = await this.stat(path);
+    if(s.isDir) await this.rmdir(path,true);
+    else await this.unlink(path);
+  },
+  async rename(from,to){
+    const fr = this._route(from), tr = this._route(to);
+    if(fr.backend === tr.backend){ return await fr.backend.rename(fr.rel, tr.rel); }
+    // cross-backend: copy then delete
+    await this.copy(from,to);
+    await this.remove(from);
+  },
+  async copy(from,to){
+    const s = await this.stat(from);
+    if(s.isDir){
+      await this.mkdir(to);
+      const entries = await this.readdir(from);
+      for(const e of entries) await this.copy(joinPath(from,e.name), joinPath(to,e.name));
+    } else {
+      await this.writeFile(to, await this.readFile(from));
+    }
+  }
+};
+
+/* ============================================================
+   APP STATE
+   ============================================================ */
+const STATE = {
+  windows: new Map(),
+  zCounter: 100,
+  active: null,
+  clipboard: null, // {op:'copy'|'cut', paths:[]}
+  desktopIcons: {}, // path -> {x,y}
+  wallpaper: 'wp-1',
+  customWallpaper: null
+};
+
+const APPS = {
+  explorer:{name:'Files',icon:'explorer',launch:openExplorer},
+  editor:{name:'Editor',icon:'editor',launch:()=>openEditor(null)},
+  browser:{name:'Browser',icon:'browser',launch:()=>openBrowser()},
+  calc:{name:'Calculator',icon:'calc',launch:openCalculator},
+  paint:{name:'Paint',icon:'paint',launch:openPaint},
+  settings:{name:'Settings',icon:'settings',launch:openSettings}
+};
+
+/* ============================================================
+   WINDOW MANAGER
+   ============================================================ */
+let winId = 0;
+function createWindow({title='Untitled', icon='file', width=720, height=480, x, y, app, content, onClose}={}){
+  const id = 'w'+(++winId);
+  const isMobile = window.innerWidth<768;
+  if(isMobile){ width = window.innerWidth-16; height = window.innerHeight-120; }
+  if(x==null) x = Math.max(20, (window.innerWidth-width)/2 + (winId%5)*24 - 60);
+  if(y==null) y = Math.max(40, (window.innerHeight-height)/2 + (winId%5)*24 - 60);
+
+  const w = el('div',{class:'window',id,style:{left:x+'px',top:y+'px',width:width+'px',height:height+'px',zIndex:++STATE.zCounter}});
+  const tb = el('div',{class:'win-titlebar'});
+  const ctrls = el('div',{class:'win-controls'});
+  const closeBtn = el('div',{class:'win-btn close',html:ICONS.close.replace('width="2"','width="2.5"')});
+  const minBtn = el('div',{class:'win-btn min',html:ICONS.min});
+  const maxBtn = el('div',{class:'win-btn max',html:ICONS.max});
+  ctrls.append(closeBtn,minBtn,maxBtn);
+  const titleEl = el('div',{class:'win-title'},title);
+  tb.append(ctrls, titleEl);
+  const body = el('div',{class:'win-body'});
+  if(content) body.append(content);
+  w.append(tb, body);
+  // resize handles
+  ['r','b','l','br','bl'].forEach(d=>{
+    const r = el('div',{class:'win-resize r-'+d});
+    w.append(r);
+    addResize(r, w, d);
+  });
+
+  document.body.append(w);
+
+  const meta = {id,el:w,titleEl,bodyEl:body,title,icon,app,minimized:false,maximized:false,prevRect:null,onClose};
+  STATE.windows.set(id, meta);
+
+  // Drag
+  let dragging=false, sx=0, sy=0, ox=0, oy=0;
+  const startDrag = (e)=>{
+    if(meta.maximized) return;
+    const t = e.touches?e.touches[0]:e;
+    dragging=true; sx=t.clientX; sy=t.clientY;
+    ox=parseInt(w.style.left); oy=parseInt(w.style.top);
+    activateWindow(id);
+    e.preventDefault();
+  };
+  const moveDrag = (e)=>{
+    if(!dragging) return;
+    const t = e.touches?e.touches[0]:e;
+    w.style.left = Math.max(-w.offsetWidth+80, Math.min(window.innerWidth-80, ox + t.clientX - sx))+'px';
+    w.style.top = Math.max(30, Math.min(window.innerHeight-80, oy + t.clientY - sy))+'px';
+  };
+  const endDrag = ()=>{ dragging=false; };
+  tb.addEventListener('mousedown', startDrag);
+  tb.addEventListener('touchstart', startDrag, {passive:false});
+  document.addEventListener('mousemove', moveDrag);
+  document.addEventListener('touchmove', moveDrag, {passive:true});
+  document.addEventListener('mouseup', endDrag);
+  document.addEventListener('touchend', endDrag);
+
+  tb.addEventListener('dblclick', ()=>toggleMaximize(id));
+
+  closeBtn.addEventListener('click', e=>{e.stopPropagation();closeWindow(id);});
+  minBtn.addEventListener('click', e=>{e.stopPropagation();minimizeWindow(id);});
+  maxBtn.addEventListener('click', e=>{e.stopPropagation();toggleMaximize(id);});
+
+  w.addEventListener('mousedown', ()=>activateWindow(id));
+  w.addEventListener('touchstart', ()=>activateWindow(id), {passive:true});
+
+  if(isMobile) toggleMaximize(id);
+  activateWindow(id);
+  updateDock();
+  return meta;
+}
+
+function addResize(handle, w, dir){
+  let resizing=false, sx=0, sy=0, sw=0, sh=0, sl=0, st=0;
+  const start = (e)=>{
+    const t = e.touches?e.touches[0]:e;
+    resizing=true; sx=t.clientX; sy=t.clientY;
+    sw=w.offsetWidth; sh=w.offsetHeight;
+    sl=parseInt(w.style.left); st=parseInt(w.style.top);
+    e.preventDefault(); e.stopPropagation();
+  };
+  const move = (e)=>{
+    if(!resizing) return;
+    const t = e.touches?e.touches[0]:e;
+    const dx = t.clientX-sx, dy = t.clientY-sy;
+    if(dir.includes('r')){ w.style.width = Math.max(280, sw+dx)+'px'; }
+    if(dir.includes('b')){ w.style.height = Math.max(180, sh+dy)+'px'; }
+    if(dir.includes('l')){ const nw = Math.max(280, sw-dx); w.style.width=nw+'px'; w.style.left = (sl + (sw-nw))+'px'; }
+  };
+  const end = ()=>{resizing=false;};
+  handle.addEventListener('mousedown', start);
+  handle.addEventListener('touchstart', start, {passive:false});
+  document.addEventListener('mousemove', move);
+  document.addEventListener('touchmove', move, {passive:true});
+  document.addEventListener('mouseup', end);
+  document.addEventListener('touchend', end);
+}
+
+function activateWindow(id){
+  const m = STATE.windows.get(id); if(!m) return;
+  if(m.minimized){ m.el.style.display=''; m.minimized=false; }
+  m.el.style.zIndex = ++STATE.zCounter;
+  STATE.active = id;
+  updateDock();
+}
+function closeWindow(id){
+  const m = STATE.windows.get(id); if(!m) return;
+  m.el.classList.add('minimizing');
+  setTimeout(()=>{
+    if(m.onClose) try{m.onClose();}catch(e){}
+    m.el.remove();
+    STATE.windows.delete(id);
+    updateDock();
+  },180);
+}
+function minimizeWindow(id){
+  const m = STATE.windows.get(id); if(!m) return;
+  m.el.style.display='none'; m.minimized=true;
+  updateDock();
+}
+function toggleMaximize(id){
+  const m = STATE.windows.get(id); if(!m) return;
+  if(m.maximized){
+    m.el.classList.remove('maximized');
+    Object.assign(m.el.style, m.prevRect);
+    m.maximized=false;
+  } else {
+    m.prevRect={left:m.el.style.left,top:m.el.style.top,width:m.el.style.width,height:m.el.style.height};
+    m.el.classList.add('maximized');
+    Object.assign(m.el.style,{left:'0px',top:'30px',width:'100vw',height:'calc(100vh - 100px)'});
+    m.maximized=true;
+  }
+}
+
+/* ============================================================
+   DOCK / TASKBAR
+   ============================================================ */
+function buildDock(){
+  const dock = $('#dock');
+  dock.innerHTML='';
+  // Start button
+  const start = el('div',{class:'dock-item',title:'Start'});
+  start.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3" fill="currentColor"/><circle cx="12" cy="12" r="9"/></svg><div class="tip">All Apps</div>';
+  start.addEventListener('click', toggleStartMenu);
+  dock.append(start);
+  dock.append(el('div',{class:'dock-sep'}));
+  // Pinned apps
+  for(const key of ['explorer','editor','browser','paint','calc','settings']){
+    const a = APPS[key];
+    const it = el('div',{class:'dock-item',title:a.name});
+    it.innerHTML = ICONS[a.icon] + `<div class="tip">${a.name}</div>`;
+    it.addEventListener('click', ()=>a.launch());
+    dock.append(it);
+  }
+}
+
+function updateDock(){
+  // Clear running indicators in dock then re-add for running windows
+  // Add task-area for running windows after pinned apps
+  const dock = $('#dock');
+  $$('.dock-item.task', dock).forEach(e=>e.remove());
+  const sep = $$('.dock-sep', dock);
+  if(STATE.windows.size>0 && sep.length<2){
+    dock.append(el('div',{class:'dock-sep'}));
+  } else if(STATE.windows.size===0 && sep.length>1){
+    sep[1].remove();
+  }
+  for(const [id,m] of STATE.windows){
+    const it = el('div',{class:'dock-item task'});
+    it.innerHTML = ICONS[m.icon||'file'] + `<div class="tip">${m.title}</div><div class="running"></div>`;
+    if(STATE.active===id && !m.minimized) it.style.background='rgba(139,42,31,0.15)';
+    it.addEventListener('click', ()=>{
+      if(m.minimized || STATE.active!==id) activateWindow(id);
+      else minimizeWindow(id);
+    });
+    dock.append(it);
+  }
+}
+
+function toggleStartMenu(){
+  $('#startmenu').classList.toggle('open');
+}
+function closeStartMenu(){ $('#startmenu').classList.remove('open'); }
+
+function buildStartMenu(){
+  const grid = $('#appgrid');
+  grid.innerHTML='';
+  for(const key in APPS){
+    const a = APPS[key];
+    const t = el('div',{class:'app-tile'});
+    t.innerHTML = ICONS[a.icon] + `<span>${a.name}</span>`;
+    t.addEventListener('click', ()=>{ closeStartMenu(); a.launch(); });
+    grid.append(t);
+  }
+}
+
+/* ============================================================
+   CONTEXT MENU
+   ============================================================ */
+function showContextMenu(x, y, items){
+  const m = $('#contextmenu');
+  m.innerHTML='';
+  for(const it of items){
+    if(it==='-'){ m.append(el('div',{class:'ctx-sep'})); continue; }
+    const r = el('div',{class:'ctx-item'+(it.danger?' danger':'')});
+    if(it.icon) r.innerHTML = ICONS[it.icon];
+    r.append(el('span',{},it.label));
+    if(it.key) r.append(el('span',{class:'key'},it.key));
+    r.addEventListener('click', ()=>{ hideContextMenu(); it.onClick&&it.onClick(); });
+    m.append(r);
+  }
+  m.style.display='block';
+  // adjust position
+  const rect = m.getBoundingClientRect();
+  if(x+rect.width > window.innerWidth) x = window.innerWidth-rect.width-8;
+  if(y+rect.height > window.innerHeight) y = window.innerHeight-rect.height-8;
+  m.style.left = x+'px';
+  m.style.top = y+'px';
+}
+function hideContextMenu(){ $('#contextmenu').style.display='none'; }
+document.addEventListener('click', (e)=>{
+  if(!e.target.closest('#contextmenu')) hideContextMenu();
+  if(!e.target.closest('#startmenu') && !e.target.closest('#dock .dock-item:first-child')) closeStartMenu();
+});
+
+/* ============================================================
+   DESKTOP
+   ============================================================ */
+async function refreshDesktop(){
+  const grid = $('#icon-grid');
+  grid.innerHTML='';
+  let entries;
+  try{ entries = await fs.readdir('/Desktop'); }
+  catch(e){ await fs.mkdir('/Desktop'); entries = []; }
+  // sort: dirs first, then by name
+  entries.sort((a,b)=> a.isDir!==b.isDir ? (a.isDir?-1:1) : a.name.localeCompare(b.name));
+  for(const e of entries){
+    grid.append(makeDesktopIcon(e, '/Desktop/'+e.name));
+  }
+  updateStorageInfo();
+}
+function makeDesktopIcon(entry, path){
+  const ic = el('div',{class:'dicon',title:entry.name,'data-path':path});
+  let iconKey = 'file';
+  if(entry.isDir) iconKey = 'folder';
+  else {
+    const t = fileType(entry.name);
+    iconKey = ({image:'image',audio:'music',video:'video',pdf:'pdf',archive:'archive',text:'text'})[t] || 'file';
+    if(['html','htm','js','css','json','xml','svg','md'].includes(ext(entry.name))) iconKey='code';
+  }
+  ic.innerHTML = `<div class="ic">${ICONS[iconKey]}</div><div class="nm">${entry.name}</div>`;
+  ic.addEventListener('dblclick', ()=>openPath(path));
+  let lastTap=0;
+  ic.addEventListener('touchend', (e)=>{ const now=Date.now(); if(now-lastTap<350){ openPath(path); e.preventDefault(); } lastTap=now; });
+  ic.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    if(!e.shiftKey && !e.ctrlKey){
+      $$('.dicon.selected').forEach(d=>d.classList.remove('selected'));
+    }
+    ic.classList.toggle('selected');
+  });
+  ic.addEventListener('contextmenu', (e)=>{
+    e.preventDefault(); e.stopPropagation();
+    if(!ic.classList.contains('selected')){
+      $$('.dicon.selected').forEach(d=>d.classList.remove('selected'));
+      ic.classList.add('selected');
+    }
+    showFileContextMenu(e.clientX,e.clientY,[path]);
+  });
+  // Drag-out (virtual -> physical)
+  ic.draggable = true;
+  setupItemDragOut(ic, path, entry);
+  return ic;
+}
+
+/* ---------- DRAG OUT (virtual -> physical) ---------- */
+function setupItemDragOut(el, path, entry){
+  // Pre-load file before drag if possible
+  el.addEventListener('dragstart', async (e)=>{
+    try{
+      if(entry.isDir){
+        // Set a download URL with placeholder; we'll create zip later? For folder we create simple representation.
+        e.dataTransfer.setData('text/plain', path);
+        e.dataTransfer.setData('application/x-vfs-path', path);
+      } else {
+        // Use cached preloaded blob if available
+        const blob = el._blobCache;
+        if(blob){
+          const url = URL.createObjectURL(blob);
+          const mime = mimeFor(entry.name);
+          e.dataTransfer.setData('DownloadURL', `${mime}:${entry.name}:${url}`);
+          e.dataTransfer.setData('text/uri-list', url);
+        }
+        e.dataTransfer.setData('text/plain', path);
+        e.dataTransfer.setData('application/x-vfs-path', path);
+      }
+    }catch(err){ console.warn(err); }
+  });
+  // Preload on mouseenter
+  el.addEventListener('mouseenter', async ()=>{
+    if(entry.isDir||el._blobCache) return;
+    try{
+      const buf = await fs.readFile(path);
+      el._blobCache = new Blob([buf],{type:mimeFor(entry.name)});
+    }catch(e){}
+  });
+}
+
+/* Selection box on desktop */
+(function setupDesktopSel(){
+  const desk = $('#desktop');
+  let dragSel=false, sx=0, sy=0;
+  const sb = $('#sel-box');
+  desk.addEventListener('mousedown', (e)=>{
+    if(e.target!==desk && !e.target.closest('#icon-grid')) return;
+    if(e.target.closest('.dicon')) return;
+    if(e.button!==0) return;
+    if(!e.shiftKey) $$('.dicon.selected').forEach(d=>d.classList.remove('selected'));
+    dragSel=true; sx=e.clientX; sy=e.clientY;
+    sb.style.display='block';
+    sb.style.left=sx+'px'; sb.style.top=sy+'px'; sb.style.width='0'; sb.style.height='0';
+  });
+  document.addEventListener('mousemove', (e)=>{
+    if(!dragSel) return;
+    const x = Math.min(sx,e.clientX), y = Math.min(sy,e.clientY);
+    const w = Math.abs(e.clientX-sx), h = Math.abs(e.clientY-sy);
+    sb.style.left=x+'px'; sb.style.top=y+'px'; sb.style.width=w+'px'; sb.style.height=h+'px';
+    const rect={left:x,top:y,right:x+w,bottom:y+h};
+    $$('.dicon').forEach(d=>{
+      const r = d.getBoundingClientRect();
+      if(r.right>rect.left && r.left<rect.right && r.bottom>rect.top && r.top<rect.bottom){
+        d.classList.add('selected');
+      } else if(!e.shiftKey) d.classList.remove('selected');
+    });
+  });
+  document.addEventListener('mouseup', ()=>{ dragSel=false; sb.style.display='none'; });
+  desk.addEventListener('click', (e)=>{
+    if(e.target===desk||e.target.id==='icon-grid'){
+      $$('.dicon.selected').forEach(d=>d.classList.remove('selected'));
+    }
+  });
+  desk.addEventListener('contextmenu', (e)=>{
+    if(e.target.closest('.window')||e.target.closest('.dicon')||e.target.closest('#dock')||e.target.closest('#topbar')) return;
+    e.preventDefault();
+    showContextMenu(e.clientX, e.clientY, [
+      {label:'New Folder', icon:'folder', onClick:()=>newItemDialog('folder','/Desktop')},
+      {label:'New Text File', icon:'text', onClick:()=>newItemDialog('file','/Desktop')},
+      '-',
+      {label:'Refresh', icon:'refresh', onClick:refreshDesktop},
+      {label:'Toggle Fullscreen', icon:'max', onClick:toggleFullscreen},
+      '-',
+      {label:'Import Files...', icon:'upload', onClick:()=>importFiles('/Desktop')},
+      {label:'Settings', icon:'settings', onClick:openSettings}
+    ]);
+  });
+  // Drop zone (physical -> virtual)
+  desk.addEventListener('dragover', (e)=>{e.preventDefault();});
+  desk.addEventListener('drop', async (e)=>{
+    e.preventDefault();
+    await handleFileDrop(e, '/Desktop');
+  });
+})();
+
+async function handleFileDrop(e, targetDir){
+  const items = e.dataTransfer.items;
+  if(!items) return;
+  const promises = [];
+  for(const item of items){
+    if(item.kind!=='file') continue;
+    const entry = item.webkitGetAsEntry?item.webkitGetAsEntry():null;
+    if(entry) promises.push(importEntry(entry, targetDir));
+    else { const f = item.getAsFile(); if(f) promises.push(importFileObj(f, targetDir)); }
+  }
+  if(promises.length){
+    toast('Importing files...');
+    await Promise.all(promises);
+    toast('Imported '+promises.length+' item(s)');
+    refreshDesktop();
+    refreshAllExplorers();
+  }
+}
+async function importEntry(entry, dir){
+  if(entry.isFile){
+    return new Promise(resolve=>{
+      entry.file(async f=>{
+        await importFileObj(f, dir);
+        resolve();
+      });
+    });
+  } else if(entry.isDirectory){
+    const target = joinPath(dir, entry.name);
+    await fs.mkdir(target);
+    const reader = entry.createReader();
+    return new Promise(resolve=>{
+      const readAll = async ()=>{
+        reader.readEntries(async (entries)=>{
+          if(!entries.length){ resolve(); return; }
+          for(const e of entries) await importEntry(e, target);
+          readAll();
+        });
+      };
+      readAll();
+    });
+  }
+}
+async function importFileObj(file, dir){
+  const path = joinPath(dir, file.name);
+  const buf = await file.arrayBuffer();
+  await fs.writeFile(path, buf);
+}
+
+function toggleFullscreen(){
+  if(!document.fullscreenElement) document.documentElement.requestFullscreen();
+  else document.exitFullscreen();
+}
+
+/* ============================================================
+   FILE OPENING DISPATCH
+   ============================================================ */
+async function openPath(path){
+  let s;
+  try{ s = await fs.stat(path); }
+  catch(e){ toast('Cannot open: '+e.message); return; }
+  if(s.isDir){ openExplorer(path); return; }
+  const t = fileType(path);
+  switch(t){
+    case 'image': openImage(path); break;
+    case 'audio': openMedia(path,'audio'); break;
+    case 'video': openMedia(path,'video'); break;
+    case 'pdf': openPDF(path); break;
+    case 'archive': handleArchive(path); break;
+    case 'text':
+      if(['html','htm'].includes(ext(path))){ openHtmlStudio(path); }
+      else openEditor(path);
+      break;
+    default: openEditor(path); break;
+  }
+}
+
+/* ============================================================
+   DIALOGS
+   ============================================================ */
+function dialog({title, body, value='', placeholder='', onOk, okText='OK'}){
+  const bg = el('div',{class:'dialog-bg'});
+  const dlg = el('div',{class:'dialog'});
+  dlg.append(el('h3',{},title));
+  if(body) dlg.append(el('p',{},body));
+  let inp = null;
+  if(value!==undefined && value!==null){
+    inp = el('input',{type:'text',value,placeholder});
+    dlg.append(inp);
+  }
+  const btns = el('div',{class:'btns'});
+  const cancel = el('button',{},'Cancel');
+  const ok = el('button',{class:'primary'},okText);
+  btns.append(cancel, ok);
+  dlg.append(btns);
+  bg.append(dlg);
+  document.body.append(bg);
+  if(inp){ setTimeout(()=>{inp.focus();inp.select();},20); }
+  cancel.addEventListener('click', ()=>bg.remove());
+  bg.addEventListener('click', e=>{ if(e.target===bg) bg.remove(); });
+  const submit = ()=>{ const v = inp?inp.value:null; bg.remove(); if(onOk) onOk(v); };
+  ok.addEventListener('click', submit);
+  if(inp) inp.addEventListener('keydown', e=>{ if(e.key==='Enter') submit(); else if(e.key==='Escape') bg.remove(); });
+}
+
+async function newItemDialog(type, dir){
+  dialog({
+    title: type==='folder'?'New Folder':'New File',
+    value: type==='folder'?'New Folder':'untitled.txt',
+    onOk: async (name)=>{
+      if(!name) return;
+      const path = joinPath(dir, name);
+      try{
+        if(type==='folder') await fs.mkdir(path);
+        else await fs.writeText(path,'');
+        refreshDesktop();
+        refreshAllExplorers();
+      }catch(e){ toast('Error: '+e.message); }
+    }
+  });
+}
+
+/* ============================================================
+   SHARED FILE OPS
+   ============================================================ */
+function showFileContextMenu(x, y, paths){
+  const single = paths.length===1;
+  showContextMenu(x, y, [
+    {label:'Open', icon:'open', onClick:()=>{paths.forEach(openPath);}},
+    ...(single && (ext(paths[0])==='html'||ext(paths[0])==='htm') ? [
+      {label:'Edit Source', icon:'edit', onClick:()=>openEditor(paths[0])},
+      {label:'Open in Browser', icon:'browser', onClick:()=>openBrowser(paths[0])}
+    ]:[]),
+    '-',
+    {label:'Cut', icon:'cut', key:'⌘X', onClick:()=>{ STATE.clipboard={op:'cut',paths}; toast('Cut '+paths.length+' item(s)'); }},
+    {label:'Copy', icon:'copy', key:'⌘C', onClick:()=>{ STATE.clipboard={op:'copy',paths}; toast('Copied '+paths.length+' item(s)'); }},
+    ...(single?[{label:'Rename', icon:'edit', key:'F2', onClick:()=>renameDialog(paths[0])}]:[]),
+    {label:'Download', icon:'download', onClick:()=>paths.forEach(downloadPath)},
+    '-',
+    {label:'Delete', icon:'trash', danger:true, key:'Del', onClick:()=>deletePaths(paths)}
+  ]);
+}
+
+async function downloadPath(path){
+  try{
+    const s = await fs.stat(path);
+    if(s.isDir){ toast('Folder download not yet supported (TODO zip)'); return; }
+    const f = await fs.readFileAsFile(path);
+    const url = URL.createObjectURL(f);
+    const a = document.createElement('a');
+    a.href = url; a.download = basename(path);
+    a.click();
+    setTimeout(()=>URL.revokeObjectURL(url), 1000);
+  }catch(e){ toast('Download failed: '+e.message); }
+}
+
+function renameDialog(path){
+  dialog({title:'Rename', value: basename(path), onOk: async (name)=>{
+    if(!name||name===basename(path)) return;
+    try{
+      await fs.rename(path, joinPath(dirname(path), name));
+      refreshDesktop(); refreshAllExplorers();
+    }catch(e){ toast('Rename failed: '+e.message); }
+  }});
+}
+async function deletePaths(paths){
+  if(!confirm('Delete '+paths.length+' item(s)?')) return;
+  for(const p of paths){
+    try{ await fs.remove(p); }catch(e){ toast('Delete failed: '+p); }
+  }
+  refreshDesktop(); refreshAllExplorers();
+}
+
+async function pasteToDir(dir){
+  if(!STATE.clipboard) return;
+  const {op, paths} = STATE.clipboard;
+  for(const p of paths){
+    let target = joinPath(dir, basename(p));
+    let i=1;
+    while(await fs.exists(target)){
+      const b = basename(p); const dotI = b.lastIndexOf('.');
+      const name = dotI>0 ? b.slice(0,dotI)+' ('+i+')'+b.slice(dotI) : b+' ('+i+')';
+      target = joinPath(dir, name); i++;
+    }
+    if(op==='copy') await fs.copy(p, target);
+    else { await fs.rename(p, target); }
+  }
+  if(op==='cut') STATE.clipboard=null;
+  refreshDesktop(); refreshAllExplorers();
+}
+
+function importFiles(targetDir){
+  const inp = $('#file-import');
+  inp.value='';
+  inp.onchange = async ()=>{
+    for(const f of inp.files){
+      await importFileObj(f, targetDir);
+    }
+    toast('Imported '+inp.files.length+' file(s)');
+    refreshDesktop(); refreshAllExplorers();
+  };
+  inp.click();
+}
+
+/* ============================================================
+   FILE EXPLORER APP
+   ============================================================ */
+const explorerInstances = new Set();
+function openExplorer(initialPath='/'){
+  const root = el('div',{class:'fe'});
+  // Sidebar
+  const side = el('div',{class:'fe-side'});
+  const main = el('div',{class:'fe-main'});
+  root.append(side, main);
+
+  // Toolbar
+  const tb = el('div',{class:'fe-toolbar'});
+  const back = el('button',{class:'fe-tbtn',title:'Back',html:ICONS.back});
+  const fwd = el('button',{class:'fe-tbtn',title:'Forward',html:ICONS.fwd});
+  const up = el('button',{class:'fe-tbtn',title:'Up',html:ICONS.up});
+  const refresh = el('button',{class:'fe-tbtn',title:'Refresh',html:ICONS.refresh});
+  const addr = el('input',{class:'fe-addr',value:initialPath});
+  const search = el('input',{class:'fe-search',placeholder:'Search...'});
+  const newBtn = el('button',{class:'fe-tbtn',title:'New',html:ICONS.plus});
+  const importBtn = el('button',{class:'fe-tbtn',title:'Import',html:ICONS.upload});
+  const mountBtn = el('button',{class:'fe-tbtn',title:'Mount Local Folder',html:ICONS.mount});
+  tb.append(back,fwd,up,refresh,addr,search,newBtn,importBtn,mountBtn);
+
+  // Cols header
+  const cols = el('div',{class:'fe-cols'});
+  const colName = el('div',{class:'fe-col active','data-sort':'name'},'Name');
+  const colDate = el('div',{class:'fe-col','data-sort':'mtime'},'Modified');
+  const colType = el('div',{class:'fe-col','data-sort':'type'},'Type');
+  const colSize = el('div',{class:'fe-col','data-sort':'size'},'Size');
+  cols.append(colName, colDate, colType, colSize);
+
+  const list = el('div',{class:'fe-list'});
+  const status = el('div',{class:'fe-status'});
+
+  main.append(tb, cols, list, status);
+
+  const win = createWindow({title:'Files', icon:'explorer', width:880, height:560, content:root, app:'explorer'});
+  const ctx = {win, root, list, addr, search, side, status, cols,
+    cwd: initialPath, history:[initialPath], hIdx:0, sort:'name', sortDir:1, selection:new Set(), entries:[]};
+  explorerInstances.add(ctx);
+  win.onClose = ()=>explorerInstances.delete(ctx);
+
+  back.addEventListener('click', ()=>{ if(ctx.hIdx>0){ ctx.hIdx--; navigate(ctx.history[ctx.hIdx], false); } });
+  fwd.addEventListener('click', ()=>{ if(ctx.hIdx<ctx.history.length-1){ ctx.hIdx++; navigate(ctx.history[ctx.hIdx], false); } });
+  up.addEventListener('click', ()=>navigate(dirname(ctx.cwd)));
+  refresh.addEventListener('click', ()=>navigate(ctx.cwd, false, false));
+  addr.addEventListener('keydown', (e)=>{ if(e.key==='Enter') navigate(addr.value); });
+  search.addEventListener('input', ()=>renderList(ctx));
+  newBtn.addEventListener('click', (e)=>{
+    showContextMenu(e.clientX,e.clientY,[
+      {label:'New Folder',icon:'folder',onClick:()=>newItemDialog('folder',ctx.cwd)},
+      {label:'New Text File',icon:'text',onClick:()=>newItemDialog('file',ctx.cwd)}
+    ]);
+  });
+  importBtn.addEventListener('click', ()=>importFiles(ctx.cwd));
+  mountBtn.addEventListener('click', mountLocalFolder);
+
+  [colName,colDate,colType,colSize].forEach(c=>{
+    c.addEventListener('click', ()=>{
+      const s = c.dataset.sort;
+      if(ctx.sort===s) ctx.sortDir*=-1;
+      else { ctx.sort=s; ctx.sortDir=1; }
+      $$('.fe-col',cols).forEach(x=>x.classList.remove('active'));
+      c.classList.add('active');
+      c.innerHTML = c.textContent.replace(/[▼▲]/g,'').trim() + (ctx.sortDir>0?' ▲':' ▼');
+      renderList(ctx);
+    });
+  });
+
+  // Sidebar
+  buildSidebar(ctx);
+
+  // List click handlers + DnD
+  list.addEventListener('click', (e)=>{
+    const row = e.target.closest('.fe-row');
+    if(!row){ ctx.selection.clear(); $$('.fe-row.selected',list).forEach(r=>r.classList.remove('selected')); return; }
+    const path = row.dataset.path;
+    if(e.ctrlKey||e.metaKey){ ctx.selection.has(path)?ctx.selection.delete(path):ctx.selection.add(path); row.classList.toggle('selected'); }
+    else { ctx.selection.clear(); ctx.selection.add(path); $$('.fe-row.selected',list).forEach(r=>r.classList.remove('selected')); row.classList.add('selected'); }
+  });
+  list.addEventListener('dblclick', (e)=>{
+    const row = e.target.closest('.fe-row');
+    if(!row) return;
+    openPath(row.dataset.path);
+  });
+  list.addEventListener('contextmenu', (e)=>{
+    e.preventDefault();
+    const row = e.target.closest('.fe-row');
+    if(row){
+      if(!ctx.selection.has(row.dataset.path)){
+        ctx.selection.clear(); $$('.fe-row.selected',list).forEach(r=>r.classList.remove('selected'));
+        ctx.selection.add(row.dataset.path); row.classList.add('selected');
+      }
+      showFileContextMenu(e.clientX,e.clientY,[...ctx.selection]);
+    } else {
+      showContextMenu(e.clientX,e.clientY,[
+        {label:'New Folder',icon:'folder',onClick:()=>newItemDialog('folder',ctx.cwd)},
+        {label:'New Text File',icon:'text',onClick:()=>newItemDialog('file',ctx.cwd)},
+        '-',
+        {label:'Paste', icon:'paste', onClick:async ()=>{ await pasteToDir(ctx.cwd); navigate(ctx.cwd,false,false); }},
+        {label:'Refresh', icon:'refresh', onClick:()=>navigate(ctx.cwd,false,false)},
+        '-',
+        {label:'Import Files...', icon:'upload', onClick:()=>importFiles(ctx.cwd)}
+      ]);
+    }
+  });
+  list.addEventListener('dragover', (e)=>{ e.preventDefault(); });
+  list.addEventListener('drop', async (e)=>{
+    e.preventDefault();
+    await handleFileDrop(e, ctx.cwd);
+    navigate(ctx.cwd,false,false);
+  });
+
+  function navigate(path, push=true, animate=true){
+    path = joinPath(path);
+    ctx.cwd = path;
+    ctx.addr.value = path;
+    if(push){ ctx.history = ctx.history.slice(0, ctx.hIdx+1); ctx.history.push(path); ctx.hIdx = ctx.history.length-1; }
+    win.titleEl.textContent = basename(path) || 'Files';
+    fs.readdir(path).then(entries=>{
+      ctx.entries = entries;
+      ctx.selection.clear();
+      renderList(ctx);
+    }).catch(err=>{
+      ctx.entries=[]; renderList(ctx);
+      toast('Error: '+err.message);
+    });
+  }
+  ctx.navigate = navigate;
+  navigate(initialPath, false);
+  return ctx;
+}
+
+function buildSidebar(ctx){
+  const side = ctx.side;
+  side.innerHTML='';
+  side.append(el('h4',{},'Quick Access'));
+  const items = [
+    {name:'Home', path:'/', icon:'hd'},
+    {name:'Desktop', path:'/Desktop', icon:'desktop'},
+    {name:'Documents', path:'/Documents', icon:'folder'},
+    {name:'Pictures', path:'/Pictures', icon:'image'},
+    {name:'Downloads', path:'/Downloads', icon:'download'}
+  ];
+  for(const it of items){
+    const r = el('div',{class:'item'+(ctx.cwd===it.path?' active':'')});
+    r.innerHTML = ICONS[it.icon] + `<span>${it.name}</span>`;
+    r.addEventListener('click', ()=>ctx.navigate(it.path));
+    side.append(r);
+  }
+  // Mounted
+  const mounts = [...fs.mounts.keys()].filter(m=>m.startsWith('/mnt/'));
+  if(mounts.length){
+    side.append(el('h4',{},'Mounted'));
+    for(const m of mounts){
+      const r = el('div',{class:'item'+(ctx.cwd===m?' active':'')});
+      r.innerHTML = ICONS.mount + `<span>${basename(m)}</span><span class="x" title="Unmount">×</span>`;
+      r.addEventListener('click', (e)=>{
+        if(e.target.classList.contains('x')){
+          fs.unmount(m);
+          refreshAllExplorers(); refreshDesktop();
+          return;
+        }
+        ctx.navigate(m);
+      });
+      side.append(r);
+    }
+  }
+  side.append(el('h4',{},'Tools'));
+  const mt = el('div',{class:'item'});
+  mt.innerHTML = ICONS.mount + `<span>Mount Folder...</span>`;
+  mt.addEventListener('click', mountLocalFolder);
+  side.append(mt);
+}
+
+function renderList(ctx){
+  const list = ctx.list;
+  list.innerHTML='';
+  let entries = [...ctx.entries];
+  // search
+  const q = ctx.search.value.trim().toLowerCase();
+  if(q) entries = entries.filter(e=>e.name.toLowerCase().includes(q));
+  // sort
+  const dir = ctx.sortDir;
+  entries.sort((a,b)=>{
+    if(a.isDir!==b.isDir) return a.isDir?-1:1;
+    let av,bv;
+    switch(ctx.sort){
+      case 'mtime': av=a.mtime||0; bv=b.mtime||0; break;
+      case 'size': av=a.size||0; bv=b.size||0; break;
+      case 'type': av=a.isDir?'':ext(a.name); bv=b.isDir?'':ext(b.name); break;
+      default: av=a.name.toLowerCase(); bv=b.name.toLowerCase();
+    }
+    return av<bv?-dir : av>bv?dir : 0;
+  });
+  for(const e of entries){
+    const path = joinPath(ctx.cwd, e.name);
+    const row = el('div',{class:'fe-row','data-path':path,draggable:'true'});
+    let iconKey = 'file';
+    if(e.isDir) iconKey = e.mount?'mount':'folder';
+    else { const t = fileType(e.name);
+      iconKey = ({image:'image',audio:'music',video:'video',pdf:'pdf',archive:'archive',text:'text'})[t] || 'file';
+      if(['html','htm','js','css','json','svg','xml','md'].includes(ext(e.name))) iconKey='code';
+    }
+    const nm = el('div',{class:'nm'});
+    nm.innerHTML = ICONS[iconKey] + `<span>${e.name}</span>`;
+    row.append(nm);
+    row.append(el('div',{class:'meta'},e.isDir?'—':fmtDate(e.mtime)));
+    row.append(el('div',{class:'meta'},e.isDir?'Folder':(ext(e.name).toUpperCase()||'FILE')));
+    row.append(el('div',{class:'meta'},e.isDir?'—':fmtSize(e.size)));
+    setupItemDragOut(row, path, e);
+    list.append(row);
+  }
+  ctx.status.innerHTML = `<span>${entries.length} item(s)</span><span>${ctx.cwd}</span>`;
+  buildSidebar(ctx);
+}
+
+function refreshAllExplorers(){
+  for(const ctx of explorerInstances){ ctx.navigate(ctx.cwd, false, false); }
+}
+
+/* Mount local folder */
+async function mountLocalFolder(){
+  if(!window.showDirectoryPicker){ toast('File System Access API not supported in this browser'); return; }
+  try{
+    const dir = await window.showDirectoryPicker({mode:'readwrite'});
+    const name = dir.name;
+    const mountPath = '/mnt/'+name;
+    fs.mount(mountPath, new FSABackend(dir));
+    toast('Mounted '+name+' at '+mountPath);
+    refreshAllExplorers(); refreshDesktop();
+  }catch(e){ if(e.name!=='AbortError') toast('Mount failed: '+e.message); }
+}
+
+/* ============================================================
+   TEXT EDITOR
+   ============================================================ */
+async function openEditor(path){
+  const root = el('div',{class:'te'});
+  const bar = el('div',{class:'te-bar'});
+  const nameEl = el('span',{class:'name'}, path?basename(path):'Untitled');
+  const tableBtn = el('button',{title:'Toggle Table View'},'Table');
+  const saveBtn = el('button',{class:'primary'},'Save');
+  const saveAsBtn = el('button',{},'Save As');
+  bar.append(nameEl, el('span',{style:{flex:'1'}}), tableBtn, saveAsBtn, saveBtn);
+  const area = el('div',{class:'te-area'});
+  const ta = el('textarea',{spellcheck:'false'});
+  ta.value = '';
+  area.append(ta);
+  root.append(bar, area);
+  const win = createWindow({title:'Editor — '+(path?basename(path):'Untitled'),icon:'editor',width:760,height:520,content:root});
+
+  const isCSV = path && (ext(path)==='csv'||ext(path)==='tsv');
+  if(!isCSV) tableBtn.style.display='none';
+
+  let dirty=false;
+  let mode='text';
+  ta.addEventListener('input', ()=>{ dirty=true; nameEl.classList.add('dirty'); });
+
+  if(path){
+    try{
+      const text = await fs.readText(path);
+      ta.value = text;
+    }catch(e){ toast('Open failed: '+e.message); }
+  }
+
+  async function save(toPath){
+    const p = toPath || path;
+    if(!p){ saveAs(); return; }
+    try{
+      await fs.writeText(p, ta.value);
+      dirty=false; nameEl.classList.remove('dirty');
+      toast('Saved');
+      refreshDesktop(); refreshAllExplorers();
+    }catch(e){ toast('Save failed: '+e.message); }
+  }
+  function saveAs(){
+    dialog({title:'Save As', value:path?basename(path):'untitled.txt', onOk: async (name)=>{
+      if(!name) return;
+      const newPath = path ? joinPath(dirname(path),name) : '/Desktop/'+name;
+      await save(newPath);
+      path = newPath;
+      win.titleEl.textContent = 'Editor — '+basename(path);
+      nameEl.textContent = basename(path);
+    }});
+  }
+  saveBtn.addEventListener('click', ()=>save());
+  saveAsBtn.addEventListener('click', saveAs);
+
+  tableBtn.addEventListener('click', ()=>{
+    if(mode==='text'){
+      mode='table';
+      const sep = ext(path)==='tsv'?'\t':',';
+      const rows = ta.value.split(/\r?\n/).filter(r=>r.length).map(r=>r.split(sep));
+      const wrap = el('div',{class:'te-table'});
+      const t = el('table');
+      const head = rows[0]||[];
+      const tr = el('tr');
+      head.forEach(h=>tr.append(el('th',{},h)));
+      t.append(tr);
+      for(let i=1;i<rows.length;i++){
+        const r = el('tr');
+        rows[i].forEach(c=>r.append(el('td',{},c)));
+        t.append(r);
+      }
+      wrap.append(t);
+      area.innerHTML=''; area.append(wrap);
+      tableBtn.textContent='Text';
+    } else {
+      mode='text';
+      area.innerHTML=''; area.append(ta);
+      tableBtn.textContent='Table';
+    }
+  });
+}
+
+/* HTML Studio: editor + live preview */
+async function openHtmlStudio(path){
+  const root = el('div',{class:'te'});
+  const bar = el('div',{class:'te-bar'});
+  const nameEl = el('span',{class:'name'}, basename(path));
+  const previewBtn = el('button',{},'Open in Browser');
+  const saveBtn = el('button',{class:'primary'},'Save');
+  bar.append(nameEl, el('span',{style:{flex:'1'}}), previewBtn, saveBtn);
+  const area = el('div',{class:'te-area'});
+  const ta = el('textarea',{spellcheck:'false'});
+  const preview = el('div',{class:'preview'});
+  const iframe = el('iframe',{sandbox:'allow-scripts allow-same-origin'});
+  preview.append(iframe);
+  area.append(ta, preview);
+  root.append(bar, area);
+  createWindow({title:'HTML Studio — '+basename(path),icon:'code',width:980,height:600,content:root});
+
+  let dirty=false;
+  ta.addEventListener('input', ()=>{ dirty=true; nameEl.classList.add('dirty'); updatePreview(); });
+  try{ ta.value = await fs.readText(path); }catch(e){ toast('Open failed: '+e.message); }
+  function updatePreview(){
+    const blob = new Blob([ta.value],{type:'text/html'});
+    iframe.src = URL.createObjectURL(blob);
+  }
+  updatePreview();
+  saveBtn.addEventListener('click', async ()=>{
+    try{ await fs.writeText(path, ta.value); dirty=false; nameEl.classList.remove('dirty'); toast('Saved'); }
+    catch(e){ toast('Save failed: '+e.message); }
+  });
+  previewBtn.addEventListener('click', ()=>openBrowser(path));
+}
+
+/* ============================================================
+   IMAGE / MEDIA / PDF VIEWERS
+   ============================================================ */
+async function openImage(path){
+  const root = el('div',{class:'iv'});
+  const bar = el('div',{class:'iv-bar'});
+  const nameEl = el('span',{},basename(path));
+  const zoomOut = el('button',{},'−');
+  const zoomLab = el('span',{},'100%');
+  const zoomIn = el('button',{},'+');
+  const fit = el('button',{},'Fit');
+  bar.append(nameEl, el('span',{style:{flex:'1'}}), zoomOut, zoomLab, zoomIn, fit);
+  const canvas = el('div',{class:'iv-canvas'});
+  const img = el('img',{});
+  canvas.append(img);
+  root.append(bar, canvas);
+  createWindow({title:'Image — '+basename(path),icon:'image',width:720,height:540,content:root});
+  try{
+    const f = await fs.readFileAsFile(path);
+    img.src = URL.createObjectURL(f);
+  }catch(e){ toast(e.message); }
+  let scale=1;
+  const apply = ()=>{ img.style.transform='scale('+scale+')'; zoomLab.textContent=Math.round(scale*100)+'%'; };
+  zoomIn.addEventListener('click',()=>{scale=Math.min(8,scale*1.2);apply();});
+  zoomOut.addEventListener('click',()=>{scale=Math.max(0.1,scale/1.2);apply();});
+  fit.addEventListener('click',()=>{scale=1;apply();});
+}
+
+async function openMedia(path,kind){
+  const root = el('div',{class:'mp'});
+  root.append(el('h3',{},basename(path)));
+  const m = el(kind, {controls:'',autoplay:''});
+  root.append(m);
+  createWindow({title:(kind==='audio'?'Audio':'Video')+' — '+basename(path),icon:kind==='audio'?'music':'video',width:540,height:kind==='audio'?260:480,content:root});
+  try{
+    const f = await fs.readFileAsFile(path);
+    m.src = URL.createObjectURL(f);
+  }catch(e){ toast(e.message); }
+}
+
+async function openPDF(path){
+  const root = el('div',{style:{height:'100%',background:'#525252'}});
+  const iframe = el('iframe',{style:'width:100%;height:100%;border:none;background:#525252'});
+  root.append(iframe);
+  createWindow({title:'PDF — '+basename(path),icon:'pdf',width:800,height:600,content:root});
+  try{
+    const f = await fs.readFileAsFile(path);
+    iframe.src = URL.createObjectURL(f);
+  }catch(e){ toast(e.message); }
+}
+
+/* Archive handler - simple zip via DecompressionStream + manual zip parser */
+async function handleArchive(path){
+  const e = ext(path);
+  showContextMenu(window.innerWidth/2-100, window.innerHeight/2, [
+    {label:'Extract Here', icon:'archive', onClick:()=>extractArchive(path, dirname(path))},
+    {label:'Cancel', icon:'close', onClick:()=>{}}
+  ]);
+}
+
+async function extractArchive(path, destDir){
+  const e = ext(path);
+  toast('Extracting...');
+  try{
+    const buf = await fs.readFile(path);
+    if(e==='zip'){
+      await extractZip(buf, destDir, basename(path).replace(/\.zip$/i,''));
+    } else if(e==='gz'){
+      const ds = new DecompressionStream('gzip');
+      const stream = new Blob([buf]).stream().pipeThrough(ds);
+      const out = await new Response(stream).arrayBuffer();
+      const name = basename(path).replace(/\.gz$/i,'');
+      await fs.writeFile(joinPath(destDir,name), out);
+    } else if(e==='tar'){
+      await extractTar(buf, destDir);
+    } else if(e==='tgz'){
+      const ds = new DecompressionStream('gzip');
+      const stream = new Blob([buf]).stream().pipeThrough(ds);
+      const out = await new Response(stream).arrayBuffer();
+      await extractTar(out, destDir);
+    }
+    toast('Extracted');
+    refreshDesktop(); refreshAllExplorers();
+  }catch(err){ toast('Extract failed: '+err.message); }
+}
+
+async function extractZip(buf, destDir, subName){
+  // Minimal zip parser using DecompressionStream
+  const dv = new DataView(buf);
+  const u8 = new Uint8Array(buf);
+  // find EOCD
+  let eocd = -1;
+  for(let i=u8.length-22;i>=Math.max(0,u8.length-65557);i--){
+    if(dv.getUint32(i,true)===0x06054b50){ eocd=i; break; }
+  }
+  if(eocd<0) throw new Error('Invalid zip');
+  const cdSize = dv.getUint32(eocd+12, true);
+  const cdOff = dv.getUint32(eocd+16, true);
+  const root = joinPath(destDir, subName);
+  await fs.mkdir(root);
+  let p = cdOff;
+  const end = cdOff+cdSize;
+  while(p<end){
+    if(dv.getUint32(p,true)!==0x02014b50) break;
+    const method = dv.getUint16(p+10,true);
+    const compSize = dv.getUint32(p+20,true);
+    const uncompSize = dv.getUint32(p+24,true);
+    const nameLen = dv.getUint16(p+28,true);
+    const extraLen = dv.getUint16(p+30,true);
+    const commentLen = dv.getUint16(p+32,true);
+    const localOff = dv.getUint32(p+42,true);
+    const name = new TextDecoder().decode(u8.slice(p+46, p+46+nameLen));
+    p += 46+nameLen+extraLen+commentLen;
+    // local header
+    const lhNameLen = dv.getUint16(localOff+26,true);
+    const lhExtraLen = dv.getUint16(localOff+28,true);
+    const dataStart = localOff+30+lhNameLen+lhExtraLen;
+    const target = joinPath(root, name);
+    if(name.endsWith('/')){ await fs.mkdir(target); continue; }
+    // ensure parent
+    await fs.mkdir(dirname(target));
+    if(method===0){
+      await fs.writeFile(target, u8.slice(dataStart, dataStart+compSize));
+    } else if(method===8){
+      const ds = new DecompressionStream('deflate-raw');
+      const compressed = u8.slice(dataStart, dataStart+compSize);
+      const out = await new Response(new Blob([compressed]).stream().pipeThrough(ds)).arrayBuffer();
+      await fs.writeFile(target, out);
+    }
+  }
+}
+
+async function extractTar(buf, destDir){
+  const u8 = new Uint8Array(buf);
+  let p = 0;
+  while(p+512<=u8.length){
+    const name = new TextDecoder().decode(u8.slice(p, p+100)).replace(/\0+$/,'');
+    if(!name) break;
+    const sizeStr = new TextDecoder().decode(u8.slice(p+124,p+136)).replace(/\0+$/,'').trim();
+    const size = parseInt(sizeStr,8) || 0;
+    const type = String.fromCharCode(u8[p+156]);
+    const target = joinPath(destDir, name);
+    if(type==='5' || name.endsWith('/')){
+      await fs.mkdir(target);
+    } else if(type==='0' || type===''){
+      await fs.mkdir(dirname(target));
+      await fs.writeFile(target, u8.slice(p+512, p+512+size));
+    }
+    p += 512 + Math.ceil(size/512)*512;
+  }
+}
+
+/* ============================================================
+   BROWSER
+   ============================================================ */
+async function openBrowser(initialPath){
+  const root = el('div',{class:'br'});
+  const bar = el('div',{class:'br-bar'});
+  const back = el('button',{html:ICONS.back});
+  const fwd = el('button',{html:ICONS.fwd});
+  const refresh = el('button',{html:ICONS.refresh});
+  const addr = el('input',{placeholder:'Enter URL or VFS path...',value:''});
+  const go = el('button',{html:ICONS.search});
+  bar.append(back, fwd, refresh, addr, go);
+  const frame = el('div',{class:'br-frame'});
+  const empty = el('div',{class:'br-empty'});
+  empty.innerHTML = ICONS.browser + '<div>The Atelier Browser</div><div style="font-size:12px;font-family:var(--mono);font-style:normal;margin-top:8px;color:var(--ink-faint)">Try a URL or open an HTML file</div>';
+  frame.append(empty);
+  root.append(bar, frame);
+  createWindow({title:'Browser',icon:'browser',width:900,height:600,content:root});
+
+  let iframe = null;
+  async function navigate(url){
+    if(!url) return;
+    if(url.startsWith('/')){
+      try{
+        const f = await fs.readFileAsFile(url);
+        url = URL.createObjectURL(f);
+      }catch(e){ toast(e.message); return; }
+    } else if(!/^https?:\/\//i.test(url)){
+      url = 'https://'+url;
+    }
+    frame.innerHTML='';
+    iframe = el('iframe',{src:url,sandbox:'allow-scripts allow-same-origin allow-forms allow-popups'});
+    frame.append(iframe);
+  }
+  go.addEventListener('click', ()=>navigate(addr.value));
+  addr.addEventListener('keydown', e=>{ if(e.key==='Enter') navigate(addr.value); });
+  back.addEventListener('click', ()=>{ try{iframe&&iframe.contentWindow.history.back();}catch(e){} });
+  fwd.addEventListener('click', ()=>{ try{iframe&&iframe.contentWindow.history.forward();}catch(e){} });
+  refresh.addEventListener('click', ()=>{ if(iframe) iframe.src=iframe.src; });
+  if(initialPath){ addr.value=initialPath; navigate(initialPath); }
+}
+
+/* ============================================================
+   CALCULATOR
+   ============================================================ */
+function openCalculator(){
+  const root = el('div',{class:'calc'});
+  const disp = el('div',{class:'calc-disp'});
+  const hist = el('div',{class:'hist'});
+  const cur = el('div',{},'0');
+  disp.append(hist, cur);
+  const keys = el('div',{class:'calc-keys'});
+  const layout = [
+    ['C','fn'],['±','fn'],['%','fn'],['÷','op'],
+    ['7',''],['8',''],['9',''],['×','op'],
+    ['4',''],['5',''],['6',''],['−','op'],
+    ['1',''],['2',''],['3',''],['+','op'],
+    ['0',''],['.',''],['⌫','fn'],['=','eq']
+  ];
+  let buf='0', prev=null, op=null, justEq=false;
+  function update(){ cur.textContent = buf; hist.textContent = (prev!=null?prev+' '+(op||''):''); }
+  function apply(a,b,o){
+    a=+a;b=+b;
+    switch(o){case '+':return a+b;case '−':return a-b;case '×':return a*b;case '÷':return b===0?'∞':a/b;}
+    return b;
+  }
+  for(const [k,cls] of layout){
+    const b = el('button',{class:'calc-key '+cls},k);
+    b.addEventListener('click', ()=>{
+      if(/[0-9]/.test(k)){ if(buf==='0'||justEq){buf=k;justEq=false;} else buf+=k; }
+      else if(k==='.'){ if(!buf.includes('.')) buf+='.'; }
+      else if(k==='C'){ buf='0'; prev=null; op=null; }
+      else if(k==='±'){ buf = buf.startsWith('-')?buf.slice(1):'-'+buf; }
+      else if(k==='%'){ buf = String((+buf)/100); }
+      else if(k==='⌫'){ buf = buf.length>1?buf.slice(0,-1):'0'; }
+      else if(['+','−','×','÷'].includes(k)){
+        if(prev!=null && !justEq){ buf = String(apply(prev,buf,op)); }
+        prev = buf; op = k; justEq=true;
+      } else if(k==='='){
+        if(op!=null && prev!=null){ buf = String(apply(prev,buf,op)); prev=null; op=null; justEq=true; }
+      }
+      update();
+    });
+    keys.append(b);
+  }
+  root.append(disp, keys);
+  createWindow({title:'Calculator',icon:'calc',width:300,height:440,content:root});
+}
+
+/* ============================================================
+   PAINT
+   ============================================================ */
+function openPaint(){
+  const root = el('div',{class:'pt'});
+  const bar = el('div',{class:'pt-bar'});
+  const color = el('input',{type:'color',value:'#8b2a1f'});
+  const size = el('input',{type:'range',min:'1',max:'40',value:'4'});
+  const eraser = el('button',{},'Eraser');
+  const clear = el('button',{},'Clear');
+  const save = el('button',{},'Save to Desktop');
+  bar.append(el('span',{style:'font-family:var(--mono);font-size:11px'},'Color'), color, el('span',{style:'font-family:var(--mono);font-size:11px'},'Size'), size, eraser, clear, el('span',{style:'flex:1'}), save);
+  const wrap = el('div',{class:'pt-canvas-wrap'});
+  const canvas = el('canvas',{width:'900',height:'600'});
+  wrap.append(canvas);
+  root.append(bar, wrap);
+  createWindow({title:'Paint',icon:'paint',width:760,height:560,content:root});
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,canvas.width,canvas.height);
+  let drawing=false, last=null, isEraser=false;
+  function getPos(e){
+    const r = canvas.getBoundingClientRect();
+    const t = e.touches?e.touches[0]:e;
+    const sx = canvas.width / r.width;
+    const sy = canvas.height / r.height;
+    return {x:(t.clientX-r.left)*sx, y:(t.clientY-r.top)*sy};
+  }
+  const start = (e)=>{ drawing=true; last=getPos(e); e.preventDefault();};
+  const move = (e)=>{
+    if(!drawing) return;
+    const p = getPos(e);
+    ctx.strokeStyle = isEraser?'#ffffff':color.value;
+    ctx.lineWidth = +size.value;
+    ctx.lineCap='round'; ctx.lineJoin='round';
+    ctx.beginPath(); ctx.moveTo(last.x,last.y); ctx.lineTo(p.x,p.y); ctx.stroke();
+    last=p;
+  };
+  const end = ()=>{ drawing=false; last=null; };
+  canvas.addEventListener('mousedown',start);
+  canvas.addEventListener('mousemove',move);
+  canvas.addEventListener('mouseup',end);
+  canvas.addEventListener('mouseleave',end);
+  canvas.addEventListener('touchstart',start,{passive:false});
+  canvas.addEventListener('touchmove',move,{passive:false});
+  canvas.addEventListener('touchend',end);
+  eraser.addEventListener('click',()=>{isEraser=!isEraser; eraser.style.background = isEraser?'var(--oxblood)':'';eraser.style.color = isEraser?'var(--paper)':'';});
+  clear.addEventListener('click',()=>{ ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,canvas.width,canvas.height); });
+  save.addEventListener('click', async ()=>{
+    canvas.toBlob(async (blob)=>{
+      const buf = await blob.arrayBuffer();
+      const name = 'painting-'+Date.now()+'.png';
+      await fs.writeFile('/Desktop/'+name, buf);
+      toast('Saved to Desktop');
+      refreshDesktop();
+    },'image/png');
+  });
+}
+
+/* ============================================================
+   SETTINGS
+   ============================================================ */
+function openSettings(){
+  const root = el('div',{class:'st'});
+  root.innerHTML = `<h2>Settings</h2><p class="sub">configure your atelier</p>`;
+  // Wallpaper
+  const wpSec = el('div',{class:'st-section'});
+  wpSec.innerHTML = '<h3>Wallpaper</h3>';
+  const wpGrid = el('div',{class:'wp-grid'});
+  ['wp-1','wp-2','wp-3','wp-4','wp-5'].forEach((w,i)=>{
+    const t = el('div',{class:'wp-thumb t'+(i+1)+(STATE.wallpaper===w?' active':'')});
+    t.addEventListener('click', ()=>setWallpaper(w));
+    wpGrid.append(t);
+  });
+  wpSec.append(wpGrid);
+  const upBtn = el('button',{style:'margin-top:12px'},'Upload Custom Wallpaper');
+  upBtn.addEventListener('click', ()=>$('#file-wallpaper').click());
+  wpSec.append(upBtn);
+  root.append(wpSec);
+
+  // Storage
+  const stSec = el('div',{class:'st-section'});
+  stSec.innerHTML = '<h3>Storage</h3>';
+  const stContent = el('div',{});
+  stSec.append(stContent);
+  root.append(stSec);
+
+  // System
+  const sysSec = el('div',{class:'st-section'});
+  sysSec.innerHTML = '<h3>System</h3>';
+  const fsRow = el('div',{class:'st-row'});
+  fsRow.append(el('label',{},'Fullscreen mode'));
+  const fsBtn = el('button',{},'Toggle');
+  fsBtn.addEventListener('click', toggleFullscreen);
+  fsRow.append(fsBtn);
+  sysSec.append(fsRow);
+
+  const mntRow = el('div',{class:'st-row'});
+  mntRow.append(el('label',{},'Mount local folder'));
+  const mntBtn = el('button',{},'Choose...');
+  mntBtn.addEventListener('click', mountLocalFolder);
+  mntRow.append(mntBtn);
+  sysSec.append(mntRow);
+
+  const resetRow = el('div',{class:'st-row'});
+  resetRow.append(el('label',{},'Reset everything (delete all files)'));
+  const resetBtn = el('button',{class:'danger'},'Reset System');
+  resetBtn.addEventListener('click', async ()=>{
+    if(!confirm('This will erase ALL files in OPFS and reset the system. Continue?')) return;
+    await resetSystem();
+  });
+  resetRow.append(resetBtn);
+  sysSec.append(resetRow);
+  root.append(sysSec);
+
+  // Credits
+  const cr = el('div',{class:'st-section',style:'border-top:1px solid var(--line-soft);padding-top:18px'});
+  cr.innerHTML = `<h3>About</h3>
+    <p style="font-family:var(--serif);font-style:italic;font-size:18px;line-height:1.6">Atelier — A paper-soft operating system for your browser.<br>Built single-file with OPFS, FSA and warm intent.</p>
+    <p style="font-family:var(--mono);font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--ink-faint);margin-top:8px">v1.0 — Stationery Edition</p>`;
+  root.append(cr);
+
+  createWindow({title:'Settings',icon:'settings',width:680,height:600,content:root});
+
+  // Compute storage
+  (async ()=>{
+    try{
+      const est = await navigator.storage.estimate();
+      const used = est.usage||0, quota = est.quota||1;
+      const pct = (used/quota*100).toFixed(2);
+      // Per-folder breakdown
+      const folders = ['/Desktop','/Documents','/Pictures','/Downloads'];
+      const sizes = {};
+      let totalVfs = 0;
+      for(const f of folders){
+        try{ sizes[f] = await dirSize(f); totalVfs += sizes[f]; }catch(e){ sizes[f]=0; }
+      }
+      stContent.innerHTML = `
+        <div style="font-family:var(--mono);font-size:11px;color:var(--ink-soft);margin-bottom:6px">${fmtSize(used)} of ${fmtSize(quota)} used (${pct}%)</div>
+        <div class="storage-bar"><div class="storage-seg used" style="width:${pct}%"></div></div>
+        <div class="storage-legend"><span>Used: ${fmtSize(used)}</span><span class="free">Free: ${fmtSize(quota-used)}</span></div>
+        <div style="margin-top:18px;font-family:var(--mono);font-size:11px;color:var(--ink-soft)">
+          ${folders.map(f=>`<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px dashed var(--line-soft)"><span>${f}</span><span>${fmtSize(sizes[f])}</span></div>`).join('')}
+          <div style="display:flex;justify-content:space-between;padding:4px 0;font-weight:700;color:var(--oxblood)"><span>Total VFS</span><span>${fmtSize(totalVfs)}</span></div>
+        </div>
+      `;
+    }catch(e){ stContent.textContent='Storage info unavailable.'; }
+  })();
+}
+
+async function dirSize(path){
+  let total = 0;
+  try{
+    const entries = await fs.readdir(path);
+    for(const e of entries){
+      if(e.isDir) total += await dirSize(joinPath(path,e.name));
+      else total += e.size||0;
+    }
+  }catch(e){}
+  return total;
+}
+
+function setWallpaper(w){
+  const desk = $('#desktop');
+  desk.className='';
+  desk.classList.add(w);
+  STATE.wallpaper = w;
+  if(w!=='wp-custom'){
+    desk.style.backgroundImage='';
+    localStorage.setItem('atelier.wallpaper', w);
+    localStorage.removeItem('atelier.wallpaper.custom');
+  }
+  $$('.wp-thumb').forEach(t=>t.classList.remove('active'));
+  const idx = parseInt(w.slice(3));
+  $$('.wp-thumb')[idx-1]&&$$('.wp-thumb')[idx-1].classList.add('active');
+}
+
+$('#file-wallpaper').addEventListener('change', async (e)=>{
+  const f = e.target.files[0]; if(!f) return;
+  const buf = await f.arrayBuffer();
+  await fs.writeFile('/.system/wallpaper.'+ext(f.name), buf);
+  const url = URL.createObjectURL(new Blob([buf],{type:f.type}));
+  const desk = $('#desktop');
+  desk.className='wp-custom';
+  desk.style.backgroundImage=`url(${url})`;
+  desk.style.backgroundSize='cover';
+  desk.style.backgroundPosition='center';
+  STATE.wallpaper='wp-custom';
+  localStorage.setItem('atelier.wallpaper','wp-custom');
+  localStorage.setItem('atelier.wallpaper.custom','/.system/wallpaper.'+ext(f.name));
+});
+
+async function resetSystem(){
+  try{
+    const root = await navigator.storage.getDirectory();
+    for await(const [name] of root.entries()){
+      try{ await root.removeEntry(name,{recursive:true}); }catch(e){}
+    }
+    localStorage.clear();
+    location.reload();
+  }catch(e){ toast('Reset failed: '+e.message); }
+}
+
+/* ============================================================
+   STORAGE INFO + CLOCK
+   ============================================================ */
+async function updateStorageInfo(){
+  try{
+    const est = await navigator.storage.estimate();
+    $('#storage-info').textContent = fmtSize(est.usage||0)+' / '+fmtSize(est.quota||0);
+  }catch(e){}
+}
+function tickClock(){
+  const now = new Date();
+  $('#clock').textContent = now.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'});
+}
+setInterval(tickClock, 1000); tickClock();
+setInterval(updateStorageInfo, 30000);
+
+/* ============================================================
+   KEYBOARD SHORTCUTS
+   ============================================================ */
+document.addEventListener('keydown', (e)=>{
+  if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA') return;
+  if(e.key==='Escape') closeStartMenu();
+  // Delete on selected desktop icons
+  if(e.key==='Delete'){
+    const sel = $$('.dicon.selected').map(d=>d.dataset.path);
+    if(sel.length) deletePaths(sel);
+  }
+});
+
+/* ============================================================
+   BOOT
+   ============================================================ */
+async function boot(){
+  try{
+    const root = await navigator.storage.getDirectory();
+    fs.mount('/', new OPFSBackend(root));
+  }catch(e){
+    alert('OPFS not available in this browser: '+e.message);
+    return;
+  }
+  // Ensure base dirs
+  for(const d of ['/Desktop','/Documents','/Pictures','/Downloads','/.system','/mnt']){
+    try{ await fs.mkdir(d); }catch(e){}
+  }
+  // Sample files (only first time)
+  if(!localStorage.getItem('atelier.seeded')){
+    await fs.writeText('/Desktop/Welcome.md', `# Welcome to Atelier
+
+A paper-soft operating system, sketched in your browser.
+
+## What you can do
+
+- Drag files from your computer onto the desktop to import them
+- Right-click anywhere to open the contextual menu
+- Open the **Files** app to browse, search and sort
+- Use **HTML files** to get a live editor + preview studio
+- Mount real folders from your computer with the **Mount** button
+- Customise your wallpaper from **Settings**
+
+Everything is stored in the browser's private file system (OPFS).
+Refresh the page — your files persist.
+
+—  Crafted as a single HTML file.`);
+    await fs.writeText('/Desktop/notes.txt','Atelier scratchpad\n\nWrite anything here. Saved to OPFS.');
+    await fs.writeText('/Documents/sample.csv','name,role,year\nAda,Engineer,1843\nGrace,Compiler,1952\nAlan,Theorist,1936\nKaren,Designer,2024');
+    await fs.writeText('/Documents/index.html',`<!DOCTYPE html><html><head><style>
+body{margin:0;font-family:Georgia,serif;background:#f1e7d0;color:#1a1814;display:flex;align-items:center;justify-content:center;min-height:100vh}
+.card{padding:48px;text-align:center}
+h1{font-style:italic;font-size:48px;font-weight:300;letter-spacing:-2px}
+.dot{display:inline-block;width:10px;height:10px;background:#8b2a1f;border-radius:50%;margin:0 8px;vertical-align:middle}
+p{font-style:italic;color:#7a6f5c}
+</style></head><body><div class="card"><h1>Hello<span class="dot"></span>World</h1><p>edit me in HTML Studio</p></div></body></html>`);
+    localStorage.setItem('atelier.seeded','1');
+  }
+
+  // Restore wallpaper
+  const wp = localStorage.getItem('atelier.wallpaper');
+  if(wp==='wp-custom'){
+    const cp = localStorage.getItem('atelier.wallpaper.custom');
+    if(cp && await fs.exists(cp)){
+      const f = await fs.readFileAsFile(cp);
+      const desk = $('#desktop');
+      desk.className='wp-custom';
+      desk.style.backgroundImage=`url(${URL.createObjectURL(f)})`;
+      desk.style.backgroundSize='cover';
+      desk.style.backgroundPosition='center';
+      STATE.wallpaper='wp-custom';
+    }
+  } else if(wp){ setWallpaper(wp); }
+
+  buildDock();
+  buildStartMenu();
+  await refreshDesktop();
+  await updateStorageInfo();
+
+  // Hide boot
+  setTimeout(()=>{ $('#boot').classList.add('hidden'); setTimeout(()=>$('#boot').remove(), 800); }, 900);
+}
+
+// Topbar menu launchers
+$$('#topbar .menu span').forEach(s=>{
+  s.addEventListener('click',()=>{ const a=APPS[s.dataset.app]; a&&a.launch(); });
+});
+
+window.addEventListener('beforeunload', (e)=>{
+  // Ask only if there's a dirty editor
+  const dirty = $$('.te-bar .name.dirty').length;
+  if(dirty){ e.preventDefault(); e.returnValue=''; }
+});
+
+boot();
+</script>
+</body>
+</html>

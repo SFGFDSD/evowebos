@@ -1,0 +1,3136 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="color-scheme" content="dark light" />
+  <title>NOCTUA WebOS</title>
+
+  <!-- Distinctive typography (avoid Inter/Roboto/Arial) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300..900&family=Unbounded:wght@300..900&family=Spline+Sans+Mono:wght@300..700&display=swap" rel="stylesheet">
+
+  <style>
+    /* =========================================================
+       NOCTUA WebOS — Single-file desktop OS simulator
+       PART 1: HTML body + CSS only (JS in PART 2)
+       Aesthetic: “lacquer noir + acid ink” with typographic contrast
+       ========================================================= */
+
+    /* ---------- Reset & base ---------- */
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      text-rendering: geometricPrecision;
+      user-select: none;
+      touch-action: manipulation;
+    }
+    button, input, textarea, select { font: inherit; }
+    a { color: inherit; }
+
+    ::selection { background: color-mix(in oklab, var(--accent) 40%, transparent); }
+
+    /* ---------- Theme tokens ---------- */
+    :root{
+      --font-ui: "Unbounded", ui-sans-serif, system-ui;
+      --font-soft: "Fraunces", ui-serif, Georgia, serif;
+      --font-mono: "Spline Sans Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+
+      --radius-xl: 22px;
+      --radius-lg: 16px;
+      --radius-md: 12px;
+      --radius-sm: 10px;
+      --radius-xs: 8px;
+
+      --shadow-1: 0 10px 30px rgba(0,0,0,.35);
+      --shadow-2: 0 25px 70px rgba(0,0,0,.55);
+      --shadow-in: inset 0 1px 0 rgba(255,255,255,.06), inset 0 -1px 0 rgba(0,0,0,.45);
+
+      --blur-1: blur(10px);
+      --blur-2: blur(18px);
+
+      --grid: 80px;
+      --dock-h: 54px;
+      --dock-h-mobile: 72px;
+
+      /* default theme: noir-ink */
+      --bg-0: #07080b;
+      --bg-1: #0b0d13;
+      --bg-2: #101426;
+      --panel: rgba(20, 22, 31, .70);
+      --panel-2: rgba(28, 30, 44, .72);
+      --stroke: rgba(255,255,255,.10);
+      --stroke-2: rgba(255,255,255,.14);
+      --text: rgba(245,248,255,.92);
+      --muted: rgba(245,248,255,.64);
+      --faint: rgba(245,248,255,.42);
+      --accent: #c7ff3a;     /* acid ink */
+      --accent-2: #ff3bd4;   /* neon orchid accent */
+      --warn: #ffb020;
+      --danger: #ff3f5f;
+      --ok: #4dffb6;
+
+      --wm-titlebar: rgba(14, 16, 25, .60);
+      --wm-surface: rgba(16, 18, 28, .62);
+      --wm-surface-2: rgba(20, 22, 35, .74);
+      --wm-glow: 0 0 0 1px rgba(255,255,255,.10), 0 20px 60px rgba(0,0,0,.55);
+
+      --focus: 0 0 0 3px color-mix(in oklab, var(--accent) 40%, transparent);
+
+      /* wallpaper defaults (CSS-only “built-ins”) */
+      --wallpaper-a:
+        radial-gradient(1100px 700px at 15% 20%, rgba(199,255,58,.12), transparent 55%),
+        radial-gradient(900px 600px at 85% 30%, rgba(255,59,212,.10), transparent 60%),
+        radial-gradient(900px 650px at 60% 90%, rgba(77,255,182,.08), transparent 62%),
+        linear-gradient(180deg, #07080b 0%, #080a10 30%, #06070b 100%);
+      --wallpaper-b:
+        radial-gradient(900px 600px at 18% 25%, rgba(255,179,32,.10), transparent 55%),
+        radial-gradient(900px 600px at 75% 15%, rgba(116,168,255,.14), transparent 60%),
+        linear-gradient(180deg, #0b0f1a 0%, #05060a 100%);
+      --wallpaper-c:
+        conic-gradient(from 220deg at 55% 45%,
+          rgba(199,255,58,.13),
+          rgba(255,59,212,.10),
+          rgba(77,255,182,.10),
+          rgba(199,255,58,.13)),
+        radial-gradient(1100px 700px at 50% 60%, rgba(0,0,0,.55), transparent 65%),
+        linear-gradient(180deg, #080812, #07080b);
+
+      --noise:
+        repeating-linear-gradient(90deg, rgba(255,255,255,.02) 0 1px, transparent 1px 3px),
+        repeating-linear-gradient(0deg, rgba(0,0,0,.02) 0 1px, transparent 1px 4px);
+    }
+
+    /* Alternate themes (Settings will toggle body[data-theme]) */
+    body[data-theme="paper-gold"]{
+      --bg-0: #f6f0e3;
+      --bg-1: #f1e8d4;
+      --bg-2: #eadfc6;
+      --panel: rgba(255,255,255,.62);
+      --panel-2: rgba(255,255,255,.78);
+      --stroke: rgba(28,18,10,.12);
+      --stroke-2: rgba(28,18,10,.18);
+      --text: rgba(22,16,10,.92);
+      --muted: rgba(22,16,10,.62);
+      --faint: rgba(22,16,10,.42);
+      --accent: #b84a2a;    /* lacquer rust */
+      --accent-2: #2a6fb8;  /* cobalt */
+      --wm-titlebar: rgba(255,255,255,.58);
+      --wm-surface: rgba(255,255,255,.64);
+      --wm-surface-2: rgba(255,255,255,.78);
+      --wallpaper-a:
+        radial-gradient(1100px 700px at 15% 20%, rgba(184,74,42,.10), transparent 55%),
+        radial-gradient(900px 600px at 85% 30%, rgba(42,111,184,.10), transparent 60%),
+        linear-gradient(180deg, #f6f0e3 0%, #efe4cb 50%, #f6f0e3 100%);
+      --noise:
+        repeating-linear-gradient(90deg, rgba(28,18,10,.03) 0 1px, transparent 1px 3px),
+        repeating-linear-gradient(0deg, rgba(28,18,10,.02) 0 1px, transparent 1px 4px);
+    }
+    body[data-theme="cobalt-terminal"]{
+      --bg-0: #05070d;
+      --bg-1: #070b16;
+      --bg-2: #0b1230;
+      --panel: rgba(10, 14, 28, .72);
+      --panel-2: rgba(10, 16, 38, .76);
+      --stroke: rgba(166, 205, 255, .12);
+      --stroke-2: rgba(166, 205, 255, .18);
+      --text: rgba(234,244,255,.92);
+      --muted: rgba(234,244,255,.66);
+      --faint: rgba(234,244,255,.44);
+      --accent: #7ef0ff;    /* CRT cyan */
+      --accent-2: #ff6bd6;
+      --wm-titlebar: rgba(6, 10, 22, .58);
+      --wm-surface: rgba(8, 12, 26, .66);
+      --wm-surface-2: rgba(10, 16, 38, .74);
+      --wallpaper-a:
+        radial-gradient(1200px 700px at 20% 20%, rgba(126,240,255,.10), transparent 55%),
+        radial-gradient(900px 600px at 70% 20%, rgba(255,107,214,.10), transparent 60%),
+        linear-gradient(180deg, #05070d 0%, #070b16 55%, #05070d 100%);
+      --noise:
+        repeating-linear-gradient(90deg, rgba(126,240,255,.02) 0 1px, transparent 1px 3px),
+        repeating-linear-gradient(0deg, rgba(0,0,0,.03) 0 1px, transparent 1px 4px);
+    }
+
+    /* ---------- App-wide helpers ---------- */
+    .sr-only{
+      position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;
+    }
+    .kbd{
+      font-family: var(--font-mono);
+      font-size: 12px;
+      padding: 2px 6px;
+      border-radius: 8px;
+      border: 1px solid var(--stroke);
+      background: color-mix(in oklab, var(--panel) 70%, transparent);
+      box-shadow: var(--shadow-in);
+    }
+    .pill{
+      display:inline-flex; align-items:center; gap:8px;
+      padding: 8px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--stroke);
+      background: color-mix(in oklab, var(--panel) 72%, transparent);
+      box-shadow: var(--shadow-in);
+    }
+    .btn{
+      appearance:none;
+      border: 1px solid var(--stroke);
+      background: color-mix(in oklab, var(--panel-2) 72%, transparent);
+      color: var(--text);
+      border-radius: 12px;
+      padding: 10px 12px;
+      cursor: pointer;
+      box-shadow: var(--shadow-in);
+      transition: transform .12s ease, border-color .12s ease, background .12s ease, filter .12s ease;
+    }
+    .btn:hover{ border-color: var(--stroke-2); filter: brightness(1.03); }
+    .btn:active{ transform: translateY(1px) scale(.99); }
+    .btn:focus-visible{ outline: none; box-shadow: var(--shadow-in), var(--focus); }
+    .btn.primary{
+      border-color: color-mix(in oklab, var(--accent) 55%, var(--stroke));
+      background: linear-gradient(180deg,
+        color-mix(in oklab, var(--accent) 26%, rgba(0,0,0,.15)),
+        color-mix(in oklab, var(--panel-2) 70%, transparent));
+    }
+    .btn.danger{
+      border-color: color-mix(in oklab, var(--danger) 55%, var(--stroke));
+      background: linear-gradient(180deg,
+        color-mix(in oklab, var(--danger) 20%, rgba(0,0,0,.15)),
+        color-mix(in oklab, var(--panel-2) 70%, transparent));
+    }
+    .chip{
+      display:inline-flex; align-items:center; gap:8px;
+      padding: 8px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--stroke);
+      background: color-mix(in oklab, var(--panel) 66%, transparent);
+      color: var(--muted);
+    }
+    .divider{
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--stroke), transparent);
+      margin: 10px 0;
+    }
+    .field{
+      display:flex; flex-direction:column; gap:8px;
+    }
+    .label{
+      font-family: var(--font-ui);
+      letter-spacing: .02em;
+      font-size: 12px;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+    .input{
+      width: 100%;
+      border: 1px solid var(--stroke);
+      background: color-mix(in oklab, var(--panel) 72%, transparent);
+      color: var(--text);
+      border-radius: 12px;
+      padding: 10px 12px;
+      box-shadow: var(--shadow-in);
+      outline: none;
+      transition: box-shadow .12s ease, border-color .12s ease;
+    }
+    .input:focus{ border-color: color-mix(in oklab, var(--accent) 55%, var(--stroke)); box-shadow: var(--shadow-in), var(--focus); }
+    .hint{ font-size: 12px; color: var(--faint); line-height: 1.4; }
+
+    /* ---------- OS Root ---------- */
+    #os{
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      background: var(--bg-0);
+      color: var(--text);
+      font-family: var(--font-ui);
+      overflow: hidden;
+      isolation: isolate;
+    }
+
+    /* Wallpaper layer: either CSS wallpaper or user image via JS */
+    #wallpaper{
+      position:absolute;
+      inset:0;
+      background-image: var(--wallpaper-a), var(--noise);
+      background-size: cover, auto;
+      background-position: center;
+      transform: scale(1.02);
+      filter: saturate(1.08) contrast(1.06);
+      z-index: 0;
+    }
+    #wallpaper::after{
+      content:"";
+      position:absolute;
+      inset:-2px;
+      background:
+        radial-gradient(1400px 900px at 50% 25%, transparent 40%, rgba(0,0,0,.34) 78%),
+        linear-gradient(180deg, rgba(0,0,0,.38), transparent 30%, rgba(0,0,0,.44));
+      pointer-events:none;
+      mix-blend-mode: multiply;
+    }
+
+    /* Subtle grid / geometry overlay */
+    #atmosphere{
+      position:absolute;
+      inset:0;
+      z-index: 1;
+      pointer-events:none;
+      opacity: .55;
+      background:
+        linear-gradient(to right, rgba(255,255,255,.02) 1px, transparent 1px) 0 0 / var(--grid) var(--grid),
+        linear-gradient(to bottom, rgba(255,255,255,.018) 1px, transparent 1px) 0 0 / var(--grid) var(--grid),
+        radial-gradient(900px 520px at 20% 10%, rgba(199,255,58,.10), transparent 55%),
+        radial-gradient(840px 520px at 80% 15%, rgba(255,59,212,.09), transparent 60%);
+      mask-image: radial-gradient(800px 520px at 50% 30%, rgba(0,0,0,.9), transparent 70%);
+    }
+
+    /* ---------- Boot / loading screen ---------- */
+    #boot{
+      position:absolute; inset:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      flex-direction:column;
+      gap: 16px;
+      z-index: 9999;
+      background:
+        radial-gradient(900px 600px at 50% 30%, rgba(199,255,58,.10), transparent 60%),
+        radial-gradient(900px 600px at 70% 60%, rgba(255,59,212,.08), transparent 60%),
+        linear-gradient(180deg, rgba(0,0,0,.78), rgba(0,0,0,.92));
+      backdrop-filter: blur(14px);
+      transition: opacity .6s ease, transform .6s ease;
+    }
+    #boot[data-hidden="true"]{
+      opacity: 0;
+      transform: translateY(-6px);
+      pointer-events:none;
+    }
+    .boot-mark{
+      display:flex; flex-direction:column; align-items:center; gap: 10px;
+    }
+    .boot-logo{
+      width: 92px; height: 92px;
+      border-radius: 26px;
+      background:
+        radial-gradient(70px 70px at 30% 25%, rgba(255,255,255,.10), transparent 60%),
+        radial-gradient(60px 60px at 65% 70%, rgba(199,255,58,.18), transparent 55%),
+        linear-gradient(180deg, rgba(255,255,255,.07), rgba(0,0,0,.20));
+      border: 1px solid rgba(255,255,255,.10);
+      box-shadow: 0 18px 55px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.06);
+      position: relative;
+      overflow:hidden;
+    }
+    .boot-logo::before{
+      content:"";
+      position:absolute; inset:-30%;
+      background: conic-gradient(from 210deg, rgba(199,255,58,.18), rgba(255,59,212,.14), rgba(126,240,255,.10), rgba(199,255,58,.18));
+      animation: spin 2.8s linear infinite;
+      filter: blur(10px);
+      opacity: .8;
+    }
+    .boot-logo::after{
+      content:"NOCTUA";
+      position:absolute; inset:0;
+      display:flex; align-items:center; justify-content:center;
+      font-family: var(--font-ui);
+      letter-spacing: .12em;
+      font-weight: 650;
+      font-size: 14px;
+      color: rgba(245,248,255,.92);
+      text-shadow: 0 10px 30px rgba(0,0,0,.65);
+      mix-blend-mode: screen;
+    }
+    .boot-title{
+      font-family: var(--font-soft);
+      font-variation-settings: "opsz" 96;
+      font-weight: 620;
+      letter-spacing: .01em;
+      font-size: 22px;
+      color: rgba(245,248,255,.92);
+    }
+    .boot-sub{
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: rgba(245,248,255,.62);
+      opacity: .95;
+    }
+    .boot-bar{
+      width: min(520px, 78vw);
+      height: 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.04);
+      overflow:hidden;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
+      position: relative;
+    }
+    .boot-bar > i{
+      display:block;
+      height: 100%;
+      width: 42%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, transparent, color-mix(in oklab, var(--accent) 70%, white), transparent);
+      filter: drop-shadow(0 0 10px rgba(199,255,58,.22));
+      transform: translateX(-60%);
+      animation: sweep 1.1s ease-in-out infinite;
+    }
+    @keyframes sweep{
+      0% { transform: translateX(-60%); opacity: .45; }
+      50%{ opacity: 1; }
+      100%{ transform: translateX(170%); opacity: .45; }
+    }
+    @keyframes spin{ to { transform: rotate(360deg); } }
+
+    /* ---------- Desktop ---------- */
+    #desktop{
+      position:absolute;
+      inset:0;
+      z-index: 2;
+      display:flex;
+      flex-direction:column;
+      padding: 14px 14px 12px;
+      gap: 10px;
+    }
+
+    /* Top “status strip” (minimal: time, network placeholder) */
+    #statusStrip{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding: 8px 10px;
+      border-radius: 16px;
+      border: 1px solid var(--stroke);
+      background: color-mix(in oklab, var(--panel) 72%, transparent);
+      box-shadow: var(--shadow-in);
+      backdrop-filter: var(--blur-1);
+      gap: 12px;
+    }
+    .status-left, .status-right{ display:flex; align-items:center; gap: 10px; min-width: 0; }
+    .os-badge{
+      display:flex; align-items:baseline; gap: 10px; min-width:0;
+    }
+    .os-badge .name{
+      font-family: var(--font-ui);
+      font-weight: 740;
+      letter-spacing: .08em;
+      font-size: 12px;
+      text-transform: uppercase;
+      color: rgba(245,248,255,.88);
+      white-space:nowrap;
+    }
+    .os-badge .tag{
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--faint);
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      max-width: 50vw;
+    }
+    .status-dot{
+      width: 8px; height: 8px;
+      border-radius: 999px;
+      background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.8), rgba(255,255,255,.05));
+      border: 1px solid rgba(255,255,255,.16);
+      box-shadow: 0 0 18px color-mix(in oklab, var(--accent) 30%, transparent);
+    }
+    .clock{
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: rgba(245,248,255,.72);
+      letter-spacing: .02em;
+    }
+    .status-right .mini{
+      display:inline-flex; align-items:center; gap: 8px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--stroke);
+      background: color-mix(in oklab, var(--panel-2) 62%, transparent);
+      box-shadow: var(--shadow-in);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    /* Icon grid */
+    #desktopMain{
+      position: relative;
+      flex: 1;
+      min-height: 0;
+      display:flex;
+      gap: 12px;
+    }
+    #iconGrid{
+      width: min(320px, 46vw);
+      max-width: 360px;
+      min-width: 220px;
+      border-radius: var(--radius-xl);
+      border: 1px solid var(--stroke);
+      background: color-mix(in oklab, var(--panel) 58%, transparent);
+      box-shadow: var(--shadow-in);
+      backdrop-filter: var(--blur-2);
+      padding: 12px;
+      display:grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      align-content: start;
+      overflow: auto;
+      scrollbar-gutter: stable;
+    }
+    #iconGrid::-webkit-scrollbar{ width: 10px; }
+    #iconGrid::-webkit-scrollbar-thumb{
+      background: color-mix(in oklab, var(--stroke-2) 60%, transparent);
+      border-radius: 999px;
+      border: 2px solid transparent;
+      background-clip: padding-box;
+    }
+    .deskIcon{
+      border-radius: 18px;
+      border: 1px solid transparent;
+      padding: 10px 10px 12px;
+      cursor: pointer;
+      display:flex;
+      gap: 10px;
+      align-items:center;
+      transition: background .12s ease, transform .12s ease, border-color .12s ease;
+      background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+    }
+    .deskIcon:hover{
+      border-color: var(--stroke);
+      background: linear-gradient(180deg,
+        color-mix(in oklab, var(--panel-2) 74%, transparent),
+        color-mix(in oklab, var(--panel) 52%, transparent));
+      transform: translateY(-1px);
+    }
+    .deskIcon:active{ transform: translateY(0px) scale(.99); }
+    .deskIcon:focus-visible{ outline:none; box-shadow: var(--focus); }
+    .deskIcon .glyph{
+      width: 42px; height: 42px;
+      border-radius: 14px;
+      border: 1px solid var(--stroke);
+      background:
+        radial-gradient(18px 18px at 30% 30%, rgba(255,255,255,.12), transparent 60%),
+        linear-gradient(180deg, rgba(255,255,255,.06), rgba(0,0,0,.20));
+      display:grid; place-items:center;
+      box-shadow: 0 14px 34px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.06);
+      flex: 0 0 auto;
+    }
+    .deskIcon .glyph svg{ width: 22px; height: 22px; opacity: .92; }
+    .deskIcon .meta{
+      min-width:0;
+      display:flex;
+      flex-direction:column;
+      gap: 4px;
+    }
+    .deskIcon .meta .title{
+      font-weight: 680;
+      font-size: 12px;
+      letter-spacing: .02em;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .deskIcon .meta .desc{
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--faint);
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+
+    /* Main workspace area (windows float here) */
+    #workspace{
+      position: relative;
+      flex: 1;
+      min-width: 0;
+      border-radius: var(--radius-xl);
+      border: 1px solid rgba(255,255,255,.08);
+      overflow:hidden;
+      background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(0,0,0,.10));
+      box-shadow: 0 30px 90px rgba(0,0,0,.35);
+    }
+    #windowLayer{
+      position:absolute; inset:0;
+      z-index: 3;
+    }
+
+    /* ---------- Taskbar / Dock ---------- */
+    #taskbar{
+      height: var(--dock-h);
+      border-radius: 18px;
+      border: 1px solid var(--stroke);
+      background: color-mix(in oklab, var(--panel) 72%, transparent);
+      box-shadow: var(--shadow-in);
+      backdrop-filter: var(--blur-2);
+      display:flex;
+      align-items:center;
+      padding: 8px;
+      gap: 10px;
+    }
+    #startBtn{
+      display:flex;
+      align-items:center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 16px;
+      border: 1px solid var(--stroke);
+      background: linear-gradient(180deg,
+        color-mix(in oklab, var(--panel-2) 70%, transparent),
+        color-mix(in oklab, var(--panel) 60%, transparent));
+      cursor: pointer;
+      box-shadow: var(--shadow-in);
+      transition: transform .12s ease, border-color .12s ease, filter .12s ease;
+    }
+    #startBtn:hover{ border-color: var(--stroke-2); filter: brightness(1.03); }
+    #startBtn:active{ transform: translateY(1px); }
+    #startBtn .mark{
+      width: 22px; height: 22px;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,.14);
+      background:
+        radial-gradient(12px 12px at 30% 30%, rgba(255,255,255,.12), transparent 65%),
+        conic-gradient(from 220deg, rgba(199,255,58,.22), rgba(255,59,212,.18), rgba(77,255,182,.16), rgba(199,255,58,.22));
+      box-shadow: 0 10px 24px rgba(0,0,0,.35);
+    }
+    #startBtn .label{
+      all: unset;
+      font-family: var(--font-ui);
+      font-size: 12px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      font-weight: 760;
+      color: rgba(245,248,255,.90);
+    }
+    #taskApps{
+      display:flex;
+      align-items:center;
+      gap: 8px;
+      flex: 1;
+      min-width: 0;
+      overflow:auto;
+      padding-bottom: 2px;
+      scrollbar-width: none;
+    }
+    #taskApps::-webkit-scrollbar{ height: 0px; }
+    .taskItem{
+      display:flex; align-items:center; gap: 10px;
+      padding: 8px 10px;
+      border-radius: 14px;
+      border: 1px solid transparent;
+      background: transparent;
+      cursor: pointer;
+      color: var(--muted);
+      transition: background .12s ease, border-color .12s ease, transform .12s ease;
+      white-space:nowrap;
+    }
+    .taskItem:hover{
+      background: color-mix(in oklab, var(--panel-2) 62%, transparent);
+      border-color: var(--stroke);
+      color: var(--text);
+    }
+    .taskItem[aria-selected="true"]{
+      border-color: color-mix(in oklab, var(--accent) 48%, var(--stroke));
+      background: linear-gradient(180deg,
+        color-mix(in oklab, var(--accent) 18%, transparent),
+        color-mix(in oklab, var(--panel-2) 66%, transparent));
+      color: rgba(245,248,255,.94);
+    }
+    .taskItem .dot{
+      width: 8px; height: 8px; border-radius: 999px;
+      background: color-mix(in oklab, var(--accent) 70%, rgba(255,255,255,.2));
+      box-shadow: 0 0 0 3px rgba(0,0,0,.20);
+      opacity: .9;
+    }
+    .taskItem .name{
+      font-family: var(--font-mono);
+      font-size: 12px;
+      opacity: .95;
+      max-width: 220px;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    #tray{
+      display:flex; align-items:center; gap: 8px;
+    }
+    #tray .trayBtn{
+      width: 40px; height: 40px;
+      border-radius: 14px;
+      border: 1px solid var(--stroke);
+      background: color-mix(in oklab, var(--panel-2) 62%, transparent);
+      box-shadow: var(--shadow-in);
+      cursor:pointer;
+      display:grid;
+      place-items:center;
+      transition: transform .12s ease, border-color .12s ease, filter .12s ease;
+    }
+    #tray .trayBtn:hover{ border-color: var(--stroke-2); filter: brightness(1.03); }
+    #tray .trayBtn:active{ transform: translateY(1px); }
+    #tray .trayBtn svg{ width: 18px; height: 18px; opacity: .9; }
+
+    /* ---------- Start menu ---------- */
+    #startMenu{
+      position:absolute;
+      left: 14px;
+      bottom: calc(14px + var(--dock-h) + 10px);
+      width: min(520px, calc(100vw - 28px));
+      max-height: min(560px, calc(100vh - 160px));
+      overflow:hidden;
+      border-radius: 22px;
+      border: 1px solid var(--stroke);
+      background: color-mix(in oklab, var(--panel-2) 72%, transparent);
+      backdrop-filter: var(--blur-2);
+      box-shadow: var(--shadow-2);
+      z-index: 999;
+      transform-origin: left bottom;
+      transform: translateY(8px) scale(.98);
+      opacity: 0;
+      pointer-events:none;
+      transition: transform .18s ease, opacity .18s ease;
+    }
+    #startMenu[data-open="true"]{
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      pointer-events:auto;
+    }
+    .start-head{
+      padding: 14px 14px 10px;
+      display:flex; align-items:center; justify-content:space-between; gap: 12px;
+      border-bottom: 1px solid color-mix(in oklab, var(--stroke) 90%, transparent);
+      background: linear-gradient(180deg, rgba(255,255,255,.05), transparent);
+    }
+    .start-head .title{
+      display:flex; flex-direction:column; gap: 2px;
+      min-width:0;
+    }
+    .start-head .title strong{
+      font-family: var(--font-soft);
+      font-weight: 700;
+      font-size: 18px;
+      letter-spacing: .01em;
+    }
+    .start-head .title span{
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--faint);
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      max-width: 70vw;
+    }
+    .start-body{
+      display:grid;
+      grid-template-columns: 1.15fr .85fr;
+      gap: 12px;
+      padding: 12px;
+    }
+    .start-card{
+      border-radius: 18px;
+      border: 1px solid var(--stroke);
+      background: color-mix(in oklab, var(--panel) 66%, transparent);
+      box-shadow: var(--shadow-in);
+      overflow:hidden;
+      min-height: 180px;
+    }
+    .start-card .card-h{
+      padding: 12px 12px 10px;
+      display:flex; align-items:center; justify-content:space-between; gap: 10px;
+      border-bottom: 1px solid color-mix(in oklab, var(--stroke) 88%, transparent);
+      background: linear-gradient(180deg, rgba(255,255,255,.05), transparent);
+    }
+    .start-card .card-h .cap{
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--muted);
+      letter-spacing: .02em;
+    }
+    .start-apps{
+      padding: 10px;
+      display:grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+      overflow:auto;
+      max-height: 420px;
+    }
+    .start-app{
+      display:flex;
+      align-items:center;
+      gap: 12px;
+      padding: 10px 10px;
+      border-radius: 16px;
+      border: 1px solid transparent;
+      background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+      cursor: pointer;
+      transition: transform .12s ease, border-color .12s ease, background .12s ease;
+    }
+    .start-app:hover{
+      border-color: var(--stroke);
+      background: linear-gradient(180deg,
+        color-mix(in oklab, var(--panel-2) 70%, transparent),
+        color-mix(in oklab, var(--panel) 60%, transparent));
+      transform: translateY(-1px);
+    }
+    .start-app:active{ transform: translateY(0px) scale(.99); }
+    .start-app .ico{
+      width: 40px; height: 40px;
+      border-radius: 14px;
+      border: 1px solid var(--stroke);
+      background:
+        radial-gradient(16px 16px at 30% 30%, rgba(255,255,255,.11), transparent 60%),
+        linear-gradient(180deg, rgba(255,255,255,.05), rgba(0,0,0,.18));
+      display:grid; place-items:center;
+      box-shadow: 0 16px 40px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.05);
+      flex: 0 0 auto;
+    }
+    .start-app .ico svg{ width: 20px; height: 20px; opacity: .92; }
+    .start-app .info{ min-width:0; display:flex; flex-direction:column; gap: 2px; }
+    .start-app .info .n{
+      font-weight: 720;
+      font-size: 12px;
+      letter-spacing: .02em;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .start-app .info .s{
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--faint);
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+
+    .start-side{
+      padding: 12px;
+      display:flex;
+      flex-direction:column;
+      gap: 10px;
+    }
+    .quick-actions{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+      padding: 10px;
+    }
+    .qa{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 10px;
+      padding: 10px 10px;
+      border-radius: 16px;
+      border: 1px solid var(--stroke);
+      background: color-mix(in oklab, var(--panel) 66%, transparent);
+      box-shadow: var(--shadow-in);
+    }
+    .qa .t{
+      display:flex; flex-direction:column; gap: 3px;
+      min-width:0;
+    }
+    .qa .t b{
+      font-size: 12px;
+      letter-spacing: .02em;
+    }
+    .qa .t span{
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--faint);
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+
+    /* ---------- Context menu ---------- */
+    #contextMenu{
+      position: fixed;
+      z-index: 2000;
+      min-width: 220px;
+      border-radius: 16px;
+      border: 1px solid var(--stroke);
+      background: color-mix(in oklab, var(--panel-2) 78%, transparent);
+      box-shadow: var(--shadow-2);
+      backdrop-filter: var(--blur-2);
+      overflow:hidden;
+      transform: translateY(6px) scale(.98);
+      opacity: 0;
+      pointer-events:none;
+      transition: transform .14s ease, opacity .14s ease;
+    }
+    #contextMenu[data-open="true"]{
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      pointer-events:auto;
+    }
+    .cm-item{
+      display:flex; align-items:center; justify-content:space-between;
+      gap: 10px;
+      padding: 10px 12px;
+      cursor:pointer;
+      border-bottom: 1px solid color-mix(in oklab, var(--stroke) 86%, transparent);
+      transition: background .12s ease;
+      font-size: 12px;
+    }
+    .cm-item:last-child{ border-bottom: none; }
+    .cm-item:hover{ background: color-mix(in oklab, var(--panel) 80%, transparent); }
+    .cm-item .left{
+      display:flex; align-items:center; gap: 10px; min-width:0;
+    }
+    .cm-item .left svg{ width: 16px; height: 16px; opacity: .92; }
+    .cm-item .right{
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--faint);
+    }
+
+    /* ---------- Toast / notifications ---------- */
+    #toasts{
+      position: fixed;
+      right: 14px;
+      bottom: calc(14px + var(--dock-h) + 10px);
+      z-index: 3000;
+      display:flex;
+      flex-direction:column;
+      gap: 10px;
+      pointer-events:none;
+      max-width: min(420px, calc(100vw - 28px));
+    }
+    .toast{
+      pointer-events:auto;
+      border-radius: 18px;
+      border: 1px solid var(--stroke);
+      background: color-mix(in oklab, var(--panel-2) 76%, transparent);
+      backdrop-filter: var(--blur-2);
+      box-shadow: var(--shadow-2);
+      overflow:hidden;
+      transform: translateY(6px);
+      opacity: 0;
+      animation: toastIn .22s ease forwards;
+    }
+    @keyframes toastIn{
+      to { transform: translateY(0); opacity: 1; }
+    }
+    .toast .t-h{
+      padding: 10px 12px;
+      display:flex; align-items:center; justify-content:space-between; gap: 12px;
+      border-bottom: 1px solid color-mix(in oklab, var(--stroke) 86%, transparent);
+    }
+    .toast .t-h b{
+      font-size: 12px;
+      letter-spacing: .02em;
+    }
+    .toast .t-b{
+      padding: 10px 12px 12px;
+      color: var(--muted);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    /* ---------- Window Manager: windows ---------- */
+    .win{
+      position:absolute;
+      left: 80px; top: 50px;
+      width: min(920px, calc(100% - 140px));
+      height: min(640px, calc(100% - 120px));
+      border-radius: var(--radius-xl);
+      border: 1px solid rgba(255,255,255,.12);
+      background: color-mix(in oklab, var(--wm-surface) 82%, transparent);
+      backdrop-filter: var(--blur-2);
+      box-shadow: var(--wm-glow), var(--shadow-2);
+      overflow:hidden;
+      display:flex;
+      flex-direction:column;
+      transform: translateY(8px) scale(.985);
+      opacity: 0;
+      animation: winIn .18s ease forwards;
+    }
+    @keyframes winIn{
+      to { transform: translateY(0) scale(1); opacity: 1; }
+    }
+    .win[data-active="true"]{
+      border-color: color-mix(in oklab, var(--accent) 32%, rgba(255,255,255,.10));
+      box-shadow: 0 0 0 1px rgba(255,255,255,.12), 0 30px 90px rgba(0,0,0,.62);
+    }
+    .titlebar{
+      height: 46px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding: 10px 10px;
+      gap: 10px;
+      background: color-mix(in oklab, var(--wm-titlebar) 84%, transparent);
+      border-bottom: 1px solid rgba(255,255,255,.10);
+      cursor: grab;
+    }
+    .titlebar:active{ cursor: grabbing; }
+    .tb-left{
+      display:flex; align-items:center; gap: 10px; min-width:0;
+    }
+    .tb-ico{
+      width: 26px; height: 26px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,.12);
+      background:
+        radial-gradient(10px 10px at 30% 30%, rgba(255,255,255,.10), transparent 60%),
+        linear-gradient(180deg, rgba(255,255,255,.06), rgba(0,0,0,.18));
+      display:grid; place-items:center;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
+      flex: 0 0 auto;
+    }
+    .tb-ico svg{ width: 14px; height: 14px; opacity: .9; }
+    .tb-title{
+      min-width:0;
+      display:flex; flex-direction:column; gap: 2px;
+    }
+    .tb-title b{
+      font-size: 12px;
+      letter-spacing: .02em;
+      font-weight: 760;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      max-width: 56vw;
+    }
+    .tb-title span{
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--faint);
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      max-width: 56vw;
+    }
+    .tb-right{
+      display:flex; align-items:center; gap: 8px; flex: 0 0 auto;
+    }
+    .wbtn{
+      width: 34px; height: 30px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.04);
+      cursor:pointer;
+      display:grid;
+      place-items:center;
+      transition: transform .12s ease, filter .12s ease, background .12s ease, border-color .12s ease;
+    }
+    .wbtn:hover{ background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.16); }
+    .wbtn:active{ transform: translateY(1px); }
+    .wbtn.close:hover{
+      background: color-mix(in oklab, var(--danger) 22%, rgba(255,255,255,.06));
+      border-color: color-mix(in oklab, var(--danger) 40%, rgba(255,255,255,.16));
+    }
+    .wbtn svg{ width: 14px; height: 14px; opacity: .9; }
+
+    .winBody{
+      flex: 1;
+      min-height: 0;
+      display:flex;
+      flex-direction:column;
+      background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(0,0,0,.12));
+    }
+
+    /* Resizers */
+    .rz{
+      position:absolute;
+      z-index: 10;
+      background: transparent;
+    }
+    .rz.n{ top:-4px; left:8px; right:8px; height: 8px; cursor: ns-resize; }
+    .rz.s{ bottom:-4px; left:8px; right:8px; height: 8px; cursor: ns-resize; }
+    .rz.e{ right:-4px; top:8px; bottom:8px; width: 8px; cursor: ew-resize; }
+    .rz.w{ left:-4px; top:8px; bottom:8px; width: 8px; cursor: ew-resize; }
+    .rz.nw{ left:-4px; top:-4px; width: 12px; height: 12px; cursor: nwse-resize; }
+    .rz.ne{ right:-4px; top:-4px; width: 12px; height: 12px; cursor: nesw-resize; }
+    .rz.sw{ left:-4px; bottom:-4px; width: 12px; height: 12px; cursor: nesw-resize; }
+    .rz.se{ right:-4px; bottom:-4px; width: 12px; height: 12px; cursor: nwse-resize; }
+
+    .win[data-max="true"]{
+      left: 0 !important;
+      top: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
+      border-radius: 0;
+    }
+    .win[data-min="true"]{
+      display:none;
+    }
+
+    /* ---------- App chrome (shared) ---------- */
+    .app{
+      display:flex;
+      flex-direction:column;
+      min-height: 0;
+      height: 100%;
+    }
+    .appToolbar{
+      display:flex;
+      align-items:center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-bottom: 1px solid rgba(255,255,255,.10);
+      background: color-mix(in oklab, var(--wm-surface-2) 80%, transparent);
+    }
+    .appToolbar .grow{ flex: 1; min-width: 0; }
+    .appToolbar .title{
+      font-family: var(--font-soft);
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: .01em;
+    }
+    .appToolbar .sub{
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--faint);
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+      max-width: 52vw;
+    }
+    .appContent{
+      flex: 1;
+      min-height: 0;
+      padding: 12px;
+      overflow:auto;
+    }
+
+    /* ---------- File Explorer styling ---------- */
+    .feTop{
+      display:flex; flex-wrap:wrap; gap: 10px;
+      align-items:center;
+    }
+    .breadcrumbs{
+      display:flex;
+      flex-wrap:wrap;
+      gap: 6px;
+      align-items:center;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--muted);
+      min-width: 0;
+    }
+    .crumb{
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--stroke);
+      background: color-mix(in oklab, var(--panel) 64%, transparent);
+      cursor:pointer;
+      transition: filter .12s ease, transform .12s ease;
+    }
+    .crumb:hover{ filter: brightness(1.04); }
+    .crumb:active{ transform: translateY(1px); }
+    .feGrid{
+      margin-top: 12px;
+      display:grid;
+      grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+      gap: 10px;
+    }
+    .fileCard{
+      border-radius: 18px;
+      border: 1px solid var(--stroke);
+      background: color-mix(in oklab, var(--panel) 62%, transparent);
+      box-shadow: var(--shadow-in);
+      padding: 10px 10px 12px;
+      display:flex;
+      align-items:center;
+      gap: 10px;
+      cursor:pointer;
+      transition: transform .12s ease, border-color .12s ease, filter .12s ease;
+    }
+    .fileCard:hover{ border-color: var(--stroke-2); filter: brightness(1.03); transform: translateY(-1px); }
+    .fileCard:active{ transform: translateY(0) scale(.99); }
+    .fileCard[aria-selected="true"]{
+      border-color: color-mix(in oklab, var(--accent) 48%, var(--stroke));
+      box-shadow: var(--shadow-in), 0 0 0 3px color-mix(in oklab, var(--accent) 22%, transparent);
+    }
+    .fileIco{
+      width: 38px; height: 38px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.12);
+      background:
+        radial-gradient(14px 14px at 30% 30%, rgba(255,255,255,.10), transparent 60%),
+        linear-gradient(180deg, rgba(255,255,255,.05), rgba(0,0,0,.16));
+      display:grid; place-items:center;
+      flex: 0 0 auto;
+    }
+    .fileIco svg{ width: 18px; height: 18px; opacity: .92; }
+    .fileMeta{ min-width:0; display:flex; flex-direction:column; gap: 3px; }
+    .fileMeta b{
+      font-size: 12px;
+      letter-spacing: .02em;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    }
+    .fileMeta span{
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--faint);
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    }
+
+    /* ---------- Text Editor styling ---------- */
+    .editorWrap{
+      height: 100%;
+      min-height: 0;
+      display:flex;
+      flex-direction:column;
+      gap: 10px;
+    }
+    .editorBar{
+      display:flex; align-items:center; gap: 10px; flex-wrap:wrap;
+    }
+    .codeShell{
+      flex: 1;
+      min-height: 0;
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,.12);
+      background:
+        radial-gradient(900px 500px at 20% 0%, rgba(199,255,58,.06), transparent 55%),
+        radial-gradient(900px 500px at 80% 0%, rgba(255,59,212,.05), transparent 60%),
+        linear-gradient(180deg, rgba(0,0,0,.38), rgba(0,0,0,.56));
+      box-shadow: var(--shadow-in);
+      display:grid;
+      grid-template-columns: 64px 1fr;
+      overflow:hidden;
+    }
+    .gutter{
+      padding: 12px 10px;
+      border-right: 1px solid rgba(255,255,255,.10);
+      color: rgba(245,248,255,.35);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      line-height: 1.65;
+      overflow:hidden;
+      text-align:right;
+    }
+    .editor{
+      padding: 12px 12px;
+      outline: none;
+      border: none;
+      resize: none;
+      width: 100%;
+      height: 100%;
+      background: transparent;
+      color: rgba(245,248,255,.88);
+      font-family: var(--font-mono);
+      font-size: 12.5px;
+      line-height: 1.65;
+      tab-size: 2;
+      caret-color: var(--accent);
+      overflow:auto;
+    }
+    .editor::placeholder{ color: rgba(245,248,255,.30); }
+
+    /* ---------- Web Browser styling ---------- */
+    .browserBar{
+      display:flex;
+      align-items:center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-bottom: 1px solid rgba(255,255,255,.10);
+      background: color-mix(in oklab, var(--wm-surface-2) 80%, transparent);
+    }
+    .navBtns{ display:flex; gap: 8px; }
+    .iconBtn{
+      width: 40px; height: 38px;
+      border-radius: 14px;
+      border: 1px solid var(--stroke);
+      background: color-mix(in oklab, var(--panel) 62%, transparent);
+      box-shadow: var(--shadow-in);
+      cursor:pointer;
+      display:grid; place-items:center;
+      transition: transform .12s ease, border-color .12s ease, filter .12s ease;
+    }
+    .iconBtn:hover{ border-color: var(--stroke-2); filter: brightness(1.03); }
+    .iconBtn:active{ transform: translateY(1px); }
+    .iconBtn svg{ width: 18px; height: 18px; opacity: .92; }
+
+    .addr{
+      flex: 1;
+      min-width: 0;
+      display:flex;
+      gap: 10px;
+      align-items:center;
+    }
+    .addr input{
+      width: 100%;
+      border-radius: 14px;
+      border: 1px solid var(--stroke);
+      background: color-mix(in oklab, var(--panel) 72%, transparent);
+      box-shadow: var(--shadow-in);
+      padding: 10px 12px;
+      outline:none;
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 12px;
+    }
+    .addr input:focus{ border-color: color-mix(in oklab, var(--accent) 55%, var(--stroke)); box-shadow: var(--shadow-in), var(--focus); }
+
+    .browserView{
+      flex: 1; min-height:0;
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,.10);
+      overflow:hidden;
+      background: rgba(0,0,0,.25);
+      box-shadow: var(--shadow-in);
+    }
+    .browserView iframe{
+      width: 100%;
+      height: 100%;
+      border: 0;
+      background: #fff;
+    }
+    .browserError{
+      height: 100%;
+      display:grid;
+      place-items:center;
+      padding: 20px;
+      background:
+        radial-gradient(900px 520px at 30% 20%, rgba(255,59,212,.08), transparent 60%),
+        radial-gradient(900px 520px at 70% 30%, rgba(199,255,58,.08), transparent 55%),
+        linear-gradient(180deg, rgba(0,0,0,.30), rgba(0,0,0,.48));
+      color: rgba(245,248,255,.86);
+    }
+    .browserError .card{
+      width: min(560px, 90%);
+      border-radius: 22px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: color-mix(in oklab, var(--panel-2) 74%, transparent);
+      box-shadow: var(--shadow-2);
+      padding: 16px;
+    }
+    .browserError h3{
+      margin: 0 0 6px 0;
+      font-family: var(--font-soft);
+      font-weight: 750;
+      letter-spacing: .01em;
+    }
+    .browserError p{
+      margin: 0;
+      font-family: var(--font-mono);
+      color: var(--muted);
+      line-height: 1.5;
+      font-size: 12px;
+    }
+
+    /* ---------- Drawing Board styling ---------- */
+    .drawWrap{
+      height: 100%;
+      min-height:0;
+      display:flex;
+      flex-direction:column;
+      gap: 10px;
+    }
+    .drawTools{
+      display:flex;
+      gap: 10px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+    .canvasShell{
+      flex: 1;
+      min-height: 0;
+      border-radius: 22px;
+      border: 1px solid rgba(255,255,255,.12);
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.03), rgba(0,0,0,.18));
+      box-shadow: var(--shadow-in);
+      overflow:hidden;
+      position: relative;
+    }
+    canvas.drawing{
+      width: 100%;
+      height: 100%;
+      display:block;
+      background:
+        radial-gradient(900px 520px at 20% 10%, rgba(255,255,255,.06), transparent 60%),
+        linear-gradient(180deg, rgba(0,0,0,.16), rgba(0,0,0,.22));
+    }
+
+    /* ---------- Media Viewer styling ---------- */
+    .mediaWrap{
+      height: 100%;
+      min-height: 0;
+      display:flex;
+      flex-direction:column;
+      gap: 10px;
+    }
+    .mediaStage{
+      flex: 1;
+      min-height:0;
+      border-radius: 22px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.28);
+      box-shadow: var(--shadow-in);
+      overflow:hidden;
+      display:grid;
+      place-items:center;
+      position: relative;
+    }
+    .mediaStage img{
+      max-width: 100%;
+      max-height: 100%;
+      transform-origin: center;
+      image-rendering: auto;
+    }
+    .mediaStage video, .mediaStage audio{
+      width: min(960px, 100%);
+      max-width: 100%;
+    }
+
+    /* ---------- Calculator styling ---------- */
+    .calc{
+      height:100%;
+      min-height:0;
+      display:flex;
+      flex-direction:column;
+      gap: 12px;
+    }
+    .calcDisplay{
+      border-radius: 22px;
+      border: 1px solid rgba(255,255,255,.12);
+      background:
+        radial-gradient(900px 520px at 20% 10%, rgba(199,255,58,.06), transparent 60%),
+        linear-gradient(180deg, rgba(255,255,255,.04), rgba(0,0,0,.20));
+      box-shadow: var(--shadow-in);
+      padding: 14px;
+      display:flex;
+      flex-direction:column;
+      gap: 8px;
+    }
+    .calcExpr{
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--faint);
+      min-height: 16px;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+    }
+    .calcVal{
+      font-family: var(--font-ui);
+      font-weight: 760;
+      font-size: 28px;
+      letter-spacing: .02em;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+    }
+    .calcGrid{
+      flex: 1;
+      min-height: 0;
+      display:grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+    }
+    .calcBtn{
+      border-radius: 18px;
+      border: 1px solid var(--stroke);
+      background: color-mix(in oklab, var(--panel) 66%, transparent);
+      box-shadow: var(--shadow-in);
+      color: var(--text);
+      cursor:pointer;
+      padding: 12px 10px;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      transition: transform .12s ease, border-color .12s ease, filter .12s ease;
+      display:grid;
+      place-items:center;
+    }
+    .calcBtn:hover{ border-color: var(--stroke-2); filter: brightness(1.03); }
+    .calcBtn:active{ transform: translateY(1px); }
+    .calcBtn.op{
+      border-color: color-mix(in oklab, var(--accent) 35%, var(--stroke));
+    }
+    .calcBtn.equals{
+      background: linear-gradient(180deg,
+        color-mix(in oklab, var(--accent) 22%, transparent),
+        color-mix(in oklab, var(--panel-2) 68%, transparent));
+      border-color: color-mix(in oklab, var(--accent) 55%, var(--stroke));
+      font-weight: 800;
+    }
+    .calcBtn.danger{
+      border-color: color-mix(in oklab, var(--danger) 50%, var(--stroke));
+    }
+    .calcBtn.wide{ grid-column: span 2; }
+
+    /* ---------- Settings styling ---------- */
+    .settings{
+      display:grid;
+      grid-template-columns: 1.1fr .9fr;
+      gap: 12px;
+      min-height: 0;
+      height: 100%;
+    }
+    .panel{
+      border-radius: 22px;
+      border: 1px solid var(--stroke);
+      background: color-mix(in oklab, var(--panel) 66%, transparent);
+      box-shadow: var(--shadow-in);
+      padding: 12px;
+      overflow:auto;
+      min-height: 0;
+    }
+    .panel h3{
+      margin: 0 0 8px 0;
+      font-family: var(--font-soft);
+      font-weight: 760;
+      letter-spacing: .01em;
+      font-size: 18px;
+    }
+    .swatches{
+      display:grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .swatch{
+      border-radius: 18px;
+      border: 1px solid var(--stroke);
+      background: color-mix(in oklab, var(--panel) 62%, transparent);
+      box-shadow: var(--shadow-in);
+      padding: 10px;
+      cursor:pointer;
+      transition: transform .12s ease, border-color .12s ease, filter .12s ease;
+      overflow:hidden;
+      position: relative;
+      min-height: 78px;
+    }
+    .swatch:hover{ border-color: var(--stroke-2); filter: brightness(1.03); transform: translateY(-1px); }
+    .swatch:active{ transform: translateY(0) scale(.99); }
+    .swatch::before{
+      content:"";
+      position:absolute;
+      inset: -20%;
+      background: var(--preview, var(--wallpaper-a));
+      filter: saturate(1.05) contrast(1.05);
+    }
+    .swatch::after{
+      content:"";
+      position:absolute; inset:0;
+      background: linear-gradient(180deg, rgba(0,0,0,.18), rgba(0,0,0,.55));
+      opacity:.65;
+    }
+    .swatch b{
+      position: relative;
+      display:block;
+      z-index:1;
+      font-size: 12px;
+      letter-spacing: .02em;
+    }
+    .swatch span{
+      position: relative;
+      z-index:1;
+      font-family: var(--font-mono);
+      color: var(--faint);
+      font-size: 11px;
+    }
+
+    /* ---------- Modal (generic) ---------- */
+    #modalShade{
+      position: fixed;
+      inset:0;
+      background: rgba(0,0,0,.38);
+      backdrop-filter: blur(10px);
+      z-index: 5000;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding: 14px;
+    }
+    #modalShade[data-open="true"]{ display:flex; }
+    .modal{
+      width: min(720px, 100%);
+      border-radius: 22px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: color-mix(in oklab, var(--panel-2) 78%, transparent);
+      box-shadow: var(--shadow-2);
+      overflow:hidden;
+    }
+    .modal .m-h{
+      padding: 12px 12px;
+      border-bottom: 1px solid rgba(255,255,255,.12);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 10px;
+      background: linear-gradient(180deg, rgba(255,255,255,.06), transparent);
+    }
+    .modal .m-h b{
+      font-family: var(--font-soft);
+      font-weight: 760;
+      font-size: 18px;
+      letter-spacing: .01em;
+    }
+    .modal .m-b{
+      padding: 12px;
+    }
+    .modal .m-f{
+      padding: 12px;
+      border-top: 1px solid rgba(255,255,255,.12);
+      display:flex;
+      justify-content:flex-end;
+      gap: 10px;
+    }
+
+    /* ---------- Mobile / Tablet adaptation ---------- */
+    @media (max-width: 920px){
+      #desktop{ padding: 12px; }
+      #iconGrid{ width: 280px; }
+    }
+    @media (max-width: 740px){
+      body{ overflow:hidden; }
+      #desktop{ padding: 10px; gap: 10px; }
+      #desktopMain{ flex-direction:column; }
+      #iconGrid{
+        width: 100%;
+        max-width: none;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        border-radius: 20px;
+      }
+      .deskIcon{ padding: 10px; flex-direction:column; align-items:flex-start; }
+      .deskIcon .meta .desc{ display:none; }
+
+      #workspace{
+        border-radius: 20px;
+        flex: 1;
+        min-height: 0;
+      }
+
+      #taskbar{
+        height: var(--dock-h-mobile);
+        border-radius: 22px;
+        padding: 10px;
+      }
+      #startBtn .label{ display:none; }
+      #startBtn{ padding: 10px; border-radius: 18px; }
+      #tray .trayBtn{ width: 48px; height: 48px; border-radius: 18px; }
+      .iconBtn{ width: 48px; height: 46px; border-radius: 18px; }
+      #toasts{ bottom: calc(14px + var(--dock-h-mobile) + 10px); }
+
+      /* Force windows to “maximized” on small screens, hide resizers */
+      .win{
+        left: 0 !important;
+        top: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        border-radius: 0 !important;
+      }
+      .rz{ display:none !important; }
+      .titlebar{ cursor: default; }
+      #startMenu{
+        left: 10px;
+        right: 10px;
+        width: auto;
+        bottom: calc(10px + var(--dock-h-mobile) + 10px);
+        transform-origin: center bottom;
+      }
+      .start-body{ grid-template-columns: 1fr; }
+    }
+    @media (prefers-reduced-motion: reduce){
+      *{ animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; scroll-behavior: auto !important; }
+    }
+  </style>
+</head>
+
+<body data-theme="noir-ink">
+  <div id="os" aria-label="NOCTUA WebOS">
+    <div id="wallpaper" aria-hidden="true"></div>
+    <div id="atmosphere" aria-hidden="true"></div>
+
+    <!-- Boot screen (JS will hide when ready) -->
+    <div id="boot" role="status" aria-live="polite">
+      <div class="boot-mark">
+        <div class="boot-logo" aria-hidden="true"></div>
+        <div class="boot-title">NOCTUA WebOS</div>
+        <div class="boot-sub">Initializing VFS · Window Manager · Apps</div>
+      </div>
+      <div class="boot-bar" aria-hidden="true"><i></i></div>
+      <div class="boot-sub">Tip: 右键桌面可打开上下文菜单；移动端窗口将自动全屏。</div>
+    </div>
+
+    <!-- Desktop -->
+    <div id="desktop">
+      <!-- Minimal status strip -->
+      <div id="statusStrip">
+        <div class="status-left">
+          <span class="status-dot" aria-hidden="true"></span>
+          <div class="os-badge">
+            <div class="name">NOCTUA</div>
+            <div class="tag" id="statusPath">/home/user</div>
+          </div>
+        </div>
+        <div class="status-right">
+          <div class="mini" id="netHint" title="Offline capable after first load">IndexedDB · VFS</div>
+          <div class="clock" id="clock">--:--</div>
+        </div>
+      </div>
+
+      <div id="desktopMain">
+        <!-- Left icon launcher rail -->
+        <div id="iconGrid" aria-label="Desktop Icons" tabindex="0">
+          <!-- JS will hydrate, but keep a few visible placeholders for first paint -->
+          <button class="deskIcon" data-app="explorer" title="文件资源管理器（双击也可）">
+            <span class="glyph" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path d="M4 7.5c0-1.1.9-2 2-2h4l2 2h8c1.1 0 2 .9 2 2v7c0 1.1-.9 2-2 2H6c-1.1 0-2-.9-2-2v-7Z" stroke="currentColor" stroke-width="1.6" opacity=".95"/>
+                <path d="M4 9h16" stroke="currentColor" stroke-width="1.6" opacity=".65"/>
+              </svg>
+            </span>
+            <span class="meta">
+              <span class="title">File Explorer</span>
+              <span class="desc">/home/user</span>
+            </span>
+          </button>
+
+          <button class="deskIcon" data-app="editor" title="文本编辑器">
+            <span class="glyph" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path d="M7 4h10a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="1.6" opacity=".95"/>
+                <path d="M8 8h8M8 12h8M8 16h6" stroke="currentColor" stroke-width="1.6" opacity=".65"/>
+              </svg>
+            </span>
+            <span class="meta">
+              <span class="title">Text Editor</span>
+              <span class="desc">code · notes</span>
+            </span>
+          </button>
+
+          <button class="deskIcon" data-app="browser" title="网页浏览器模拟器">
+            <span class="glyph" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v11A2.5 2.5 0 0 1 17.5 20h-11A2.5 2.5 0 0 1 4 17.5v-11Z" stroke="currentColor" stroke-width="1.6" opacity=".95"/>
+                <path d="M4 8h16" stroke="currentColor" stroke-width="1.6" opacity=".65"/>
+                <path d="M8 6.1h.01M10.5 6.1h.01M13 6.1h.01" stroke="currentColor" stroke-width="2" opacity=".65"/>
+              </svg>
+            </span>
+            <span class="meta">
+              <span class="title">Web Browser</span>
+              <span class="desc">iframe sandbox</span>
+            </span>
+          </button>
+
+          <button class="deskIcon" data-app="draw" title="画板">
+            <span class="glyph" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path d="M4.5 16.5 14 7a2.2 2.2 0 0 1 3.1 0l.9.9a2.2 2.2 0 0 1 0 3.1l-9.5 9.5H4.5v-4Z" stroke="currentColor" stroke-width="1.6" opacity=".95"/>
+                <path d="M12.3 8.7 16 12.4" stroke="currentColor" stroke-width="1.6" opacity=".65"/>
+              </svg>
+            </span>
+            <span class="meta">
+              <span class="title">Drawing Board</span>
+              <span class="desc">canvas</span>
+            </span>
+          </button>
+
+          <button class="deskIcon" data-app="media" title="媒体播放器">
+            <span class="glyph" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path d="M6 5h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="1.6" opacity=".95"/>
+                <path d="M10 9.2v5.6l5-2.8-5-2.8Z" stroke="currentColor" stroke-width="1.6" opacity=".65"/>
+              </svg>
+            </span>
+            <span class="meta">
+              <span class="title">Media Player</span>
+              <span class="desc">img · mp3 · mp4</span>
+            </span>
+          </button>
+
+          <button class="deskIcon" data-app="calc" title="科学计算器">
+            <span class="glyph" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path d="M7 4h10a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="1.6" opacity=".95"/>
+                <path d="M8 8h8M8 12h3M13 12h3M8 16h3M13 16h3" stroke="currentColor" stroke-width="1.6" opacity=".65"/>
+              </svg>
+            </span>
+            <span class="meta">
+              <span class="title">Calculator</span>
+              <span class="desc">scientific</span>
+            </span>
+          </button>
+
+          <button class="deskIcon" data-app="settings" title="设置">
+            <span class="glyph" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path d="M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4Z" stroke="currentColor" stroke-width="1.6" opacity=".95"/>
+                <path d="M19.4 12a7.5 7.5 0 0 0-.1-1l2-1.5-2-3.5-2.4 1a7.6 7.6 0 0 0-1.7-1L14.8 3h-5.6L8.8 6a7.6 7.6 0 0 0-1.7 1L4.7 6l-2 3.5 2 1.5a7.5 7.5 0 0 0 0 2l-2 1.5 2 3.5 2.4-1a7.6 7.6 0 0 0 1.7 1l.4 3h5.6l.4-3a7.6 7.6 0 0 0 1.7-1l2.4 1 2-3.5-2-1.5c.1-.3.1-.6.1-1Z" stroke="currentColor" stroke-width="1.2" opacity=".55"/>
+              </svg>
+            </span>
+            <span class="meta">
+              <span class="title">Settings</span>
+              <span class="desc">themes · reset</span>
+            </span>
+          </button>
+        </div>
+
+        <!-- Window workspace -->
+        <div id="workspace" aria-label="Workspace">
+          <div id="windowLayer" aria-label="Windows layer"></div>
+        </div>
+      </div>
+
+      <!-- Taskbar -->
+      <div id="taskbar" role="navigation" aria-label="Taskbar">
+        <button id="startBtn" aria-haspopup="true" aria-expanded="false" class="btnLike" type="button">
+          <span class="mark" aria-hidden="true"></span>
+          <span class="label">Start</span>
+        </button>
+
+        <div id="taskApps" aria-label="Open apps"></div>
+
+        <div id="tray" aria-label="Tray">
+          <button class="trayBtn" id="btnWallpaper" title="壁纸" aria-label="Wallpaper">
+            <svg viewBox="0 0 24 24" fill="none">
+              <path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v11A2.5 2.5 0 0 1 17.5 20h-11A2.5 2.5 0 0 1 4 17.5v-11Z" stroke="currentColor" stroke-width="1.6" opacity=".9"/>
+              <path d="M7.2 15.6 10 13l2.2 2.1 3.2-3.2L19.5 16" stroke="currentColor" stroke-width="1.6" opacity=".6"/>
+              <path d="M8.3 9.2h.01" stroke="currentColor" stroke-width="3" opacity=".6"/>
+            </svg>
+          </button>
+          <button class="trayBtn" id="btnFullScreen" title="全屏" aria-label="Fullscreen">
+            <svg viewBox="0 0 24 24" fill="none">
+              <path d="M8 4H4v4M16 4h4v4M8 20H4v-4M16 20h4v-4" stroke="currentColor" stroke-width="1.6" opacity=".9"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Start Menu Panel -->
+    <div id="startMenu" aria-label="Start Menu" data-open="false">
+      <div class="start-head">
+        <div class="title">
+          <strong>Launcher</strong>
+          <span id="startHint">双击桌面图标打开 · 右键桌面更多操作</span>
+        </div>
+        <button class="btn" id="startClose" type="button">关闭</button>
+      </div>
+
+      <div class="start-body">
+        <div class="start-card">
+          <div class="card-h">
+            <span class="cap">Apps</span>
+            <span class="chip">拖拽窗口 · 边缘缩放</span>
+          </div>
+          <div class="start-apps" id="startApps">
+            <!-- JS will render full list (same as icons + more) -->
+          </div>
+        </div>
+
+        <div class="start-card">
+          <div class="card-h">
+            <span class="cap">Quick Actions</span>
+            <span class="cap"><span class="kbd">Esc</span> 关闭菜单</span>
+          </div>
+          <div class="start-side">
+            <div class="qa">
+              <div class="t">
+                <b>导入文件到 VFS</b>
+                <span>图片/文本/音视频/zip</span>
+              </div>
+              <button class="btn primary" id="qaImport" type="button">导入</button>
+            </div>
+            <div class="qa">
+              <div class="t">
+                <b>打开下载目录</b>
+                <span>/home/user/Downloads</span>
+              </div>
+              <button class="btn" id="qaDownloads" type="button">打开</button>
+            </div>
+            <div class="qa">
+              <div class="t">
+                <b>设置与主题</b>
+                <span>三种高审美主题</span>
+              </div>
+              <button class="btn" id="qaSettings" type="button">设置</button>
+            </div>
+            <div class="divider"></div>
+            <div class="hint">
+              说明：系统会使用 IndexedDB 持久化保存文件与设置。首次载入需要初始化数据库。
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Context menu -->
+    <div id="contextMenu" role="menu" aria-label="Desktop Context Menu" data-open="false">
+      <div class="cm-item" data-action="refresh" role="menuitem">
+        <div class="left">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M20 12a8 8 0 1 1-2.3-5.7" stroke="currentColor" stroke-width="1.6"/><path d="M20 4v6h-6" stroke="currentColor" stroke-width="1.6" opacity=".7"/></svg>
+          <span>刷新桌面</span>
+        </div>
+        <div class="right">F5</div>
+      </div>
+      <div class="cm-item" data-action="new-folder" role="menuitem">
+        <div class="left">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M4 7.5c0-1.1.9-2 2-2h4l2 2h8c1.1 0 2 .9 2 2v7c0 1.1-.9 2-2 2H6c-1.1 0-2-.9-2-2v-7Z" stroke="currentColor" stroke-width="1.6"/><path d="M12 11v6M9 14h6" stroke="currentColor" stroke-width="1.6" opacity=".7"/></svg>
+          <span>新建文件夹</span>
+        </div>
+        <div class="right">N</div>
+      </div>
+      <div class="cm-item" data-action="upload-wallpaper" role="menuitem">
+        <div class="left">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M12 16V4" stroke="currentColor" stroke-width="1.6"/><path d="M7 9l5-5 5 5" stroke="currentColor" stroke-width="1.6" opacity=".7"/><path d="M4 20h16" stroke="currentColor" stroke-width="1.6" opacity=".7"/></svg>
+          <span>上传并设置壁纸</span>
+        </div>
+        <div class="right">W</div>
+      </div>
+      <div class="cm-item" data-action="fullscreen" role="menuitem">
+        <div class="left">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M8 4H4v4M16 4h4v4M8 20H4v-4M16 20h4v-4" stroke="currentColor" stroke-width="1.6"/></svg>
+          <span>全屏模式</span>
+        </div>
+        <div class="right">F</div>
+      </div>
+      <div class="cm-item" data-action="settings" role="menuitem">
+        <div class="left">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4Z" stroke="currentColor" stroke-width="1.6"/><path d="M19.4 12a7.5 7.5 0 0 0-.1-1l2-1.5-2-3.5-2.4 1a7.6 7.6 0 0 0-1.7-1L14.8 3h-5.6L8.8 6a7.6 7.6 0 0 0-1.7 1L4.7 6l-2 3.5 2 1.5a7.5 7.5 0 0 0 0 2l-2 1.5 2 3.5 2.4-1a7.6 7.6 0 0 0 1.7 1l.4 3h5.6l.4-3a7.6 7.6 0 0 0 1.7-1l2.4 1 2-3.5-2-1.5c.1-.3.1-.6.1-1Z" stroke="currentColor" stroke-width="1.2" opacity=".7"/></svg>
+          <span>设置</span>
+        </div>
+        <div class="right">S</div>
+      </div>
+    </div>
+
+    <!-- Toasts -->
+    <div id="toasts" aria-live="polite" aria-label="Notifications"></div>
+
+    <!-- Modal -->
+    <div id="modalShade" aria-hidden="true">
+      <div class="modal" role="dialog" aria-modal="true" aria-label="Modal">
+        <div class="m-h">
+          <b id="modalTitle">Modal</b>
+          <button class="btn" id="modalClose" type="button">关闭</button>
+        </div>
+        <div class="m-b" id="modalBody">
+          <!-- JS injects -->
+        </div>
+        <div class="m-f" id="modalFooter">
+          <button class="btn" id="modalCancel" type="button">取消</button>
+          <button class="btn primary" id="modalOk" type="button">确定</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hidden file inputs (JS will trigger) -->
+    <input class="sr-only" id="fileImportInput" type="file" multiple />
+    <input class="sr-only" id="wallpaperInput" type="file" accept="image/*" />
+
+    <!-- Templates (windows & apps are instantiated by JS) -->
+    <template id="tplWindow">
+      <div class="win" role="application" data-active="false" data-min="false" data-max="false">
+        <div class="titlebar">
+          <div class="tb-left">
+            <div class="tb-ico" aria-hidden="true"></div>
+            <div class="tb-title">
+              <b class="w-title">Window</b>
+              <span class="w-sub">—</span>
+            </div>
+          </div>
+          <div class="tb-right">
+            <button class="wbtn min" title="最小化" aria-label="Minimize">
+              <svg viewBox="0 0 24 24" fill="none"><path d="M6 12.5h12" stroke="currentColor" stroke-width="2" opacity=".9"/></svg>
+            </button>
+            <button class="wbtn max" title="最大化" aria-label="Maximize">
+              <svg viewBox="0 0 24 24" fill="none"><path d="M7 7h10v10H7z" stroke="currentColor" stroke-width="1.8" opacity=".9"/></svg>
+            </button>
+            <button class="wbtn close" title="关闭" aria-label="Close">
+              <svg viewBox="0 0 24 24" fill="none"><path d="M7 7l10 10M17 7 7 17" stroke="currentColor" stroke-width="2" opacity=".9"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="winBody">
+          <!-- injected app -->
+        </div>
+
+        <!-- resizers -->
+        <i class="rz n"></i><i class="rz s"></i><i class="rz e"></i><i class="rz w"></i>
+        <i class="rz nw"></i><i class="rz ne"></i><i class="rz sw"></i><i class="rz se"></i>
+      </div>
+    </template>
+  </div>
+
+  <!-- JS will be generated in PART 2 (no <script> yet) -->
+</body>
+<script>
+    /**
+     * =========================================================
+     * NOCTUA WebOS — System Kernel (PART 2 / JS SEGMENT 1)
+     * Includes: Utilities, VFS (IndexedDB), Window Manager, Desktop Logic
+     * =========================================================
+     */
+
+    /* ---------- 0. Utilities & Config ---------- */
+    const $ = (sel, el = document) => el.querySelector(sel);
+    const $$ = (sel, el = document) => [...el.querySelectorAll(sel)];
+    const uuid = () => Math.random().toString(36).slice(2, 10);
+    const now = () => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    const CONFIG = {
+      dbName: 'NoctuaOS_DB',
+      dbVersion: 1,
+      storeName: 'files',
+      isMobile: window.innerWidth < 768,
+      apps: {
+        explorer: { title: 'File Explorer', icon: 'folder', allowMulti: true },
+        editor:   { title: 'Text Editor', icon: 'file-text', allowMulti: true },
+        browser:  { title: 'Web Browser', icon: 'globe', allowMulti: true },
+        draw:     { title: 'Drawing Board', icon: 'pen-tool', allowMulti: false },
+        media:    { title: 'Media Player', icon: 'image', allowMulti: true },
+        calc:     { title: 'Calculator', icon: 'hash', allowMulti: false },
+        settings: { title: 'Settings', icon: 'settings', allowMulti: false }
+      }
+    };
+
+    // SVG Icons map (Simple feather-like paths)
+    const ICONS = {
+      folder: '<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>',
+      'file-text': '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline>',
+      globe: '<circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>',
+      'pen-tool': '<path d="M12 19l7-7 3 3-7 7-3-3z"></path><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path><path d="M2 2l7.586 7.586"></path><circle cx="11" cy="11" r="2"></circle>',
+      image: '<rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline>',
+      hash: '<line x1="4" y1="9" x2="20" y2="9"></line><line x1="4" y1="15" x2="20" y2="15"></line><line x1="10" y1="3" x2="8" y2="21"></line><line x1="16" y1="3" x2="14" y2="21"></line>',
+      settings: '<circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>',
+      file: '<path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline>'
+    };
+
+    function getIconSvg(name) {
+      return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONS[name] || ICONS.file}</svg>`;
+    }
+
+    /* ---------- 1. Virtual File System (VFS) - IndexedDB ---------- */
+    class VFS {
+      constructor() {
+        this.db = null;
+        this.ready = false;
+      }
+
+      async init() {
+        return new Promise((resolve, reject) => {
+          const req = indexedDB.open(CONFIG.dbName, CONFIG.dbVersion);
+
+          req.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains(CONFIG.storeName)) {
+              const store = db.createObjectStore(CONFIG.storeName, { keyPath: 'path' });
+              store.createIndex('parent', 'parent', { unique: false });
+            }
+          };
+
+          req.onsuccess = async (e) => {
+            this.db = e.target.result;
+            this.ready = true;
+            await this.seed();
+            resolve();
+          };
+          req.onerror = (e) => reject(e);
+        });
+      }
+
+      // Initialize default directories if empty
+      async seed() {
+        const root = await this.readDir('/');
+        if (root.length === 0) {
+          console.log('VFS: Seeding initial FS...');
+          await this.mkdir('/home');
+          await this.mkdir('/home/user');
+          await this.mkdir('/home/user/Documents');
+          await this.mkdir('/home/user/Downloads');
+          await this.mkdir('/home/user/Pictures');
+          // Add a welcome file
+          await this.writeFile('/home/user/Documents/Welcome.txt',
+            'Welcome to NOCTUA WebOS!\n\nThis is a persistent system using IndexedDB.\nFeel free to create files, import images, or write code.',
+            'text/plain');
+        }
+      }
+
+      async writeFile(path, content, type = 'text/plain') {
+        return new Promise((resolve, reject) => {
+          const tx = this.db.transaction([CONFIG.storeName], 'readwrite');
+          const store = tx.objectStore(CONFIG.storeName);
+          const parent = path.substring(0, path.lastIndexOf('/')) || '/';
+          const name = path.split('/').pop();
+
+          const file = {
+            path,
+            name,
+            parent,
+            type,
+            content, // Blob or string
+            isDir: false,
+            updated: Date.now()
+          };
+          
+          store.put(file).onsuccess = () => {
+            // Toast
+            OS.toast(`Saved: ${name}`);
+            resolve(file);
+          };
+          store.put(file).onerror = reject;
+        });
+      }
+
+      async mkdir(path) {
+        return new Promise((resolve, reject) => {
+          const tx = this.db.transaction([CONFIG.storeName], 'readwrite');
+          const store = tx.objectStore(CONFIG.storeName);
+          const parent = path.substring(0, path.lastIndexOf('/')) || '/';
+          const name = path.split('/').pop();
+
+          const dir = {
+            path,
+            name,
+            parent,
+            type: 'folder',
+            content: null,
+            isDir: true,
+            updated: Date.now()
+          };
+          store.put(dir).onsuccess = () => resolve(dir);
+          store.put(dir).onerror = reject;
+        });
+      }
+
+      async readDir(parentPath) {
+        return new Promise((resolve) => {
+          const tx = this.db.transaction([CONFIG.storeName], 'readonly');
+          const store = tx.objectStore(CONFIG.storeName);
+          const index = store.index('parent');
+          const req = index.getAll(parentPath);
+          req.onsuccess = () => resolve(req.result);
+        });
+      }
+
+      async readFile(path) {
+        return new Promise((resolve, reject) => {
+          const tx = this.db.transaction([CONFIG.storeName], 'readonly');
+          const store = tx.objectStore(CONFIG.storeName);
+          const req = store.get(path);
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = reject;
+        });
+      }
+
+      async deleteNode(path) {
+        // Simple delete, not recursive for MVP (avoids complexity)
+        return new Promise((resolve) => {
+          const tx = this.db.transaction([CONFIG.storeName], 'readwrite');
+          const store = tx.objectStore(CONFIG.storeName);
+          store.delete(path).onsuccess = () => resolve();
+        });
+      }
+
+      async nuke() {
+        return new Promise((resolve) => {
+          const req = indexedDB.deleteDatabase(CONFIG.dbName);
+          req.onsuccess = () => window.location.reload();
+        });
+      }
+    }
+
+    const fs = new VFS();
+
+    /* ---------- 2. Window Manager (WM) ---------- */
+    class WindowManager {
+      constructor() {
+        this.windows = [];
+        this.zIndex = 100;
+        this.activeWin = null;
+        this.layer = $('#windowLayer');
+        this.taskbar = $('#taskApps');
+      }
+
+      // Open an app window
+      open(appId, args = {}) {
+        const config = CONFIG.apps[appId];
+        if (!config) return;
+
+        // Single instance check
+        if (!config.allowMulti) {
+          const existing = this.windows.find(w => w.appId === appId);
+          if (existing) {
+            this.focus(existing.id);
+            return;
+          }
+        }
+
+        const id = 'win-' + uuid();
+        const winEl = $('#tplWindow').content.cloneNode(true).querySelector('.win');
+        
+        // Hydrate
+        winEl.id = id;
+        winEl.style.zIndex = ++this.zIndex;
+        winEl.querySelector('.w-title').textContent = config.title;
+        winEl.querySelector('.tb-ico').innerHTML = getIconSvg(config.icon);
+        
+        // Randomize pos slightly
+        if (!CONFIG.isMobile) {
+          const offset = this.windows.length * 20;
+          winEl.style.left = (80 + (offset % 100)) + 'px';
+          winEl.style.top = (50 + (offset % 100)) + 'px';
+        }
+
+        // Attach to DOM
+        this.layer.appendChild(winEl);
+
+        // State object
+        const winObj = {
+          id,
+          appId,
+          el: winEl,
+          minimized: false,
+          maximized: false,
+          data: args
+        };
+        this.windows.push(winObj);
+
+        // Setup Taskbar Item
+        this.addTaskbarItem(winObj);
+
+        // Bind events
+        this.bindWindowEvents(winObj);
+
+        // Run App Logic (Init)
+        if (Apps[appId]) Apps[appId].init(winEl.querySelector('.winBody'), winObj, args);
+
+        this.focus(id);
+      }
+
+      addTaskbarItem(winObj) {
+        const item = document.createElement('button');
+        item.className = 'taskItem';
+        item.dataset.id = winObj.id;
+        item.innerHTML = `
+          <div class="dot"></div>
+          <span class="name">${CONFIG.apps[winObj.appId].title}</span>
+        `;
+        item.onclick = () => {
+          if (winObj.minimized) this.restore(winObj.id);
+          else if (winObj === this.activeWin) this.minimize(winObj.id);
+          else this.focus(winObj.id);
+        };
+        this.taskbar.appendChild(item);
+        winObj.taskEl = item;
+      }
+
+      bindWindowEvents(win) {
+        const el = win.el;
+        
+        // Focus on mousedown
+        el.addEventListener('mousedown', () => this.focus(win.id));
+
+        // Controls
+        el.querySelector('.wbtn.close').onclick = (e) => { e.stopPropagation(); this.close(win.id); };
+        el.querySelector('.wbtn.min').onclick = (e) => { e.stopPropagation(); this.minimize(win.id); };
+        el.querySelector('.wbtn.max').onclick = (e) => { e.stopPropagation(); this.toggleMax(win.id); };
+
+        // Draggable (Titlebar) - Desktop Only
+        if (!CONFIG.isMobile) {
+          const tb = el.querySelector('.titlebar');
+          let isDragging = false, startX, startY, initLeft, initTop;
+
+          tb.addEventListener('mousedown', (e) => {
+            if (e.target.closest('.wbtn')) return; // ignore buttons
+            isDragging = true;
+            startX = e.clientX;
+            startY = e.clientY;
+            initLeft = el.offsetLeft;
+            initTop = el.offsetTop;
+            el.style.transition = 'none';
+          });
+
+          window.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            if (win.maximized) return; // Can't drag maxed
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+            el.style.left = (initLeft + dx) + 'px';
+            el.style.top = (initTop + dy) + 'px';
+          });
+
+          window.addEventListener('mouseup', () => {
+            if (isDragging) {
+              isDragging = false;
+              el.style.transition = ''; 
+            }
+          });
+
+          // Double click maximize
+          tb.addEventListener('dblclick', () => this.toggleMax(win.id));
+        }
+
+        // Resizable (Edges) - Desktop Only
+        if (!CONFIG.isMobile) {
+           // Simplified resizing logic would go here
+           // For code brevity, implementing a generic resizing handler
+           this.initResize(win);
+        }
+      }
+
+      initResize(win) {
+        const el = win.el;
+        const resizers = el.querySelectorAll('.rz');
+        let currentResizer = null;
+        let isResizing = false;
+        let startX, startY, startW, startH, startL, startT;
+
+        resizers.forEach(r => {
+          r.addEventListener('mousedown', (e) => {
+            e.stopPropagation(); // prevent window drag
+            currentResizer = r;
+            isResizing = true;
+            startX = e.clientX;
+            startY = e.clientY;
+            startW = parseInt(getComputedStyle(el).width);
+            startH = parseInt(getComputedStyle(el).height);
+            startL = el.offsetLeft;
+            startT = el.offsetTop;
+            el.style.transition = 'none';
+          });
+        });
+
+        window.addEventListener('mousemove', (e) => {
+          if (!isResizing) return;
+          const dx = e.clientX - startX;
+          const dy = e.clientY - startY;
+          const type = currentResizer.className; // contains n, s, e, w...
+
+          if (type.includes('e')) el.style.width = (startW + dx) + 'px';
+          if (type.includes('s')) el.style.height = (startH + dy) + 'px';
+          if (type.includes('w')) {
+             el.style.width = (startW - dx) + 'px';
+             el.style.left = (startL + dx) + 'px';
+          }
+          if (type.includes('n')) {
+             el.style.height = (startH - dy) + 'px';
+             el.style.top = (startT + dy) + 'px';
+          }
+        });
+
+        window.addEventListener('mouseup', () => { isResizing = false; if(el) el.style.transition = ''; });
+      }
+
+      focus(id) {
+        const win = this.windows.find(w => w.id === id);
+        if (!win) return;
+
+        // Bring to front
+        win.el.style.zIndex = ++this.zIndex;
+        win.el.dataset.active = "true";
+        win.el.style.display = 'flex'; // ensure visible if coming from min
+        win.minimized = false;
+        win.el.dataset.min = "false";
+
+        // Deactivate others
+        this.windows.forEach(w => {
+          if (w.id !== id) {
+            w.el.dataset.active = "false";
+            if (w.taskEl) w.taskEl.setAttribute('aria-selected', 'false');
+          }
+        });
+
+        if (win.taskEl) win.taskEl.setAttribute('aria-selected', 'true');
+        this.activeWin = win;
+      }
+
+      minimize(id) {
+        const win = this.windows.find(w => w.id === id);
+        if (!win) return;
+        win.minimized = true;
+        win.el.dataset.min = "true";
+        win.el.dataset.active = "false";
+        if (win.taskEl) win.taskEl.setAttribute('aria-selected', 'false');
+        this.activeWin = null;
+      }
+
+      restore(id) {
+        this.focus(id);
+      }
+
+      toggleMax(id) {
+        const win = this.windows.find(w => w.id === id);
+        if (!win) return;
+        win.maximized = !win.maximized;
+        win.el.dataset.max = win.maximized;
+      }
+
+      close(id) {
+        const winIndex = this.windows.findIndex(w => w.id === id);
+        if (winIndex === -1) return;
+        
+        const win = this.windows[winIndex];
+        
+        // Remove DOM
+        win.el.remove();
+        if (win.taskEl) win.taskEl.remove();
+
+        // Remove from memory
+        this.windows.splice(winIndex, 1);
+
+        // Focus next
+        if (this.windows.length > 0) {
+          this.focus(this.windows[this.windows.length - 1].id);
+        } else {
+          this.activeWin = null;
+        }
+      }
+
+      closeAll() {
+        [...this.windows].forEach(w => this.close(w.id));
+      }
+    }
+
+    const wm = new WindowManager();
+    const Apps = {}; // App registry, filled in next part
+
+    /* ---------- 3. System / Desktop Logic ---------- */
+    const OS = {
+      async init() {
+        // Clock
+        setInterval(() => $('#clock').innerText = now(), 1000);
+        $('#clock').innerText = now();
+
+        // Boot VFS
+        try {
+          await fs.init();
+          $('#boot').dataset.hidden = "true"; // Hide boot screen
+          this.renderDesktop();
+        } catch (e) {
+          console.error("Boot failed", e);
+          $('#boot .boot-sub').innerText = "VFS Error: " + e.message;
+        }
+
+        // Listeners
+        this.bindEvents();
+      },
+
+      bindEvents() {
+        // Start Menu
+        $('#startBtn').onclick = () => this.toggleStartMenu();
+        $('#startClose').onclick = () => this.toggleStartMenu(false);
+        $('#desktopMain').onclick = () => this.toggleStartMenu(false);
+
+        // Desktop Icons (Double Click)
+        $$('.deskIcon').forEach(btn => {
+          btn.ondblclick = () => wm.open(btn.dataset.app);
+          // Touch devices usually don't dblclick easily, handle click for them in icon grid logic if needed,
+          // but CSS handles hover. Mobile logic: single tap opens?
+          if (CONFIG.isMobile) {
+            btn.onclick = () => wm.open(btn.dataset.app);
+          }
+        });
+
+        // Context Menu
+        $('#desktop').oncontextmenu = (e) => {
+          e.preventDefault();
+          this.showContextMenu(e.clientX, e.clientY);
+        };
+        document.onclick = (e) => {
+          if (!e.target.closest('#contextMenu')) $('#contextMenu').dataset.open = "false";
+        };
+
+        // Context Menu Actions
+        $$('.cm-item').forEach(item => {
+          item.onclick = () => {
+            const action = item.dataset.action;
+            if (action === 'refresh') window.location.reload();
+            if (action === 'fullscreen') this.toggleFullScreen();
+            if (action === 'settings') wm.open('settings');
+            if (action === 'new-folder') {
+               // Quick hack to create folder on desktop (simulated by Explorer opening home)
+               wm.open('explorer', { path: '/home/user' });
+               OS.toast('Open Explorer to create folders');
+            }
+            if (action === 'upload-wallpaper') $('#wallpaperInput').click();
+            $('#contextMenu').dataset.open = "false";
+          };
+        });
+
+        // Wallpaper Upload
+        $('#wallpaperInput').onchange = async (e) => {
+          const file = e.target.files[0];
+          if (file) {
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+              // We could save this to DB, but for now just CSS var
+              document.documentElement.style.setProperty('--wallpaper-a', `url(${ev.target.result})`);
+              OS.toast('Wallpaper updated');
+            };
+            reader.readAsDataURL(file);
+          }
+        };
+
+        // Start Menu Actions
+        $('#qaSettings').onclick = () => { wm.open('settings'); this.toggleStartMenu(false); };
+        $('#qaDownloads').onclick = () => { wm.open('explorer', { path: '/home/user/Downloads' }); this.toggleStartMenu(false); };
+        $('#qaImport').onclick = () => { $('#fileImportInput').click(); };
+
+        // Generic File Import
+        $('#fileImportInput').onchange = async (e) => {
+          const files = [...e.target.files];
+          let count = 0;
+          for (const f of files) {
+            // Read as blob/base64
+             // For simplicity in text-only output, we assume text or simple images
+             // Real implementation would handle Blobs in IDB.
+             // Here we try to read as DataURL for images, Text for others.
+             if (f.type.startsWith('image/') || f.type.startsWith('audio/') || f.type.startsWith('video/')) {
+               const reader = new FileReader();
+               reader.onload = async (ev) => {
+                  await fs.writeFile(`/home/user/Downloads/${f.name}`, ev.target.result, f.type);
+                  OS.toast(`Imported: ${f.name}`);
+               };
+               reader.readAsDataURL(f);
+             } else {
+               const text = await f.text();
+               await fs.writeFile(`/home/user/Downloads/${f.name}`, text, f.type || 'text/plain');
+               OS.toast(`Imported: ${f.name}`);
+             }
+             count++;
+          }
+          this.toggleStartMenu(false);
+        };
+
+        // Tray
+        $('#btnFullScreen').onclick = () => this.toggleFullScreen();
+        $('#btnWallpaper').onclick = () => $('#wallpaperInput').click();
+      },
+
+      toggleStartMenu(force) {
+        const el = $('#startMenu');
+        const isOpen = el.dataset.open === "true";
+        const newState = force !== undefined ? force : !isOpen;
+        el.dataset.open = newState;
+        
+        if (newState) {
+          // Render Start Apps list dynamically
+          const list = $('#startApps');
+          list.innerHTML = '';
+          Object.entries(CONFIG.apps).forEach(([id, app]) => {
+            const div = document.createElement('div');
+            div.className = 'start-app';
+            div.onclick = () => { wm.open(id); this.toggleStartMenu(false); };
+            div.innerHTML = `
+              <div class="ico">${getIconSvg(app.icon)}</div>
+              <div class="info">
+                <span class="n">${app.title}</span>
+                <span class="s">Application</span>
+              </div>
+            `;
+            list.appendChild(div);
+          });
+        }
+      },
+
+      showContextMenu(x, y) {
+        const cm = $('#contextMenu');
+        // Bound checks
+        if (x + 220 > window.innerWidth) x -= 220;
+        if (y + 200 > window.innerHeight) y -= 200;
+        
+        cm.style.left = x + 'px';
+        cm.style.top = y + 'px';
+        cm.dataset.open = "true";
+      },
+
+      toggleFullScreen() {
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen().catch(e=>{});
+        } else {
+          document.exitFullscreen();
+        }
+      },
+
+      toast(msg) {
+        const t = document.createElement('div');
+        t.className = 'toast';
+        t.innerHTML = `
+          <div class="t-h"><b>System</b></div>
+          <div class="t-b">${msg}</div>
+        `;
+        $('#toasts').appendChild(t);
+        setTimeout(() => { t.style.opacity = '0'; setTimeout(()=>t.remove(), 300); }, 3000);
+      },
+
+      renderDesktop() {
+        // Just ensures icons are there, already in HTML. 
+        // We could fetch desktop folder from VFS if we wanted fully dynamic desktop.
+      },
+
+      // Modal Helper
+      modal(title, htmlContent, onOk) {
+        $('#modalTitle').innerText = title;
+        $('#modalBody').innerHTML = htmlContent;
+        $('#modalShade').dataset.open = "true";
+        
+        const okBtn = $('#modalOk');
+        const close = () => { $('#modalShade').dataset.open = "false"; };
+        
+        $('#modalCancel').onclick = close;
+        $('#modalClose').onclick = close;
+        
+        // Remove old listeners to avoid stacking
+        const newOk = okBtn.cloneNode(true);
+        okBtn.parentNode.replaceChild(newOk, okBtn);
+        
+        newOk.onclick = () => {
+          if (onOk) onOk();
+          close();
+        };
+      }
+    };
+</script>
+<script>
+    /**
+     * =========================================================
+     * NOCTUA WebOS — Applications & Final Assembly (PART 2)
+     * =========================================================
+     */
+
+    // ---------------------------------------------------------
+    // APP 1: File Explorer
+    // ---------------------------------------------------------
+    Apps.explorer = {
+      init(body, win, args) {
+        let currentPath = args.path || '/home/user';
+        
+        // Layout
+        body.innerHTML = `
+          <div class="appToolbar">
+            <div class="navBtns">
+              <button class="iconBtn" id="feUp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button>
+              <button class="iconBtn" id="feRefresh"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></button>
+            </div>
+            <div class="breadcrumbs" id="feBread"></div>
+            <div class="grow"></div>
+            <button class="btn primary" id="feNewFolder">New Folder</button>
+          </div>
+          <div class="appContent" id="feGrid"></div>
+        `;
+
+        const render = async (path) => {
+          currentPath = path;
+          // Update Window Title
+          win.el.querySelector('.w-sub').innerText = path;
+          
+          // Breadcrumbs
+          const bread = body.querySelector('#feBread');
+          bread.innerHTML = '';
+          const parts = path.split('/').filter(Boolean);
+          let buildPath = '';
+          
+          const rootC = document.createElement('span');
+          rootC.className = 'crumb';
+          rootC.innerText = '/';
+          rootC.onclick = () => render('/');
+          bread.appendChild(rootC);
+
+          parts.forEach(p => {
+            buildPath += '/' + p;
+            const c = document.createElement('span');
+            c.className = 'crumb';
+            c.innerText = p;
+            const target = buildPath;
+            c.onclick = () => render(target);
+            bread.appendChild(c);
+          });
+
+          // Grid
+          const grid = body.querySelector('#feGrid');
+          grid.innerHTML = '<div style="padding:20px; color:var(--faint)">Loading...</div>';
+          
+          try {
+            const files = await fs.readDir(path);
+            grid.innerHTML = '';
+            
+            if (files.length === 0) {
+              grid.innerHTML = '<div style="padding:20px; color:var(--faint); grid-column:1/-1; text-align:center">Folder is empty</div>';
+              return;
+            }
+            
+            // Sort: Folders first
+            files.sort((a,b) => (b.isDir - a.isDir) || a.name.localeCompare(b.name));
+
+            files.forEach(f => {
+              const el = document.createElement('div');
+              el.className = 'fileCard';
+              el.tabIndex = 0;
+              // Determine Icon
+              let icon = f.isDir ? 'folder' : 'file';
+              if (!f.isDir) {
+                if (f.type.includes('image')) icon = 'image';
+                if (f.type.includes('text') || f.name.endsWith('.js') || f.name.endsWith('.css')) icon = 'file-text';
+              }
+
+              el.innerHTML = `
+                <div class="fileIco">${getIconSvg(icon)}</div>
+                <div class="fileMeta">
+                  <b>${f.name}</b>
+                  <span>${f.isDir ? 'Folder' : new Date(f.updated).toLocaleDateString()}</span>
+                </div>
+              `;
+
+              // Interaction
+              el.ondblclick = () => {
+                if (f.isDir) render(f.path);
+                else openFile(f);
+              };
+              
+              // Mobile tap
+              if (CONFIG.isMobile) {
+                  el.onclick = () => {
+                     if(el.getAttribute('aria-selected') === 'true') {
+                         if (f.isDir) render(f.path);
+                         else openFile(f);
+                     } else {
+                         // Select first
+                         [...grid.children].forEach(c => c.setAttribute('aria-selected', 'false'));
+                         el.setAttribute('aria-selected', 'true');
+                     }
+                  }
+              }
+
+              // Right click context (simple delete)
+              el.oncontextmenu = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                OS.modal('Delete File?', `Are you sure you want to delete <b>${f.name}</b>?`, async () => {
+                   await fs.deleteNode(f.path);
+                   render(currentPath);
+                });
+              };
+
+              grid.appendChild(el);
+            });
+          } catch(e) {
+            grid.innerHTML = `<div style="color:var(--danger)">Error: ${e.message}</div>`;
+          }
+        };
+
+        const openFile = (f) => {
+          if (f.type.includes('image') || f.type.includes('audio') || f.type.includes('video')) {
+            wm.open('media', { path: f.path });
+          } else {
+            wm.open('editor', { path: f.path });
+          }
+        };
+
+        // Events
+        body.querySelector('#feUp').onclick = () => {
+          if (currentPath === '/') return;
+          const parent = currentPath.substring(0, currentPath.lastIndexOf('/')) || '/';
+          render(parent);
+        };
+        body.querySelector('#feRefresh').onclick = () => render(currentPath);
+        
+        body.querySelector('#feNewFolder').onclick = () => {
+          OS.modal('New Folder', 
+            `<div class="field"><label class="label">Name</label><input class="input" id="newFolderName" value="New Folder"></div>`, 
+            async () => {
+              const name = $('#newFolderName').value;
+              if(name) {
+                await fs.mkdir((currentPath === '/' ? '' : currentPath) + '/' + name);
+                render(currentPath);
+              }
+            }
+          );
+          setTimeout(() => $('#newFolderName').focus(), 100);
+        };
+
+        // Init
+        const grid = document.createElement('div');
+        grid.className = 'feGrid';
+        grid.id = 'feGrid';
+        body.querySelector('.appContent').replaceWith(grid); // swap placeholder
+        render(currentPath);
+      }
+    };
+
+    // ---------------------------------------------------------
+    // APP 2: Text Editor
+    // ---------------------------------------------------------
+    Apps.editor = {
+      async init(body, win, args) {
+        const filePath = args.path;
+        let content = '';
+        
+        if (filePath) {
+          try {
+            const f = await fs.readFile(filePath);
+            if (f) content = typeof f.content === 'string' ? f.content : 'Binary file';
+            win.el.querySelector('.w-sub').innerText = filePath;
+          } catch(e) { content = 'Error loading file.'; }
+        } else {
+          win.el.querySelector('.w-sub').innerText = 'Untitled';
+        }
+
+        body.innerHTML = `
+          <div class="editorWrap">
+            <div class="appToolbar">
+              <button class="btn primary" id="teSave">Save</button>
+              <span class="divider"></span>
+              <div class="field" style="flex:1">
+                 <input class="input" id="tePath" placeholder="/home/user/file.txt" value="${filePath || ''}">
+              </div>
+            </div>
+            <div class="codeShell">
+              <div class="gutter" id="teGutter">1</div>
+              <textarea class="editor" id="teArea" spellcheck="false">${content}</textarea>
+            </div>
+          </div>
+        `;
+
+        const area = body.querySelector('#teArea');
+        const gutter = body.querySelector('#teGutter');
+        const pathInput = body.querySelector('#tePath');
+
+        // Line numbers
+        const updateGutter = () => {
+          const lines = area.value.split('\n').length;
+          gutter.innerHTML = Array(lines).fill(0).map((_, i) => i + 1).join('<br>');
+        };
+        area.oninput = updateGutter;
+        // initial sync
+        requestAnimationFrame(updateGutter); 
+
+        // Save
+        body.querySelector('#teSave').onclick = async () => {
+          const p = pathInput.value;
+          if (!p) { OS.toast('Please enter a path'); return; }
+          await fs.writeFile(p, area.value);
+          win.el.querySelector('.w-sub').innerText = p;
+        };
+      }
+    };
+
+    // ---------------------------------------------------------
+    // APP 3: Web Browser (Simulation)
+    // ---------------------------------------------------------
+    Apps.browser = {
+      init(body, win, args) {
+        body.innerHTML = `
+          <div class="app">
+            <div class="browserBar">
+              <div class="navBtns">
+                <button class="iconBtn" id="wbBack"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button>
+                <button class="iconBtn" id="wbReload"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></button>
+              </div>
+              <div class="addr">
+                <input type="text" id="wbUrl" value="https://wikipedia.org" placeholder="https://...">
+              </div>
+              <button class="btn primary" id="wbGo">Go</button>
+            </div>
+            <div class="browserView">
+              <iframe id="wbFrame" src=""></iframe>
+            </div>
+          </div>
+        `;
+        
+        const frame = body.querySelector('#wbFrame');
+        const input = body.querySelector('#wbUrl');
+        
+        const go = () => {
+          let url = input.value;
+          if (!url.startsWith('http')) url = 'https://' + url;
+          // Simple blocked check
+          if (url.includes('google.com') || url.includes('youtube.com')) {
+             frame.src = 'about:blank';
+             setTimeout(() => {
+                const doc = frame.contentDocument || frame.contentWindow.document;
+                doc.body.innerHTML = `
+                  <style>body{font-family:sans-serif;background:#111;color:#eee;display:grid;place-items:center;height:100vh;margin:0}</style>
+                  <div style="text-align:center">
+                    <h2>Connection Refused</h2>
+                    <p>${url} does not allow embedding (X-Frame-Options).</p>
+                    <p>Try Wikipedia, Bing, or static sites.</p>
+                  </div>
+                `;
+             }, 100);
+             return;
+          }
+          frame.src = url;
+        };
+
+        body.querySelector('#wbGo').onclick = go;
+        body.querySelector('#wbReload').onclick = go;
+        input.onkeydown = (e) => { if (e.key === 'Enter') go(); };
+        
+        // Initial load
+        go();
+      }
+    };
+
+    // ---------------------------------------------------------
+    // APP 4: Drawing Board
+    // ---------------------------------------------------------
+    Apps.draw = {
+      init(body, win, args) {
+        body.innerHTML = `
+          <div class="drawWrap">
+            <div class="appToolbar drawTools">
+              <input type="color" id="dbColor" value="#c7ff3a" style="height:30px;width:40px;border:none;background:transparent;cursor:pointer">
+              <input type="range" id="dbSize" min="1" max="50" value="5" title="Brush Size">
+              <div class="divider"></div>
+              <button class="btn" id="dbClear">Clear</button>
+              <button class="btn primary" id="dbSave">Save PNG</button>
+            </div>
+            <div class="canvasShell" id="dbShell">
+              <canvas class="drawing" id="dbCanvas"></canvas>
+            </div>
+          </div>
+        `;
+
+        const canvas = body.querySelector('#dbCanvas');
+        const ctx = canvas.getContext('2d');
+        const shell = body.querySelector('#dbShell');
+
+        // Resize
+        const fit = () => {
+          canvas.width = shell.clientWidth;
+          canvas.height = shell.clientHeight;
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
+        };
+        // Wait for layout
+        setTimeout(fit, 100);
+        new ResizeObserver(fit).observe(shell);
+
+        // Drawing Logic
+        let painting = false;
+        
+        const getPos = (e) => {
+          const rect = canvas.getBoundingClientRect();
+          if (e.touches && e.touches[0]) {
+             return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top };
+          }
+          return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+        };
+
+        const start = (e) => {
+          painting = true;
+          const pos = getPos(e);
+          ctx.beginPath();
+          ctx.moveTo(pos.x, pos.y);
+          ctx.strokeStyle = body.querySelector('#dbColor').value;
+          ctx.lineWidth = body.querySelector('#dbSize').value;
+        };
+
+        const move = (e) => {
+          if (!painting) return;
+          e.preventDefault(); // prevent scroll on touch
+          const pos = getPos(e);
+          ctx.lineTo(pos.x, pos.y);
+          ctx.stroke();
+        };
+
+        const end = () => { painting = false; ctx.closePath(); };
+
+        canvas.addEventListener('mousedown', start);
+        canvas.addEventListener('mousemove', move);
+        canvas.addEventListener('mouseup', end);
+        canvas.addEventListener('mouseleave', end);
+        
+        // Touch
+        canvas.addEventListener('touchstart', start, {passive: false});
+        canvas.addEventListener('touchmove', move, {passive: false});
+        canvas.addEventListener('touchend', end);
+
+        body.querySelector('#dbClear').onclick = () => ctx.clearRect(0,0,canvas.width,canvas.height);
+        
+        body.querySelector('#dbSave').onclick = async () => {
+          const data = canvas.toDataURL('image/png');
+          const fname = `drawing_${Date.now()}.png`;
+          await fs.writeFile(`/home/user/Pictures/${fname}`, data, 'image/png');
+        };
+      }
+    };
+
+    // ---------------------------------------------------------
+    // APP 5: Media Player
+    // ---------------------------------------------------------
+    Apps.media = {
+      async init(body, win, args) {
+        body.innerHTML = `
+          <div class="mediaWrap">
+            <div class="mediaStage" id="mvStage">
+              <div style="color:var(--faint)">No media loaded</div>
+            </div>
+            <div class="appToolbar" style="justify-content:center">
+               <span class="pill" id="mvName">--</span>
+            </div>
+          </div>
+        `;
+
+        if (args.path) {
+          try {
+            const file = await fs.readFile(args.path);
+            const stage = body.querySelector('#mvStage');
+            const nameEl = body.querySelector('#mvName');
+            
+            nameEl.innerText = file.name;
+            stage.innerHTML = '';
+
+            if (file.type.startsWith('image')) {
+              const img = document.createElement('img');
+              img.src = file.content; // Data URL
+              stage.appendChild(img);
+            } else if (file.type.startsWith('video')) {
+              const vid = document.createElement('video');
+              vid.src = file.content;
+              vid.controls = true;
+              stage.appendChild(vid);
+            } else if (file.type.startsWith('audio')) {
+               const aud = document.createElement('audio');
+               aud.src = file.content;
+               aud.controls = true;
+               stage.appendChild(aud);
+            } else {
+               stage.innerHTML = 'Unsupported media type';
+            }
+          } catch(e) {
+            OS.toast('Failed to load media');
+          }
+        }
+      }
+    };
+
+    // ---------------------------------------------------------
+    // APP 6: Calculator
+    // ---------------------------------------------------------
+    Apps.calc = {
+      init(body, win, args) {
+        body.innerHTML = `
+          <div class="calc">
+            <div class="calcDisplay">
+              <div class="calcExpr" id="cExpr"></div>
+              <div class="calcVal" id="cVal">0</div>
+            </div>
+            <div class="calcGrid">
+               <button class="calcBtn danger" data-k="C">C</button>
+               <button class="calcBtn" data-k="(">(</button>
+               <button class="calcBtn" data-k=")">)</button>
+               <button class="calcBtn op" data-k="/">÷</button>
+               <button class="calcBtn op" data-k="*">×</button>
+
+               <button class="calcBtn" data-k="7">7</button>
+               <button class="calcBtn" data-k="8">8</button>
+               <button class="calcBtn" data-k="9">9</button>
+               <button class="calcBtn op" data-k="-">-</button>
+               <button class="calcBtn op" data-k="sqrt">√</button>
+
+               <button class="calcBtn" data-k="4">4</button>
+               <button class="calcBtn" data-k="5">5</button>
+               <button class="calcBtn" data-k="6">6</button>
+               <button class="calcBtn op" data-k="+">+</button>
+               <button class="calcBtn op" data-k="^">^</button>
+
+               <button class="calcBtn" data-k="1">1</button>
+               <button class="calcBtn" data-k="2">2</button>
+               <button class="calcBtn" data-k="3">3</button>
+               <button class="calcBtn equals wide" data-k="=">=</button>
+               
+               <button class="calcBtn wide" data-k="0">0</button>
+               <button class="calcBtn" data-k=".">.</button>
+            </div>
+          </div>
+        `;
+
+        let current = '0';
+        let expr = '';
+        const valEl = body.querySelector('#cVal');
+        const expEl = body.querySelector('#cExpr');
+
+        body.querySelectorAll('.calcBtn').forEach(b => {
+          b.onclick = () => {
+             const k = b.dataset.k;
+             if (k === 'C') { current = '0'; expr = ''; }
+             else if (k === '=') {
+                try {
+                   // Safe eval replacement could be implemented, using standard eval for Sim
+                   // replace visual ops
+                   let jsExpr = current
+                     .replace(/×/g, '*')
+                     .replace(/÷/g, '/')
+                     .replace(/\^/g, '**')
+                     .replace(/sqrt/g, 'Math.sqrt');
+                   current = String(eval(jsExpr));
+                   expr = '';
+                } catch(e) { current = 'Error'; }
+             } else {
+               if (current === '0' && !isNaN(k)) current = k;
+               else current += k;
+             }
+             valEl.innerText = current;
+             expEl.innerText = expr;
+          };
+        });
+      }
+    };
+
+    // ---------------------------------------------------------
+    // APP 7: Settings
+    // ---------------------------------------------------------
+    Apps.settings = {
+      init(body, win, args) {
+        body.innerHTML = `
+          <div class="settings">
+            <div class="panel">
+              <h3>Personalization</h3>
+              <p class="hint">Choose a visual theme for your system.</p>
+              
+              <div class="swatches">
+                 <div class="swatch" data-t="noir-ink" style="--preview:var(--wallpaper-a)">
+                    <b>Noir Ink</b>
+                    <span>Default</span>
+                 </div>
+                 <div class="swatch" data-t="paper-gold" style="--preview:radial-gradient(circle, #b84a2a, #f6f0e3)">
+                    <b>Paper Gold</b>
+                    <span>Light</span>
+                 </div>
+                 <div class="swatch" data-t="cobalt-terminal" style="--preview:linear-gradient(#05070d, #0b1230)">
+                    <b>Cobalt</b>
+                    <span>Cyber</span>
+                 </div>
+              </div>
+            </div>
+            
+            <div class="panel">
+               <h3>System</h3>
+               <div class="field">
+                 <label class="label">Storage</label>
+                 <div class="chip">IndexedDB Active</div>
+                 <p class="hint">All files are stored in your browser's persistent storage.</p>
+               </div>
+               <div class="divider"></div>
+               <button class="btn danger" id="sysReset">Format System (Reset)</button>
+            </div>
+          </div>
+        `;
+
+        body.querySelectorAll('.swatch').forEach(s => {
+          s.onclick = () => {
+            const t = s.dataset.t;
+            document.body.dataset.theme = t;
+            // Optionally save preference to DB
+          };
+        });
+
+        body.querySelector('#sysReset').onclick = () => {
+           OS.modal('Format System', 'This will delete all files and reset the OS. Continue?', async () => {
+              await fs.nuke();
+           });
+        };
+      }
+    };
+
+    // ---------------------------------------------------------
+    // Main Entry Point
+    // ---------------------------------------------------------
+    window.addEventListener('DOMContentLoaded', () => {
+      OS.init();
+    });
+
+</script>
+</html>

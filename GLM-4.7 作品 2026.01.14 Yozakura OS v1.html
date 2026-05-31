@@ -1,0 +1,3365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>夜櫻 OS | Yozakura OS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&family=Zen+Kaku+Gothic+New:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/browserfs@2.0.0/dist/browserfs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            /* Japanese-inspired color palette */
+            --kuro: #1a1a1c;
+            --shiro: #f0efe9;
+            --aka: #c73232;
+            --kin: #d4a853;
+            --midori: #3d6b4b;
+            --hai: #6b6b6b;
+            --sora: #2a3b4c;
+            --sakura: #f8e1e7;
+            --window-bg: rgba(26, 26, 28, 0.92);
+            --window-border: rgba(212, 168, 83, 0.3);
+            --glass: rgba(255, 255, 255, 0.08);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            overflow: hidden;
+            user-select: none;
+            background: var(--kuro);
+            color: var(--shiro);
+        }
+
+        /* Boot screen */
+        #boot-screen {
+            position: fixed;
+            inset: 0;
+            background: var(--kuro);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            transition: opacity 0.8s ease-out;
+        }
+
+        #boot-screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .boot-logo {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: clamp(2rem, 8vw, 4rem);
+            font-weight: 300;
+            letter-spacing: 0.5em;
+            color: var(--shiro);
+            margin-bottom: 2rem;
+            animation: fadeInUp 1s ease-out;
+        }
+
+        .boot-logo span {
+            color: var(--aka);
+            font-weight: 600;
+        }
+
+        .boot-loader {
+            width: 200px;
+            height: 2px;
+            background: var(--glass);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .boot-loader-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--aka), var(--kin));
+            width: 0%;
+            animation: loading 2s ease-out forwards;
+        }
+
+        @keyframes loading {
+            to { width: 100%; }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Desktop */
+        #desktop {
+            position: fixed;
+            inset: 0;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            transition: background-image 0.5s ease;
+        }
+
+        #desktop::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(26,26,28,0.3) 0%, rgba(26,26,28,0.6) 100%);
+            pointer-events: none;
+        }
+
+        /* Desktop icons */
+        .desktop-icons {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-content: flex-start;
+            max-height: calc(100vh - 100px);
+            max-width: 100px;
+        }
+
+        .desktop-icon {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 12px 8px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            width: 80px;
+        }
+
+        .desktop-icon:hover {
+            background: var(--glass);
+            backdrop-filter: blur(10px);
+        }
+
+        .desktop-icon:active {
+            transform: scale(0.95);
+        }
+
+        .desktop-icon i {
+            font-size: 2rem;
+            margin-bottom: 8px;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+        }
+
+        .desktop-icon .icon-files { color: var(--kin); }
+        .desktop-icon .icon-editor { color: var(--midori); }
+        .desktop-icon .icon-browser { color: var(--sora); }
+        .desktop-icon .icon-paint { color: var(--aka); }
+        .desktop-icon .icon-media { color: #e06c75; }
+        .desktop-icon .icon-calc { color: #61afef; }
+        .desktop-icon .icon-settings { color: var(--hai); }
+        .desktop-icon .icon-folder { color: var(--kin); }
+
+        .desktop-icon span {
+            font-size: 0.7rem;
+            text-align: center;
+            color: var(--shiro);
+            text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+            word-break: break-word;
+            line-height: 1.3;
+        }
+
+        /* Window */
+        .window {
+            position: absolute;
+            background: var(--window-bg);
+            border: 1px solid var(--window-border);
+            border-radius: 16px;
+            box-shadow: 
+                0 25px 50px -12px rgba(0, 0, 0, 0.5),
+                0 0 0 1px rgba(255, 255, 255, 0.05),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            min-width: 300px;
+            min-height: 200px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transition: box-shadow 0.2s ease, transform 0.1s ease;
+            animation: windowOpen 0.3s ease-out;
+        }
+
+        @keyframes windowOpen {
+            from {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .window.closing {
+            animation: windowClose 0.2s ease-in forwards;
+        }
+
+        @keyframes windowClose {
+            to {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+        }
+
+        .window.minimized {
+            display: none;
+        }
+
+        .window.maximized {
+            border-radius: 0;
+            border: none;
+        }
+
+        .window-titlebar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            background: linear-gradient(180deg, rgba(255,255,255,0.05) 0%, transparent 100%);
+            border-bottom: 1px solid var(--glass);
+            cursor: grab;
+            flex-shrink: 0;
+        }
+
+        .window-titlebar:active {
+            cursor: grabbing;
+        }
+
+        .window-title {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1rem;
+            font-weight: 500;
+            letter-spacing: 0.05em;
+            color: var(--shiro);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .window-title i {
+            color: var(--kin);
+            font-size: 0.9rem;
+        }
+
+        .window-controls {
+            display: flex;
+            gap: 8px;
+        }
+
+        .window-btn {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0;
+            transition: all 0.2s ease;
+        }
+
+        .window-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .window-btn.minimize {
+            background: var(--kin);
+        }
+
+        .window-btn.maximize {
+            background: var(--midori);
+        }
+
+        .window-btn.close {
+            background: var(--aka);
+        }
+
+        .window-content {
+            flex: 1;
+            overflow: auto;
+            position: relative;
+        }
+
+        /* Resize handles */
+        .resize-handle {
+            position: absolute;
+            background: transparent;
+        }
+
+        .resize-handle.se {
+            right: 0;
+            bottom: 0;
+            width: 20px;
+            height: 20px;
+            cursor: se-resize;
+        }
+
+        .resize-handle.e {
+            right: 0;
+            top: 40px;
+            width: 6px;
+            height: calc(100% - 60px);
+            cursor: e-resize;
+        }
+
+        .resize-handle.s {
+            bottom: 0;
+            left: 40px;
+            width: calc(100% - 60px);
+            height: 6px;
+            cursor: s-resize;
+        }
+
+        /* Taskbar */
+        #taskbar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 56px;
+            background: rgba(26, 26, 28, 0.9);
+            backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
+            border-top: 1px solid var(--glass);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 16px;
+            gap: 8px;
+            z-index: 9000;
+        }
+
+        .taskbar-item {
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 1.2rem;
+            position: relative;
+        }
+
+        .taskbar-item:hover {
+            background: var(--glass);
+            transform: translateY(-2px);
+        }
+
+        .taskbar-item.active {
+            background: var(--glass);
+        }
+
+        .taskbar-item.active::after {
+            content: '';
+            position: absolute;
+            bottom: 4px;
+            width: 20px;
+            height: 3px;
+            background: var(--kin);
+            border-radius: 2px;
+        }
+
+        .taskbar-item.start-btn {
+            color: var(--aka);
+        }
+
+        .taskbar-divider {
+            width: 1px;
+            height: 32px;
+            background: var(--glass);
+            margin: 0 8px;
+        }
+
+        /* Start Menu */
+        #start-menu {
+            position: fixed;
+            bottom: 70px;
+            left: 50%;
+            transform: translateX(-50%) scale(0.95);
+            width: 360px;
+            max-width: calc(100vw - 32px);
+            background: rgba(26, 26, 28, 0.95);
+            border: 1px solid var(--window-border);
+            border-radius: 20px;
+            padding: 20px;
+            backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.2s ease;
+            z-index: 9000;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        #start-menu.open {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateX(-50%) scale(1);
+        }
+
+        .start-menu-header {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.5rem;
+            font-weight: 300;
+            color: var(--shiro);
+            margin-bottom: 20px;
+            text-align: center;
+            letter-spacing: 0.2em;
+        }
+
+        .start-menu-apps {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+        }
+
+        .start-app-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 16px 8px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .start-app-item:hover {
+            background: var(--glass);
+        }
+
+        .start-app-item i {
+            font-size: 1.5rem;
+            margin-bottom: 8px;
+        }
+
+        .start-app-item span {
+            font-size: 0.65rem;
+            color: var(--shiro);
+            text-align: center;
+        }
+
+        /* Context Menu */
+        #context-menu {
+            position: fixed;
+            background: rgba(26, 26, 28, 0.98);
+            border: 1px solid var(--window-border);
+            border-radius: 12px;
+            padding: 8px 0;
+            min-width: 180px;
+            backdrop-filter: blur(20px);
+            z-index: 10000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.15s ease;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        }
+
+        #context-menu.open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .context-item {
+            padding: 10px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: background 0.1s ease;
+        }
+
+        .context-item:hover {
+            background: var(--glass);
+        }
+
+        .context-item i {
+            width: 18px;
+            color: var(--hai);
+        }
+
+        .context-divider {
+            height: 1px;
+            background: var(--glass);
+            margin: 8px 0;
+        }
+
+        /* Clock */
+        #clock {
+            position: fixed;
+            bottom: 70px;
+            right: 20px;
+            text-align: right;
+            pointer-events: none;
+            z-index: 8000;
+        }
+
+        #clock-time {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 2.5rem;
+            font-weight: 300;
+            color: var(--shiro);
+            text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            line-height: 1;
+        }
+
+        #clock-date {
+            font-size: 0.85rem;
+            color: var(--hai);
+            margin-top: 4px;
+        }
+
+        /* App specific styles */
+        
+        /* File Explorer */
+        .file-explorer {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .file-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--glass);
+            flex-wrap: wrap;
+        }
+
+        .file-nav-btn {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            cursor: pointer;
+            color: var(--hai);
+            transition: all 0.2s ease;
+        }
+
+        .file-nav-btn:hover {
+            background: var(--glass);
+            color: var(--shiro);
+        }
+
+        .file-path {
+            flex: 1;
+            background: var(--kuro);
+            border: 1px solid var(--glass);
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--shiro);
+            min-width: 0;
+        }
+
+        .file-grid {
+            flex: 1;
+            padding: 16px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+            gap: 16px;
+            align-content: start;
+            overflow-y: auto;
+        }
+
+        .file-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 12px 8px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .file-item:hover {
+            background: var(--glass);
+        }
+
+        .file-item.selected {
+            background: rgba(212, 168, 83, 0.2);
+            border: 1px solid rgba(212, 168, 83, 0.3);
+        }
+
+        .file-item i {
+            font-size: 2rem;
+            margin-bottom: 8px;
+        }
+
+        .file-item i.fa-folder { color: var(--kin); }
+        .file-item i.fa-file-lines { color: var(--hai); }
+        .file-item i.fa-file-image { color: #c678dd; }
+        .file-item i.fa-file-code { color: var(--midori); }
+        .file-item i.fa-file-zipper { color: #e5c07b; }
+        .file-item i.fa-file-audio { color: #e06c75; }
+        .file-item i.fa-file-video { color: #98c379; }
+
+        .file-item span {
+            font-size: 0.7rem;
+            text-align: center;
+            word-break: break-word;
+            max-width: 100%;
+            line-height: 1.3;
+        }
+
+        .file-sidebar {
+            width: 180px;
+            border-right: 1px solid var(--glass);
+            padding: 12px;
+            flex-shrink: 0;
+        }
+
+        .sidebar-section {
+            margin-bottom: 20px;
+        }
+
+        .sidebar-title {
+            font-size: 0.7rem;
+            color: var(--hai);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 8px;
+            padding-left: 8px;
+        }
+
+        .sidebar-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.15s ease;
+        }
+
+        .sidebar-item:hover {
+            background: var(--glass);
+        }
+
+        .sidebar-item.active {
+            background: rgba(212, 168, 83, 0.15);
+            color: var(--kin);
+        }
+
+        /* Text Editor */
+        .text-editor {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .editor-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-bottom: 1px solid var(--glass);
+            background: rgba(0,0,0,0.2);
+        }
+
+        .editor-btn {
+            padding: 6px 12px;
+            background: var(--glass);
+            border: none;
+            border-radius: 6px;
+            color: var(--shiro);
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-family: inherit;
+            transition: all 0.15s ease;
+        }
+
+        .editor-btn:hover {
+            background: rgba(212, 168, 83, 0.2);
+        }
+
+        .editor-container {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+
+        .line-numbers {
+            padding: 16px 12px;
+            background: rgba(0,0,0,0.3);
+            color: var(--hai);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            line-height: 1.6;
+            text-align: right;
+            user-select: none;
+            overflow: hidden;
+        }
+
+        .editor-textarea {
+            flex: 1;
+            padding: 16px;
+            background: transparent;
+            border: none;
+            color: var(--shiro);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            line-height: 1.6;
+            resize: none;
+            outline: none;
+        }
+
+        /* Browser */
+        .browser-container {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .browser-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            border-bottom: 1px solid var(--glass);
+        }
+
+        .browser-nav-btn {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            cursor: pointer;
+            color: var(--shiro);
+            transition: all 0.15s ease;
+        }
+
+        .browser-nav-btn:hover {
+            background: var(--glass);
+        }
+
+        .browser-url {
+            flex: 1;
+            background: var(--kuro);
+            border: 1px solid var(--glass);
+            border-radius: 20px;
+            padding: 8px 16px;
+            color: var(--shiro);
+            font-size: 0.85rem;
+            outline: none;
+        }
+
+        .browser-url:focus {
+            border-color: var(--kin);
+        }
+
+        .browser-frame {
+            flex: 1;
+            border: none;
+            background: white;
+        }
+
+        /* Drawing Board */
+        .drawing-board {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .drawing-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--glass);
+            flex-wrap: wrap;
+        }
+
+        .drawing-tool {
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            cursor: pointer;
+            color: var(--hai);
+            transition: all 0.15s ease;
+        }
+
+        .drawing-tool:hover {
+            background: var(--glass);
+            color: var(--shiro);
+        }
+
+        .drawing-tool.active {
+            background: var(--kin);
+            color: var(--kuro);
+        }
+
+        .drawing-color-picker {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 3px solid var(--glass);
+            cursor: pointer;
+            overflow: hidden;
+        }
+
+        .drawing-color-picker input {
+            width: 100%;
+            height: 100%;
+            border: none;
+            cursor: pointer;
+        }
+
+        .drawing-size-slider {
+            width: 100px;
+        }
+
+        .drawing-canvas-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: repeating-conic-gradient(#2a2a2c 0% 25%, #252527 0% 50%) 50% / 20px 20px;
+            overflow: auto;
+            padding: 20px;
+        }
+
+        .drawing-canvas {
+            background: white;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            cursor: crosshair;
+        }
+
+        /* Media Player */
+        .media-player {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+        }
+
+        .media-screen {
+            flex: 1;
+            background: var(--kuro);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 16px;
+            overflow: hidden;
+        }
+
+        .media-screen video,
+        .media-screen audio {
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        .media-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .media-progress {
+            width: 100%;
+            height: 4px;
+            background: var(--glass);
+            border-radius: 2px;
+            cursor: pointer;
+        }
+
+        .media-progress-bar {
+            height: 100%;
+            background: var(--kin);
+            border-radius: 2px;
+            width: 0%;
+        }
+
+        .media-buttons {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+        }
+
+        .media-btn {
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            cursor: pointer;
+            color: var(--shiro);
+            transition: all 0.15s ease;
+            font-size: 1.1rem;
+        }
+
+        .media-btn:hover {
+            background: var(--glass);
+        }
+
+        .media-btn.play {
+            width: 56px;
+            height: 56px;
+            background: var(--kin);
+            color: var(--kuro);
+        }
+
+        .media-btn.play:hover {
+            background: #e0b963;
+        }
+
+        /* Calculator */
+        .calculator {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            padding: 16px;
+        }
+
+        .calc-display {
+            background: var(--kuro);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: right;
+            margin-bottom: 16px;
+            min-height: 100px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+        }
+
+        .calc-expression {
+            font-size: 0.9rem;
+            color: var(--hai);
+            margin-bottom: 8px;
+            min-height: 1.2rem;
+        }
+
+        .calc-result {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 2.5rem;
+            font-weight: 300;
+            color: var(--shiro);
+            word-break: break-all;
+        }
+
+        .calc-buttons {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            flex: 1;
+        }
+
+        .calc-btn {
+            border: none;
+            border-radius: 12px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: inherit;
+        }
+
+        .calc-btn.number {
+            background: var(--glass);
+            color: var(--shiro);
+        }
+
+        .calc-btn.number:hover {
+            background: rgba(255,255,255,0.15);
+        }
+
+        .calc-btn.operator {
+            background: rgba(212, 168, 83, 0.2);
+            color: var(--kin);
+        }
+
+        .calc-btn.operator:hover {
+            background: rgba(212, 168, 83, 0.3);
+        }
+
+        .calc-btn.equals {
+            background: var(--kin);
+            color: var(--kuro);
+        }
+
+        .calc-btn.equals:hover {
+            background: #e0b963;
+        }
+
+        .calc-btn.clear {
+            background: var(--aka);
+            color: white;
+        }
+
+        .calc-btn.clear:hover {
+            background: #d74646;
+        }
+
+        /* Settings */
+        .settings-container {
+            height: 100%;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .settings-section {
+            margin-bottom: 30px;
+        }
+
+        .settings-title {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.3rem;
+            font-weight: 500;
+            color: var(--kin);
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--glass);
+        }
+
+        .settings-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 0;
+            border-bottom: 1px solid var(--glass);
+        }
+
+        .settings-item:last-child {
+            border-bottom: none;
+        }
+
+        .settings-label {
+            font-size: 0.9rem;
+            color: var(--shiro);
+        }
+
+        .settings-desc {
+            font-size: 0.75rem;
+            color: var(--hai);
+            margin-top: 4px;
+        }
+
+        .settings-btn {
+            padding: 10px 20px;
+            background: var(--glass);
+            border: none;
+            border-radius: 8px;
+            color: var(--shiro);
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.15s ease;
+        }
+
+        .settings-btn:hover {
+            background: rgba(212, 168, 83, 0.2);
+        }
+
+        .settings-btn.danger {
+            background: rgba(199, 50, 50, 0.2);
+            color: var(--aka);
+        }
+
+        .settings-btn.danger:hover {
+            background: rgba(199, 50, 50, 0.3);
+        }
+
+        .wallpaper-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-top: 12px;
+        }
+
+        .wallpaper-option {
+            aspect-ratio: 16/10;
+            border-radius: 10px;
+            cursor: pointer;
+            overflow: hidden;
+            border: 3px solid transparent;
+            transition: all 0.2s ease;
+        }
+
+        .wallpaper-option:hover {
+            transform: scale(1.02);
+        }
+
+        .wallpaper-option.active {
+            border-color: var(--kin);
+        }
+
+        .wallpaper-option img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(5px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10001;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+        }
+
+        .modal-overlay.open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal {
+            background: var(--kuro);
+            border: 1px solid var(--window-border);
+            border-radius: 16px;
+            padding: 24px;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+        }
+
+        .modal-title {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.3rem;
+            color: var(--shiro);
+            margin-bottom: 16px;
+        }
+
+        .modal-input {
+            width: 100%;
+            background: var(--glass);
+            border: 1px solid var(--glass);
+            border-radius: 8px;
+            padding: 12px;
+            color: var(--shiro);
+            font-size: 0.9rem;
+            outline: none;
+            margin-bottom: 16px;
+        }
+
+        .modal-input:focus {
+            border-color: var(--kin);
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+
+        /* Toast notification */
+        .toast-container {
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10002;
+        }
+
+        .toast {
+            background: var(--kuro);
+            border: 1px solid var(--window-border);
+            border-radius: 12px;
+            padding: 12px 24px;
+            margin-top: 8px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            animation: toastIn 0.3s ease-out;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        @keyframes toastIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .toast i {
+            color: var(--kin);
+        }
+
+        .toast span {
+            font-size: 0.9rem;
+        }
+
+        /* File input hidden */
+        .hidden-input {
+            display: none;
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--glass);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255,255,255,0.15);
+        }
+
+        /* Mobile responsive */
+        @media (max-width: 768px) {
+            .desktop-icons {
+                flex-direction: row;
+                flex-wrap: wrap;
+                max-width: none;
+                top: 10px;
+                left: 10px;
+                right: 10px;
+            }
+
+            .desktop-icon {
+                width: 70px;
+            }
+
+            .window {
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                height: calc(100% - 56px) !important;
+                border-radius: 0 !important;
+                border: none !important;
+            }
+
+            .window.maximized {
+                border-radius: 0;
+            }
+
+            .resize-handle,
+            .window-btn.minimize,
+            .window-btn.maximize {
+                display: none;
+            }
+
+            .file-sidebar {
+                display: none;
+            }
+
+            #start-menu {
+                bottom: 66px;
+                width: calc(100% - 32px);
+            }
+
+            #clock {
+                display: none;
+            }
+
+            .taskbar-item {
+                width: 40px;
+                height: 40px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .boot-logo {
+                font-size: 1.5rem;
+                letter-spacing: 0.2em;
+            }
+
+            .start-menu-apps {
+                grid-template-columns: repeat(3, 1fr);
+            }
+
+            .calc-buttons {
+                gap: 6px;
+            }
+
+            .calc-btn {
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Boot Screen -->
+    <div id="boot-screen">
+        <div class="boot-logo">夜櫻<span>OS</span></div>
+        <div class="boot-loader">
+            <div class="boot-loader-bar"></div>
+        </div>
+    </div>
+
+    <!-- Desktop -->
+    <div id="desktop"></div>
+
+    <!-- Desktop Icons -->
+    <div class="desktop-icons" id="desktop-icons"></div>
+
+    <!-- Windows Container -->
+    <div id="windows-container"></div>
+
+    <!-- Start Menu -->
+    <div id="start-menu">
+        <div class="start-menu-header">夜櫻 OS</div>
+        <div class="start-menu-apps" id="start-menu-apps"></div>
+    </div>
+
+    <!-- Taskbar -->
+    <div id="taskbar"></div>
+
+    <!-- Clock -->
+    <div id="clock">
+        <div id="clock-time">00:00</div>
+        <div id="clock-date">Loading...</div>
+    </div>
+
+    <!-- Context Menu -->
+    <div id="context-menu"></div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- Modal -->
+    <div class="modal-overlay" id="modal-overlay">
+        <div class="modal" id="modal">
+            <div class="modal-title" id="modal-title"></div>
+            <input type="text" class="modal-input" id="modal-input">
+            <div class="modal-buttons" id="modal-buttons"></div>
+        </div>
+    </div>
+
+    <!-- Hidden file inputs -->
+    <input type="file" id="file-import-input" class="hidden-input" multiple>
+    <input type="file" id="wallpaper-input" class="hidden-input" accept="image/*">
+
+    <script>
+        // ============================================
+        // YOZAKURA OS - Virtual File System & Desktop
+        // ============================================
+
+        // Buffer polyfill - must be defined before any BrowserFS operations
+        if (typeof Buffer === 'undefined') {
+            window.Buffer = {
+                from: (data) => {
+                    if (ArrayBuffer.isView(data)) {
+                        return data;
+                    }
+                    if (typeof data === 'string') {
+                        const encoder = new TextEncoder();
+                        return encoder.encode(data);
+                    }
+                    return new Uint8Array(data);
+                }
+            };
+        }
+
+        const OS = {
+            fs: null,
+            windows: [],
+            windowIdCounter: 0,
+            activeWindowId: null,
+            isMobile: window.innerWidth <= 768,
+            
+            // Default wallpapers
+            wallpapers: [
+                'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=1920&q=80',
+                'https://images.unsplash.com/photo-1480796927426-f609979314bd?w=1920&q=80',
+                'https://images.unsplash.com/photo-1545569341-9eb8b30979d9?w=1920&q=80',
+                'https://images.unsplash.com/photo-1518837695005-2083093ee35b?w=1920&q=80'
+            ],
+
+            // Apps configuration
+            apps: {
+                files: {
+                    name: 'Files',
+                    icon: 'fa-folder-open',
+                    iconClass: 'icon-files',
+                    width: 800,
+                    height: 500
+                },
+                editor: {
+                    name: 'Text Editor',
+                    icon: 'fa-file-lines',
+                    iconClass: 'icon-editor',
+                    width: 700,
+                    height: 500
+                },
+                browser: {
+                    name: 'Browser',
+                    icon: 'fa-globe',
+                    iconClass: 'icon-browser',
+                    width: 900,
+                    height: 600
+                },
+                paint: {
+                    name: 'Drawing',
+                    icon: 'fa-palette',
+                    iconClass: 'icon-paint',
+                    width: 700,
+                    height: 550
+                },
+                media: {
+                    name: 'Media',
+                    icon: 'fa-play-circle',
+                    iconClass: 'icon-media',
+                    width: 600,
+                    height: 450
+                },
+                calculator: {
+                    name: 'Calculator',
+                    icon: 'fa-calculator',
+                    iconClass: 'icon-calc',
+                    width: 320,
+                    height: 450
+                },
+                settings: {
+                    name: 'Settings',
+                    icon: 'fa-gear',
+                    iconClass: 'icon-settings',
+                    width: 500,
+                    height: 450
+                }
+            }
+        };
+
+        // ============================================
+        // INDEXEDDB & BROWSERFS INITIALIZATION
+        // ============================================
+
+        async function initFileSystem() {
+            return new Promise((resolve, reject) => {
+                // Add timeout to prevent hanging
+                const timeout = setTimeout(() => {
+                    console.error('BrowserFS init timeout');
+                    reject(new Error('BrowserFS initialization timeout'));
+                }, 15000);
+
+                BrowserFS.configure({
+                    fs: "IndexedDB",
+                    options: {
+                        storeName: "yozakura_fs"
+                    }
+                }, (err) => {
+                    clearTimeout(timeout);
+                    if (err) {
+                        console.error('BrowserFS init failed:', err);
+                        reject(err);
+                        return;
+                    }
+                    
+                    OS.fs = BrowserFS.BFSRequire('fs');
+                    
+                    // Initialize file system functions now that fs is ready
+                    initFileSystemFunctions();
+                    
+                    // Initialize default directory structure
+                    initDefaultStructure().then(() => {
+                        resolve(OS.fs);
+                    }).catch(reject);
+                });
+            });
+        }
+
+        async function initDefaultStructure() {
+            const dirs = [
+                '/home',
+                '/home/user',
+                '/home/user/Desktop',
+                '/home/user/Documents',
+                '/home/user/Downloads',
+                '/home/user/Pictures',
+                '/home/user/Music',
+                '/home/user/Videos'
+            ];
+
+            // Create directories with error handling
+            for (const dir of dirs) {
+                try {
+                    await ensureDir(dir);
+                } catch (err) {
+                    console.warn(`Failed to create directory ${dir}:`, err);
+                }
+            }
+
+            // Create welcome file
+            const welcomeContent = `Welcome to 夜櫻 OS (Yozakura OS)
+================================
+
+A beautiful, browser-based desktop environment.
+
+Features:
+• Persistent file system with IndexedDB
+• Built-in applications
+• Responsive design for mobile & desktop
+• Custom wallpapers
+
+Built with ❤️ using vanilla JavaScript.
+
+Press F11 for fullscreen experience.
+`;
+            
+            try {
+                await writeFile('/home/user/Documents/welcome.txt', welcomeContent);
+            } catch (err) {
+                console.warn('Failed to create welcome file:', err);
+            }
+            
+            // Save current wallpaper index
+            try {
+                await saveSettings();
+            } catch (err) {
+                console.warn('Failed to save settings:', err);
+            }
+        }
+
+        function promisify(fs, method) {
+            return function(...args) {
+                return new Promise((resolve, reject) => {
+                    if (!fs || typeof fs[method] !== 'function') {
+                        reject(new Error(`File system not ready or method ${method} not available`));
+                        return;
+                    }
+                    fs[method](...args, (err, result) => {
+                        if (err) reject(err);
+                        else resolve(result);
+                    });
+                });
+            };
+        }
+
+        // File system functions - will be initialized after BrowserFS is ready
+        let readdir, readFile, writeFile, mkdir, stat, unlink, rmdir, rename;
+        
+        function initFileSystemFunctions() {
+            readdir = promisify(OS.fs, 'readdir');
+            readFile = promisify(OS.fs, 'readFile');
+            writeFile = promisify(OS.fs, 'writeFile');
+            mkdir = promisify(OS.fs, 'mkdir');
+            stat = promisify(OS.fs, 'stat');
+            unlink = promisify(OS.fs, 'unlink');
+            rmdir = promisify(OS.fs, 'rmdir');
+            rename = promisify(OS.fs, 'rename');
+        }
+
+        async function ensureDir(path) {
+            try {
+                await mkdir(path);
+            } catch (err) {
+                if (err.code !== 'EEXIST') throw err;
+            }
+        }
+
+        async function pathExists(path) {
+            try {
+                await stat(path);
+                return true;
+            } catch {
+                return false;
+            }
+        }
+
+        function pathJoin(...parts) {
+            return parts.join('/').replace(/\/+/g, '/');
+        }
+
+        function pathDirname(path) {
+            return path.substring(0, path.lastIndexOf('/')) || '/';
+        }
+
+        function pathBasename(path) {
+            return path.substring(path.lastIndexOf('/') + 1);
+        }
+
+        // ============================================
+        // SETTINGS MANAGEMENT
+        // ============================================
+
+        let settings = {
+            wallpaperIndex: 0,
+            customWallpaper: null
+        };
+
+        async function loadSettings() {
+            try {
+                const data = await readFile('/home/user/.settings');
+                settings = JSON.parse(data.toString());
+            } catch (err) {
+                settings = { wallpaperIndex: 0, customWallpaper: null };
+            }
+            applyWallpaper();
+        }
+
+        async function saveSettings() {
+            try {
+                await ensureDir('/home/user');
+                await writeFile('/home/user/.settings', JSON.stringify(settings));
+            } catch (err) {
+                console.error('Failed to save settings:', err);
+            }
+        }
+
+        function applyWallpaper() {
+            const desktop = document.getElementById('desktop');
+            if (settings.customWallpaper) {
+                desktop.style.backgroundImage = `url(${settings.customWallpaper})`;
+            } else {
+                desktop.style.backgroundImage = `url(${OS.wallpapers[settings.wallpaperIndex] || OS.wallpapers[0]})`;
+            }
+        }
+
+        // ============================================
+        // WINDOW MANAGER
+        // ============================================
+
+        function createWindow(appId, title = null, options = {}) {
+            const app = OS.apps[appId];
+            if (!app) return null;
+
+            const windowId = ++OS.windowIdCounter;
+            const isMobile = OS.isMobile;
+            
+            const width = isMobile ? window.innerWidth : (options.width || app.width);
+            const height = isMobile ? window.innerHeight - 56 : (options.height || app.height);
+            const left = isMobile ? 0 : Math.max(0, (window.innerWidth - width) / 2 + (Math.random() - 0.5) * 100);
+            const top = isMobile ? 0 : Math.max(0, (window.innerHeight - height) / 2 + (Math.random() - 0.5) * 100);
+
+            const windowEl = document.createElement('div');
+            windowEl.className = 'window';
+            windowEl.id = `window-${windowId}`;
+            windowEl.dataset.windowId = windowId;
+            windowEl.dataset.appId = appId;
+            windowEl.style.cssText = `width:${width}px;height:${height}px;left:${left}px;top:${top}px;z-index:${100 + windowId}`;
+
+            windowEl.innerHTML = `
+                <div class="window-titlebar">
+                    <div class="window-title">
+                        <i class="fa-solid ${app.icon}"></i>
+                        <span>${title || app.name}</span>
+                    </div>
+                    <div class="window-controls">
+                        <button class="window-btn minimize" data-action="minimize" title="Minimize">−</button>
+                        <button class="window-btn maximize" data-action="maximize" title="Maximize">□</button>
+                        <button class="window-btn close" data-action="close" title="Close">×</button>
+                    </div>
+                </div>
+                <div class="window-content" id="window-content-${windowId}"></div>
+                ${!isMobile ? `
+                <div class="resize-handle s" data-resize="s"></div>
+                <div class="resize-handle e" data-resize="e"></div>
+                <div class="resize-handle se" data-resize="se"></div>
+                ` : ''}
+            `;
+
+            document.getElementById('windows-container').appendChild(windowEl);
+            
+            const windowData = {
+                id: windowId,
+                appId,
+                el: windowEl,
+                contentEl: windowEl.querySelector(`#window-content-${windowId}`),
+                title,
+                isMinimized: false,
+                isMaximized: false,
+                prevState: { left, top, width, height }
+            };
+
+            OS.windows.push(windowData);
+            
+            // Initialize app content
+            initAppContent(appId, windowData, options);
+
+            // Event listeners
+            initWindowEvents(windowData);
+            
+            // Bring to front
+            focusWindow(windowId);
+            
+            // Update taskbar
+            updateTaskbar();
+
+            return windowData;
+        }
+
+        function initWindowEvents(windowData) {
+            const { el } = windowData;
+
+            // Click to focus
+            el.addEventListener('mousedown', () => focusWindow(windowData.id));
+
+            // Window controls
+            el.querySelectorAll('.window-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const action = btn.dataset.action;
+                    if (action === 'minimize') minimizeWindow(windowData.id);
+                    else if (action === 'maximize') toggleMaximize(windowData.id);
+                    else if (action === 'close') closeWindow(windowData.id);
+                });
+            });
+
+            // Dragging
+            if (!OS.isMobile) {
+                const titlebar = el.querySelector('.window-titlebar');
+                let isDragging = false;
+                let dragOffset = { x: 0, y: 0 };
+
+                titlebar.addEventListener('mousedown', (e) => {
+                    if (windowData.isMaximized) return;
+                    if (e.target.closest('.window-controls')) return;
+                    
+                    isDragging = true;
+                    dragOffset.x = e.clientX - el.offsetLeft;
+                    dragOffset.y = e.clientY - el.offsetTop;
+                    titlebar.style.cursor = 'grabbing';
+                });
+
+                document.addEventListener('mousemove', (e) => {
+                    if (!isDragging) return;
+                    
+                    let newX = e.clientX - dragOffset.x;
+                    let newY = e.clientY - dragOffset.y;
+                    
+                    // Constrain to viewport
+                    newX = Math.max(0, Math.min(newX, window.innerWidth - 50));
+                    newY = Math.max(0, Math.min(newY, window.innerHeight - 50));
+                    
+                    el.style.left = newX + 'px';
+                    el.style.top = newY + 'px';
+                });
+
+                document.addEventListener('mouseup', () => {
+                    isDragging = false;
+                    titlebar.style.cursor = 'grab';
+                });
+
+                // Resizing
+                el.querySelectorAll('.resize-handle').forEach(handle => {
+                    handle.addEventListener('mousedown', (e) => {
+                        if (windowData.isMaximized) return;
+                        e.preventDefault();
+                        
+                        const resizeType = handle.dataset.resize;
+                        const startX = e.clientX;
+                        const startY = e.clientY;
+                        const startWidth = el.offsetWidth;
+                        const startHeight = el.offsetHeight;
+                        const startLeft = el.offsetLeft;
+                        const startTop = el.offsetTop;
+
+                        const doResize = (e) => {
+                            const dx = e.clientX - startX;
+                            const dy = e.clientY - startY;
+
+                            if (resizeType.includes('e')) {
+                                el.style.width = Math.max(300, startWidth + dx) + 'px';
+                            }
+                            if (resizeType.includes('s')) {
+                                el.style.height = Math.max(200, startHeight + dy) + 'px';
+                            }
+                        };
+
+                        const stopResize = () => {
+                            document.removeEventListener('mousemove', doResize);
+                            document.removeEventListener('mouseup', stopResize);
+                        };
+
+                        document.addEventListener('mousemove', doResize);
+                        document.addEventListener('mouseup', stopResize);
+                    });
+                });
+            }
+        }
+
+        function focusWindow(windowId) {
+            const windowData = OS.windows.find(w => w.id === windowId);
+            if (!windowData) return;
+
+            const maxZ = Math.max(...OS.windows.map(w => parseInt(w.el.style.zIndex) || 100));
+            windowData.el.style.zIndex = maxZ + 1;
+            OS.activeWindowId = windowId;
+            
+            // Update taskbar active state
+            updateTaskbar();
+        }
+
+        function minimizeWindow(windowId) {
+            const windowData = OS.windows.find(w => w.id === windowId);
+            if (!windowData) return;
+
+            windowData.isMinimized = true;
+            windowData.el.classList.add('minimized');
+            updateTaskbar();
+        }
+
+        function restoreWindow(windowId) {
+            const windowData = OS.windows.find(w => w.id === windowId);
+            if (!windowData) return;
+
+            windowData.isMinimized = false;
+            windowData.el.classList.remove('minimized');
+            focusWindow(windowId);
+            updateTaskbar();
+        }
+
+        function toggleMaximize(windowId) {
+            const windowData = OS.windows.find(w => w.id === windowId);
+            if (!windowData) return;
+
+            if (windowData.isMaximized) {
+                // Restore
+                windowData.el.classList.remove('maximized');
+                windowData.el.style.left = windowData.prevState.left + 'px';
+                windowData.el.style.top = windowData.prevState.top + 'px';
+                windowData.el.style.width = windowData.prevState.width + 'px';
+                windowData.el.style.height = windowData.prevState.height + 'px';
+                windowData.isMaximized = false;
+            } else {
+                // Maximize
+                windowData.prevState = {
+                    left: windowData.el.offsetLeft,
+                    top: windowData.el.offsetTop,
+                    width: windowData.el.offsetWidth,
+                    height: windowData.el.offsetHeight
+                };
+                windowData.el.classList.add('maximized');
+                windowData.el.style.left = '0';
+                windowData.el.style.top = '0';
+                windowData.el.style.width = '100%';
+                windowData.el.style.height = '100%';
+                windowData.isMaximized = true;
+            }
+        }
+
+        function closeWindow(windowId) {
+            const windowIndex = OS.windows.findIndex(w => w.id === windowId);
+            if (windowIndex === -1) return;
+
+            const windowData = OS.windows[windowIndex];
+            windowData.el.classList.add('closing');
+
+            setTimeout(() => {
+                windowData.el.remove();
+                OS.windows.splice(windowIndex, 1);
+                if (OS.activeWindowId === windowId) {
+                    OS.activeWindowId = OS.windows.length > 0 ? OS.windows[OS.windows.length - 1].id : null;
+                }
+                updateTaskbar();
+            }, 200);
+        }
+
+        // ============================================
+        // TASKBAR
+        // ============================================
+
+        function initTaskbar() {
+            const taskbar = document.getElementById('taskbar');
+            
+            // Start button
+            const startBtn = document.createElement('div');
+            startBtn.className = 'taskbar-item start-btn';
+            startBtn.innerHTML = '<i class="fa-solid fa-torii-gate"></i>';
+            startBtn.addEventListener('click', toggleStartMenu);
+            taskbar.appendChild(startBtn);
+
+            // Divider
+            const divider = document.createElement('div');
+            divider.className = 'taskbar-divider';
+            taskbar.appendChild(divider);
+
+            // Running apps container
+            const runningApps = document.createElement('div');
+            runningApps.id = 'taskbar-running';
+            runningApps.style.cssText = 'display:flex;gap:8px;flex:1;overflow-x:auto;';
+            taskbar.appendChild(runningApps);
+
+            // Clock click listener
+            document.getElementById('clock').addEventListener('click', () => {
+                createWindow('settings');
+            });
+        }
+
+        function updateTaskbar() {
+            const runningContainer = document.getElementById('taskbar-running');
+            runningContainer.innerHTML = '';
+
+            OS.windows.forEach(windowData => {
+                const app = OS.apps[windowData.appId];
+                const item = document.createElement('div');
+                item.className = 'taskbar-item' + (windowData.id === OS.activeWindowId ? ' active' : '');
+                item.innerHTML = `<i class="fa-solid ${app.icon}"></i>`;
+                item.addEventListener('click', () => {
+                    if (windowData.isMinimized) {
+                        restoreWindow(windowData.id);
+                    } else if (windowData.id === OS.activeWindowId) {
+                        minimizeWindow(windowData.id);
+                    } else {
+                        focusWindow(windowData.id);
+                    }
+                });
+                runningContainer.appendChild(item);
+            });
+        }
+
+        function toggleStartMenu(e) {
+            if (e) e.stopPropagation();
+            document.getElementById('start-menu').classList.toggle('open');
+        }
+
+        function initStartMenu() {
+            const container = document.getElementById('start-menu-apps');
+            
+            Object.entries(OS.apps).forEach(([appId, app]) => {
+                const item = document.createElement('div');
+                item.className = 'start-app-item';
+                item.innerHTML = `
+                    <i class="fa-solid ${app.icon}" style="color:var(--kin)"></i>
+                    <span>${app.name}</span>
+                `;
+                item.addEventListener('click', () => {
+                    createWindow(appId);
+                    toggleStartMenu();
+                });
+                container.appendChild(item);
+            });
+
+            // Close start menu when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('#start-menu') && !e.target.closest('.start-btn')) {
+                    document.getElementById('start-menu').classList.remove('open');
+                }
+            });
+        }
+
+        function initDesktopIcons() {
+            const container = document.getElementById('desktop-icons');
+            
+            // Add file shortcut
+            const filesIcon = document.createElement('div');
+            filesIcon.className = 'desktop-icon';
+            filesIcon.innerHTML = `
+                <i class="fa-solid fa-folder-open icon-files"></i>
+                <span>Files</span>
+            `;
+            filesIcon.addEventListener('dblclick', () => createWindow('files'));
+            filesIcon.addEventListener('click', (e) => {
+                e.stopPropagation();
+            });
+            container.appendChild(filesIcon);
+
+            // Add other app shortcuts
+            ['editor', 'browser', 'paint', 'media', 'calculator', 'settings'].forEach(appId => {
+                const app = OS.apps[appId];
+                const icon = document.createElement('div');
+                icon.className = 'desktop-icon';
+                icon.innerHTML = `
+                    <i class="fa-solid ${app.icon} ${app.iconClass}"></i>
+                    <span>${app.name}</span>
+                `;
+                icon.addEventListener('dblclick', () => createWindow(appId));
+                icon.addEventListener('click', (e) => e.stopPropagation());
+                container.appendChild(icon);
+            });
+        }
+
+        // ============================================
+        // CLOCK
+        // ============================================
+
+        function updateClock() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const timeStr = `${hours}:${minutes}`;
+            
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            const dateStr = now.toLocaleDateString('en-US', options);
+
+            document.getElementById('clock-time').textContent = timeStr;
+            document.getElementById('clock-date').textContent = dateStr;
+        }
+
+        // ============================================
+        // CONTEXT MENU
+        // ============================================
+
+        function initContextMenu() {
+            const desktop = document.getElementById('desktop');
+            
+            desktop.addEventListener('contextmenu', (e) => {
+                if (e.target.closest('.window') || e.target.closest('.desktop-icon')) return;
+                
+                e.preventDefault();
+                showContextMenu(e.clientX, e.clientY, 'desktop');
+            });
+
+            document.addEventListener('click', () => {
+                document.getElementById('context-menu').classList.remove('open');
+            });
+        }
+
+        function showContextMenu(x, y, context, extraItems = []) {
+            const menu = document.getElementById('context-menu');
+            menu.innerHTML = '';
+
+            const baseItems = [
+                { icon: 'fa-arrows-rotate', label: 'Refresh', action: () => location.reload() },
+                { divider: true },
+                { icon: 'fa-folder-plus', label: 'New Folder', action: () => showNewFolderModal() },
+                { icon: 'fa-file-circle-plus', label: 'New File', action: () => showNewFileModal() },
+                { divider: true },
+                { icon: 'fa-image', label: 'Change Wallpaper', action: () => showWallpaperPicker() },
+                { icon: 'fa-upload', label: 'Import Files', action: () => document.getElementById('file-import-input').click() },
+                { icon: 'fa-expand', label: 'Toggle Fullscreen', action: () => toggleFullscreen() }
+            ];
+
+            [...baseItems, ...extraItems].forEach(item => {
+                if (item.divider) {
+                    menu.appendChild(document.createElement('div')).className = 'context-divider';
+                } else {
+                    const menuItem = document.createElement('div');
+                    menuItem.className = 'context-item';
+                    menuItem.innerHTML = `<i class="fa-solid ${item.icon}"></i><span>${item.label}</span>`;
+                    menuItem.addEventListener('click', () => {
+                        item.action();
+                        menu.classList.remove('open');
+                    });
+                    menu.appendChild(menuItem);
+                }
+            });
+
+            // Position menu
+            menu.style.left = x + 'px';
+            menu.style.top = y + 'px';
+            menu.classList.add('open');
+
+            // Keep menu in viewport
+            const rect = menu.getBoundingClientRect();
+            if (rect.right > window.innerWidth) {
+                menu.style.left = (window.innerWidth - rect.width - 10) + 'px';
+            }
+            if (rect.bottom > window.innerHeight) {
+                menu.style.top = (window.innerHeight - rect.height - 10) + 'px';
+            }
+        }
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
+        // ============================================
+        // MODAL SYSTEM
+        // ============================================
+
+        function showModal(title, defaultValue = '', callback) {
+            return new Promise((resolve) => {
+                const overlay = document.getElementById('modal-overlay');
+                const titleEl = document.getElementById('modal-title');
+                const inputEl = document.getElementById('modal-input');
+                const buttonsEl = document.getElementById('modal-buttons');
+
+                titleEl.textContent = title;
+                inputEl.value = defaultValue;
+                inputEl.focus();
+
+                buttonsEl.innerHTML = `
+                    <button class="settings-btn" id="modal-cancel">Cancel</button>
+                    <button class="settings-btn" id="modal-ok" style="background:var(--kin);color:var(--kuro)">OK</button>
+                `;
+
+                const close = () => {
+                    overlay.classList.remove('open');
+                    overlay.onclick = null;
+                    document.getElementById('modal-ok').onclick = null;
+                    document.getElementById('modal-cancel').onclick = null;
+                    inputEl.onkeydown = null;
+                };
+
+                overlay.onclick = (e) => {
+                    if (e.target === overlay) {
+                        close();
+                        resolve(null);
+                    }
+                };
+
+                document.getElementById('modal-ok').onclick = () => {
+                    const value = inputEl.value.trim();
+                    close();
+                    resolve(value || null);
+                };
+
+                document.getElementById('modal-cancel').onclick = () => {
+                    close();
+                    resolve(null);
+                };
+
+                inputEl.onkeydown = (e) => {
+                    if (e.key === 'Enter') {
+                        document.getElementById('modal-ok').click();
+                    } else if (e.key === 'Escape') {
+                        document.getElementById('modal-cancel').click();
+                    }
+                };
+
+                overlay.classList.add('open');
+            });
+        }
+
+        function showNewFolderModal() {
+            showModal('Create New Folder', 'New Folder').then(async (name) => {
+                if (name) {
+                    try {
+                        await mkdir(`/home/user/Desktop/${name}`);
+                        showToast('Folder created: ' + name);
+                        refreshFileExplorers();
+                    } catch (err) {
+                        showToast('Failed to create folder', 'error');
+                    }
+                }
+            });
+        }
+
+        function showNewFileModal() {
+            showModal('Create New File', 'new_file.txt').then(async (name) => {
+                if (name) {
+                    try {
+                        await writeFile(`/home/user/Desktop/${name}`, '');
+                        showToast('File created: ' + name);
+                        refreshFileExplorers();
+                    } catch (err) {
+                        showToast('Failed to create file', 'error');
+                    }
+                }
+            });
+        }
+
+        function showWallpaperPicker() {
+            createWindow('settings');
+        }
+
+        // ============================================
+        // TOAST NOTIFICATIONS
+        // ============================================
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            const icon = type === 'error' ? 'fa-circle-exclamation' : 'fa-circle-check';
+            toast.innerHTML = `<i class="fa-solid ${icon}"></i><span>${message}</span>`;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(20px)';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // ============================================
+        // FILE IMPORT HANDLER
+        // ============================================
+
+        function initFileImport() {
+            const input = document.getElementById('file-import-input');
+            if (!input) return;
+            
+            input.addEventListener('change', async (e) => {
+                const files = Array.from(e.target.files);
+                if (files.length === 0) return;
+
+                const targetPath = input.dataset.targetPath || '/home/user/Downloads';
+
+                for (const file of files) {
+                    try {
+                        const buffer = await file.arrayBuffer();
+                        await writeFile(`${targetPath}/${file.name}`, Buffer.from(buffer));
+                        showToast(`Imported: ${file.name}`);
+                    } catch (err) {
+                        console.error('Import error:', err);
+                        showToast(`Failed to import ${file.name}`, 'error');
+                    }
+                }
+
+                input.value = '';
+                input.dataset.targetPath = '';
+                refreshFileExplorers();
+            });
+
+            // Wallpaper upload
+            const wallpaperInput = document.getElementById('wallpaper-input');
+            wallpaperInput.addEventListener('change', async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = async (event) => {
+                    settings.customWallpaper = event.target.result;
+                    await saveSettings();
+                    applyWallpaper();
+                    showToast('Wallpaper updated');
+                    
+                    // Save to VFS
+                    try {
+                        await writeFile('/home/user/.wallpaper', Buffer.from(new Uint8Array(await file.arrayBuffer())));
+                    } catch (err) {
+                        console.error('Failed to save wallpaper to VFS:', err);
+                    }
+                    
+                    refreshFileExplorers();
+                };
+                reader.readAsDataURL(file);
+                wallpaperInput.value = '';
+            });
+        }
+
+        // ============================================
+        // APP CONTENT INITIALIZATION
+        // ============================================
+
+        function initAppContent(appId, windowData, options = {}) {
+            const { contentEl } = windowData;
+
+            switch (appId) {
+                case 'files':
+                    initFileExplorer(windowData, options.path || '/home/user');
+                    break;
+                case 'editor':
+                    initTextEditor(windowData, options.file || null);
+                    break;
+                case 'browser':
+                    initBrowser(windowData, options.url || 'https://www.wikipedia.org');
+                    break;
+                case 'paint':
+                    initDrawingBoard(windowData, options.file || null);
+                    break;
+                case 'media':
+                    initMediaPlayer(windowData, options.file || null);
+                    break;
+                case 'calculator':
+                    initCalculator(windowData);
+                    break;
+                case 'settings':
+                    initSettings(windowData);
+                    break;
+            }
+        }
+
+        // ============================================
+        // FILE EXPLORER
+        // ============================================
+
+        let fileExplorers = [];
+
+        function initFileExplorer(windowData, initialPath) {
+            const { contentEl, id } = windowData;
+            let currentPath = initialPath || '/home/user';
+
+            contentEl.innerHTML = `
+                <div class="file-explorer">
+                    <div class="file-sidebar">
+                        <div class="sidebar-section">
+                            <div class="sidebar-title">Quick Access</div>
+                            <div class="sidebar-item" data-path="/home/user">
+                                <i class="fa-solid fa-house"></i> Home
+                            </div>
+                            <div class="sidebar-item" data-path="/home/user/Desktop">
+                                <i class="fa-solid fa-desktop"></i> Desktop
+                            </div>
+                            <div class="sidebar-item" data-path="/home/user/Documents">
+                                <i class="fa-solid fa-file-lines"></i> Documents
+                            </div>
+                            <div class="sidebar-item" data-path="/home/user/Downloads">
+                                <i class="fa-solid fa-download"></i> Downloads
+                            </div>
+                            <div class="sidebar-item" data-path="/home/user/Pictures">
+                                <i class="fa-solid fa-image"></i> Pictures
+                            </div>
+                        </div>
+                    </div>
+                    <div style="flex:1;display:flex;flex-direction:column;overflow:hidden">
+                        <div class="file-toolbar">
+                            <div class="file-nav-btn" id="nav-back-${id}"><i class="fa-solid fa-arrow-left"></i></div>
+                            <div class="file-nav-btn" id="nav-up-${id}"><i class="fa-solid fa-arrow-up"></i></div>
+                            <div class="file-nav-btn" id="nav-refresh-${id}"><i class="fa-solid fa-arrows-rotate"></i></div>
+                            <input type="text" class="file-path" id="file-path-${id}" value="${currentPath}" readonly>
+                            <div class="file-nav-btn" id="nav-new-folder-${id}"><i class="fa-solid fa-folder-plus"></i></div>
+                            <div class="file-nav-btn" id="nav-import-${id}"><i class="fa-solid fa-upload"></i></div>
+                        </div>
+                        <div class="file-grid" id="file-grid-${id}"></div>
+                    </div>
+                </div>
+            `;
+
+            const explorer = { windowId: id, path: currentPath, el: contentEl };
+            fileExplorers.push(explorer);
+
+            // Navigation
+            contentEl.querySelector(`#nav-back-${id}`).addEventListener('click', () => navigateTo(id, pathDirname(currentPath)));
+            contentEl.querySelector(`#nav-up-${id}`).addEventListener('click', () => navigateTo(id, pathDirname(currentPath)));
+            contentEl.querySelector(`#nav-refresh-${id}`).addEventListener('click', () => loadDirectory(id, currentPath));
+            contentEl.querySelector(`#nav-new-folder-${id}`).addEventListener('click', () => showNewFolderModalInPath(currentPath));
+            contentEl.querySelector(`#nav-import-${id}`).addEventListener('click', () => importFilesToPath(currentPath));
+
+            // Sidebar navigation
+            contentEl.querySelectorAll('.sidebar-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    navigateTo(id, item.dataset.path);
+                    contentEl.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
+                    item.classList.add('active');
+                });
+            });
+
+            loadDirectory(id, currentPath);
+        }
+
+        async function loadDirectory(windowId, path) {
+            const grid = document.getElementById(`file-grid-${windowId}`);
+            const pathInput = document.getElementById(`file-path-${windowId}`);
+            if (!grid || !pathInput) return;
+
+            const explorer = fileExplorers.find(e => e.windowId === windowId);
+            if (explorer) explorer.path = path;
+
+            pathInput.value = path;
+            grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--hai)"><i class="fa-solid fa-spinner fa-spin"></i> Loading...</div>';
+
+            try {
+                const entries = await readdir(path);
+                grid.innerHTML = '';
+
+                if (entries.length === 0) {
+                    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--hai)">This folder is empty</div>';
+                    return;
+                }
+
+                for (const name of entries) {
+                    const fullPath = pathJoin(path, name);
+                    try {
+                        const stats = await stat(fullPath);
+                        const isDir = stats.isDirectory();
+                        const ext = name.split('.').pop().toLowerCase();
+                        
+                        let icon = 'fa-file';
+                        if (isDir) icon = 'fa-folder';
+                        else if (['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp'].includes(ext)) icon = 'fa-file-image';
+                        else if (['txt', 'md', 'js', 'html', 'css', 'json'].includes(ext)) icon = 'fa-file-code';
+                        else if (['zip', 'tar', 'gz', 'rar'].includes(ext)) icon = 'fa-file-zipper';
+                        else if (['mp3', 'wav', 'ogg', 'flac'].includes(ext)) icon = 'fa-file-audio';
+                        else if (['mp4', 'webm', 'mov', 'avi'].includes(ext)) icon = 'fa-file-video';
+
+                        const item = document.createElement('div');
+                        item.className = 'file-item';
+                        item.dataset.path = fullPath;
+                        item.dataset.name = name;
+                        item.dataset.type = isDir ? 'dir' : 'file';
+                        item.innerHTML = `
+                            <i class="fa-solid ${icon}"></i>
+                            <span>${name}</span>
+                        `;
+
+                        item.addEventListener('dblclick', () => {
+                            if (isDir) {
+                                navigateTo(windowId, fullPath);
+                            } else {
+                                openFile(fullPath, name);
+                            }
+                        });
+
+                        item.addEventListener('contextmenu', (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            showFileContextMenu(e.clientX, e.clientY, fullPath, name, isDir);
+                        });
+
+                        grid.appendChild(item);
+                    } catch (err) {
+                        console.error('Error reading file:', fullPath, err);
+                    }
+                }
+            } catch (err) {
+                grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--aka)">
+                    <i class="fa-solid fa-circle-exclamation"></i><br>
+                    Error: ${err.message}
+                </div>`;
+            }
+        }
+
+        function navigateTo(windowId, path) {
+            if (!path || path === '/') path = '/home/user';
+            loadDirectory(windowId, path);
+        }
+
+        function showNewFolderModalInPath(path) {
+            showModal('Create New Folder', 'New Folder').then(async (name) => {
+                if (name) {
+                    try {
+                        await mkdir(`${path}/${name}`);
+                        showToast('Folder created: ' + name);
+                        refreshFileExplorers();
+                    } catch (err) {
+                        showToast('Failed to create folder', 'error');
+                    }
+                }
+            });
+        }
+
+        function importFilesToPath(path) {
+            const input = document.getElementById('file-import-input');
+            if (input) {
+                input.dataset.targetPath = path;
+                input.click();
+            }
+        }
+
+        function showFileContextMenu(x, y, path, name, isDir) {
+            const items = [
+                { icon: 'fa-folder-open', label: 'Open', action: () => isDir ? navigateToFileExplorer(path) : openFile(path, name) },
+                { divider: true },
+                { icon: 'fa-pen', label: 'Rename', action: () => renameFile(path, name) },
+                { icon: 'fa-copy', label: 'Copy', action: () => copyFile(path) },
+                { icon: 'fa-trash', label: 'Delete', action: () => deleteFile(path, name) }
+            ];
+
+            if (name.endsWith('.zip')) {
+                items.push({ divider: true });
+                items.push({ icon: 'fa-file-zipper', label: 'Extract Here', action: () => extractZip(path, pathDirname(path)) });
+            }
+
+            showContextMenu(x, y, 'file', items);
+        }
+
+        async function renameFile(path, oldName) {
+            const newName = await showModal('Rename', oldName);
+            if (newName && newName !== oldName) {
+                try {
+                    await rename(path, pathJoin(pathDirname(path), newName));
+                    showToast(`Renamed to ${newName}`);
+                    refreshFileExplorers();
+                } catch (err) {
+                    showToast('Failed to rename', 'error');
+                }
+            }
+        }
+
+        let clipboard = null;
+
+        async function copyFile(path) {
+            try {
+                const data = await readFile(path);
+                clipboard = { path, data };
+                showToast('Copied to clipboard');
+            } catch (err) {
+                showToast('Failed to copy', 'error');
+            }
+        }
+
+        async function pasteFile(targetPath) {
+            if (!clipboard) {
+                showToast('Nothing to paste', 'error');
+                return;
+            }
+            try {
+                const newName = pathBasename(clipboard.path);
+                await writeFile(`${targetPath}/${newName}`, clipboard.data);
+                showToast(`Pasted: ${newName}`);
+                refreshFileExplorers();
+            } catch (err) {
+                showToast('Failed to paste', 'error');
+            }
+        }
+
+        async function deleteFile(path, name) {
+            try {
+                const stats = await stat(path);
+                if (stats.isDirectory()) {
+                    await rmdir(path);
+                } else {
+                    await unlink(path);
+                }
+                showToast(`Deleted: ${name}`);
+                refreshFileExplorers();
+            } catch (err) {
+                showToast('Failed to delete', 'error');
+            }
+        }
+
+        async function extractZip(zipPath, targetDir) {
+            try {
+                const zipData = await readFile(zipPath);
+                const blob = new Blob([zipData]);
+                const zip = await JSZip.loadAsync(blob);
+
+                for (const [relativePath, file] of Object.entries(zip.files)) {
+                    if (file.dir) {
+                        await mkdir(`${targetDir}/${relativePath}`);
+                    } else {
+                        const content = await file.async('arraybuffer');
+                        await writeFile(`${targetDir}/${relativePath}`, Buffer.from(content));
+                    }
+                }
+
+                showToast('Archive extracted successfully');
+                refreshFileExplorers();
+            } catch (err) {
+                showToast('Failed to extract archive', 'error');
+                console.error(err);
+            }
+        }
+
+        function navigateToFileExplorer(path) {
+            // Find first file explorer and navigate
+            if (fileExplorers.length > 0) {
+                navigateTo(fileExplorers[0].windowId, path);
+                focusWindow(fileExplorers[0].windowId);
+            } else {
+                createWindow('files', 'Files', { path });
+            }
+        }
+
+        function refreshFileExplorers() {
+            fileExplorers.forEach(explorer => {
+                loadDirectory(explorer.windowId, explorer.path);
+            });
+        }
+
+        // ============================================
+        // OPEN FILES
+        // ============================================
+
+        async function openFile(path, name) {
+            const ext = name.split('.').pop().toLowerCase();
+
+            try {
+                if (['txt', 'md', 'js', 'html', 'css', 'json', 'xml', 'py', 'java', 'c', 'cpp', 'h'].includes(ext)) {
+                    const content = await readFile(path, 'utf8');
+                    createWindow('editor', name, { file: path, content: content.toString() });
+                } else if (['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'].includes(ext)) {
+                    const data = await readFile(path);
+                    const blob = new Blob([data], { type: 'image/png' });
+                    const url = URL.createObjectURL(blob);
+                    
+                    // Create a simple image viewer
+                    const windowData = createWindow('browser', name, { url: 'about:blank' });
+                    setTimeout(() => {
+                        const frame = windowData.contentEl.querySelector('iframe');
+                        if (frame) {
+                            frame.srcdoc = `
+                                <!DOCTYPE html>
+                                <html>
+                                <head>
+                                    <style>
+                                        body { margin:0; display:flex; align-items:center; justify-content:center; min-height:100vh; background:#1a1a1c; }
+                                        img { max-width:100%; max-height:100vh; object-fit:contain; }
+                                    </style>
+                                </head>
+                                <body><img src="${url}" alt="${name}"></body>
+                                </html>
+                            `;
+                        }
+                    }, 100);
+                } else if (['mp3', 'wav', 'ogg', 'flac'].includes(ext)) {
+                    createWindow('media', name, { file: path, type: 'audio' });
+                } else if (['mp4', 'webm', 'mov'].includes(ext)) {
+                    createWindow('media', name, { file: path, type: 'video' });
+                } else if (['zip', 'tar', 'gz'].includes(ext)) {
+                    if (confirm('Extract this archive to Downloads?')) {
+                        extractZip(path, '/home/user/Downloads');
+                    }
+                } else {
+                    showToast(`Cannot open file type: .${ext}`, 'error');
+                }
+            } catch (err) {
+                showToast('Failed to open file', 'error');
+                console.error(err);
+            }
+        }
+
+        // ============================================
+        // TEXT EDITOR
+        // ============================================
+
+        function initTextEditor(windowData, fileInfo) {
+            const { contentEl, id } = windowData;
+            let filePath = typeof fileInfo === 'string' ? fileInfo : (fileInfo?.file || null);
+            let content = typeof fileInfo === 'object' && fileInfo?.content ? fileInfo.content : '';
+            let isModified = false;
+
+            contentEl.innerHTML = `
+                <div class="text-editor">
+                    <div class="editor-toolbar">
+                        <button class="editor-btn" id="editor-save-${id}"><i class="fa-solid fa-floppy-disk"></i> Save</button>
+                        <button class="editor-btn" id="editor-new-${id}"><i class="fa-solid fa-file-circle-plus"></i> New</button>
+                        <span style="flex:1"></span>
+                        <span id="editor-status-${id}" style="font-size:0.8rem;color:var(--hai)">Untitled</span>
+                    </div>
+                    <div class="editor-container">
+                        <div class="line-numbers" id="line-numbers-${id}">1</div>
+                        <textarea class="editor-textarea" id="editor-textarea-${id}" spellcheck="false">${escapeHtml(content)}</textarea>
+                    </div>
+                </div>
+            `;
+
+            const textarea = contentEl.querySelector(`#editor-textarea-${id}`);
+            const lineNumbers = contentEl.querySelector(`#line-numbers-${id}`);
+            const status = contentEl.querySelector(`#editor-status-${id}`);
+
+            if (filePath) {
+                status.textContent = pathBasename(filePath);
+            }
+
+            const updateLineNumbers = () => {
+                const lines = textarea.value.split('\n').length;
+                lineNumbers.innerHTML = Array.from({ length: lines }, (_, i) => i + 1).join('<br>');
+            };
+
+            textarea.addEventListener('input', () => {
+                updateLineNumbers();
+                isModified = true;
+                status.textContent = (filePath ? pathBasename(filePath) : 'Untitled') + ' *';
+            });
+
+            textarea.addEventListener('scroll', () => {
+                lineNumbers.scrollTop = textarea.scrollTop;
+            });
+
+            textarea.addEventListener('keydown', (e) => {
+                if (e.key === 'Tab') {
+                    e.preventDefault();
+                    const start = textarea.selectionStart;
+                    const end = textarea.selectionEnd;
+                    textarea.value = textarea.value.substring(0, start) + '    ' + textarea.value.substring(end);
+                    textarea.selectionStart = textarea.selectionEnd = start + 4;
+                    updateLineNumbers();
+                }
+            });
+
+            contentEl.querySelector(`#editor-save-${id}`).addEventListener('click', async () => {
+                if (!filePath) {
+                    const name = await showModal('Save As', 'untitled.txt');
+                    if (!name) return;
+                    filePath = `/home/user/Documents/${name}`;
+                }
+                
+                try {
+                    await writeFile(filePath, textarea.value);
+                    isModified = false;
+                    status.textContent = pathBasename(filePath);
+                    showToast('File saved');
+                } catch (err) {
+                    showToast('Failed to save file', 'error');
+                }
+            });
+
+            contentEl.querySelector(`#editor-new-${id}`).addEventListener('click', () => {
+                if (isModified && !confirm('Discard unsaved changes?')) return;
+                filePath = null;
+                textarea.value = '';
+                isModified = false;
+                status.textContent = 'Untitled';
+                updateLineNumbers();
+            });
+
+            updateLineNumbers();
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // ============================================
+        // BROWSER
+        // ============================================
+
+        function initBrowser(windowData, url) {
+            const { contentEl, id } = windowData;
+
+            contentEl.innerHTML = `
+                <div class="browser-container">
+                    <div class="browser-toolbar">
+                        <div class="browser-nav-btn" id="browser-back-${id}"><i class="fa-solid fa-arrow-left"></i></div>
+                        <div class="browser-nav-btn" id="browser-forward-${id}"><i class="fa-solid fa-arrow-right"></i></div>
+                        <div class="browser-nav-btn" id="browser-refresh-${id}"><i class="fa-solid fa-arrows-rotate"></i></div>
+                        <div class="browser-nav-btn" id="browser-home-${id}"><i class="fa-solid fa-house"></i></div>
+                        <input type="text" class="browser-url" id="browser-url-${id}" value="${url}">
+                        <div class="browser-nav-btn" id="browser-go-${id}"><i class="fa-solid fa-arrow-right"></i></div>
+                    </div>
+                    <iframe class="browser-frame" id="browser-frame-${id}" src="${url}" sandbox="allow-scripts allow-same-origin allow-forms"></iframe>
+                </div>
+            `;
+
+            const frame = contentEl.querySelector(`#browser-frame-${id}`);
+            const urlInput = contentEl.querySelector(`#browser-url-${id}`);
+
+            const navigate = (url) => {
+                if (!url.startsWith('http')) {
+                    url = 'https://' + url;
+                }
+                urlInput.value = url;
+                frame.src = url;
+            };
+
+            contentEl.querySelector(`#browser-go-${id}`).addEventListener('click', () => navigate(urlInput.value));
+            contentEl.querySelector(`#browser-refresh-${id}`).addEventListener('click', () => frame.src = frame.src);
+            contentEl.querySelector(`#browser-home-${id}`).addEventListener('click', () => navigate('https://www.wikipedia.org'));
+            
+            urlInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') navigate(urlInput.value);
+            });
+        }
+
+        // ============================================
+        // DRAWING BOARD
+        // ============================================
+
+        function initDrawingBoard(windowData, fileInfo) {
+            const { contentEl, id } = windowData;
+            let isDrawing = false;
+            let currentTool = 'brush';
+            let currentColor = '#000000';
+            let brushSize = 5;
+            let lastX = 0;
+            let lastY = 0;
+
+            contentEl.innerHTML = `
+                <div class="drawing-board">
+                    <div class="drawing-toolbar">
+                        <div class="drawing-tool active" data-tool="brush" id="tool-brush-${id}"><i class="fa-solid fa-paintbrush"></i></div>
+                        <div class="drawing-tool" data-tool="eraser" id="tool-eraser-${id}"><i class="fa-solid fa-eraser"></i></div>
+                        <div class="drawing-tool" data-tool="fill" id="tool-fill-${id}"><i class="fa-solid fa-fill-drip"></i></div>
+                        <div style="width:1px;height:24px;background:var(--glass)"></div>
+                        <div class="drawing-color-picker" id="color-picker-${id}">
+                            <input type="color" value="#000000" id="color-input-${id}">
+                        </div>
+                        <input type="range" class="drawing-size-slider" id="size-slider-${id}" min="1" max="50" value="5">
+                        <span style="font-size:0.8rem;color:var(--hai)" id="size-display-${id}">5px</span>
+                        <span style="flex:1"></span>
+                        <button class="editor-btn" id="draw-clear-${id}"><i class="fa-solid fa-trash"></i> Clear</button>
+                        <button class="editor-btn" id="draw-save-${id}"><i class="fa-solid fa-floppy-disk"></i> Save</button>
+                    </div>
+                    <div class="drawing-canvas-container">
+                        <canvas class="drawing-canvas" id="canvas-${id}" width="600" height="400"></canvas>
+                    </div>
+                </div>
+            `;
+
+            const canvas = contentEl.querySelector(`#canvas-${id}`);
+            const ctx = canvas.getContext('2d');
+            
+            // Set white background
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Tool selection
+            contentEl.querySelectorAll('.drawing-tool').forEach(tool => {
+                tool.addEventListener('click', () => {
+                    contentEl.querySelectorAll('.drawing-tool').forEach(t => t.classList.remove('active'));
+                    tool.classList.add('active');
+                    currentTool = tool.dataset.tool;
+                });
+            });
+
+            // Color picker
+            const colorInput = contentEl.querySelector(`#color-input-${id}`);
+            colorInput.addEventListener('input', (e) => {
+                currentColor = e.target.value;
+            });
+
+            // Size slider
+            const sizeSlider = contentEl.querySelector(`#size-slider-${id}`);
+            const sizeDisplay = contentEl.querySelector(`#size-display-${id}`);
+            sizeSlider.addEventListener('input', (e) => {
+                brushSize = parseInt(e.target.value);
+                sizeDisplay.textContent = brushSize + 'px';
+            });
+
+            // Clear canvas
+            contentEl.querySelector(`#draw-clear-${id}`).addEventListener('click', () => {
+                if (confirm('Clear canvas?')) {
+                    ctx.fillStyle = 'white';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                }
+            });
+
+            // Save canvas
+            contentEl.querySelector(`#draw-save-${id}`).addEventListener('click', async () => {
+                const name = await showModal('Save Drawing', 'drawing.png');
+                if (!name) return;
+
+                try {
+                    const dataUrl = canvas.toDataURL('image/png');
+                    const base64Data = dataUrl.split(',')[1];
+                    const binaryString = atob(base64Data);
+                    const bytes = new Uint8Array(binaryString.length);
+                    for (let i = 0; i < binaryString.length; i++) {
+                        bytes[i] = binaryString.charCodeAt(i);
+                    }
+                    
+                    await writeFile(`/home/user/Pictures/${name}`, Buffer.from(bytes));
+                    showToast('Drawing saved');
+                    refreshFileExplorers();
+                } catch (err) {
+                    showToast('Failed to save drawing', 'error');
+                }
+            });
+
+            // Drawing functions
+            const getCanvasCoords = (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = canvas.width / rect.width;
+                const scaleY = canvas.height / rect.height;
+                
+                if (e.touches) {
+                    return {
+                        x: (e.touches[0].clientX - rect.left) * scaleX,
+                        y: (e.touches[0].clientY - rect.top) * scaleY
+                    };
+                }
+                return {
+                    x: (e.clientX - rect.left) * scaleX,
+                    y: (e.clientY - rect.top) * scaleY
+                };
+            };
+
+            const startDrawing = (e) => {
+                isDrawing = true;
+                const coords = getCanvasCoords(e);
+                lastX = coords.x;
+                lastY = coords.y;
+
+                if (currentTool === 'fill') {
+                    ctx.fillStyle = currentColor;
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                }
+            };
+
+            const draw = (e) => {
+                if (!isDrawing || currentTool === 'fill') return;
+                e.preventDefault();
+
+                const coords = getCanvasCoords(e);
+
+                ctx.beginPath();
+                ctx.moveTo(lastX, lastY);
+                ctx.lineTo(coords.x, coords.y);
+                ctx.strokeStyle = currentTool === 'eraser' ? 'white' : currentColor;
+                ctx.lineWidth = brushSize;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                ctx.stroke();
+
+                lastX = coords.x;
+                lastY = coords.y;
+            };
+
+            const stopDrawing = () => {
+                isDrawing = false;
+            };
+
+            // Mouse events
+            canvas.addEventListener('mousedown', startDrawing);
+            canvas.addEventListener('mousemove', draw);
+            canvas.addEventListener('mouseup', stopDrawing);
+            canvas.addEventListener('mouseout', stopDrawing);
+
+            // Touch events
+            canvas.addEventListener('touchstart', startDrawing);
+            canvas.addEventListener('touchmove', draw);
+            canvas.addEventListener('touchend', stopDrawing);
+        }
+
+        // ============================================
+        // MEDIA PLAYER
+        // ============================================
+
+        function initMediaPlayer(windowData, fileInfo) {
+            const { contentEl, id } = windowData;
+            let currentFile = fileInfo?.file || null;
+            let mediaElement = null;
+
+            contentEl.innerHTML = `
+                <div class="media-player">
+                    <div class="media-screen" id="media-screen-${id}">
+                        <div style="text-align:center;color:var(--hai)">
+                            <i class="fa-solid fa-film" style="font-size:3rem;margin-bottom:16px"></i>
+                            <p>Open a media file to play</p>
+                            <button class="editor-btn" id="media-open-${id}" style="margin-top:16px">Browse Files</button>
+                        </div>
+                    </div>
+                    <div class="media-controls">
+                        <div class="media-progress" id="media-progress-${id}">
+                            <div class="media-progress-bar" id="media-progress-bar-${id}"></div>
+                        </div>
+                        <div class="media-buttons">
+                            <div class="media-btn" id="media-seek-back-${id}"><i class="fa-solid fa-backward"></i></div>
+                            <div class="media-btn play" id="media-play-${id}"><i class="fa-solid fa-play" id="media-play-icon-${id}"></i></div>
+                            <div class="media-btn" id="media-seek-fwd-${id}"><i class="fa-solid fa-forward"></i></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            const screen = contentEl.querySelector(`#media-screen-${id}`);
+            const progressBar = contentEl.querySelector(`#media-progress-bar-${id}`);
+            const progress = contentEl.querySelector(`#media-progress-${id}`);
+            const playIcon = contentEl.querySelector(`#media-play-icon-${id}`);
+
+            const loadMedia = async (filePath) => {
+                try {
+                    const data = await readFile(filePath);
+                    const ext = pathBasename(filePath).split('.').pop().toLowerCase();
+                    const mimeType = ext === 'mp3' ? 'audio/mpeg' : ext === 'wav' ? 'audio/wav' : ext === 'ogg' ? 'audio/ogg' : 'video/mp4';
+                    const blob = new Blob([data], { type: mimeType });
+                    const url = URL.createObjectURL(blob);
+
+                    screen.innerHTML = '';
+                    
+                    if (['mp3', 'wav', 'ogg', 'flac'].includes(ext)) {
+                        mediaElement = document.createElement('audio');
+                        mediaElement.style.width = '100%';
+                    } else {
+                        mediaElement = document.createElement('video');
+                        mediaElement.style.width = '100%';
+                        mediaElement.style.height = '100%';
+                    }
+                    
+                    mediaElement.src = url;
+                    mediaElement.controls = true;
+                    screen.appendChild(mediaElement);
+
+                    mediaElement.addEventListener('timeupdate', () => {
+                        if (mediaElement.duration) {
+                            progressBar.style.width = (mediaElement.currentTime / mediaElement.duration * 100) + '%';
+                        }
+                    });
+
+                    mediaElement.addEventListener('ended', () => {
+                        playIcon.className = 'fa-solid fa-play';
+                    });
+
+                    currentFile = filePath;
+                } catch (err) {
+                    showToast('Failed to load media', 'error');
+                }
+            };
+
+            contentEl.querySelector(`#media-open-${id}`).addEventListener('click', () => {
+                createWindow('files', 'Select Media File', { path: '/home/user' });
+            });
+
+            contentEl.querySelector(`#media-play-${id}`).addEventListener('click', () => {
+                if (!mediaElement) return;
+                
+                if (mediaElement.paused) {
+                    mediaElement.play();
+                    playIcon.className = 'fa-solid fa-pause';
+                } else {
+                    mediaElement.pause();
+                    playIcon.className = 'fa-solid fa-play';
+                }
+            });
+
+            contentEl.querySelector(`#media-seek-back-${id}`).addEventListener('click', () => {
+                if (mediaElement) mediaElement.currentTime -= 10;
+            });
+
+            contentEl.querySelector(`#media-seek-fwd-${id}`).addEventListener('click', () => {
+                if (mediaElement) mediaElement.currentTime += 10;
+            });
+
+            progress.addEventListener('click', (e) => {
+                if (!mediaElement) return;
+                const rect = progress.getBoundingClientRect();
+                const percent = (e.clientX - rect.left) / rect.width;
+                mediaElement.currentTime = percent * mediaElement.duration;
+            });
+
+            // Load file if provided
+            if (fileInfo?.file) {
+                loadMedia(fileInfo.file);
+            }
+        }
+
+        // ============================================
+        // CALCULATOR
+        // ============================================
+
+        function initCalculator(windowData) {
+            const { contentEl, id } = windowData;
+            let expression = '';
+            let lastResult = '';
+
+            contentEl.innerHTML = `
+                <div class="calculator">
+                    <div class="calc-display">
+                        <div class="calc-expression" id="calc-expression-${id}"></div>
+                        <div class="calc-result" id="calc-result-${id}">0</div>
+                    </div>
+                    <div class="calc-buttons" id="calc-buttons-${id}"></div>
+                </div>
+            `;
+
+            const buttons = contentEl.querySelector(`#calc-buttons-${id}`);
+            const expressionEl = contentEl.querySelector(`#calc-expression-${id}`);
+            const resultEl = contentEl.querySelector(`#calc-result-${id}`);
+
+            const buttonConfig = [
+                { label: 'C', type: 'clear' },
+                { label: '±', type: 'operator' },
+                { label: '%', type: 'operator' },
+                { label: '÷', type: 'operator' },
+                { label: '7', type: 'number' },
+                { label: '8', type: 'number' },
+                { label: '9', type: 'number' },
+                { label: '×', type: 'operator' },
+                { label: '4', type: 'number' },
+                { label: '5', type: 'number' },
+                { label: '6', type: 'number' },
+                { label: '−', type: 'operator' },
+                { label: '1', type: 'number' },
+                { label: '2', type: 'number' },
+                { label: '3', type: 'number' },
+                { label: '+', type: 'operator' },
+                { label: '0', type: 'number', style: 'grid-column:span 2' },
+                { label: '.', type: 'number' },
+                { label: '=', type: 'equals' }
+            ];
+
+            buttonConfig.forEach(btn => {
+                const button = document.createElement('button');
+                button.className = `calc-btn ${btn.type}`;
+                button.textContent = btn.label;
+                if (btn.style) button.style.cssText = btn.style;
+                buttons.appendChild(button);
+
+                button.addEventListener('click', () => {
+                    handleInput(btn.label, btn.type);
+                });
+            });
+
+            function handleInput(label, type) {
+                switch (type) {
+                    case 'number':
+                        if (expression === '' && lastResult !== '') {
+                            expression = label;
+                            lastResult = '';
+                        } else {
+                            expression += label;
+                        }
+                        break;
+                    case 'operator':
+                        if (label === '±') {
+                            if (expression) {
+                                if (expression.startsWith('-')) {
+                                    expression = expression.substring(1);
+                                } else {
+                                    expression = '-' + expression;
+                                }
+                            }
+                        } else if (label === '%') {
+                            expression = '(' + expression + ')/100';
+                        } else {
+                            const op = label === '×' ? '*' : label === '÷' ? '/' : label === '−' ? '-' : '+';
+                            expression += op;
+                        }
+                        break;
+                    case 'clear':
+                        expression = '';
+                        lastResult = '';
+                        resultEl.textContent = '0';
+                        expressionEl.textContent = '';
+                        return;
+                    case 'equals':
+                        try {
+                            const result = eval(expression);
+                            lastResult = result.toString();
+                            expressionEl.textContent = expression + ' =';
+                            resultEl.textContent = lastResult;
+                            expression = '';
+                            return;
+                        } catch (err) {
+                            resultEl.textContent = 'Error';
+                            expression = '';
+                            return;
+                        }
+                }
+
+                // Update display
+                if (expression) {
+                    const displayExpr = expression.replace(/\*/g, '×').replace(/\//g, '÷');
+                    expressionEl.textContent = displayExpr;
+                    
+                    try {
+                        const preview = eval(expression);
+                        if (isFinite(preview)) {
+                            resultEl.textContent = preview.toString().substring(0, 12);
+                        }
+                    } catch {
+                        // Keep last result
+                    }
+                }
+            }
+
+            // Keyboard support
+            document.addEventListener('keydown', (e) => {
+                if (!document.getElementById(`calc-buttons-${id}`)) return;
+                
+                const key = e.key;
+                if (/[0-9]/.test(key)) handleInput(key, 'number');
+                else if (key === '+') handleInput('+', 'operator');
+                else if (key === '-') handleInput('−', 'operator');
+                else if (key === '*') handleInput('×', 'operator');
+                else if (key === '/') handleInput('÷', 'operator');
+                else if (key === '.') handleInput('.', 'number');
+                else if (key === 'Enter' || key === '=') handleInput('=', 'equals');
+                else if (key === 'Escape' || key === 'c' || key === 'C') handleInput('C', 'clear');
+                else if (key === '%') handleInput('%', 'operator');
+            });
+        }
+
+        // ============================================
+        // SETTINGS
+        // ============================================
+
+        function initSettings(windowData) {
+            const { contentEl, id } = windowData;
+
+            contentEl.innerHTML = `
+                <div class="settings-container">
+                    <div class="settings-section">
+                        <div class="settings-title">Wallpaper</div>
+                        <div class="wallpaper-grid">
+                            ${OS.wallpapers.map((url, i) => `
+                                <div class="wallpaper-option ${settings.wallpaperIndex === i && !settings.customWallpaper ? 'active' : ''}" data-index="${i}">
+                                    <img src="${url}" alt="Wallpaper ${i + 1}">
+                                </div>
+                            `).join('')}
+                        </div>
+                        <div style="margin-top:16px;display:flex;align-items:center;gap:12px">
+                            <button class="settings-btn" id="upload-wallpaper-${id}">
+                                <i class="fa-solid fa-upload"></i> Upload Custom
+                            </button>
+                            ${settings.customWallpaper ? '<span style="color:var(--midori);font-size:0.8rem"><i class="fa-solid fa-check"></i> Custom wallpaper set</span>' : ''}
+                        </div>
+                    </div>
+
+                    <div class="settings-section">
+                        <div class="settings-title">About</div>
+                        <div style="color:var(--hai);font-size:0.9rem;line-height:1.6">
+                            <strong>夜櫻 OS</strong> (Yozakura OS)<br>
+                            Version 1.0.0<br><br>
+                            A browser-based desktop environment with persistent file storage.<br><br>
+                            Built with vanilla JavaScript, IndexedDB, and BrowserFS.
+                        </div>
+                    </div>
+
+                    <div class="settings-section">
+                        <div class="settings-title">Storage</div>
+                        <div class="settings-item">
+                            <div>
+                                <div class="settings-label">Reset File System</div>
+                                <div class="settings-desc">Delete all files and reset to default</div>
+                            </div>
+                            <button class="settings-btn danger" id="reset-fs-${id}">
+                                <i class="fa-solid fa-trash"></i> Reset
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Wallpaper selection
+            contentEl.querySelectorAll('.wallpaper-option').forEach(option => {
+                option.addEventListener('click', async () => {
+                    settings.wallpaperIndex = parseInt(option.dataset.index);
+                    settings.customWallpaper = null;
+                    await saveSettings();
+                    applyWallpaper();
+                    
+                    contentEl.querySelectorAll('.wallpaper-option').forEach(o => o.classList.remove('active'));
+                    option.classList.add('active');
+                    showToast('Wallpaper updated');
+                });
+            });
+
+            // Upload wallpaper
+            contentEl.querySelector(`#upload-wallpaper-${id}`).addEventListener('click', () => {
+                document.getElementById('wallpaper-input').click();
+            });
+
+            // Reset file system
+            contentEl.querySelector(`#reset-fs-${id}`).addEventListener('click', async () => {
+                if (confirm('Are you sure you want to reset the file system? This will delete all files!')) {
+                    try {
+                        // Clear IndexedDB
+                        indexedDB.deleteDatabase('yozakura_fs');
+                        showToast('File system reset. Reloading...');
+                        setTimeout(() => location.reload(), 1500);
+                    } catch (err) {
+                        showToast('Failed to reset file system', 'error');
+                    }
+                }
+            });
+        }
+
+        // ============================================
+        // INITIALIZATION
+        // ============================================
+
+        async function init() {
+            const bootScreen = document.getElementById('boot-screen');
+            const bootLogo = document.querySelector('.boot-logo');
+            const bootLoader = document.querySelector('.boot-loader');
+
+            // Hide boot screen after animation completes (even if init fails)
+            const hideBootScreen = () => {
+                setTimeout(() => {
+                    bootScreen.classList.add('hidden');
+                    setTimeout(() => {
+                        bootScreen.remove();
+                    }, 800);
+                }, 500);
+            };
+
+            try {
+                // Initialize file system with timeout
+                await Promise.race([
+                    initFileSystem(),
+                    new Promise((_, reject) => 
+                        setTimeout(() => reject(new Error('Init timeout')), 20000)
+                    )
+                ]);
+                
+                // Load settings
+                await loadSettings();
+                
+                // Initialize UI components
+                initTaskbar();
+                initStartMenu();
+                initDesktopIcons();
+                initContextMenu();
+                initFileImport();
+                
+                // Start clock
+                updateClock();
+                setInterval(updateClock, 1000);
+                
+                // Hide boot screen
+                hideBootScreen();
+
+                // Handle resize
+                window.addEventListener('resize', () => {
+                    OS.isMobile = window.innerWidth <= 768;
+                });
+
+            } catch (err) {
+                console.error('Initialization failed:', err);
+                
+                // Show error message on boot screen
+                if (bootLogo) {
+                    bootLogo.innerHTML = '<span style="color:var(--aka)">Initialization Failed</span>';
+                }
+                if (bootLoader) {
+                    bootLoader.style.display = 'none';
+                }
+                
+                // Add retry button
+                const retryBtn = document.createElement('button');
+                retryBtn.textContent = 'Retry';
+                retryBtn.style.cssText = `
+                    margin-top: 20px;
+                    padding: 10px 24px;
+                    background: var(--kin);
+                    color: var(--kuro);
+                    border: none;
+                    border-radius: 8px;
+                    cursor: pointer;
+                    font-family: inherit;
+                    font-size: 1rem;
+                `;
+                retryBtn.onclick = () => location.reload();
+                
+                // Clear boot screen and add retry button
+                bootScreen.innerHTML = '';
+                bootScreen.appendChild(bootLogo);
+                bootScreen.appendChild(retryBtn);
+            }
+        }
+
+        // Wait for DOM to be ready before starting
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            // DOM is already ready
+            init();
+        }
+
+        // Polyfill for Buffer if needed
+        if (typeof Buffer === 'undefined') {
+            window.Buffer = {
+                from: (data) => {
+                    if (ArrayBuffer.isView(data)) {
+                        return data;
+                    }
+                    if (typeof data === 'string') {
+                        const encoder = new TextEncoder();
+                        return encoder.encode(data);
+                    }
+                    return new Uint8Array(data);
+                }
+            };
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,1582 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>EMBER OS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg-0:#16110d;
+  --bg-1:#1f1813;
+  --bg-2:#2a2018;
+  --bg-3:#352a20;
+  --line:#473829;
+  --txt:#f0e6d8;
+  --txt-dim:#b3a18c;
+  --txt-faint:#7a6a55;
+  --amber:#e8a13c;
+  --amber-soft:#f0c074;
+  --rust:#d2632a;
+  --sage:#8fae7c;
+  --rose:#cf7e7e;
+  --blue:#7fa6c4;
+  --glass:rgba(31,24,19,.78);
+  --glass-hi:rgba(53,42,32,.9);
+  --shadow:0 24px 60px -12px rgba(0,0,0,.7),0 4px 14px rgba(0,0,0,.4);
+  --radius:14px;
+  --mono:'Space Mono',monospace;
+  --disp:'Fraunces',serif;
+  --ui:'Sora',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;font-family:var(--ui);color:var(--txt);background:var(--bg-0)}
+body{position:fixed;inset:0;user-select:none;touch-action:none}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,textarea{font-family:inherit}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--line);border-radius:6px;border:2px solid transparent;background-clip:padding-box}
+::-webkit-scrollbar-thumb:hover{background:var(--txt-faint)}
+
+/* ===== BOOT ===== */
+#boot{position:fixed;inset:0;z-index:9999;background:radial-gradient(circle at 50% 40%,#2a2018,#16110d 70%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;transition:opacity .8s ease,transform .8s ease}
+#boot.gone{opacity:0;transform:scale(1.04);pointer-events:none}
+.boot-logo{font-family:var(--disp);font-weight:600;font-size:clamp(38px,8vw,76px);letter-spacing:-.03em;color:var(--amber);position:relative}
+.boot-logo span{color:var(--txt)}
+.boot-mark{width:64px;height:64px;animation:spin 3s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.boot-bar{width:min(280px,60vw);height:3px;background:var(--bg-3);border-radius:3px;overflow:hidden}
+.boot-bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--rust),var(--amber-soft));border-radius:3px;animation:load 2.2s cubic-bezier(.7,0,.3,1) forwards}
+@keyframes load{to{width:100%}}
+.boot-status{font-family:var(--mono);font-size:11px;color:var(--txt-faint);letter-spacing:.15em;text-transform:uppercase}
+
+/* ===== DESKTOP ===== */
+#desktop{position:absolute;inset:0;overflow:hidden;background-size:cover;background-position:center;transition:background-image .6s ease}
+#wp-overlay{position:absolute;inset:0;background:linear-gradient(160deg,rgba(22,17,13,.25),rgba(22,17,13,.55));pointer-events:none}
+#icon-layer{position:absolute;inset:0;padding:18px}
+
+/* desktop icons */
+.dicon{position:absolute;width:88px;display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 4px;border-radius:12px;transition:transform .35s cubic-bezier(.2,.9,.25,1.4),background .15s,box-shadow .25s;cursor:pointer}
+.dicon:hover{background:rgba(232,161,60,.08)}
+.dicon.sel{background:rgba(232,161,60,.16);box-shadow:inset 0 0 0 1px rgba(232,161,60,.4)}
+.dicon.dragging{opacity:.4}
+.dicon .gi{width:50px;height:50px;display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 3px 6px rgba(0,0,0,.5))}
+.dicon .gi svg{width:46px;height:46px}
+.dicon .lbl{font-size:11.5px;text-align:center;line-height:1.25;color:var(--txt);text-shadow:0 1px 3px rgba(0,0,0,.9);word-break:break-word;max-width:84px;font-weight:500}
+
+/* marquee selection */
+#marquee{position:absolute;border:1px solid var(--amber);background:rgba(232,161,60,.12);pointer-events:none;z-index:50;display:none;border-radius:3px}
+
+/* ===== TASKBAR / DOCK ===== */
+#taskbar{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);z-index:5000;display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--glass);backdrop-filter:blur(22px) saturate(1.3);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);max-width:calc(100vw - 24px)}
+#start-btn{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:linear-gradient(150deg,var(--rust),var(--amber));box-shadow:0 4px 12px rgba(210,99,42,.4);transition:transform .2s,box-shadow .2s;flex-shrink:0}
+#start-btn:hover{transform:translateY(-3px) scale(1.05);box-shadow:0 8px 20px rgba(232,161,60,.5)}
+#start-btn:active{transform:scale(.95)}
+#start-btn svg{width:24px;height:24px}
+.tb-sep{width:1px;height:30px;background:var(--line);flex-shrink:0}
+#tb-apps{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+#tb-apps::-webkit-scrollbar{display:none}
+.tb-app{width:42px;height:42px;border-radius:11px;display:flex;align-items:center;justify-content:center;position:relative;transition:transform .2s,background .15s;background:var(--bg-2);flex-shrink:0}
+.tb-app:hover{transform:translateY(-3px);background:var(--bg-3)}
+.tb-app svg{width:26px;height:26px}
+.tb-app.active::after{content:'';position:absolute;bottom:-5px;left:50%;transform:translateX(-50%);width:5px;height:5px;border-radius:50%;background:var(--amber)}
+#tb-clock{font-family:var(--mono);font-size:12px;color:var(--txt-dim);text-align:right;line-height:1.3;padding:0 6px;flex-shrink:0}
+#tb-clock b{color:var(--txt);font-size:13px;display:block}
+
+/* ===== START MENU ===== */
+#start-menu{position:absolute;left:50%;bottom:74px;transform:translateX(-50%) translateY(20px);z-index:6000;width:min(560px,92vw);max-height:70vh;background:var(--glass);backdrop-filter:blur(26px) saturate(1.3);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow);padding:20px;opacity:0;pointer-events:none;transition:opacity .25s,transform .3s cubic-bezier(.2,.9,.3,1.2)}
+#start-menu.open{opacity:1;pointer-events:auto;transform:translateX(-50%) translateY(0)}
+.sm-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.sm-title{font-family:var(--disp);font-size:22px;font-weight:600;color:var(--amber)}
+.sm-title span{color:var(--txt)}
+.sm-search{width:100%;background:var(--bg-1);border:1px solid var(--line);border-radius:11px;padding:11px 14px;color:var(--txt);font-size:14px;margin-bottom:16px;outline:none}
+.sm-search:focus{border-color:var(--amber)}
+.sm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:8px;overflow-y:auto;max-height:42vh}
+.sm-item{display:flex;flex-direction:column;align-items:center;gap:8px;padding:14px 6px;border-radius:13px;transition:background .15s,transform .15s;text-align:center}
+.sm-item:hover{background:rgba(232,161,60,.12);transform:translateY(-2px)}
+.sm-item svg{width:38px;height:38px}
+.sm-item span{font-size:11.5px;color:var(--txt-dim)}
+
+/* ===== WINDOWS ===== */
+.win{position:absolute;min-width:280px;min-height:180px;background:var(--bg-1);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden;animation:winpop .28s cubic-bezier(.2,.9,.3,1.3)}
+@keyframes winpop{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:scale(1)}}
+.win.minz{display:none}
+.win.maxz{border-radius:0}
+.win-bar{height:42px;display:flex;align-items:center;gap:10px;padding:0 8px 0 14px;background:linear-gradient(180deg,var(--bg-3),var(--bg-2));border-bottom:1px solid var(--line);cursor:grab;flex-shrink:0}
+.win-bar.drag{cursor:grabbing}
+.win-ico{width:20px;height:20px;flex-shrink:0;display:flex}
+.win-ico svg{width:20px;height:20px}
+.win-title{flex:1;font-size:13px;font-weight:500;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:.01em}
+.win-btns{display:flex;gap:6px}
+.wbtn{width:26px;height:26px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--txt-dim);transition:.15s}
+.wbtn:hover{background:var(--bg-3);color:var(--txt)}
+.wbtn.close:hover{background:var(--rust);color:#fff}
+.wbtn svg{width:14px;height:14px}
+.win-body{flex:1;overflow:auto;position:relative}
+.win.inactive{filter:saturate(.8) brightness(.96)}
+.win.inactive .win-bar{background:var(--bg-2)}
+.resz{position:absolute;z-index:10}
+.resz.e{right:0;top:0;width:7px;height:100%;cursor:e-resize}
+.resz.s{bottom:0;left:0;height:7px;width:100%;cursor:s-resize}
+.resz.se{right:0;bottom:0;width:16px;height:16px;cursor:se-resize}
+.resz.w{left:0;top:0;width:7px;height:100%;cursor:w-resize}
+.resz.n{top:0;left:0;height:7px;width:100%;cursor:n-resize}
+
+/* ===== CONTEXT MENU ===== */
+.ctx{position:absolute;z-index:8000;min-width:210px;background:var(--glass-hi);backdrop-filter:blur(20px);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:6px;animation:ctxin .15s ease}
+@keyframes ctxin{from{opacity:0;transform:scale(.96) translateY(-4px)}to{opacity:1;transform:none}}
+.ctx-item{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:8px;font-size:13px;color:var(--txt);transition:background .12s;cursor:pointer}
+.ctx-item:hover{background:rgba(232,161,60,.16)}
+.ctx-item svg{width:16px;height:16px;color:var(--txt-dim);flex-shrink:0}
+.ctx-item.danger{color:var(--rose)}
+.ctx-item.danger svg{color:var(--rose)}
+.ctx-sep{height:1px;background:var(--line);margin:5px 8px}
+.ctx-item .sub-arrow{margin-left:auto;color:var(--txt-faint)}
+
+/* ===== FILE EXPLORER ===== */
+.fe{display:flex;height:100%;font-size:13px}
+.fe-side{width:180px;background:var(--bg-2);border-right:1px solid var(--line);padding:12px 8px;overflow-y:auto;flex-shrink:0}
+.fe-side h5{font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--txt-faint);margin:12px 8px 6px;font-weight:700}
+.fe-nav{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:8px;color:var(--txt-dim);transition:.12s;cursor:pointer;margin-bottom:2px}
+.fe-nav:hover{background:var(--bg-3);color:var(--txt)}
+.fe-nav.active{background:rgba(232,161,60,.15);color:var(--amber)}
+.fe-nav svg{width:17px;height:17px}
+.fe-nav span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fe-main{flex:1;display:flex;flex-direction:column;min-width:0}
+.fe-top{display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--line);background:var(--bg-1)}
+.fe-tb{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--txt-dim);transition:.12s;flex-shrink:0}
+.fe-tb:hover:not(:disabled){background:var(--bg-3);color:var(--txt)}
+.fe-tb:disabled{opacity:.35;cursor:default}
+.fe-tb svg{width:16px;height:16px}
+.fe-crumb{flex:1;display:flex;align-items:center;gap:3px;background:var(--bg-2);border:1px solid var(--line);border-radius:9px;padding:6px 10px;overflow-x:auto;scrollbar-width:none;min-width:0}
+.fe-crumb::-webkit-scrollbar{display:none}
+.fe-crumb b{color:var(--txt);cursor:pointer;white-space:nowrap;padding:2px 5px;border-radius:5px}
+.fe-crumb b:hover{background:var(--bg-3)}
+.fe-crumb i{color:var(--txt-faint);font-style:normal}
+.fe-search{width:150px;background:var(--bg-2);border:1px solid var(--line);border-radius:9px;padding:6px 10px;color:var(--txt);font-size:12px;outline:none;flex-shrink:0}
+.fe-search:focus{border-color:var(--amber)}
+.fe-cols{display:grid;grid-template-columns:1fr 130px 110px 90px;gap:8px;padding:7px 14px;border-bottom:1px solid var(--line);background:var(--bg-2);font-size:11px;color:var(--txt-faint);font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+.fe-cols span{cursor:pointer;display:flex;align-items:center;gap:4px}
+.fe-cols span:hover{color:var(--txt)}
+.fe-cols span.act{color:var(--amber)}
+.fe-list{flex:1;overflow-y:auto;padding:4px;position:relative}
+.fe-row{display:grid;grid-template-columns:1fr 130px 110px 90px;gap:8px;padding:7px 10px;border-radius:8px;align-items:center;transition:background .1s;cursor:pointer}
+.fe-row:hover{background:var(--bg-2)}
+.fe-row.sel{background:rgba(232,161,60,.16)}
+.fe-name{display:flex;align-items:center;gap:10px;min-width:0}
+.fe-name svg{width:22px;height:22px;flex-shrink:0}
+.fe-name span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fe-meta{color:var(--txt-faint);font-size:12px;font-family:var(--mono)}
+.fe-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--txt-faint);gap:12px}
+.fe-empty svg{width:54px;height:54px;opacity:.4}
+
+/* generic app chrome */
+.app-pad{padding:16px;height:100%;overflow:auto}
+.btn{background:var(--bg-3);border:1px solid var(--line);border-radius:9px;padding:8px 14px;color:var(--txt);font-size:13px;transition:.15s;display:inline-flex;align-items:center;gap:7px}
+.btn:hover{background:var(--line);border-color:var(--txt-faint)}
+.btn.pri{background:linear-gradient(150deg,var(--rust),var(--amber));border-color:transparent;color:#1a120a;font-weight:600}
+.btn.pri:hover{filter:brightness(1.1)}
+.btn svg{width:15px;height:15px}
+
+/* notepad */
+.np{display:flex;flex-direction:column;height:100%}
+.np-bar{display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid var(--line);background:var(--bg-2);flex-wrap:wrap}
+.np-ta{flex:1;background:var(--bg-0);color:var(--txt);border:none;outline:none;resize:none;padding:16px 18px;font-family:var(--mono);font-size:13.5px;line-height:1.7;tab-size:2}
+.np-tabs{display:flex;gap:4px;margin-left:auto}
+.np-tab{padding:5px 12px;border-radius:7px;font-size:12px;color:var(--txt-dim);background:var(--bg-1)}
+.np-tab.act{background:var(--amber);color:#1a120a;font-weight:600}
+
+/* html split */
+.htv{display:flex;height:100%;flex-direction:column}
+.htv-split{flex:1;display:flex;min-height:0}
+.htv-split>div{flex:1;min-width:0;display:flex;flex-direction:column}
+.htv-split textarea{flex:1;background:var(--bg-0);color:var(--txt);border:none;outline:none;resize:none;padding:14px;font-family:var(--mono);font-size:13px;line-height:1.6;border-right:1px solid var(--line)}
+.htv-split iframe{flex:1;border:none;background:#fff}
+.htv-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--txt-faint);padding:7px 12px;background:var(--bg-2);border-bottom:1px solid var(--line);font-weight:700}
+
+/* media viewers */
+.viewer{display:flex;align-items:center;justify-content:center;height:100%;background:repeating-conic-gradient(var(--bg-0) 0% 25%,var(--bg-1) 0% 50%) 50%/24px 24px;overflow:hidden;position:relative}
+.viewer img{max-width:100%;max-height:100%;transition:transform .15s;cursor:grab}
+.viewer-bar{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);display:flex;gap:6px;background:var(--glass);backdrop-filter:blur(14px);border:1px solid var(--line);border-radius:12px;padding:6px}
+.viewer audio,.viewer video{max-width:90%}
+.viewer iframe{width:100%;height:100%;border:none;background:#fff}
+
+/* calc */
+.calc{display:flex;flex-direction:column;height:100%;background:var(--bg-1);padding:14px}
+.calc-disp{background:var(--bg-0);border-radius:12px;padding:18px 20px;text-align:right;margin-bottom:12px;border:1px solid var(--line)}
+.calc-disp .small{font-family:var(--mono);font-size:13px;color:var(--txt-faint);min-height:18px}
+.calc-disp .big{font-family:var(--disp);font-size:38px;font-weight:500;color:var(--txt);overflow:hidden}
+.calc-grid{flex:1;display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.ck{border-radius:12px;background:var(--bg-3);font-size:19px;color:var(--txt);transition:.12s;display:flex;align-items:center;justify-content:center;font-family:var(--mono)}
+.ck:hover{background:var(--line)}
+.ck:active{transform:scale(.95)}
+.ck.op{background:var(--bg-2);color:var(--amber)}
+.ck.eq{background:linear-gradient(150deg,var(--rust),var(--amber));color:#1a120a;font-weight:700}
+.ck.fn{color:var(--rose)}
+
+/* settings */
+.set-sec{margin-bottom:24px}
+.set-sec h4{font-family:var(--disp);font-size:18px;color:var(--amber);margin-bottom:12px;font-weight:600}
+.set-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
+.set-row .lbl b{display:block;font-size:13px;margin-bottom:3px}
+.set-row .lbl small{color:var(--txt-faint);font-size:11.5px}
+.bar-track{width:100%;height:14px;background:var(--bg-0);border-radius:8px;overflow:hidden;display:flex;border:1px solid var(--line)}
+.bar-track i{height:100%;display:block}
+.legend{display:flex;gap:16px;margin-top:10px;flex-wrap:wrap;font-size:12px;color:var(--txt-dim)}
+.legend span{display:flex;align-items:center;gap:6px}
+.legend i{width:11px;height:11px;border-radius:3px;display:inline-block}
+.wp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px}
+.wp-thumb{aspect-ratio:16/10;border-radius:10px;background-size:cover;background-position:center;border:2px solid transparent;transition:.15s;cursor:pointer}
+.wp-thumb:hover{transform:scale(1.04)}
+.wp-thumb.act{border-color:var(--amber)}
+
+/* paint */
+.paint{display:flex;flex-direction:column;height:100%}
+.paint-bar{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg-2);border-bottom:1px solid var(--line);flex-wrap:wrap}
+.paint-bar input[type=color]{width:34px;height:34px;border:1px solid var(--line);border-radius:8px;background:none;cursor:pointer}
+.paint-bar input[type=range]{width:90px}
+.paint-canvas-wrap{flex:1;overflow:auto;background:var(--bg-0);display:flex;align-items:center;justify-content:center;padding:14px}
+.paint canvas{background:#fff;border-radius:6px;box-shadow:0 8px 24px rgba(0,0,0,.5);touch-action:none}
+
+/* csv table */
+.csv-table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12px}
+.csv-table td,.csv-table th{border:1px solid var(--line);padding:6px 10px;white-space:nowrap}
+.csv-table th{background:var(--bg-3);position:sticky;top:0;color:var(--amber)}
+.csv-table tr:nth-child(even) td{background:var(--bg-2)}
+
+/* toast */
+#toasts{position:fixed;bottom:84px;right:18px;z-index:9000;display:flex;flex-direction:column;gap:8px;align-items:flex-end}
+.toast{background:var(--glass-hi);backdrop-filter:blur(14px);border:1px solid var(--line);border-left:3px solid var(--amber);border-radius:10px;padding:12px 16px;font-size:13px;color:var(--txt);box-shadow:var(--shadow);animation:toastin .3s ease;max-width:300px}
+.toast.err{border-left-color:var(--rose)}
+.toast.ok{border-left-color:var(--sage)}
+@keyframes toastin{from{opacity:0;transform:translateX(30px)}to{opacity:1;transform:none}}
+
+/* dialog */
+#modal-back{position:fixed;inset:0;z-index:8500;background:rgba(10,7,5,.6);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center}
+.modal{background:var(--bg-1);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:24px;width:min(420px,92vw);animation:winpop .25s ease}
+.modal h3{font-family:var(--disp);font-size:20px;margin-bottom:8px;color:var(--txt)}
+.modal p{font-size:13px;color:var(--txt-dim);margin-bottom:16px;line-height:1.5}
+.modal input{width:100%;background:var(--bg-0);border:1px solid var(--line);border-radius:9px;padding:11px 14px;color:var(--txt);font-size:14px;outline:none;margin-bottom:16px}
+.modal input:focus{border-color:var(--amber)}
+.modal-btns{display:flex;gap:10px;justify-content:flex-end}
+
+/* drag-over highlight */
+.drop-hi{outline:2px dashed var(--amber)!important;outline-offset:-6px;background:rgba(232,161,60,.06)!important}
+
+/* mobile */
+@media(max-width:760px){
+  .fe-side{display:none}
+  .fe-cols{grid-template-columns:1fr 80px}
+  .fe-cols span:nth-child(2),.fe-cols span:nth-child(3){display:none}
+  .fe-row{grid-template-columns:1fr 80px}
+  .fe-row .fe-meta:nth-child(2),.fe-row .fe-meta:nth-child(3){display:none}
+  .fe-search{width:110px}
+  .htv-split{flex-direction:column}
+  #taskbar{left:8px;right:8px;bottom:8px;transform:none;border-radius:16px;width:auto;max-width:none}
+  #tb-clock{display:none}
+  .dicon{width:74px}
+  .dicon .gi svg{width:40px;height:40px}
+}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+
+<div id="boot">
+  <svg class="boot-mark" viewBox="0 0 64 64" fill="none">
+    <circle cx="32" cy="32" r="26" stroke="#e8a13c" stroke-width="2.5" stroke-dasharray="8 6"/>
+    <path d="M32 14 L44 38 L20 38 Z" fill="#d2632a"/>
+    <circle cx="32" cy="44" r="5" fill="#f0c074"/>
+  </svg>
+  <div class="boot-logo">EMBER<span>OS</span></div>
+  <div class="boot-bar"><i></i></div>
+  <div class="boot-status" id="boot-status">INITIALIZING FILESYSTEM…</div>
+</div>
+
+<div id="desktop">
+  <div id="wp-overlay"></div>
+  <div id="icon-layer"></div>
+  <div id="marquee"></div>
+</div>
+
+<div id="taskbar">
+  <button id="start-btn" title="Menu">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#1a120a" stroke-width="2.2" stroke-linecap="round">
+      <path d="M12 3 L20 17 L4 17 Z" fill="#1a120a" stroke="none"/>
+      <circle cx="12" cy="20" r="1.6" fill="#1a120a"/>
+    </svg>
+  </button>
+  <div class="tb-sep"></div>
+  <div id="tb-apps"></div>
+  <div class="tb-sep"></div>
+  <div id="tb-clock"><b id="clk-time">--:--</b><span id="clk-date">---</span></div>
+</div>
+
+<div id="start-menu">
+  <div class="sm-head"><div class="sm-title">EMBER<span>OS</span></div></div>
+  <input class="sm-search" id="sm-search" placeholder="搜索应用…">
+  <div class="sm-grid" id="sm-grid"></div>
+</div>
+
+<div id="toasts"></div>
+<div id="modal-back"></div>
+
+<script>
+/* ============================================================
+   ICONS — original SVGs (no emoji)
+   ============================================================ */
+const I = {
+  files:`<svg viewBox="0 0 24 24" fill="none"><path d="M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" fill="#e8a13c"/><path d="M3 9h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" fill="#f0c074"/></svg>`,
+  folder:`<svg viewBox="0 0 24 24" fill="none"><path d="M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" fill="#e8a13c"/><path d="M3 9h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" fill="#f0c074"/></svg>`,
+  folderMnt:`<svg viewBox="0 0 24 24" fill="none"><path d="M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" fill="#7fa6c4"/><path d="M3 9h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" fill="#a7c4dc"/></svg>`,
+  notepad:`<svg viewBox="0 0 24 24" fill="none"><rect x="5" y="3" width="14" height="18" rx="2" fill="#352a20" stroke="#e8a13c" stroke-width="1.5"/><path d="M8 8h8M8 12h8M8 16h5" stroke="#f0c074" stroke-width="1.6" stroke-linecap="round"/></svg>`,
+  browser:`<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" fill="#2a2018" stroke="#8fae7c" stroke-width="1.5"/><ellipse cx="12" cy="12" rx="4" ry="9" stroke="#8fae7c" stroke-width="1.3"/><path d="M3 12h18M5 7h14M5 17h14" stroke="#8fae7c" stroke-width="1.1"/></svg>`,
+  calc:`<svg viewBox="0 0 24 24" fill="none"><rect x="5" y="3" width="14" height="18" rx="2.5" fill="#352a20" stroke="#e8a13c" stroke-width="1.4"/><rect x="7.5" y="5.5" width="9" height="3.5" rx="1" fill="#d2632a"/><circle cx="9" cy="13" r="1.1" fill="#f0c074"/><circle cx="12" cy="13" r="1.1" fill="#f0c074"/><circle cx="15" cy="13" r="1.1" fill="#f0c074"/><circle cx="9" cy="17" r="1.1" fill="#f0c074"/><circle cx="12" cy="17" r="1.1" fill="#f0c074"/><circle cx="15" cy="17" r="1.1" fill="#e8a13c"/></svg>`,
+  paint:`<svg viewBox="0 0 24 24" fill="none"><path d="M12 3a9 9 0 0 0 0 18c1.1 0 2-.9 2-2 0-.5-.2-1-.5-1.3-.3-.4-.5-.8-.5-1.2 0-1 .8-1.7 1.8-1.7H17a4 4 0 0 0 4-4c0-4.4-4-8-9-8z" fill="#352a20" stroke="#e8a13c" stroke-width="1.4"/><circle cx="7.5" cy="11" r="1.3" fill="#cf7e7e"/><circle cx="10" cy="7.5" r="1.3" fill="#e8a13c"/><circle cx="14.5" cy="7.5" r="1.3" fill="#8fae7c"/><circle cx="17" cy="11" r="1.3" fill="#7fa6c4"/></svg>`,
+  settings:`<svg viewBox="0 0 24 24" fill="none"><path d="M12 2l1.5 2.6 3-.5.5 3 2.6 1.5-1.5 2.6 1.5 2.6L17 17.4l-.5 3-3-.5L12 22l-1.5-2.6-3 .5-.5-3L4.4 15l1.5-2.6L4.4 9.8 7 8.3l.5-3 3 .5z" fill="#352a20" stroke="#e8a13c" stroke-width="1.3"/><circle cx="12" cy="12" r="3.2" fill="#f0c074"/></svg>`,
+  image:`<svg viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="14" rx="2" fill="#2a2018" stroke="#8fae7c" stroke-width="1.4"/><circle cx="8" cy="9.5" r="1.8" fill="#f0c074"/><path d="M4 17l4.5-5 3 3L15 11l5 6z" fill="#8fae7c"/></svg>`,
+  audio:`<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" fill="#2a2018" stroke="#cf7e7e" stroke-width="1.4"/><path d="M10 9v6l5-3z" fill="#cf7e7e"/></svg>`,
+  video:`<svg viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="14" rx="2.5" fill="#2a2018" stroke="#7fa6c4" stroke-width="1.4"/><path d="M10 9v6l5-3z" fill="#7fa6c4"/></svg>`,
+  code:`<svg viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="16" height="16" rx="2" fill="#2a2018" stroke="#e8a13c" stroke-width="1.3"/><path d="M9 9l-2.5 3L9 15M15 9l2.5 3L15 15M13 8l-2 8" stroke="#f0c074" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  txt:`<svg viewBox="0 0 24 24" fill="none"><path d="M6 3h8l4 4v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" fill="#352a20" stroke="#b3a18c" stroke-width="1.3"/><path d="M14 3v4h4" stroke="#b3a18c" stroke-width="1.3"/><path d="M8 12h8M8 15h8M8 18h5" stroke="#b3a18c" stroke-width="1.2" stroke-linecap="round"/></svg>`,
+  csv:`<svg viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="16" height="16" rx="2" fill="#2a2018" stroke="#8fae7c" stroke-width="1.3"/><path d="M4 9h16M4 14h16M9 4v16M15 4v16" stroke="#8fae7c" stroke-width="1.1"/></svg>`,
+  zip:`<svg viewBox="0 0 24 24" fill="none"><path d="M6 3h12a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" fill="#352a20" stroke="#e8a13c" stroke-width="1.3"/><path d="M11 3v2h2V3M11 7v2h2V7M11 11v2h2v-2" stroke="#e8a13c" stroke-width="1.2"/><rect x="10.5" y="14" width="3" height="4" rx="1" fill="#f0c074"/></svg>`,
+  pdf:`<svg viewBox="0 0 24 24" fill="none"><path d="M6 3h8l4 4v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" fill="#352a20" stroke="#cf7e7e" stroke-width="1.3"/><path d="M14 3v4h4" stroke="#cf7e7e" stroke-width="1.3"/><text x="12" y="17" font-size="6" fill="#cf7e7e" text-anchor="middle" font-family="monospace" font-weight="bold">PDF</text></svg>`,
+  html:`<svg viewBox="0 0 24 24" fill="none"><path d="M5 3l1.5 17L12 22l5.5-2L19 3z" fill="#d2632a"/><path d="M8 7h8l-.5 4H9.5l.2 2.5L12 14l2.3-.5.2-2.5" stroke="#fff" stroke-width="1" fill="none"/></svg>`,
+  file:`<svg viewBox="0 0 24 24" fill="none"><path d="M6 3h8l4 4v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" fill="#352a20" stroke="#7a6a55" stroke-width="1.3"/><path d="M14 3v4h4" stroke="#7a6a55" stroke-width="1.3"/></svg>`,
+  back:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>`,
+  fwd:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>`,
+  up:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>`,
+  refresh:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>`,
+  close:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>`,
+  min:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14"/></svg>`,
+  max:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="5" width="14" height="14" rx="1.5"/></svg>`,
+  home:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8M5 10v10h14V10"/></svg>`,
+  desk:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M9 20h6M12 16v4"/></svg>`,
+  mnt:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M3 7h18M7 3v4M12 11v8M8 19h8"/><circle cx="12" cy="13" r="1"/></svg>`,
+  doc:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/></svg>`,
+  trash:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>`,
+  copy:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>`,
+  cut:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4L8.5 15.5M14 11l6 9"/></svg>`,
+  paste:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="6" y="4" width="12" height="16" rx="2"/><path d="M9 4V2h6v2"/></svg>`,
+  rename:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>`,
+  open:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>`,
+  newfolder:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M12 10v6M9 13h6"/></svg>`,
+  newfile:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M12 12v6M9 15h6"/></svg>`,
+  upload:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 16V4M7 9l5-5 5 5M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>`,
+  download:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 4v12M7 11l5 5 5-5M4 20h16"/></svg>`,
+  fullscreen:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 9V5a1 1 0 0 1 1-1h4M15 4h4a1 1 0 0 1 1 1v4M20 15v4a1 1 0 0 1-1 1h-4M9 20H5a1 1 0 0 1-1-1v-4"/></svg>`,
+  zoomin:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4M11 8v6M8 11h6"/></svg>`,
+  zoomout:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4M8 11h6"/></svg>`,
+  go:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>`,
+  save:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h11l3 3v15H5z"/><path d="M8 3v5h7M8 21v-6h8v6"/></svg>`,
+  extract:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 3v12M8 11l4 4 4-4M5 20h14"/></svg>`,
+  search:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>`,
+  brush:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M9.5 14.5L18 6a2 2 0 0 0-3-3l-8.5 8.5M9.5 14.5l-3 3M9.5 14.5a2 2 0 0 1-3 3c-1.5 0-2 1-3 1.5 1-2 0-3 1.5-4.5a2 2 0 0 1 4.5 0z"/></svg>`,
+  eraser:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3l5 5L10 19H5l-2-2z"/><path d="M9 13l4 4"/></svg>`,
+};
+
+function iconForExt(name){
+  const e = (name.split('.').pop()||'').toLowerCase();
+  if(['png','jpg','jpeg','gif','svg','webp','bmp','ico'].includes(e)) return I.image;
+  if(['mp3','wav','ogg','flac','aac','m4a'].includes(e)) return I.audio;
+  if(['mp4','webm','ogv','mov'].includes(e)) return I.video;
+  if(['html','htm'].includes(e)) return I.html;
+  if(['css','js','json','xml','yaml','yml'].includes(e)) return I.code;
+  if(['csv','tsv'].includes(e)) return I.csv;
+  if(['zip','gz','tar','tgz'].includes(e)) return I.zip;
+  if(e==='pdf') return I.pdf;
+  if(['txt','md','log'].includes(e)) return I.txt;
+  return I.file;
+}
+</script>
+<script>
+/* ============================================================
+   FILESYSTEM — OPFS primary, IndexedDB/localStorage fallback
+   Unified `fs` API. Local mounts route transparently.
+   ============================================================ */
+const FS = (() => {
+  let backend = 'opfs';
+  let opfsRoot = null;
+  let idb = null;
+  const mounts = {}; // '/mnt/local/Name' -> FileSystemDirectoryHandle
+
+  // ---- IndexedDB fallback store ----
+  function openIDB(){
+    return new Promise((res,rej)=>{
+      const r = indexedDB.open('emberfs',1);
+      r.onupgradeneeded = e => {
+        const db = e.target.result;
+        if(!db.objectStoreNames.contains('files')) db.createObjectStore('files');
+        if(!db.objectStoreNames.contains('dirs')) db.createObjectStore('dirs');
+      };
+      r.onsuccess = e => res(e.target.result);
+      r.onerror = e => rej(e.target.error);
+    });
+  }
+  function idbGet(store,key){return new Promise((res,rej)=>{const t=idb.transaction(store,'readonly').objectStore(store).get(key);t.onsuccess=()=>res(t.result);t.onerror=()=>rej(t.error);});}
+  function idbPut(store,key,val){return new Promise((res,rej)=>{const t=idb.transaction(store,'readwrite').objectStore(store).put(val,key);t.onsuccess=()=>res();t.onerror=()=>rej(t.error);});}
+  function idbDel(store,key){return new Promise((res,rej)=>{const t=idb.transaction(store,'readwrite').objectStore(store).delete(key);t.onsuccess=()=>res();t.onerror=()=>rej(t.error);});}
+  function idbKeys(store){return new Promise((res,rej)=>{const t=idb.transaction(store,'readonly').objectStore(store).getAllKeys();t.onsuccess=()=>res(t.result);t.onerror=()=>rej(t.error);});}
+
+  async function init(){
+    try{
+      if(navigator.storage && navigator.storage.getDirectory){
+        opfsRoot = await navigator.storage.getDirectory();
+        backend = 'opfs';
+        try{ if(navigator.storage.persist) await navigator.storage.persist(); }catch(e){}
+        return backend;
+      }
+      throw new Error('no opfs');
+    }catch(e){
+      idb = await openIDB();
+      backend = 'idb';
+      return backend;
+    }
+  }
+
+  function norm(p){ p=('/'+p).replace(/\/+/g,'/'); if(p.length>1&&p.endsWith('/'))p=p.slice(0,-1); return p; }
+  function parts(p){ return norm(p).split('/').filter(Boolean); }
+
+  // ---- mount detection ----
+  function findMount(p){
+    p = norm(p);
+    for(const mp in mounts){
+      if(p===mp || p.startsWith(mp+'/')) return {mp, handle:mounts[mp], rel: p.slice(mp.length).replace(/^\//,'')};
+    }
+    return null;
+  }
+  async function resolveLocalDir(handle, relParts, create=false){
+    let h = handle;
+    for(const seg of relParts){ h = await h.getDirectoryHandle(seg, {create}); }
+    return h;
+  }
+  async function resolveLocalFile(handle, relParts, create=false){
+    const fileName = relParts[relParts.length-1];
+    const dirParts = relParts.slice(0,-1);
+    const dir = await resolveLocalDir(handle, dirParts, create);
+    return await dir.getFileHandle(fileName, {create});
+  }
+
+  // ===== OPFS helpers =====
+  async function getDir(p, create=false){
+    let h = opfsRoot;
+    for(const seg of parts(p)){ h = await h.getDirectoryHandle(seg, {create}); }
+    return h;
+  }
+  async function getFileHandle(p, create=false){
+    const ps = parts(p);
+    const fn = ps.pop();
+    let h = opfsRoot;
+    for(const seg of ps){ h = await h.getDirectoryHandle(seg, {create}); }
+    return await h.getFileHandle(fn, {create});
+  }
+
+  // ===== UNIFIED API (all accept extra trailing args for signature compat) =====
+  async function mkdir(p){
+    p = norm(p);
+    const m = findMount(p);
+    if(m){ await resolveLocalDir(m.handle, m.rel? m.rel.split('/'):[], true); return; }
+    if(backend==='opfs'){ await getDir(p,true); }
+    else { await idbPut('dirs',p,1); }
+  }
+
+  async function readdir(p){
+    p = norm(p);
+    const m = findMount(p);
+    if(m){
+      const dir = await resolveLocalDir(m.handle, m.rel? m.rel.split('/'):[], false);
+      const out=[]; for await (const [name,handle] of dir.entries()){ out.push(name); }
+      return out;
+    }
+    // virtual root: include mount points if directly under /mnt/local
+    if(backend==='opfs'){
+      const dir = await getDir(p,false);
+      const out=[]; for await (const [name] of dir.entries()){ out.push(name); }
+      // synthetic mnt
+      if(p==='/' && !out.includes('mnt') && Object.keys(mounts).length) out.push('mnt');
+      mergeSyntheticMounts(p,out);
+      return out;
+    } else {
+      const all = [...(await idbKeys('files')), ...(await idbKeys('dirs'))];
+      const set = new Set();
+      const base = p==='/'?'/':p+'/';
+      all.forEach(k=>{ if(k.startsWith(base) && k!==p){ const rest=k.slice(base.length); const seg=rest.split('/')[0]; if(seg) set.add(seg); }});
+      const out=[...set]; mergeSyntheticMounts(p,out); return out;
+    }
+  }
+  function mergeSyntheticMounts(p,out){
+    p=norm(p);
+    for(const mp in mounts){
+      const base = p==='/'?'/':p+'/';
+      if(mp.startsWith(base)){ const seg = mp.slice(base.length).split('/')[0]; if(seg && !out.includes(seg)) out.push(seg); }
+    }
+    return out;
+  }
+
+  async function stat(p){
+    p = norm(p);
+    if(p==='/' ) return {isDirectory:true,isFile:false,size:0,mtime:Date.now()};
+    if(p==='/mnt'||p==='/mnt/local') return {isDirectory:true,isFile:false,size:0,mtime:Date.now()};
+    const m = findMount(p);
+    if(m){
+      if(!m.rel) return {isDirectory:true,isFile:false,size:0,mtime:Date.now()};
+      const rp = m.rel.split('/');
+      // try file then dir
+      try{ const fh = await resolveLocalFile(m.handle, rp, false); const f = await fh.getFile(); return {isDirectory:false,isFile:true,size:f.size,mtime:f.lastModified}; }catch(e){}
+      try{ await resolveLocalDir(m.handle, rp, false); return {isDirectory:true,isFile:false,size:0,mtime:Date.now()}; }catch(e){}
+      throw new Error('ENOENT '+p);
+    }
+    if(backend==='opfs'){
+      try{ const fh = await getFileHandle(p,false); const f = await fh.getFile(); return {isDirectory:false,isFile:true,size:f.size,mtime:f.lastModified}; }catch(e){}
+      try{ await getDir(p,false); return {isDirectory:true,isFile:false,size:0,mtime:Date.now()}; }catch(e){}
+      // synthetic mount path
+      for(const mp in mounts){ if(mp.startsWith(p+'/')||mp===p) return {isDirectory:true,isFile:false,size:0,mtime:Date.now()}; }
+      throw new Error('ENOENT '+p);
+    } else {
+      const f = await idbGet('files',p);
+      if(f!==undefined && f!==null) return {isDirectory:false,isFile:true,size:f.byteLength||f.size||0,mtime:(await idbGet('files',p+'::mtime'))||Date.now()};
+      const d = await idbGet('dirs',p);
+      if(d!==undefined && d!==null) return {isDirectory:true,isFile:false,size:0,mtime:Date.now()};
+      // implicit dir
+      const all = [...(await idbKeys('files')),...(await idbKeys('dirs'))];
+      if(all.some(k=>k.startsWith(p+'/'))) return {isDirectory:true,isFile:false,size:0,mtime:Date.now()};
+      for(const mp in mounts){ if(mp.startsWith(p+'/')||mp===p) return {isDirectory:true,isFile:false,size:0,mtime:Date.now()}; }
+      throw new Error('ENOENT '+p);
+    }
+  }
+
+  async function exists(p){ try{ await stat(p); return true; }catch(e){ return false; } }
+
+  // returns ArrayBuffer
+  async function readFile(p){
+    p = norm(p);
+    const m = findMount(p);
+    if(m){ const fh = await resolveLocalFile(m.handle, m.rel.split('/'), false); const f = await fh.getFile(); return await f.arrayBuffer(); }
+    if(backend==='opfs'){ const fh = await getFileHandle(p,false); const f = await fh.getFile(); return await f.arrayBuffer(); }
+    else { const v = await idbGet('files',p); if(v===undefined||v===null) throw new Error('ENOENT '+p); return v instanceof ArrayBuffer? v : (v.buffer||v); }
+  }
+  async function readText(p){ return new TextDecoder().decode(await readFile(p)); }
+  async function readBlob(p){ return new Blob([await readFile(p)], {type: mimeFor(p)}); }
+
+  async function writeFile(p, data){ // data: ArrayBuffer|Blob|string|Uint8Array
+    p = norm(p);
+    let buf;
+    if(typeof data==='string') buf = new TextEncoder().encode(data).buffer;
+    else if(data instanceof Blob) buf = await data.arrayBuffer();
+    else if(data instanceof Uint8Array) buf = data.buffer.slice(data.byteOffset, data.byteOffset+data.byteLength);
+    else buf = data;
+    const m = findMount(p);
+    if(m){
+      const fh = await resolveLocalFile(m.handle, m.rel.split('/'), true);
+      const w = await fh.createWritable(); await w.write(buf); await w.close(); return;
+    }
+    if(backend==='opfs'){
+      const fh = await getFileHandle(p,true);
+      const w = await fh.createWritable(); await w.write(buf); await w.close();
+    } else {
+      await idbPut('files',p,buf); await idbPut('files',p+'::mtime',Date.now());
+    }
+  }
+
+  async function unlink(p){
+    p = norm(p);
+    const m = findMount(p);
+    if(m){ const rp=m.rel.split('/'); const dir = await resolveLocalDir(m.handle, rp.slice(0,-1), false); await dir.removeEntry(rp[rp.length-1], {recursive:true}); return; }
+    if(backend==='opfs'){
+      const ps = parts(p); const fn = ps.pop(); const dir = await getDir('/'+ps.join('/'),false);
+      await dir.removeEntry(fn, {recursive:true});
+    } else {
+      const all=[...(await idbKeys('files')),...(await idbKeys('dirs'))];
+      for(const k of all){ if(k===p||k.startsWith(p+'/')){ await idbDel('files',k).catch(()=>{}); await idbDel('dirs',k).catch(()=>{}); await idbDel('files',k+'::mtime').catch(()=>{});} }
+    }
+  }
+  const rmdir = unlink;
+
+  async function rename(oldP,newP){
+    oldP=norm(oldP); newP=norm(newP);
+    const st = await stat(oldP);
+    if(st.isFile){ const buf = await readFile(oldP); await writeFile(newP,buf); await unlink(oldP); }
+    else { await copyDir(oldP,newP); await unlink(oldP); }
+  }
+  async function copyDir(src,dst){
+    await mkdir(dst);
+    const items = await readdir(src);
+    for(const it of items){ const sp=src+'/'+it, dp=dst+'/'+it; const s=await stat(sp); if(s.isDirectory) await copyDir(sp,dp); else await writeFile(dp, await readFile(sp)); }
+  }
+  async function copy(src,dst){
+    src=norm(src);dst=norm(dst); const s=await stat(src);
+    if(s.isDirectory) await copyDir(src,dst); else await writeFile(dst, await readFile(src));
+  }
+
+  // ---- mounts ----
+  function addMount(name, handle){ const p='/mnt/local/'+name; mounts[p]=handle; return p; }
+  function removeMount(name){ delete mounts['/mnt/local/'+name]; }
+  function listMounts(){ return Object.keys(mounts).map(p=>({path:p,name:p.split('/').pop()})); }
+
+  // ---- storage estimate ----
+  async function estimate(){ try{ return await navigator.storage.estimate(); }catch(e){ return {usage:0,quota:0}; } }
+
+  // ---- reset ----
+  async function wipe(){
+    if(backend==='opfs'){
+      for await (const [name] of opfsRoot.entries()){ await opfsRoot.removeEntry(name,{recursive:true}); }
+    } else {
+      const f=await idbKeys('files'); for(const k of f) await idbDel('files',k);
+      const d=await idbKeys('dirs'); for(const k of d) await idbDel('dirs',k);
+    }
+    for(const k in mounts) delete mounts[k];
+  }
+
+  return {init,mkdir,readdir,stat,exists,readFile,readText,readBlob,writeFile,unlink,rmdir,rename,copy,
+          addMount,removeMount,listMounts,estimate,wipe,norm,
+          get backend(){return backend;}, get mounts(){return mounts;}};
+})();
+window.fs = FS;
+
+/* ===== MIME helper ===== */
+function mimeFor(name){
+  const e=(name.split('.').pop()||'').toLowerCase();
+  const map={png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',gif:'image/gif',svg:'image/svg+xml',webp:'image/webp',bmp:'image/bmp',ico:'image/x-icon',
+    mp3:'audio/mpeg',wav:'audio/wav',ogg:'audio/ogg',flac:'audio/flac',aac:'audio/aac',m4a:'audio/mp4',
+    mp4:'video/mp4',webm:'video/webm',ogv:'video/ogg',mov:'video/quicktime',
+    html:'text/html',htm:'text/html',css:'text/css',js:'text/javascript',json:'application/json',xml:'application/xml',
+    txt:'text/plain',md:'text/markdown',log:'text/plain',yaml:'text/yaml',yml:'text/yaml',csv:'text/csv',tsv:'text/tab-separated-values',
+    pdf:'application/pdf',zip:'application/zip',gz:'application/gzip',tar:'application/x-tar'};
+  return map[e]||'application/octet-stream';
+}
+function extOf(n){return (n.split('.').pop()||'').toLowerCase();}
+function fmtSize(b){ if(b===0||b==null)return '—'; const u=['B','KB','MB','GB','TB']; let i=0; while(b>=1024&&i<u.length-1){b/=1024;i++;} return (i===0?b:b.toFixed(1))+' '+u[i]; }
+function fmtDate(t){ if(!t)return '—'; const d=new Date(t); const p=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}/${p(d.getMonth()+1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; }
+function typeLabel(name,isDir){ if(isDir)return '文件夹'; const e=extOf(name); return e? e.toUpperCase()+' 文件':'文件'; }
+</script>
+
+<script>
+/* ============================================================
+   TOAST + MODAL utilities
+   ============================================================ */
+function toast(msg,type=''){ const t=document.createElement('div'); t.className='toast '+type; t.textContent=msg; document.getElementById('toasts').appendChild(t); setTimeout(()=>{t.style.transition='opacity .3s,transform .3s';t.style.opacity='0';t.style.transform='translateX(30px)';setTimeout(()=>t.remove(),300);},2600); }
+function prompt2(title,desc,def=''){
+  return new Promise(res=>{
+    const back=document.getElementById('modal-back'); back.style.display='flex';
+    back.innerHTML=`<div class="modal"><h3>${title}</h3><p>${desc||''}</p><input id="mp-in" value="${def.replace(/"/g,'&quot;')}"><div class="modal-btns"><button class="btn" id="mp-cancel">取消</button><button class="btn pri" id="mp-ok">确定</button></div></div>`;
+    const inp=back.querySelector('#mp-in'); inp.focus(); inp.select();
+    const done=v=>{back.style.display='none';back.innerHTML='';res(v);};
+    back.querySelector('#mp-ok').onclick=()=>done(inp.value);
+    back.querySelector('#mp-cancel').onclick=()=>done(null);
+    inp.onkeydown=e=>{if(e.key==='Enter')done(inp.value);if(e.key==='Escape')done(null);};
+  });
+}
+function confirm2(title,desc){
+  return new Promise(res=>{
+    const back=document.getElementById('modal-back'); back.style.display='flex';
+    back.innerHTML=`<div class="modal"><h3>${title}</h3><p>${desc||''}</p><div class="modal-btns"><button class="btn" id="mc-cancel">取消</button><button class="btn pri" id="mc-ok">确定</button></div></div>`;
+    const done=v=>{back.style.display='none';back.innerHTML='';res(v);};
+    back.querySelector('#mc-ok').onclick=()=>done(true);
+    back.querySelector('#mc-cancel').onclick=()=>done(false);
+  });
+}
+</script>
+<script>
+/* ============================================================
+   WINDOW MANAGER
+   ============================================================ */
+let zTop = 100;
+const WINS = {};
+let winSeq = 0;
+const isMobile = ()=> window.innerWidth <= 760;
+
+function focusWin(id){
+  const w = WINS[id]; if(!w) return;
+  zTop++; w.el.style.zIndex = zTop;
+  Object.values(WINS).forEach(o=>o.el.classList.toggle('inactive', o.id!==id));
+  updateTaskbar();
+}
+
+function createWindow({title, icon, body, w=620, h=440, x, y, onClose, app}){
+  const id = 'win'+(++winSeq);
+  const el = document.createElement('div');
+  el.className='win'; el.dataset.id=id;
+  const maxW=Math.min(w, window.innerWidth-20), maxH=Math.min(h, window.innerHeight-90);
+  if(x==null) x = Math.max(10,(window.innerWidth-maxW)/2 + (winSeq%5)*24);
+  if(y==null) y = Math.max(10,(window.innerHeight-maxH)/2 - 30 + (winSeq%5)*24);
+  el.style.cssText=`left:${x}px;top:${y}px;width:${maxW}px;height:${maxH}px;z-index:${++zTop}`;
+  el.innerHTML=`
+    <div class="win-bar">
+      <div class="win-ico">${icon||I.file}</div>
+      <div class="win-title">${title}</div>
+      <div class="win-btns">
+        <button class="wbtn min" title="最小化">${I.min}</button>
+        <button class="wbtn max" title="最大化">${I.max}</button>
+        <button class="wbtn close" title="关闭">${I.close}</button>
+      </div>
+    </div>
+    <div class="win-body"></div>
+    <div class="resz n"></div><div class="resz s"></div><div class="resz e"></div><div class="resz w"></div><div class="resz se"></div>`;
+  document.getElementById('desktop').appendChild(el);
+  const bodyEl = el.querySelector('.win-body');
+  if(typeof body==='string') bodyEl.innerHTML=body; else if(body) bodyEl.appendChild(body);
+
+  const win = {id,el,title,app,bodyEl,onClose,maximized:false,prev:null,icon};
+  WINS[id]=win;
+
+  el.addEventListener('mousedown',()=>focusWin(id));
+  el.addEventListener('touchstart',()=>focusWin(id),{passive:true});
+
+  // controls
+  el.querySelector('.close').onclick=e=>{e.stopPropagation();closeWin(id);};
+  el.querySelector('.min').onclick=e=>{e.stopPropagation();el.classList.add('minz');updateTaskbar();};
+  el.querySelector('.max').onclick=e=>{e.stopPropagation();toggleMax(id);};
+
+  // mobile: open near full
+  if(isMobile()){ el.style.left='6px';el.style.top='6px';el.style.width=(window.innerWidth-12)+'px';el.style.height=(window.innerHeight-80)+'px'; }
+
+  setupDrag(win); setupResize(win);
+  focusWin(id); updateTaskbar();
+  return win;
+}
+
+function closeWin(id){ const w=WINS[id]; if(!w)return; if(w.onClose)try{w.onClose();}catch(e){} w.el.style.transition='opacity .2s,transform .2s';w.el.style.opacity='0';w.el.style.transform='scale(.94)'; setTimeout(()=>{w.el.remove();delete WINS[id];updateTaskbar();},180); }
+
+function toggleMax(id){
+  const w=WINS[id], el=w.el;
+  if(w.maximized){ const p=w.prev; el.style.left=p.x+'px';el.style.top=p.y+'px';el.style.width=p.w+'px';el.style.height=p.h+'px';el.classList.remove('maxz');w.maximized=false; }
+  else { w.prev={x:el.offsetLeft,y:el.offsetTop,w:el.offsetWidth,h:el.offsetHeight}; el.style.left='0';el.style.top='0';el.style.width='100vw';el.style.height=(window.innerHeight-76)+'px';el.classList.add('maxz');w.maximized=true; }
+}
+
+function setupDrag(win){
+  const bar=win.el.querySelector('.win-bar'); let sx,sy,ox,oy,drag=false;
+  const start=(cx,cy)=>{ if(win.maximized)return; drag=true; sx=cx;sy=cy;ox=win.el.offsetLeft;oy=win.el.offsetTop; bar.classList.add('drag'); focusWin(win.id); };
+  const move=(cx,cy)=>{ if(!drag)return; let nx=ox+cx-sx, ny=oy+cy-sy; nx=Math.max(-win.el.offsetWidth+80,Math.min(window.innerWidth-60,nx)); ny=Math.max(0,Math.min(window.innerHeight-50,ny)); win.el.style.left=nx+'px';win.el.style.top=ny+'px'; };
+  const end=()=>{drag=false;bar.classList.remove('drag');};
+  bar.addEventListener('mousedown',e=>{if(e.target.closest('.wbtn'))return;e.preventDefault();start(e.clientX,e.clientY);});
+  window.addEventListener('mousemove',e=>move(e.clientX,e.clientY));
+  window.addEventListener('mouseup',end);
+  bar.addEventListener('touchstart',e=>{if(e.target.closest('.wbtn'))return;const t=e.touches[0];start(t.clientX,t.clientY);},{passive:true});
+  bar.addEventListener('touchmove',e=>{const t=e.touches[0];move(t.clientX,t.clientY);e.preventDefault();},{passive:false});
+  bar.addEventListener('touchend',end);
+  bar.addEventListener('dblclick',()=>toggleMax(win.id));
+}
+
+function setupResize(win){
+  win.el.querySelectorAll('.resz').forEach(h=>{
+    const dir=[...h.classList].find(c=>c!=='resz');
+    const start=(cx,cy)=>{ const r=win.el.getBoundingClientRect(); const init={x:r.left,y:r.top,w:r.width,h:r.height,cx,cy}; const move=(mx,my)=>{ const dx=mx-init.cx,dy=my-init.cy; let nw=init.w,nh=init.h,nl=init.x,nt=init.y; if(dir.includes('e'))nw=init.w+dx; if(dir.includes('s'))nh=init.h+dy; if(dir.includes('w')){nw=init.w-dx;nl=init.x+dx;} if(dir.includes('n')){nh=init.h-dy;nt=init.y+dy;} nw=Math.max(280,nw);nh=Math.max(160,nh); win.el.style.width=nw+'px';win.el.style.height=nh+'px';win.el.style.left=nl+'px';win.el.style.top=nt+'px'; };
+      const up=()=>{window.removeEventListener('mousemove',mm);window.removeEventListener('mouseup',up);window.removeEventListener('touchmove',tm);window.removeEventListener('touchend',up);};
+      const mm=e=>move(e.clientX,e.clientY); const tm=e=>{const t=e.touches[0];move(t.clientX,t.clientY);e.preventDefault();};
+      window.addEventListener('mousemove',mm);window.addEventListener('mouseup',up);window.addEventListener('touchmove',tm,{passive:false});window.addEventListener('touchend',up);
+    };
+    h.addEventListener('mousedown',e=>{e.preventDefault();e.stopPropagation();start(e.clientX,e.clientY);});
+    h.addEventListener('touchstart',e=>{e.stopPropagation();const t=e.touches[0];start(t.clientX,t.clientY);},{passive:true});
+  });
+}
+
+/* ============================================================
+   TASKBAR
+   ============================================================ */
+function updateTaskbar(){
+  const c=document.getElementById('tb-apps'); c.innerHTML='';
+  const top = Math.max(...Object.values(WINS).map(w=>+w.el.style.zIndex||0), 0);
+  Object.values(WINS).forEach(w=>{
+    const b=document.createElement('button'); b.className='tb-app'; b.innerHTML=w.icon||I.file; b.title=w.title;
+    if(+w.el.style.zIndex===top && !w.el.classList.contains('minz')) b.classList.add('active');
+    b.onclick=()=>{ if(w.el.classList.contains('minz')){w.el.classList.remove('minz');focusWin(w.id);} else if(+w.el.style.zIndex===top){w.el.classList.add('minz');updateTaskbar();} else focusWin(w.id); };
+    c.appendChild(b);
+  });
+}
+function clock(){ const d=new Date(); const p=n=>String(n).padStart(2,'0'); document.getElementById('clk-time').textContent=`${p(d.getHours())}:${p(d.getMinutes())}`; const days=['日','一','二','三','四','五','六']; document.getElementById('clk-date').textContent=`${d.getMonth()+1}月${d.getDate()}日 周${days[d.getDay()]}`; }
+setInterval(clock,1000);
+
+/* ============================================================
+   START MENU
+   ============================================================ */
+const APPS = [
+  {key:'files',name:'文件管理器',icon:I.files,run:()=>openExplorer('/')},
+  {key:'notepad',name:'记事本',icon:I.notepad,run:()=>openNotepad()},
+  {key:'browser',name:'网页浏览器',icon:I.browser,run:()=>openBrowser()},
+  {key:'calc',name:'计算器',icon:I.calc,run:()=>openCalc()},
+  {key:'paint',name:'画板',icon:I.paint,run:()=>openPaint()},
+  {key:'settings',name:'设置',icon:I.settings,run:()=>openSettings()},
+];
+function renderStart(filter=''){
+  const g=document.getElementById('sm-grid'); g.innerHTML='';
+  APPS.filter(a=>a.name.toLowerCase().includes(filter.toLowerCase())).forEach(a=>{
+    const d=document.createElement('div'); d.className='sm-item'; d.innerHTML=`${a.icon}<span>${a.name}</span>`;
+    d.onclick=()=>{a.run();closeStart();}; g.appendChild(d);
+  });
+}
+function openStart(){ document.getElementById('start-menu').classList.add('open'); renderStart(); document.getElementById('sm-search').value=''; }
+function closeStart(){ document.getElementById('start-menu').classList.remove('open'); }
+document.getElementById('start-btn').onclick=e=>{e.stopPropagation();const m=document.getElementById('start-menu');m.classList.contains('open')?closeStart():openStart();};
+document.getElementById('sm-search').oninput=e=>renderStart(e.target.value);
+document.addEventListener('mousedown',e=>{ if(!e.target.closest('#start-menu')&&!e.target.closest('#start-btn')) closeStart(); });
+
+/* ============================================================
+   CONTEXT MENU
+   ============================================================ */
+let curCtx=null;
+function showCtx(x,y,items){
+  hideCtx();
+  const m=document.createElement('div'); m.className='ctx';
+  items.forEach(it=>{
+    if(it==='sep'){ const s=document.createElement('div');s.className='ctx-sep';m.appendChild(s);return; }
+    const d=document.createElement('div'); d.className='ctx-item'+(it.danger?' danger':''); d.innerHTML=`${it.icon||''}<span>${it.label}</span>`;
+    d.onclick=()=>{hideCtx();it.action&&it.action();}; m.appendChild(d);
+  });
+  document.body.appendChild(m); curCtx=m;
+  const r=m.getBoundingClientRect();
+  if(x+r.width>window.innerWidth)x=window.innerWidth-r.width-8;
+  if(y+r.height>window.innerHeight)y=window.innerHeight-r.height-8;
+  m.style.left=x+'px';m.style.top=y+'px';
+}
+function hideCtx(){ if(curCtx){curCtx.remove();curCtx=null;} }
+document.addEventListener('mousedown',e=>{if(!e.target.closest('.ctx'))hideCtx();});
+document.addEventListener('scroll',hideCtx,true);
+</script>
+<script>
+/* ============================================================
+   WALLPAPERS — CSS-gradient art, persisted in localStorage
+   ============================================================ */
+const WALLPAPERS = [
+  {id:'ember',css:'radial-gradient(circle at 20% 20%,#3a2415,#16110d 60%),conic-gradient(from 200deg at 80% 30%,#d2632a33,transparent 40%)'},
+  {id:'dunes',css:'linear-gradient(160deg,#2a1e16,#16110d),radial-gradient(ellipse at 70% 80%,#e8a13c22,transparent 50%)'},
+  {id:'sage',css:'linear-gradient(160deg,#1a221a,#10120d),radial-gradient(circle at 30% 70%,#8fae7c2e,transparent 55%)'},
+  {id:'dusk',css:'linear-gradient(180deg,#241a26,#16110d),radial-gradient(ellipse at 50% 0%,#cf7e7e22,transparent 50%)'},
+  {id:'ink',css:'linear-gradient(135deg,#10171f,#0d0f12),radial-gradient(circle at 80% 20%,#7fa6c425,transparent 50%)'},
+  {id:'paper',css:'linear-gradient(160deg,#2b261d,#1a1610),repeating-linear-gradient(45deg,#ffffff04 0 2px,transparent 2px 22px)'},
+];
+async function applyWallpaper(val){
+  const d=document.getElementById('desktop');
+  if(val && val.startsWith('opfs:')){
+    try{ const blob=await fs.readBlob(val.slice(5)); const url=URL.createObjectURL(blob); d.style.backgroundImage=`url(${url})`; localStorage.setItem('ember_wp',val); return; }catch(e){ console.warn(e); }
+  }
+  const wp=WALLPAPERS.find(w=>w.id===val)||WALLPAPERS[0];
+  d.style.backgroundImage=wp.css; localStorage.setItem('ember_wp',wp.id);
+}
+
+/* ============================================================
+   DESKTOP ICONS — free placement, HTML5 drag&drop only
+   ============================================================ */
+const DESKTOP_DIR='/Desktop';
+let iconPositions = JSON.parse(localStorage.getItem('ember_iconpos')||'{}');
+const dragCache = new Map(); // path -> {file, name}
+
+function savePositions(){ localStorage.setItem('ember_iconpos',JSON.stringify(iconPositions)); }
+
+function gridSnap(x,y){ const gx=108, gy=104, px=18, py=18; return {x: px + Math.round((x-px)/gx)*gx, y: py + Math.round((y-py)/gy)*gy}; }
+function autoPos(i){ const cols=Math.max(1,Math.floor((window.innerHeight-120)/104)); const col=Math.floor(i/cols), row=i%cols; return {x:18+col*108, y:18+row*104}; }
+
+async function renderDesktop(){
+  const layer=document.getElementById('icon-layer'); 
+  // preserve selection clearing
+  layer.innerHTML='';
+  let items=[];
+  try{ if(!(await fs.exists(DESKTOP_DIR))) await fs.mkdir(DESKTOP_DIR); items=await fs.readdir(DESKTOP_DIR); }catch(e){ console.warn(e); }
+  let idx=0;
+  for(const name of items){
+    let st; try{ st=await fs.stat(DESKTOP_DIR+'/'+name); }catch(e){ continue; }
+    const path=DESKTOP_DIR+'/'+name;
+    const el=document.createElement('div'); el.className='dicon'; el.dataset.path=path; el.dataset.name=name; el.dataset.dir=st.isDirectory?'1':'0';
+    let ic = st.isDirectory? I.folder : iconForExt(name);
+    el.innerHTML=`<div class="gi">${ic}</div><div class="lbl">${name}</div>`;
+    const pos = iconPositions[name] || autoPos(idx++);
+    el.style.left=pos.x+'px'; el.style.top=pos.y+'px';
+    el.draggable=true;
+    bindDesktopIcon(el, path, name, st.isDirectory);
+    layer.appendChild(el);
+  }
+}
+
+function bindDesktopIcon(el, path, name, isDir){
+  let lastTap=0;
+  const openIt=()=>openPath(path, isDir);
+  el.addEventListener('dblclick', openIt);
+  el.addEventListener('click',e=>{ e.stopPropagation(); if(!e.shiftKey&&!e.ctrlKey) document.querySelectorAll('.dicon.sel').forEach(d=>d.classList.remove('sel')); el.classList.toggle('sel'); });
+  el.addEventListener('touchend',e=>{ const now=Date.now(); if(now-lastTap<320){ e.preventDefault(); openIt(); } lastTap=now; });
+  // preload file data for drag-out
+  el.addEventListener('mouseenter',()=>preloadDrag(path,name,isDir));
+  el.addEventListener('touchstart',()=>preloadDrag(path,name,isDir),{passive:true});
+  el.addEventListener('contextmenu',e=>{ e.preventDefault();e.stopPropagation(); desktopIconCtx(e,path,name,isDir); });
+
+  el.addEventListener('dragstart',e=>{
+    el.classList.add('dragging');
+    e.dataTransfer.effectAllowed='all';
+    e.dataTransfer.setData('application/x-ember', JSON.stringify({path,name,isDir,from:'desktop'}));
+    // drag-out via cache (sync)
+    const c=dragCache.get(path);
+    if(c && !isDir){
+      try{ e.dataTransfer.items.add(c.file); }catch(_){}
+      e.dataTransfer.setData('DownloadURL', `${c.file.type||'application/octet-stream'}:${name}:${c.url}`);
+    }
+  });
+  el.addEventListener('dragend',e=>{
+    el.classList.remove('dragging');
+    const c=dragCache.get(path); if(c&&c.url){ setTimeout(()=>{URL.revokeObjectURL(c.url);dragCache.delete(path);},6000); }
+  });
+}
+
+async function preloadDrag(path,name,isDir){
+  if(isDir||dragCache.has(path))return;
+  try{ const blob=await fs.readBlob(path); const file=new File([blob],name,{type:blob.type}); const url=URL.createObjectURL(blob); dragCache.set(path,{file,url}); }catch(e){}
+}
+
+function openPath(path,isDir){
+  if(isDir){ openExplorer(path); }
+  else { openFile(path); }
+}
+
+/* desktop icon context menu */
+function desktopIconCtx(e,path,name,isDir){
+  const items=[
+    {label:'打开',icon:I.open,action:()=>openPath(path,isDir)},
+  ];
+  if(!isDir){
+    const ext=extOf(name);
+    if(['html','htm'].includes(ext)) items.push({label:'在浏览器中打开',icon:I.browser,action:()=>openHtmlInBrowser(path)});
+    items.push({label:'下载/导出',icon:I.download,action:()=>exportFile(path,name)});
+  }
+  items.push('sep');
+  items.push({label:'重命名',icon:I.rename,action:async()=>{ const nn=await prompt2('重命名','输入新名称',name); if(nn&&nn!==name){ await fs.rename(path,DESKTOP_DIR+'/'+nn); if(iconPositions[name]){iconPositions[nn]=iconPositions[name];delete iconPositions[name];savePositions();} renderDesktop(); } }});
+  items.push({label:'删除',icon:I.trash,danger:true,action:async()=>{ if(await confirm2('删除',`确定删除 "${name}"？`)){ await fs.unlink(path); delete iconPositions[name]; savePositions(); renderDesktop(); toast('已删除','ok'); } }});
+  showCtx(e.clientX,e.clientY,items);
+}
+
+/* ============================================================
+   DESKTOP DROP — internal move + external import + drag-out
+   ============================================================ */
+const desk=document.getElementById('desktop');
+const iconLayer=document.getElementById('icon-layer');
+
+iconLayer.addEventListener('dragover',e=>{ e.preventDefault(); e.dataTransfer.dropEffect = e.dataTransfer.types.includes('application/x-ember')?'move':'copy'; });
+iconLayer.addEventListener('drop',async e=>{
+  e.preventDefault(); e.stopPropagation();
+  const internal=e.dataTransfer.getData('application/x-ember');
+  if(internal){
+    const d=JSON.parse(internal);
+    // check if dropped on a folder icon
+    const overFolder=e.target.closest('.dicon[data-dir="1"]');
+    if(overFolder && overFolder.dataset.path!==d.path){
+      const dest=overFolder.dataset.path+'/'+d.name;
+      try{ await fs.rename(d.path, dest); delete iconPositions[d.name]; savePositions(); renderDesktop(); toast('已移动','ok'); }catch(err){toast('移动失败','err');}
+      return;
+    }
+    if(d.from==='desktop'){
+      const rect=iconLayer.getBoundingClientRect();
+      const snap=gridSnap(e.clientX-rect.left-44, e.clientY-rect.top-30);
+      iconPositions[d.name]={x:Math.max(0,snap.x),y:Math.max(0,snap.y)}; savePositions();
+      const el=iconLayer.querySelector(`.dicon[data-name="${CSS.escape(d.name)}"]`);
+      if(el){ el.style.left=iconPositions[d.name].x+'px'; el.style.top=iconPositions[d.name].y+'px'; }
+    } else if(d.from==='explorer'){
+      try{ await fs.rename(d.path, DESKTOP_DIR+'/'+d.name); renderDesktop(); refreshExplorers(); toast('已移动到桌面','ok'); }catch(err){toast('移动失败','err');}
+    }
+    return;
+  }
+  // external import
+  await importDataTransfer(e.dataTransfer, DESKTOP_DIR);
+  renderDesktop();
+});
+
+/* import from physical desktop (files/folders) */
+async function importDataTransfer(dt, destDir){
+  const items=dt.items;
+  let count=0;
+  if(items && items.length && items[0].webkitGetAsEntry){
+    const entries=[]; for(let i=0;i<items.length;i++){ const en=items[i].webkitGetAsEntry&&items[i].webkitGetAsEntry(); if(en)entries.push(en); }
+    for(const en of entries){ count+=await importEntry(en,destDir); }
+  } else if(dt.files && dt.files.length){
+    for(const f of dt.files){ await fs.writeFile(destDir+'/'+f.name, await f.arrayBuffer()); count++; }
+  }
+  if(count) toast(`已导入 ${count} 个文件`,'ok');
+}
+async function importEntry(entry, destDir){
+  let n=0;
+  if(entry.isFile){
+    const file=await new Promise((res,rej)=>entry.file(res,rej));
+    await fs.writeFile(destDir+'/'+entry.name, await file.arrayBuffer()); n++;
+  } else if(entry.isDirectory){
+    const newDir=destDir+'/'+entry.name; await fs.mkdir(newDir);
+    const reader=entry.createReader(); let batch;
+    do{ batch=await new Promise((res,rej)=>reader.readEntries(res,rej)); for(const ch of batch){ n+=await importEntry(ch,newDir); } }while(batch.length>0);
+  }
+  return n;
+}
+
+/* ============================================================
+   MARQUEE selection on desktop
+   ============================================================ */
+let mq=null;
+desk.addEventListener('mousedown',e=>{
+  if(e.target!==desk && e.target!==iconLayer && e.target.id!=='wp-overlay') return;
+  if(e.button!==0)return;
+  document.querySelectorAll('.dicon.sel').forEach(d=>d.classList.remove('sel'));
+  const box=document.getElementById('marquee'); const sx=e.clientX,sy=e.clientY;
+  box.style.display='block'; mq={sx,sy};
+  const move=ev=>{ const x=Math.min(sx,ev.clientX),y=Math.min(sy,ev.clientY),w=Math.abs(ev.clientX-sx),h=Math.abs(ev.clientY-sy); box.style.left=x+'px';box.style.top=y+'px';box.style.width=w+'px';box.style.height=h+'px';
+    document.querySelectorAll('.dicon').forEach(d=>{ const r=d.getBoundingClientRect(); const hit=!(r.right<x||r.left>x+w||r.bottom<y||r.top>y+h); d.classList.toggle('sel',hit); }); };
+  const up=()=>{ box.style.display='none';box.style.width='0';box.style.height='0';mq=null; window.removeEventListener('mousemove',move);window.removeEventListener('mouseup',up); };
+  window.addEventListener('mousemove',move);window.addEventListener('mouseup',up);
+});
+
+/* ============================================================
+   DESKTOP context menu (blank area)
+   ============================================================ */
+desk.addEventListener('contextmenu',e=>{
+  if(e.target.closest('.dicon')||e.target.closest('.win'))return;
+  e.preventDefault();
+  showCtx(e.clientX,e.clientY,[
+    {label:'刷新',icon:I.refresh,action:renderDesktop},
+    {label:'新建文件夹',icon:I.newfolder,action:async()=>{ const n=await prompt2('新建文件夹','名称','新建文件夹'); if(n){ await fs.mkdir(DESKTOP_DIR+'/'+n); renderDesktop(); } }},
+    {label:'新建文本文件',icon:I.newfile,action:async()=>{ const n=await prompt2('新建文件','名称','新建文本.txt'); if(n){ await fs.writeFile(DESKTOP_DIR+'/'+n,''); renderDesktop(); } }},
+    'sep',
+    {label:'上传文件…',icon:I.upload,action:()=>uploadToDir(DESKTOP_DIR,renderDesktop)},
+    {label:'挂载本地文件夹…',icon:I.mnt,action:mountLocalFolder},
+    'sep',
+    {label:'全屏模式',icon:I.fullscreen,action:()=>{ if(!document.fullscreenElement)document.documentElement.requestFullscreen(); else document.exitFullscreen(); }},
+    {label:'更换壁纸…',icon:I.image,action:openSettings},
+  ]);
+});
+
+function uploadToDir(dir, after){
+  const inp=document.createElement('input'); inp.type='file'; inp.multiple=true;
+  inp.onchange=async()=>{ for(const f of inp.files){ await fs.writeFile(dir+'/'+f.name, await f.arrayBuffer()); } toast(`已上传 ${inp.files.length} 个文件`,'ok'); after&&after(); };
+  inp.click();
+}
+async function exportFile(path,name){
+  try{ const blob=await fs.readBlob(path); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url;a.download=name;a.click(); setTimeout(()=>URL.revokeObjectURL(url),3000); }
+  catch(e){ toast('导出失败','err'); }
+}
+
+/* ============================================================
+   LOCAL FOLDER MOUNT (File System Access API)
+   ============================================================ */
+async function mountLocalFolder(){
+  if(!window.showDirectoryPicker){ toast('当前浏览器不支持本地挂载','err'); return; }
+  try{
+    const handle=await window.showDirectoryPicker();
+    const p=fs.addMount(handle.name, handle);
+    let saved=JSON.parse(localStorage.getItem('ember_mounts')||'[]'); if(!saved.includes(handle.name)){saved.push(handle.name);localStorage.setItem('ember_mounts',JSON.stringify(saved));}
+    toast(`已挂载 "${handle.name}" → ${p}`,'ok');
+    refreshExplorers();
+  }catch(e){ if(e.name!=='AbortError')toast('挂载取消','err'); }
+}
+// startup remount prompt
+function checkRemount(){
+  const saved=JSON.parse(localStorage.getItem('ember_mounts')||'[]');
+  if(saved.length){ toast(`有 ${saved.length} 个本地文件夹需重新挂载（右键桌面→挂载）`); }
+}
+</script>
+<script>
+/* ============================================================
+   SMART OPEN — stat first, route file vs dir
+   ============================================================ */
+async function smartOpen(path){
+  let st; try{ st=await fs.stat(path); }catch(e){ toast('无法访问','err'); return; }
+  if(st.isDirectory) openExplorer(path); else openFile(path);
+}
+function openFile(path){
+  const name=path.split('/').pop(); const ext=extOf(name);
+  if(['png','jpg','jpeg','gif','svg','webp','bmp','ico'].includes(ext)) return openImage(path);
+  if(['mp3','wav','ogg','flac','aac','m4a'].includes(ext)) return openMedia(path,'audio');
+  if(['mp4','webm','ogv','mov'].includes(ext)) return openMedia(path,'video');
+  if(ext==='pdf') return openPdf(path);
+  if(['html','htm'].includes(ext)) return openHtmlEditor(path);
+  if(['csv','tsv'].includes(ext)) return openTable(path);
+  if(['zip','gz','tar','tgz'].includes(ext)) return openArchive(path);
+  // everything else as text
+  openNotepad(path);
+}
+
+/* ============================================================
+   FILE EXPLORER
+   ============================================================ */
+const explorers=new Set();
+function refreshExplorers(){ explorers.forEach(fn=>{try{fn();}catch(e){}}); }
+
+function openExplorer(startPath='/'){
+  const root=document.createElement('div'); root.className='fe';
+  root.innerHTML=`
+    <div class="fe-side">
+      <h5>快速访问</h5>
+      <div class="fe-nav" data-go="/"> ${I.home}<span>根目录</span></div>
+      <div class="fe-nav" data-go="/Desktop">${I.desk}<span>桌面</span></div>
+      <div class="fe-nav" data-go="/Documents">${I.doc}<span>文档</span></div>
+      <div class="fe-nav" data-go="/Pictures">${I.image}<span>图片</span></div>
+      <h5>设备</h5>
+      <div class="fe-nav" data-go="/mnt/local">${I.mnt}<span>本地挂载</span></div>
+      <div class="fe-nav" id="fe-mount">${I.upload}<span>挂载文件夹…</span></div>
+      <div id="fe-mountlist"></div>
+    </div>
+    <div class="fe-main">
+      <div class="fe-top">
+        <button class="fe-tb" data-act="back" title="后退">${I.back}</button>
+        <button class="fe-tb" data-act="fwd" title="前进">${I.fwd}</button>
+        <button class="fe-tb" data-act="up" title="上级">${I.up}</button>
+        <button class="fe-tb" data-act="refresh" title="刷新">${I.refresh}</button>
+        <div class="fe-crumb"></div>
+        <input class="fe-search" placeholder="搜索…">
+        <button class="fe-tb" data-act="upload" title="上传">${I.upload}</button>
+        <button class="fe-tb" data-act="newfolder" title="新建文件夹">${I.newfolder}</button>
+      </div>
+      <div class="fe-cols">
+        <span data-sort="name">名称</span>
+        <span data-sort="mtime">修改日期</span>
+        <span data-sort="type">类型</span>
+        <span data-sort="size">大小</span>
+      </div>
+      <div class="fe-list"></div>
+    </div>`;
+  const win=createWindow({title:'文件管理器',icon:I.files,body:root,w:760,h:520,app:'files'});
+
+  const state={path:startPath,history:[startPath],hi:0,sort:'name',asc:true,search:'',clip:null};
+  const listEl=root.querySelector('.fe-list');
+  const crumbEl=root.querySelector('.fe-crumb');
+  const searchEl=root.querySelector('.fe-search');
+
+  async function go(p,push=true){ p=fs.norm(p); if(!(await fs.exists(p))){toast('路径不存在','err');return;} if(push){ state.history=state.history.slice(0,state.hi+1); state.history.push(p); state.hi=state.history.length-1; } state.path=p; state.search=''; searchEl.value=''; await render(); updateNav(); }
+  function updateNav(){ root.querySelector('[data-act=back]').disabled=state.hi<=0; root.querySelector('[data-act=fwd]').disabled=state.hi>=state.history.length-1; root.querySelector('[data-act=up]').disabled=state.path==='/'; }
+
+  function renderCrumb(){ crumbEl.innerHTML=''; const segs=state.path.split('/').filter(Boolean); let acc=''; const home=document.createElement('b'); home.textContent='/'; home.onclick=()=>go('/'); crumbEl.appendChild(home); segs.forEach((s,i)=>{ acc+='/'+s; const sep=document.createElement('i');sep.textContent='›';crumbEl.appendChild(sep); const b=document.createElement('b');b.textContent=s;const path=acc;b.onclick=()=>go(path);crumbEl.appendChild(b); }); }
+
+  async function render(){
+    renderCrumb();
+    let names=[]; try{ names=await fs.readdir(state.path); }catch(e){ listEl.innerHTML=`<div class="fe-empty">${I.folder}<span>无法读取目录</span></div>`; return; }
+    let rows=[];
+    for(const n of names){ let st; try{ st=await fs.stat(state.path+'/'+n); }catch(e){ st={isDirectory:false,isFile:true,size:0,mtime:0}; } rows.push({name:n,...st}); }
+    if(state.search){ rows=rows.filter(r=>r.name.toLowerCase().includes(state.search.toLowerCase())); }
+    rows.sort((a,b)=>{ if(a.isDirectory!==b.isDirectory)return a.isDirectory?-1:1; let r=0; if(state.sort==='name')r=a.name.localeCompare(b.name); else if(state.sort==='size')r=(a.size||0)-(b.size||0); else if(state.sort==='mtime')r=(a.mtime||0)-(b.mtime||0); else if(state.sort==='type')r=typeLabel(a.name,a.isDirectory).localeCompare(typeLabel(b.name,b.isDirectory)); return state.asc?r:-r; });
+    if(!rows.length){ listEl.innerHTML=`<div class="fe-empty">${I.folder}<span>${state.search?'未找到结果':'此文件夹为空'}</span></div>`; return; }
+    listEl.innerHTML='';
+    rows.forEach(r=>{
+      const path=state.path+'/'+r.name;
+      const isMnt = state.path==='/mnt/local';
+      const ic = r.isDirectory? (isMnt?I.folderMnt:I.folder) : iconForExt(r.name);
+      const row=document.createElement('div'); row.className='fe-row'; row.dataset.path=path; row.dataset.name=r.name; row.dataset.dir=r.isDirectory?'1':'0';
+      row.innerHTML=`<div class="fe-name">${ic}<span>${r.name}</span></div><div class="fe-meta">${fmtDate(r.mtime)}</div><div class="fe-meta">${typeLabel(r.name,r.isDirectory)}</div><div class="fe-meta">${r.isDirectory?'—':fmtSize(r.size)}</div>`;
+      row.draggable=true;
+      let lastTap=0;
+      row.onclick=e=>{ if(!e.ctrlKey&&!e.shiftKey) listEl.querySelectorAll('.fe-row.sel').forEach(x=>x.classList.remove('sel')); row.classList.toggle('sel'); };
+      row.ondblclick=()=>{ if(r.isDirectory)go(path); else openFile(path); };
+      row.addEventListener('touchend',e=>{ const now=Date.now(); if(now-lastTap<320){e.preventDefault(); if(r.isDirectory)go(path);else openFile(path);} lastTap=now; });
+      row.addEventListener('mouseenter',()=>preloadDrag(path,r.name,r.isDirectory));
+      row.addEventListener('contextmenu',e=>{e.preventDefault();e.stopPropagation();rowCtx(e,path,r.name,r.isDirectory);});
+      row.addEventListener('dragstart',e=>{ e.dataTransfer.effectAllowed='all'; e.dataTransfer.setData('application/x-ember',JSON.stringify({path,name:r.name,isDir:r.isDirectory,from:'explorer'})); const c=dragCache.get(path); if(c&&!r.isDirectory){ try{e.dataTransfer.items.add(c.file);}catch(_){} e.dataTransfer.setData('DownloadURL',`${c.file.type||'application/octet-stream'}:${r.name}:${c.url}`);} });
+      row.addEventListener('dragend',()=>{ const c=dragCache.get(path); if(c&&c.url)setTimeout(()=>{URL.revokeObjectURL(c.url);dragCache.delete(path);},6000); });
+      listEl.appendChild(row);
+    });
+  }
+
+  function rowCtx(e,path,name,isDir){
+    const items=[{label:'打开',icon:I.open,action:()=>{ if(isDir)go(path);else openFile(path); }}];
+    if(!isDir){ const ext=extOf(name); if(['html','htm'].includes(ext))items.push({label:'在浏览器中打开',icon:I.browser,action:()=>openHtmlInBrowser(path)}); if(['zip','gz','tar','tgz'].includes(ext))items.push({label:'解压到此处',icon:I.extract,action:()=>extractArchive(path,state.path).then(()=>render())}); items.push({label:'下载/导出',icon:I.download,action:()=>exportFile(path,name)}); }
+    items.push('sep',
+      {label:'复制',icon:I.copy,action:()=>{state.clip={path,name,cut:false};toast('已复制');}},
+      {label:'剪切',icon:I.cut,action:()=>{state.clip={path,name,cut:true};toast('已剪切');}},
+      {label:'重命名',icon:I.rename,action:async()=>{const nn=await prompt2('重命名','新名称',name);if(nn&&nn!==name){await fs.rename(path,state.path+'/'+nn);render();renderDesktop();}}},
+      {label:'删除',icon:I.trash,danger:true,action:async()=>{if(await confirm2('删除',`删除 "${name}"？`)){await fs.unlink(path);render();renderDesktop();toast('已删除','ok');}}});
+    showCtx(e.clientX,e.clientY,items);
+  }
+
+  // blank-area context menu
+  listEl.addEventListener('contextmenu',e=>{ if(e.target.closest('.fe-row'))return; e.preventDefault();
+    const items=[
+      {label:'新建文件夹',icon:I.newfolder,action:async()=>{const n=await prompt2('新建文件夹','名称','新建文件夹');if(n){await fs.mkdir(state.path+'/'+n);render();}}},
+      {label:'新建文本文件',icon:I.newfile,action:async()=>{const n=await prompt2('新建文件','名称','新建.txt');if(n){await fs.writeFile(state.path+'/'+n,'');render();}}},
+      {label:'上传文件…',icon:I.upload,action:()=>uploadToDir(state.path,render)},
+    ];
+    if(state.clip) items.push({label:'粘贴',icon:I.paste,action:async()=>{ try{ await fs.copy(state.clip.path,state.path+'/'+state.clip.name); if(state.clip.cut){await fs.unlink(state.clip.path);state.clip=null;} render();renderDesktop();toast('已粘贴','ok'); }catch(err){toast('粘贴失败','err');} }});
+    items.push('sep',{label:'刷新',icon:I.refresh,action:render});
+    showCtx(e.clientX,e.clientY,items);
+  });
+
+  // drop into explorer list (import + internal move)
+  listEl.addEventListener('dragover',e=>{e.preventDefault(); const f=e.target.closest('.fe-row[data-dir="1"]'); listEl.querySelectorAll('.drop-hi').forEach(x=>x.classList.remove('drop-hi')); if(f)f.classList.add('drop-hi');});
+  listEl.addEventListener('dragleave',()=>listEl.querySelectorAll('.drop-hi').forEach(x=>x.classList.remove('drop-hi')));
+  listEl.addEventListener('drop',async e=>{
+    e.preventDefault(); listEl.querySelectorAll('.drop-hi').forEach(x=>x.classList.remove('drop-hi'));
+    const internal=e.dataTransfer.getData('application/x-ember');
+    const folderRow=e.target.closest('.fe-row[data-dir="1"]');
+    const destDir = folderRow? folderRow.dataset.path : state.path;
+    if(internal){ const d=JSON.parse(internal); if(d.path===destDir)return; try{ await fs.rename(d.path,destDir+'/'+d.name); render();renderDesktop();toast('已移动','ok'); }catch(err){toast('移动失败:'+err.message,'err');} return; }
+    await importDataTransfer(e.dataTransfer,destDir); render();renderDesktop();
+  });
+
+  // toolbar
+  root.querySelectorAll('[data-act]').forEach(b=>b.onclick=()=>{ const a=b.dataset.act;
+    if(a==='back'&&state.hi>0){state.hi--;state.path=state.history[state.hi];render();updateNav();}
+    else if(a==='fwd'&&state.hi<state.history.length-1){state.hi++;state.path=state.history[state.hi];render();updateNav();}
+    else if(a==='up'&&state.path!=='/'){go(state.path.replace(/\/[^/]+$/,'')||'/');}
+    else if(a==='refresh')render();
+    else if(a==='upload')uploadToDir(state.path,render);
+    else if(a==='newfolder')(async()=>{const n=await prompt2('新建文件夹','名称','新建文件夹');if(n){await fs.mkdir(state.path+'/'+n);render();}})();
+  });
+  root.querySelectorAll('.fe-nav[data-go]').forEach(n=>n.onclick=()=>go(n.dataset.go));
+  root.querySelector('#fe-mount').onclick=()=>mountLocalFolder();
+  searchEl.oninput=()=>{state.search=searchEl.value;render();};
+  root.querySelectorAll('.fe-cols span').forEach(s=>s.onclick=()=>{ const k=s.dataset.sort; if(state.sort===k)state.asc=!state.asc;else{state.sort=k;state.asc=true;} root.querySelectorAll('.fe-cols span').forEach(x=>x.classList.toggle('act',x.dataset.sort===state.sort)); render(); });
+
+  // register refresh + mount list
+  function renderMountList(){ const c=root.querySelector('#fe-mountlist'); c.innerHTML=''; fs.listMounts().forEach(m=>{ const d=document.createElement('div');d.className='fe-nav';d.innerHTML=`${I.folderMnt}<span>${m.name}</span>`;d.onclick=()=>go(m.path);d.oncontextmenu=ev=>{ev.preventDefault();showCtx(ev.clientX,ev.clientY,[{label:'卸载',icon:I.close,danger:true,action:()=>{fs.removeMount(m.name);let s=JSON.parse(localStorage.getItem('ember_mounts')||'[]').filter(x=>x!==m.name);localStorage.setItem('ember_mounts',JSON.stringify(s));renderMountList();toast('已卸载','ok');}}]);};c.appendChild(d);}); }
+  renderMountList();
+  const refresh=()=>{render();renderMountList();};
+  explorers.add(refresh);
+  win.onClose=()=>explorers.delete(refresh);
+
+  render(); updateNav();
+  return win;
+}
+function openHtmlInBrowser(path){ openBrowser('ember-file://'+path); }
+</script>
+<script>
+/* ============================================================
+   NOTEPAD
+   ============================================================ */
+async function openNotepad(path){
+  let content=''; let name='未命名.txt';
+  if(path){ name=path.split('/').pop(); try{ content=await fs.readText(path); }catch(e){ toast('读取失败','err'); } }
+  const root=document.createElement('div'); root.className='np';
+  root.innerHTML=`<div class="np-bar"><button class="btn pri" data-a="save">${I.save}保存</button><button class="btn" data-a="saveas">另存为</button><span style="font-size:11px;color:var(--txt-faint);font-family:var(--mono)" class="np-st"></span></div><textarea class="np-ta" spellcheck="false"></textarea>`;
+  const ta=root.querySelector('.np-ta'); ta.value=content;
+  const st=root.querySelector('.np-st');
+  const upd=()=>st.textContent=`${ta.value.length} 字符 · ${ta.value.split('\n').length} 行`; upd(); ta.oninput=upd;
+  const win=createWindow({title:'记事本 — '+name,icon:I.notepad,body:root,w:680,h:480,app:'notepad'});
+  root.querySelector('[data-a=save]').onclick=async()=>{ if(!path){ const p=await prompt2('保存','输入路径','/Documents/'+name); if(!p)return; path=fs.norm(p); } await fs.writeFile(path,ta.value); toast('已保存','ok'); renderDesktop(); refreshExplorers(); win.el.querySelector('.win-title').textContent='记事本 — '+path.split('/').pop(); };
+  root.querySelector('[data-a=saveas]').onclick=async()=>{ const p=await prompt2('另存为','输入路径','/Documents/'+name); if(!p)return; await fs.writeFile(fs.norm(p),ta.value); toast('已保存','ok'); renderDesktop(); refreshExplorers(); };
+  return win;
+}
+
+/* ============================================================
+   HTML EDITOR with live preview + browser-open
+   ============================================================ */
+async function openHtmlEditor(path){
+  let content=''; const name=path.split('/').pop();
+  try{ content=await fs.readText(path); }catch(e){}
+  const root=document.createElement('div'); root.className='htv';
+  root.innerHTML=`<div class="np-bar"><button class="btn pri" data-a="save">${I.save}保存</button><button class="btn" data-a="browser">${I.browser}在浏览器打开</button><button class="btn" data-a="refresh">${I.refresh}刷新预览</button></div>
+    <div class="htv-split"><div><div class="htv-lbl">源代码</div><textarea spellcheck="false"></textarea></div><div><div class="htv-lbl">实时预览</div><iframe sandbox="allow-scripts allow-same-origin"></iframe></div></div>`;
+  const ta=root.querySelector('textarea'); ta.value=content; const ifr=root.querySelector('iframe');
+  const preview=()=>{ ifr.srcdoc=ta.value; };
+  const win=createWindow({title:'HTML 编辑器 — '+name,icon:I.html,body:root,w:840,h:560,app:'notepad'});
+  preview(); let t; ta.oninput=()=>{clearTimeout(t);t=setTimeout(preview,400);};
+  root.querySelector('[data-a=save]').onclick=async()=>{await fs.writeFile(path,ta.value);toast('已保存','ok');renderDesktop();refreshExplorers();};
+  root.querySelector('[data-a=refresh]').onclick=preview;
+  root.querySelector('[data-a=browser]').onclick=()=>openHtmlInBrowser(path);
+  return win;
+}
+
+/* ============================================================
+   TABLE (CSV/TSV) dual view
+   ============================================================ */
+async function openTable(path){
+  const name=path.split('/').pop(); const sep=extOf(name)==='tsv'?'\t':',';
+  let content=''; try{content=await fs.readText(path);}catch(e){}
+  const root=document.createElement('div'); root.className='np';
+  root.innerHTML=`<div class="np-bar"><button class="btn pri" data-a="save">${I.save}保存</button><div class="np-tabs"><div class="np-tab act" data-v="table">表格视图</div><div class="np-tab" data-v="text">文本视图</div></div></div>
+    <div class="tbl-view" style="flex:1;overflow:auto;padding:8px"></div>
+    <textarea class="np-ta hidden" spellcheck="false"></textarea>`;
+  const ta=root.querySelector('.np-ta'); ta.value=content; const tv=root.querySelector('.tbl-view');
+  function parse(txt){ return txt.split(/\r?\n/).filter(l=>l.length).map(l=>{ const out=[];let cur='',q=false; for(let i=0;i<l.length;i++){const c=l[i]; if(c==='"'){ if(q&&l[i+1]==='"'){cur+='"';i++;} else q=!q; } else if(c===sep&&!q){out.push(cur);cur='';} else cur+=c;} out.push(cur); return out; }); }
+  function renderTable(){ const rows=parse(ta.value); if(!rows.length){tv.innerHTML='<div class="fe-empty">空表格</div>';return;} let h='<table class="csv-table"><thead><tr>'+rows[0].map(c=>`<th>${esc(c)}</th>`).join('')+'</tr></thead><tbody>'; for(let i=1;i<rows.length;i++){h+='<tr>'+rows[i].map(c=>`<td>${esc(c)}</td>`).join('')+'</tr>';} h+='</tbody></table>'; tv.innerHTML=h; }
+  function esc(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+  renderTable();
+  const win=createWindow({title:'表格 — '+name,icon:I.csv,body:root,w:720,h:500,app:'notepad'});
+  root.querySelectorAll('.np-tab').forEach(tab=>tab.onclick=()=>{ root.querySelectorAll('.np-tab').forEach(x=>x.classList.remove('act')); tab.classList.add('act'); if(tab.dataset.v==='table'){renderTable();tv.classList.remove('hidden');ta.classList.add('hidden');}else{tv.classList.add('hidden');ta.classList.remove('hidden');} });
+  root.querySelector('[data-a=save]').onclick=async()=>{await fs.writeFile(path,ta.value);toast('已保存','ok');renderTable();};
+  return win;
+}
+
+/* ============================================================
+   IMAGE VIEWER
+   ============================================================ */
+async function openImage(path){
+  const name=path.split('/').pop();
+  const root=document.createElement('div'); root.className='viewer';
+  root.innerHTML=`<img><div class="viewer-bar"><button class="fe-tb" data-z="out">${I.zoomout}</button><button class="fe-tb" data-z="reset">${I.refresh}</button><button class="fe-tb" data-z="in">${I.zoomin}</button><button class="fe-tb" data-z="dl">${I.download}</button></div>`;
+  const img=root.querySelector('img');
+  try{ const blob=await fs.readBlob(path); img.src=URL.createObjectURL(blob); }catch(e){toast('读取失败','err');}
+  let scale=1,tx=0,ty=0;
+  const apply=()=>img.style.transform=`translate(${tx}px,${ty}px) scale(${scale})`;
+  root.querySelector('[data-z=in]').onclick=()=>{scale=Math.min(8,scale*1.3);apply();};
+  root.querySelector('[data-z=out]').onclick=()=>{scale=Math.max(.2,scale/1.3);apply();};
+  root.querySelector('[data-z=reset]').onclick=()=>{scale=1;tx=ty=0;apply();};
+  root.querySelector('[data-z=dl]').onclick=()=>exportFile(path,name);
+  root.addEventListener('wheel',e=>{e.preventDefault();scale=Math.max(.2,Math.min(8,scale*(e.deltaY<0?1.1:.9)));apply();},{passive:false});
+  let drag=false,sx,sy;
+  img.addEventListener('mousedown',e=>{drag=true;sx=e.clientX-tx;sy=e.clientY-ty;img.style.cursor='grabbing';});
+  window.addEventListener('mousemove',e=>{if(drag){tx=e.clientX-sx;ty=e.clientY-sy;apply();}});
+  window.addEventListener('mouseup',()=>{drag=false;img.style.cursor='grab';});
+  createWindow({title:'图片 — '+name,icon:I.image,body:root,w:600,h:480,app:'image'});
+}
+
+/* ============================================================
+   MEDIA (audio/video)
+   ============================================================ */
+async function openMedia(path,kind){
+  const name=path.split('/').pop();
+  const root=document.createElement('div'); root.className='viewer';
+  try{ const blob=await fs.readBlob(path); const url=URL.createObjectURL(blob);
+    if(kind==='audio'){ root.innerHTML=`<div style="text-align:center"><div style="margin-bottom:18px">${I.audio.replace('viewBox="0 0 24 24"','viewBox="0 0 24 24" width="90" height="90"')}</div><div style="font-family:var(--disp);font-size:18px;margin-bottom:14px">${name}</div><audio controls autoplay src="${url}" style="width:320px"></audio></div>`; }
+    else { root.innerHTML=`<video controls autoplay src="${url}" style="max-width:100%;max-height:100%"></video>`; }
+  }catch(e){toast('读取失败','err');}
+  createWindow({title:(kind==='audio'?'音乐 — ':'视频 — ')+name,icon:kind==='audio'?I.audio:I.video,body:root,w:kind==='audio'?440:680,h:kind==='audio'?340:460,app:kind});
+}
+
+/* ============================================================
+   PDF
+   ============================================================ */
+async function openPdf(path){
+  const name=path.split('/').pop();
+  const root=document.createElement('div'); root.className='viewer';
+  try{ const blob=await fs.readBlob(path); const url=URL.createObjectURL(blob); root.innerHTML=`<iframe src="${url}"></iframe>`; }catch(e){toast('读取失败','err');}
+  createWindow({title:'PDF — '+name,icon:I.pdf,body:root,w:760,h:560,app:'pdf'});
+}
+
+/* ============================================================
+   BROWSER
+   ============================================================ */
+function openBrowser(initial){
+  const root=document.createElement('div'); root.style.cssText='display:flex;flex-direction:column;height:100%';
+  root.innerHTML=`<div class="fe-top"><button class="fe-tb" data-a="back">${I.back}</button><button class="fe-tb" data-a="fwd">${I.fwd}</button><button class="fe-tb" data-a="reload">${I.refresh}</button><input class="fe-search" style="flex:1;width:auto" placeholder="输入网址或 ember-file:// 路径"><button class="fe-tb" data-a="go">${I.go}</button></div><iframe style="flex:1;border:none;background:#fff" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>`;
+  const ifr=root.querySelector('iframe'); const inp=root.querySelector('input');
+  let blobUrls=[];
+  async function navigate(u){
+    if(!u)return;
+    if(u.startsWith('ember-file://')){ const p=u.slice('ember-file://'.length); try{ const blob=await fs.readBlob(p); const url=URL.createObjectURL(blob); blobUrls.push(url); ifr.src=url; inp.value=u; }catch(e){toast('无法打开文件','err');} return; }
+    if(!/^https?:\/\//.test(u) && !u.startsWith('about:')) u='https://'+u;
+    inp.value=u; ifr.src=u;
+  }
+  root.querySelector('[data-a=go]').onclick=()=>navigate(inp.value);
+  inp.onkeydown=e=>{if(e.key==='Enter')navigate(inp.value);};
+  root.querySelector('[data-a=reload]').onclick=()=>{try{ifr.contentWindow.location.reload();}catch(e){ifr.src=ifr.src;}};
+  root.querySelector('[data-a=back]').onclick=()=>{try{ifr.contentWindow.history.back();}catch(e){}};
+  root.querySelector('[data-a=fwd]').onclick=()=>{try{ifr.contentWindow.history.forward();}catch(e){}};
+  const win=createWindow({title:'网页浏览器',icon:I.browser,body:root,w:820,h:560,app:'browser'});
+  win.onClose=()=>blobUrls.forEach(u=>setTimeout(()=>URL.revokeObjectURL(u),1000));
+  navigate(initial||'about:blank');
+  if(!initial){ ifr.srcdoc=`<body style="margin:0;font-family:sans-serif;background:#1f1813;color:#f0e6d8;display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:12px"><h1 style="color:#e8a13c;font-family:Georgia,serif">EMBER 浏览器</h1><p style="color:#b3a18c">输入网址访问，或打开本地 HTML 文件预览</p></body>`; }
+  return win;
+}
+
+/* ============================================================
+   CALCULATOR
+   ============================================================ */
+function openCalc(){
+  const root=document.createElement('div'); root.className='calc';
+  root.innerHTML=`<div class="calc-disp"><div class="small"></div><div class="big">0</div></div><div class="calc-grid">
+    <button class="ck fn" data-k="C">C</button><button class="ck fn" data-k="±">±</button><button class="ck fn" data-k="%">%</button><button class="ck op" data-k="/">÷</button>
+    <button class="ck" data-k="7">7</button><button class="ck" data-k="8">8</button><button class="ck" data-k="9">9</button><button class="ck op" data-k="*">×</button>
+    <button class="ck" data-k="4">4</button><button class="ck" data-k="5">5</button><button class="ck" data-k="6">6</button><button class="ck op" data-k="-">−</button>
+    <button class="ck" data-k="1">1</button><button class="ck" data-k="2">2</button><button class="ck" data-k="3">3</button><button class="ck op" data-k="+">+</button>
+    <button class="ck" data-k="0" style="grid-column:span 2">0</button><button class="ck" data-k=".">.</button><button class="ck eq" data-k="=">=</button></div>`;
+  const big=root.querySelector('.big'),small=root.querySelector('.small');
+  let cur='0',prev=null,op=null,fresh=false;
+  const show=()=>big.textContent=cur;
+  function press(k){
+    if(/[0-9]/.test(k)){ if(fresh||cur==='0'){cur=k;fresh=false;}else cur+=k; }
+    else if(k==='.'){ if(!cur.includes('.'))cur+='.'; }
+    else if(k==='C'){ cur='0';prev=null;op=null;small.textContent=''; }
+    else if(k==='±'){ cur=String(parseFloat(cur)*-1); }
+    else if(k==='%'){ cur=String(parseFloat(cur)/100); }
+    else if(['+','-','*','/'].includes(k)){ if(op&&!fresh)compute(); prev=parseFloat(cur);op=k;fresh=true;small.textContent=cur+' '+({'*':'×','/':'÷','-':'−','+':'+'}[k]); }
+    else if(k==='='){ compute();op=null;small.textContent=''; }
+    show();
+  }
+  function compute(){ if(op==null||prev==null)return; const b=parseFloat(cur); let r=0; if(op==='+')r=prev+b;if(op==='-')r=prev-b;if(op==='*')r=prev*b;if(op==='/')r=b===0?NaN:prev/b; cur=String(Math.round(r*1e10)/1e10);prev=null;fresh=true; }
+  root.querySelectorAll('.ck').forEach(b=>b.onclick=()=>press(b.dataset.k));
+  createWindow({title:'计算器',icon:I.calc,body:root,w:300,h:420,app:'calc'});
+}
+
+/* ============================================================
+   PAINT
+   ============================================================ */
+function openPaint(){
+  const root=document.createElement('div'); root.className='paint';
+  root.innerHTML=`<div class="paint-bar"><input type="color" value="#e8a13c"><input type="range" min="1" max="40" value="4"><button class="fe-tb" data-t="brush" title="画笔">${I.brush}</button><button class="fe-tb" data-t="eraser" title="橡皮">${I.eraser}</button><button class="btn" data-a="clear">清空</button><button class="btn pri" data-a="save">${I.save}保存</button></div><div class="paint-canvas-wrap"><canvas width="800" height="520"></canvas></div>`;
+  const cv=root.querySelector('canvas'),ctx=cv.getContext('2d');
+  ctx.fillStyle='#fff';ctx.fillRect(0,0,cv.width,cv.height);
+  let drawing=false,tool='brush',color='#e8a13c',size=4;
+  const colorInp=root.querySelector('input[type=color]'),sizeInp=root.querySelector('input[type=range]');
+  colorInp.oninput=()=>color=colorInp.value; sizeInp.oninput=()=>size=+sizeInp.value;
+  root.querySelector('[data-t=brush]').onclick=()=>tool='brush';
+  root.querySelector('[data-t=eraser]').onclick=()=>tool='eraser';
+  root.querySelector('[data-a=clear]').onclick=()=>{ctx.fillStyle='#fff';ctx.fillRect(0,0,cv.width,cv.height);};
+  function pos(e){ const r=cv.getBoundingClientRect(); const cx=(e.touches?e.touches[0].clientX:e.clientX)-r.left; const cy=(e.touches?e.touches[0].clientY:e.clientY)-r.top; return {x:cx*cv.width/r.width,y:cy*cv.height/r.height}; }
+  let last=null;
+  function start(e){drawing=true;last=pos(e);}
+  function move(e){ if(!drawing)return; e.preventDefault(); const p=pos(e); ctx.strokeStyle=tool==='eraser'?'#fff':color; ctx.lineWidth=size; ctx.lineCap='round';ctx.lineJoin='round'; ctx.beginPath();ctx.moveTo(last.x,last.y);ctx.lineTo(p.x,p.y);ctx.stroke(); last=p; }
+  function end(){drawing=false;}
+  cv.addEventListener('mousedown',start);cv.addEventListener('mousemove',move);window.addEventListener('mouseup',end);
+  cv.addEventListener('touchstart',start,{passive:false});cv.addEventListener('touchmove',move,{passive:false});cv.addEventListener('touchend',end);
+  root.querySelector('[data-a=save]').onclick=async()=>{ const p=await prompt2('保存图片','输入路径','/Pictures/绘图.png'); if(!p)return; cv.toBlob(async b=>{await fs.writeFile(fs.norm(p),b);toast('已保存','ok');renderDesktop();refreshExplorers();},'image/png'); };
+  createWindow({title:'画板',icon:I.paint,body:root,w:860,h:600,app:'paint'});
+}
+
+/* ============================================================
+   ARCHIVE (ZIP native) — read + extract
+   ============================================================ */
+async function openArchive(path){
+  const name=path.split('/').pop();
+  const root=document.createElement('div'); root.className='app-pad';
+  root.innerHTML=`<div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">${I.zip}<div style="font-family:var(--disp);font-size:18px">${name}</div></div><button class="btn pri" data-a="extract">${I.extract}解压到当前目录</button><div style="margin-top:16px" class="arc-list"></div>`;
+  const win=createWindow({title:'压缩包 — '+name,icon:I.zip,body:root,w:520,h:420,app:'files'});
+  const list=root.querySelector('.arc-list'); list.innerHTML='<div style="color:var(--txt-faint)">读取中…</div>';
+  try{
+    const buf=await fs.readFile(path);
+    const entries=await unzip(buf);
+    list.innerHTML=entries.map(e=>`<div style="display:flex;gap:10px;padding:6px 8px;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:12px"><span style="flex:1">${e.name}</span><span style="color:var(--txt-faint)">${fmtSize(e.size)}</span></div>`).join('')||'<div style="color:var(--txt-faint)">空压缩包</div>';
+    root.querySelector('[data-a=extract]').onclick=async()=>{ const dir=path.replace(/\/[^/]+$/,'')||'/'; await extractArchive(path,dir,entries); toast('解压完成','ok'); renderDesktop(); refreshExplorers(); };
+  }catch(e){ list.innerHTML=`<div style="color:var(--rose)">无法读取: ${e.message}</div>`; }
+}
+async function extractArchive(path,destDir,entries){
+  if(!entries){ const buf=await fs.readFile(path); entries=await unzip(buf); }
+  const baseName=path.split('/').pop().replace(/\.zip$/i,'');
+  const outRoot=destDir+'/'+baseName;
+  await fs.mkdir(outRoot);
+  for(const e of entries){ if(e.dir)continue; const full=outRoot+'/'+e.name; const sub=full.replace(/\/[^/]+$/,''); if(sub!==outRoot)await fs.mkdir(sub); await fs.writeFile(full, e.data); }
+}
+
+/* ---- Native ZIP parser (DEFLATE via DecompressionStream) ---- */
+async function unzip(buf){
+  const dv=new DataView(buf); const u8=new Uint8Array(buf);
+  // find End Of Central Directory
+  let eocd=-1;
+  for(let i=u8.length-22;i>=0;i--){ if(dv.getUint32(i,true)===0x06054b50){eocd=i;break;} }
+  if(eocd<0) throw new Error('非 ZIP 格式');
+  const cdCount=dv.getUint16(eocd+10,true); const cdOff=dv.getUint32(eocd+16,true);
+  let p=cdOff; const entries=[];
+  for(let n=0;n<cdCount;n++){
+    if(dv.getUint32(p,true)!==0x02014b50)break;
+    const method=dv.getUint16(p+10,true);
+    const compSize=dv.getUint32(p+20,true);
+    const uncompSize=dv.getUint32(p+24,true);
+    const nameLen=dv.getUint16(p+28,true);
+    const extraLen=dv.getUint16(p+30,true);
+    const commentLen=dv.getUint16(p+32,true);
+    const lho=dv.getUint32(p+42,true);
+    const name=new TextDecoder().decode(u8.subarray(p+46,p+46+nameLen));
+    // local header
+    const lnameLen=dv.getUint16(lho+26,true); const lextraLen=dv.getUint16(lho+28,true);
+    const dataStart=lho+30+lnameLen+lextraLen;
+    const comp=u8.subarray(dataStart,dataStart+compSize);
+    entries.push({name,size:uncompSize,method,dir:name.endsWith('/'),comp});
+    p+=46+nameLen+extraLen+commentLen;
+  }
+  // decompress
+  for(const e of entries){ if(e.dir){e.data=new ArrayBuffer(0);continue;}
+    if(e.method===0){ e.data=e.comp.slice().buffer; }
+    else if(e.method===8){ e.data=await inflateRaw(e.comp); }
+    else throw new Error('不支持的压缩方法 '+e.method);
+  }
+  return entries;
+}
+async function inflateRaw(comp){
+  if(typeof DecompressionStream==='undefined') throw new Error('浏览器不支持解压');
+  const ds=new DecompressionStream('deflate-raw');
+  const stream=new Blob([comp]).stream().pipeThrough(ds);
+  return await new Response(stream).arrayBuffer();
+}
+</script>
+<script>
+/* ============================================================
+   SETTINGS
+   ============================================================ */
+async function openSettings(){
+  const root=document.createElement('div'); root.className='app-pad';
+  root.innerHTML=`
+    <div class="set-sec"><h4>壁纸</h4>
+      <div class="wp-grid" id="set-wp"></div>
+      <div style="margin-top:12px"><button class="btn" id="set-upwp">${I.upload} 上传自定义壁纸</button></div>
+    </div>
+    <div class="set-sec"><h4>存储空间</h4>
+      <div class="bar-track" id="set-bar"></div>
+      <div class="legend" id="set-legend"></div>
+      <div style="margin-top:10px;font-size:12px;color:var(--txt-faint);font-family:var(--mono)" id="set-info"></div>
+    </div>
+    <div class="set-sec"><h4>系统</h4>
+      <div class="set-row"><div class="lbl"><b>文件系统后端</b><small id="set-backend"></small></div></div>
+      <div class="set-row"><div class="lbl"><b>挂载本地文件夹</b><small>映射真实文件夹到 /mnt/local</small></div><button class="btn" id="set-mount">挂载</button></div>
+      <div class="set-row"><div class="lbl"><b>重置系统</b><small>清除全部文件并恢复出厂状态</small></div><button class="btn" id="set-reset" style="border-color:var(--rose);color:var(--rose)">一键重置</button></div>
+    </div>`;
+  const win=createWindow({title:'设置',icon:I.settings,body:root,w:560,h:560,app:'settings'});
+
+  // wallpapers
+  const wpg=root.querySelector('#set-wp'); const cur=localStorage.getItem('ember_wp');
+  WALLPAPERS.forEach(w=>{ const d=document.createElement('div'); d.className='wp-thumb'+(cur===w.id?' act':''); d.style.background=w.css; d.style.backgroundSize='cover'; d.onclick=()=>{applyWallpaper(w.id);wpg.querySelectorAll('.wp-thumb').forEach(x=>x.classList.remove('act'));d.classList.add('act');}; wpg.appendChild(d); });
+  root.querySelector('#set-upwp').onclick=()=>{ const inp=document.createElement('input');inp.type='file';inp.accept='image/*'; inp.onchange=async()=>{ const f=inp.files[0]; if(!f)return; const dir='/System/Wallpapers'; if(!(await fs.exists(dir)))await fs.mkdir(dir); const p=dir+'/'+f.name; await fs.writeFile(p,await f.arrayBuffer()); applyWallpaper('opfs:'+p); toast('壁纸已更新','ok'); }; inp.click(); };
+
+  root.querySelector('#set-backend').textContent = fs.backend==='opfs'?'OPFS（原生持久化）':'IndexedDB（降级模式）';
+  root.querySelector('#set-mount').onclick=mountLocalFolder;
+  root.querySelector('#set-reset').onclick=async()=>{ if(await confirm2('重置系统','这将永久删除所有文件、文件夹和设置，无法撤销。')){ await fs.wipe(); localStorage.removeItem('ember_iconpos'); localStorage.removeItem('ember_mounts'); iconPositions={}; await seedFS(); renderDesktop(); refreshExplorers(); toast('系统已重置','ok'); refreshStorage(); } };
+
+  async function refreshStorage(){
+    const est=await fs.estimate(); const usage=est.usage||0, quota=est.quota||1;
+    // categorize by walking VFS
+    const cats={图片:0,音视频:0,文档代码:0,其他:0};
+    async function walk(p){ let items=[]; try{items=await fs.readdir(p);}catch(e){return;} for(const n of items){ if(p.startsWith('/mnt'))continue; const fp=p==='/'?'/'+n:p+'/'+n; let s; try{s=await fs.stat(fp);}catch(e){continue;} if(s.isDirectory){await walk(fp);}else{ const e=extOf(n); if(['png','jpg','jpeg','gif','svg','webp','bmp','ico'].includes(e))cats.图片+=s.size; else if(['mp3','wav','ogg','mp4','webm','flac','aac','ogv'].includes(e))cats.音视频+=s.size; else if(['txt','html','css','js','json','md','csv','tsv','xml','pdf'].includes(e))cats.文档代码+=s.size; else cats.其他+=s.size; } } }
+    try{ for(const r of ['/Desktop','/Documents','/Pictures','/System']) if(await fs.exists(r)) await walk(r); }catch(e){}
+    const fileTotal=Object.values(cats).reduce((a,b)=>a+b,0);
+    const colors={图片:'#8fae7c',音视频:'#cf7e7e',文档代码:'#7fa6c4',其他:'#e8a13c'};
+    const bar=root.querySelector('#set-bar'); bar.innerHTML='';
+    const display=Math.max(usage,fileTotal,1);
+    Object.entries(cats).forEach(([k,v])=>{ if(v>0){const i=document.createElement('i');i.style.width=(v/display*100)+'%';i.style.background=colors[k];bar.appendChild(i);} });
+    const used=document.createElement('i'); const known=fileTotal; const sys=Math.max(0,usage-known); if(sys>0){const i=document.createElement('i');i.style.width=(sys/display*100)+'%';i.style.background='#473829';i.title='系统/元数据';bar.appendChild(i);}
+    root.querySelector('#set-legend').innerHTML=Object.entries(cats).map(([k,v])=>`<span><i style="background:${colors[k]}"></i>${k} ${fmtSize(v)}</span>`).join('')+`<span><i style="background:#473829"></i>系统 ${fmtSize(Math.max(0,usage-fileTotal))}</span>`;
+    root.querySelector('#set-info').textContent=`已用 ${fmtSize(usage)} / 配额 ${fmtSize(quota)}（${(usage/quota*100).toFixed(1)}%）`;
+  }
+  refreshStorage();
+  return win;
+}
+
+/* ============================================================
+   SEED FILESYSTEM (first run)
+   ============================================================ */
+async function seedFS(){
+  for(const d of ['/Desktop','/Documents','/Pictures','/System','/mnt','/mnt/local']){ if(!(await fs.exists(d))) await fs.mkdir(d); }
+  if(!(await fs.exists('/System/.seeded'))){
+    await fs.writeFile('/Desktop/欢迎.txt', `欢迎使用 EMBER OS\n\n这是一个完全运行在浏览器中的桌面系统。\n所有文件都通过 OPFS 持久化存储，刷新后依然保留。\n\n• 双击图标打开文件或文件夹\n• 右键桌面新建/上传/挂载/换壁纸\n• 拖拽图标可自由摆放（吸附网格）\n• 把电脑文件拖进来即可导入\n• 文件可拖出浏览器下载\n\n尽情探索吧。`);
+    await fs.writeFile('/Desktop/示例网页.html', `<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{font-family:Georgia,serif;background:linear-gradient(135deg,#2a1e16,#16110d);color:#f0e6d8;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;flex-direction:column}h1{color:#e8a13c;font-size:48px}p{color:#b3a18c}</style></head><body><h1>Hello, Ember</h1><p>这是一个内置示例 HTML 文件，支持实时预览与编辑。</p></body></html>`);
+    await fs.writeFile('/Documents/数据示例.csv', `名称,类型,大小\n报告.pdf,文档,2.4MB\n照片.jpg,图片,1.1MB\n音乐.mp3,音频,4.8MB\n脚本.js,代码,12KB`);
+    await fs.writeFile('/Documents/笔记.md', `# 我的笔记\n\n- EMBER OS 使用 OPFS 持久化\n- 支持 *Markdown* 文本编辑\n- 支持 \`代码\` 高亮显示\n\n## 待办\n1. 探索文件管理器\n2. 尝试画板\n3. 挂载本地文件夹`);
+    // a tiny svg image
+    await fs.writeFile('/Pictures/标志.svg', `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><rect width="200" height="200" fill="#16110d"/><circle cx="100" cy="100" r="70" fill="none" stroke="#e8a13c" stroke-width="6" stroke-dasharray="20 14"/><path d="M100 50 L140 140 L60 140 Z" fill="#d2632a"/><circle cx="100" cy="155" r="14" fill="#f0c074"/></svg>`);
+    await fs.writeFile('/System/.seeded','1');
+  }
+}
+
+/* ============================================================
+   BOOT
+   ============================================================ */
+async function boot(){
+  const status=document.getElementById('boot-status');
+  try{
+    status.textContent='MOUNTING FILESYSTEM…';
+    const be=await fs.init();
+    status.textContent='SEEDING SYSTEM FILES…';
+    await seedFS();
+    status.textContent='LOADING DESKTOP…';
+    await applyWallpaper(localStorage.getItem('ember_wp')||'ember');
+    await renderDesktop();
+    clock();
+    if(be!=='opfs') toast('OPFS 不可用，已降级到 IndexedDB','err');
+  }catch(e){ console.error(e); status.textContent='ERROR: '+e.message; toast('启动错误: '+e.message,'err'); }
+  setTimeout(()=>{ document.getElementById('boot').classList.add('gone'); setTimeout(()=>document.getElementById('boot').remove(),900); checkRemount(); }, 1800);
+}
+
+// reposition icons on resize for mobile
+window.addEventListener('resize',()=>{ Object.values(WINS).forEach(w=>{ if(isMobile()&&!w.maximized){ w.el.style.left='6px';w.el.style.top='6px';w.el.style.width=(window.innerWidth-12)+'px';w.el.style.height=(window.innerHeight-80)+'px'; } }); });
+// prevent native dragover default flashing
+document.addEventListener('dragover',e=>e.preventDefault());
+document.addEventListener('drop',e=>{ if(!e.target.closest('#icon-layer')&&!e.target.closest('.fe-list')) e.preventDefault(); });
+
+boot();
+</script>
+
+
+
+
+
+
+</body>
+</html>

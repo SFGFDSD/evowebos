@@ -1,0 +1,1153 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Aster FS - Web OS</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Serif+SC:wght@500;700;900&display=swap');
+
+    :root {
+      --ink: #eef7ff;
+      --muted: #9eb3c4;
+      --panel: rgba(8, 13, 18, .78);
+      --panel-2: rgba(14, 23, 30, .86);
+      --line: rgba(211, 237, 255, .18);
+      --accent: #b7f4ff;
+      --accent-2: #d8ff7a;
+      --danger: #ff6f78;
+      --shadow: 0 30px 80px rgba(0, 0, 0, .48);
+      --mono: "IBM Plex Mono", "Cascadia Mono", monospace;
+      --serif: "Noto Serif SC", "Songti SC", serif;
+      --radius: 18px;
+      color-scheme: dark;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: #05080b;
+      font-family: var(--serif);
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    button, input, textarea, select { font: inherit; }
+    textarea, input { user-select: text; }
+    svg { display: block; }
+
+    #desktop {
+      position: fixed;
+      inset: 0;
+      overflow: hidden;
+      background: #05080b;
+      isolation: isolate;
+    }
+
+    #wallpaperLayer {
+      position: absolute;
+      inset: 0;
+      z-index: -3;
+      background-size: cover;
+      background-position: center;
+      transform: scale(1.02);
+      transition: filter .7s ease, background-image .7s ease;
+    }
+
+    #desktop::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: -2;
+      pointer-events: none;
+      background:
+        linear-gradient(115deg, rgba(4, 9, 12, .82), rgba(4, 9, 12, .2) 45%, rgba(4, 8, 9, .72)),
+        repeating-linear-gradient(90deg, rgba(255,255,255,.04) 0 1px, transparent 1px 12px),
+        radial-gradient(circle at 82% 18%, rgba(183,244,255,.18), transparent 28%);
+      mix-blend-mode: normal;
+    }
+
+    #desktop::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
+      background: linear-gradient(180deg, transparent 0, rgba(0,0,0,.08) 50%, rgba(0,0,0,.34) 100%);
+    }
+
+    #boot {
+      position: fixed;
+      inset: 0;
+      z-index: 5000;
+      display: grid;
+      place-items: center;
+      background: radial-gradient(circle at 50% 38%, #1d303a 0, #071015 42%, #020406 100%);
+      transition: opacity .65s ease, transform .65s ease;
+    }
+    #boot.hide { opacity: 0; transform: scale(1.04); pointer-events: none; }
+    .boot-mark {
+      letter-spacing: .18em;
+      text-transform: uppercase;
+      font-family: var(--mono);
+      animation: bootIn 1.1s cubic-bezier(.2,.8,.2,1) both;
+    }
+    @keyframes bootIn { from { opacity: 0; transform: translateY(22px); filter: blur(12px); } to { opacity: 1; transform: none; filter: none; } }
+
+    .topbar {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      right: 14px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 0 12px;
+      border: 1px solid rgba(230, 250, 255, .14);
+      background: rgba(4, 9, 12, .38);
+      backdrop-filter: blur(18px) saturate(130%);
+      box-shadow: 0 18px 50px rgba(0,0,0,.24);
+      animation: slideTop .8s cubic-bezier(.16,1,.3,1) both .12s;
+    }
+    @keyframes slideTop { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: none; } }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: var(--mono);
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      font-size: 12px;
+      color: var(--accent);
+      white-space: nowrap;
+    }
+    .status { color: var(--muted); font: 12px var(--mono); display: flex; gap: 14px; align-items: center; }
+
+    .desktop-grid {
+      position: absolute;
+      inset: 74px 12px 86px 12px;
+      overflow: hidden;
+    }
+    .desktop-icon {
+      position: absolute;
+      width: 84px;
+      min-height: 88px;
+      display: grid;
+      justify-items: center;
+      align-content: start;
+      gap: 8px;
+      padding: 8px 6px;
+      border: 1px solid transparent;
+      color: var(--ink);
+      cursor: default;
+      touch-action: none;
+      animation: iconRise .55s cubic-bezier(.16,1,.3,1) both;
+    }
+    @keyframes iconRise { from { opacity: 0; transform: translateY(16px) scale(.96); } to { opacity: 1; transform: none; } }
+    .desktop-icon:hover, .desktop-icon.selected {
+      border-color: rgba(183,244,255,.34);
+      background: rgba(183,244,255,.08);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.04);
+    }
+    .desktop-icon .glyph {
+      width: 48px;
+      height: 48px;
+      display: grid;
+      place-items: center;
+      color: var(--accent);
+      filter: drop-shadow(0 10px 18px rgba(0,0,0,.35));
+    }
+    .desktop-icon span {
+      max-width: 78px;
+      text-align: center;
+      overflow-wrap: anywhere;
+      text-shadow: 0 2px 8px rgba(0,0,0,.72);
+      font-size: 12px;
+      line-height: 1.22;
+    }
+
+    .selection-box {
+      position: absolute;
+      border: 1px solid rgba(183,244,255,.72);
+      background: rgba(183,244,255,.12);
+      pointer-events: none;
+      display: none;
+      z-index: 20;
+    }
+
+    .taskbar {
+      position: absolute;
+      left: 14px;
+      right: 14px;
+      bottom: 14px;
+      min-height: 58px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px;
+      border: 1px solid rgba(230,250,255,.16);
+      background: rgba(4, 9, 12, .48);
+      backdrop-filter: blur(24px) saturate(140%);
+      box-shadow: 0 -18px 60px rgba(0,0,0,.28);
+      animation: dockIn .9s cubic-bezier(.16,1,.3,1) both .22s;
+    }
+    @keyframes dockIn { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: none; } }
+    .dock-button, .task-button, .tool-button, .menu-item, .control-button {
+      border: 1px solid rgba(230,250,255,.15);
+      background: rgba(7, 17, 22, .7);
+      color: var(--ink);
+      min-height: 38px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 0 12px;
+      cursor: default;
+      transition: transform .16s ease, border-color .16s ease, background .16s ease;
+    }
+    .dock-button:hover, .task-button:hover, .tool-button:hover, .menu-item:hover, .control-button:hover { transform: translateY(-1px); border-color: rgba(183,244,255,.45); background: rgba(183,244,255,.1); }
+    .dock-button { width: 42px; padding: 0; color: var(--accent); }
+    .task-button { max-width: 180px; font: 12px var(--mono); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+    .task-button.minimized { color: var(--muted); border-style: dashed; }
+    .task-list { display: flex; gap: 8px; overflow: auto; flex: 1; scrollbar-width: none; }
+    .task-list::-webkit-scrollbar { display: none; }
+
+    .start-menu, .context-menu {
+      position: absolute;
+      z-index: 3000;
+      display: none;
+      border: 1px solid rgba(230,250,255,.16);
+      background: rgba(5, 10, 14, .9);
+      backdrop-filter: blur(26px) saturate(140%);
+      box-shadow: var(--shadow);
+    }
+    .start-menu {
+      left: 14px;
+      bottom: 82px;
+      width: min(420px, calc(100vw - 28px));
+      padding: 16px;
+    }
+    .start-title { font-family: var(--serif); font-size: 28px; font-weight: 900; letter-spacing: .03em; margin-bottom: 12px; }
+    .launcher-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .menu-item { justify-content: flex-start; width: 100%; min-height: 44px; font-size: 13px; }
+    .context-menu { min-width: 210px; padding: 7px; }
+    .context-menu .menu-item { border-color: transparent; background: transparent; }
+
+    .window {
+      position: absolute;
+      min-width: 320px;
+      min-height: 230px;
+      border: 1px solid rgba(230,250,255,.2);
+      background: var(--panel);
+      backdrop-filter: blur(28px) saturate(140%);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      animation: windowIn .26s cubic-bezier(.16,1,.3,1) both;
+    }
+    @keyframes windowIn { from { opacity: 0; transform: translateY(14px) scale(.985); filter: blur(4px); } to { opacity: 1; transform: none; filter: none; } }
+    .window.active { border-color: rgba(183,244,255,.42); }
+    .titlebar {
+      height: 42px;
+      flex: 0 0 42px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 8px 0 12px;
+      border-bottom: 1px solid rgba(230,250,255,.12);
+      background: linear-gradient(90deg, rgba(183,244,255,.08), rgba(255,255,255,.02));
+      touch-action: none;
+    }
+    .titlebar .title { flex: 1; min-width: 0; font: 12px var(--mono); letter-spacing: .05em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .window-body { flex: 1; min-height: 0; overflow: hidden; background: rgba(1, 4, 6, .18); }
+    .window-controls { display: flex; gap: 6px; }
+    .control-button { width: 30px; min-height: 26px; padding: 0; }
+    .control-button.close:hover { border-color: rgba(255,111,120,.7); color: var(--danger); }
+    .resize-handle { position: absolute; z-index: 5; }
+    .resize-e { right: -3px; top: 0; bottom: 0; width: 7px; cursor: ew-resize; }
+    .resize-s { left: 0; right: 0; bottom: -3px; height: 7px; cursor: ns-resize; }
+    .resize-se { right: -3px; bottom: -3px; width: 16px; height: 16px; cursor: nwse-resize; }
+
+    .app-shell { height: 100%; display: flex; flex-direction: column; min-height: 0; }
+    .toolbar { flex: 0 0 auto; display: flex; gap: 8px; align-items: center; padding: 10px; border-bottom: 1px solid rgba(230,250,255,.11); background: rgba(2,7,10,.28); overflow: auto; }
+    .tool-button { min-height: 34px; font: 12px var(--mono); white-space: nowrap; }
+    .path-input, .plain-input {
+      flex: 1;
+      min-width: 120px;
+      height: 34px;
+      border: 1px solid rgba(230,250,255,.16);
+      background: rgba(1,4,7,.58);
+      color: var(--ink);
+      padding: 0 10px;
+      outline: none;
+      font: 12px var(--mono);
+    }
+    .content-split { flex: 1; min-height: 0; display: grid; grid-template-columns: 170px 1fr; }
+    .sidebar { border-right: 1px solid rgba(230,250,255,.11); padding: 10px; overflow: auto; background: rgba(1,4,7,.22); }
+    .side-link { width: 100%; text-align: left; display: flex; gap: 8px; align-items: center; border: 0; background: transparent; color: var(--muted); padding: 8px; font: 12px var(--mono); }
+    .side-link:hover { color: var(--ink); background: rgba(183,244,255,.08); }
+    .file-pane { overflow: auto; min-width: 0; }
+    table.file-table { width: 100%; border-collapse: collapse; font: 12px var(--mono); }
+    .file-table th { position: sticky; top: 0; z-index: 2; background: rgba(6,13,18,.96); color: var(--accent); text-align: left; padding: 9px 10px; border-bottom: 1px solid rgba(230,250,255,.13); cursor: default; }
+    .file-table td { padding: 8px 10px; border-bottom: 1px solid rgba(230,250,255,.07); color: #d7e8f2; white-space: nowrap; }
+    .file-table tr:hover, .file-table tr.selected { background: rgba(183,244,255,.08); }
+    .file-table .name-cell { display: flex; gap: 8px; align-items: center; min-width: 180px; }
+    .empty { color: var(--muted); padding: 24px; font: 13px var(--mono); }
+
+    .editor-layout { height: 100%; display: grid; grid-template-columns: 1fr 1fr; min-height: 0; }
+    .editor-pane, .preview-pane { min-width: 0; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+    .code-area {
+      flex: 1;
+      width: 100%;
+      resize: none;
+      border: 0;
+      outline: none;
+      background: rgba(1,4,7,.66);
+      color: #e8f8ff;
+      padding: 14px;
+      font: 13px/1.6 var(--mono);
+      tab-size: 2;
+    }
+    .highlight {
+      flex: 1;
+      overflow: auto;
+      margin: 0;
+      padding: 14px;
+      font: 13px/1.6 var(--mono);
+      color: #c8dbe7;
+      background: rgba(0,0,0,.22);
+      user-select: text;
+    }
+    .syntax-string { color: #d8ff7a; }
+    .syntax-key { color: #b7f4ff; }
+    .syntax-num { color: #ffb86b; }
+    .syntax-tag { color: #ff9cb0; }
+    .data-table { width: max-content; min-width: 100%; border-collapse: collapse; font: 12px var(--mono); }
+    .data-table td, .data-table th { border: 1px solid rgba(230,250,255,.12); padding: 6px 8px; user-select: text; }
+
+    .viewer { height: 100%; display: grid; place-items: center; background: rgba(0,0,0,.45); overflow: auto; }
+    .viewer img { max-width: 100%; max-height: 100%; transform-origin: center; transition: transform .18s ease; }
+    .media-box { width: min(780px, 94%); display: grid; gap: 16px; place-items: center; }
+    audio, video, iframe { width: 100%; height: 100%; border: 0; background: #05080b; }
+    video { max-height: 100%; }
+    canvas.paint-canvas { width: 100%; height: 100%; background: #f7fbff; cursor: crosshair; touch-action: none; }
+    .settings-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; padding: 14px; overflow: auto; }
+    .settings-block { border: 1px solid rgba(230,250,255,.14); background: rgba(1,4,7,.24); padding: 14px; }
+    .meter { height: 12px; background: rgba(255,255,255,.09); overflow: hidden; }
+    .meter > span { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); width: 0; transition: width .5s ease; }
+    .toast-host { position: absolute; right: 14px; top: 70px; z-index: 4500; display: grid; gap: 8px; width: min(360px, calc(100vw - 28px)); }
+    .toast { border: 1px solid rgba(230,250,255,.16); background: rgba(4,9,12,.86); backdrop-filter: blur(18px); padding: 10px 12px; box-shadow: var(--shadow); font: 12px/1.45 var(--mono); animation: toastIn .25s ease both; }
+    @keyframes toastIn { from { opacity: 0; transform: translateX(18px); } to { opacity: 1; transform: none; } }
+
+    @media (max-width: 760px) {
+      .topbar { top: 8px; left: 8px; right: 8px; height: 40px; }
+      .status span:first-child { display: none; }
+      .desktop-grid { inset: 58px 6px 78px 6px; }
+      .taskbar { left: 8px; right: 8px; bottom: 8px; min-height: 56px; border-radius: 24px; justify-content: center; }
+      .task-button { max-width: 92px; padding: 0 8px; }
+      .window { left: 4px !important; right: 4px !important; top: 54px !important; width: calc(100vw - 8px) !important; height: calc(100vh - 124px) !important; min-width: 0; }
+      .content-split { grid-template-columns: 1fr; }
+      .sidebar { display: none; }
+      .editor-layout { grid-template-columns: 1fr; }
+      .preview-pane { display: none; }
+      .launcher-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div id="boot"><div class="boot-mark">ASTER FS / OPFS DESKTOP</div></div>
+  <main id="desktop" aria-label="Aster FS Desktop">
+    <div id="wallpaperLayer"></div>
+    <div class="topbar">
+      <div class="brand" id="brandButton"></div>
+      <div class="status"><span id="storageStatus">OPFS 初始化中</span><span id="clock"></span></div>
+    </div>
+    <section id="desktopGrid" class="desktop-grid"></section>
+    <div id="selectionBox" class="selection-box"></div>
+    <section id="windows"></section>
+    <nav id="startMenu" class="start-menu"></nav>
+    <nav id="contextMenu" class="context-menu"></nav>
+    <div id="toastHost" class="toast-host"></div>
+    <footer id="taskbar" class="taskbar">
+      <button id="startButton" class="dock-button" title="启动器"></button>
+      <div id="taskList" class="task-list"></div>
+      <button id="quickImport" class="dock-button" title="导入文件"></button>
+      <button id="quickSettings" class="dock-button" title="设置"></button>
+    </footer>
+    <input id="fileImport" type="file" multiple hidden>
+    <input id="wallpaperInput" type="file" accept="image/*" hidden>
+  </main>
+
+  <script>
+  (() => {
+    'use strict';
+
+    const $ = (s, r = document) => r.querySelector(s);
+    const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+    const enc = new TextEncoder();
+    const dec = new TextDecoder();
+    const MIME_TEXT = new Set(['txt','html','css','js','json','xml','csv','tsv','md','yaml','yml','log','ini','svg']);
+    const MIME_IMAGE = new Set(['png','jpg','jpeg','gif','svg','webp','bmp','ico']);
+    const MIME_AUDIO = new Set(['mp3','wav','ogg','flac','aac','m4a']);
+    const MIME_VIDEO = new Set(['mp4','webm','ogv','mov']);
+    const MIME_ARCHIVE = new Set(['zip','gz','tar','tgz']);
+    const state = { z: 20, windows: new Map(), active: null, clipboard: null, iconPositions: {}, desktopSelection: new Set(), fileUrlCache: new Map() };
+
+    function icon(name, size = 22) {
+      const common = `width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"`;
+      const paths = {
+        logo: '<path d="M4 16 11 3l2 8 7-3-7 13-2-8-7 3Z"/><path d="M8 17h8"/>',
+        folder: '<path d="M3 7.5h6l2 2h10v8.5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7.5Z"/><path d="M3 7.5V6a2 2 0 0 1 2-2h4l2 2h4"/>',
+        file: '<path d="M6 3h8l4 4v14H6V3Z"/><path d="M14 3v5h5"/>',
+        image: '<rect x="4" y="4" width="16" height="16" rx="2"/><path d="m6.5 16 4-4 3 3 2-2 2 3"/><circle cx="9" cy="9" r="1.2"/>',
+        code: '<path d="m8 8-4 4 4 4"/><path d="m16 8 4 4-4 4"/><path d="m14 5-4 14"/>',
+        browser: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c2.6 2.6 3.7 5.6 3.7 9S14.6 18.4 12 21c-2.6-2.6-3.7-5.6-3.7-9S9.4 5.6 12 3Z"/>',
+        calc: '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8"/><path d="M8 11h.1M12 11h.1M16 11h.1M8 15h.1M12 15h.1M16 15h.1"/>',
+        paint: '<path d="M4 14c0-5 4-9 9-9 4 0 7 2.5 7 6 0 2-1.5 3-3 3h-2a2 2 0 0 0-2 2c0 1.5-1 3-3 3-3.5 0-6-2-6-5Z"/><circle cx="8" cy="12" r=".7"/><circle cx="10" cy="8" r=".7"/><circle cx="14" cy="8" r=".7"/>',
+        settings: '<path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z"/><path d="M4 12h2m12 0h2M12 4v2m0 12v2M6.3 6.3l1.4 1.4m8.6 8.6 1.4 1.4m0-11.4-1.4 1.4m-8.6 8.6-1.4 1.4"/>',
+        upload: '<path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M5 20h14"/>',
+        down: '<path d="M12 4v12"/><path d="m7 11 5 5 5-5"/><path d="M5 20h14"/>',
+        close: '<path d="M7 7l10 10M17 7 7 17"/>',
+        max: '<path d="M6 6h12v12H6z"/>',
+        min: '<path d="M6 12h12"/>',
+        plus: '<path d="M12 5v14M5 12h14"/>',
+        copy: '<path d="M8 8h11v11H8z"/><path d="M5 16H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/>',
+        trash: '<path d="M4 7h16"/><path d="M9 7V5h6v2"/><path d="m7 7 1 14h8l1-14"/>',
+        table: '<path d="M4 5h16v14H4zM4 10h16M10 5v14"/>',
+        play: '<path d="M8 5v14l11-7-11-7Z"/>',
+        pdf: '<path d="M6 3h8l4 4v14H6V3Z"/><path d="M14 3v5h5"/><path d="M8 16h8"/>',
+        archive: '<path d="M6 3h12v18H6z"/><path d="M10 3v18M10 6h2M10 10h2M10 14h2"/>',
+        text: '<path d="M5 5h14M5 10h14M5 15h10M5 20h8"/>'
+      };
+      return `<svg ${common}>${paths[name] || paths.file}</svg>`;
+    }
+
+    function norm(path) {
+      path = String(path || '/').replace(/\\/g, '/');
+      if (!path.startsWith('/')) path = '/' + path;
+      const parts = [];
+      for (const part of path.split('/')) {
+        if (!part || part === '.') continue;
+        if (part === '..') parts.pop(); else parts.push(part);
+      }
+      return '/' + parts.join('/');
+    }
+    const base = p => norm(p).split('/').pop() || '/';
+    const dir = p => { const a = norm(p).split('/'); a.pop(); return a.length > 1 ? a.join('/') : '/'; };
+    const ext = p => { const n = base(p).toLowerCase(); if (n.endsWith('.tar.gz')) return 'tgz'; return n.includes('.') ? n.split('.').pop() : ''; };
+    const join = (a, b) => norm(norm(a) + '/' + b);
+    const htmlEscape = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    const sizeFmt = n => n == null ? '-' : n < 1024 ? n + ' B' : n < 1048576 ? (n/1024).toFixed(1) + ' KB' : n < 1073741824 ? (n/1048576).toFixed(1) + ' MB' : (n/1073741824).toFixed(2) + ' GB';
+    const dateFmt = n => n ? new Date(n).toLocaleString('zh-CN') : '-';
+    const sleep = ms => new Promise(r => setTimeout(r, ms));
+    const uid = () => Math.random().toString(36).slice(2, 9);
+
+    function finish(promise, args) {
+      const cb = Array.from(args).find(a => typeof a === 'function');
+      if (cb) promise.then(v => cb(null, v), e => cb(e));
+      return promise;
+    }
+
+    function dataToBlob(data) {
+      if (data instanceof Blob) return data;
+      if (data instanceof ArrayBuffer) return new Blob([data]);
+      if (ArrayBuffer.isView(data)) return new Blob([data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength)]);
+      return new Blob([String(data)], { type: 'text/plain;charset=utf-8' });
+    }
+
+    async function blobByMode(blob, mode) {
+      if (mode === 'text' || mode === 'utf8' || mode === 'utf-8') return await blob.text();
+      if (mode === 'blob') return blob;
+      if (mode === 'dataURL') return await new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsDataURL(blob); });
+      return await blob.arrayBuffer();
+    }
+
+    const LocalState = {
+      get(key, fallback) { try { const v = localStorage.getItem('aster.' + key); return v == null ? fallback : JSON.parse(v); } catch { return fallback; } },
+      set(key, value) { try { localStorage.setItem('aster.' + key, JSON.stringify(value)); document.cookie = 'aster_' + encodeURIComponent(key) + '=' + encodeURIComponent(JSON.stringify(value)).slice(0, 3200) + ';max-age=31536000;path=/;SameSite=Lax'; } catch {} },
+      del(key) { try { localStorage.removeItem('aster.' + key); document.cookie = 'aster_' + encodeURIComponent(key) + '=;max-age=0;path=/'; } catch {} }
+    };
+
+    class IDBStore {
+      constructor(name, version, upgrade) { this.name = name; this.version = version; this.upgrade = upgrade; this.db = null; }
+      async open() {
+        if (this.db) return this.db;
+        this.db = await new Promise((resolve, reject) => {
+          const req = indexedDB.open(this.name, this.version);
+          req.onupgradeneeded = () => this.upgrade(req.result);
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = () => reject(req.error);
+        });
+        return this.db;
+      }
+      async tx(store, mode, fn) {
+        const db = await this.open();
+        return await new Promise((resolve, reject) => {
+          const t = db.transaction(store, mode);
+          const s = t.objectStore(store);
+          const out = fn(s);
+          t.oncomplete = () => resolve(out && out.__result !== undefined ? out.__result : out);
+          t.onerror = () => reject(t.error);
+        });
+      }
+    }
+
+    class OPFSBackend {
+      constructor() { this.kind = 'opfs'; this.root = null; }
+      async init() { if (!navigator.storage || !navigator.storage.getDirectory) throw new Error('OPFS 不可用'); this.root = await navigator.storage.getDirectory(); }
+      parts(path) { return norm(path).split('/').filter(Boolean); }
+      async dirHandle(path, create = false) { let h = this.root; for (const p of this.parts(path)) h = await h.getDirectoryHandle(p, { create }); return h; }
+      async parent(path, create = false) { const ps = this.parts(path); const name = ps.pop(); const parent = await this.dirHandle('/' + ps.join('/'), create); return { parent, name }; }
+      stat(path, ...args) { return finish(this._stat(path), args); }
+      async _stat(path) {
+        path = norm(path);
+        if (path === '/') return { path, name: '/', type: 'dir', size: 0, mtime: Date.now(), backend: this.kind };
+        const { parent, name } = await this.parent(path, false);
+        try { const d = await parent.getDirectoryHandle(name); return { path, name, type: 'dir', size: 0, mtime: Date.now(), backend: this.kind }; }
+        catch {
+          const f = await parent.getFileHandle(name);
+          const file = await f.getFile();
+          return { path, name, type: 'file', size: file.size, mtime: file.lastModified, mime: file.type, backend: this.kind };
+        }
+      }
+      readdir(path, ...args) { return finish(this._readdir(path), args); }
+      async _readdir(path) {
+        const d = await this.dirHandle(path, false);
+        const out = [];
+        for await (const [name, handle] of d.entries()) {
+          const p = join(path, name);
+          if (handle.kind === 'directory') out.push({ path: p, name, type: 'dir', size: 0, mtime: Date.now(), backend: this.kind });
+          else { const file = await handle.getFile(); out.push({ path: p, name, type: 'file', size: file.size, mtime: file.lastModified, mime: file.type, backend: this.kind }); }
+        }
+        return out;
+      }
+      mkdir(path, ...args) { return finish(this.dirHandle(path, true).then(() => true), args); }
+      readFile(path, mode = 'arrayBuffer', ...args) { if (typeof mode === 'function') { args.unshift(mode); mode = 'arrayBuffer'; } return finish(this._readFile(path, mode), args); }
+      async _readFile(path, mode) { const { parent, name } = await this.parent(path); const h = await parent.getFileHandle(name); return await blobByMode(await h.getFile(), mode); }
+      writeFile(path, data, ...args) { return finish(this._writeFile(path, data), args); }
+      async _writeFile(path, data) { const { parent, name } = await this.parent(path, true); const h = await parent.getFileHandle(name, { create: true }); const w = await h.createWritable(); await w.write(dataToBlob(data)); await w.close(); return true; }
+      unlink(path, ...args) { return finish(this._remove(path, false), args); }
+      rmdir(path, ...args) { return finish(this._remove(path, true), args); }
+      remove(path, ...args) { return finish(this._remove(path, true), args); }
+      async _remove(path, recursive) { const { parent, name } = await this.parent(path); await parent.removeEntry(name, { recursive }); return true; }
+      exists(path, ...args) { return finish(this._stat(path).then(() => true).catch(() => false), args); }
+      rename(src, dst, ...args) { return finish(this._rename(src, dst), args); }
+      async _rename(src, dst) { await copyBetween(this, norm(src), this, norm(dst)); await this._remove(src, true); return true; }
+      async clear() { for await (const [name] of this.root.entries()) await this.root.removeEntry(name, { recursive: true }); }
+    }
+
+    class IDBBackend {
+      constructor() { this.kind = 'indexeddb'; this.store = new IDBStore('aster-fs', 1, db => { if (!db.objectStoreNames.contains('entries')) db.createObjectStore('entries', { keyPath: 'path' }); }); }
+      async init() { await this.put({ path: '/', name: '/', type: 'dir', size: 0, mtime: Date.now() }); }
+      async put(v) { await this.store.tx('entries', 'readwrite', s => s.put(v)); }
+      async get(path) { return await new Promise(async (res, rej) => { const db = await this.store.open(); const r = db.transaction('entries').objectStore('entries').get(norm(path)); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); }
+      async all() { return await new Promise(async (res, rej) => { const db = await this.store.open(); const r = db.transaction('entries').objectStore('entries').getAll(); r.onsuccess = () => res(r.result || []); r.onerror = () => rej(r.error); }); }
+      stat(path, ...args) { return finish(this._stat(path), args); }
+      async _stat(path) { const e = await this.get(path); if (!e) throw new Error('不存在: ' + path); return { ...e, backend: this.kind }; }
+      readdir(path, ...args) { return finish(this._readdir(path), args); }
+      async _readdir(path) { path = norm(path); const all = await this.all(); return all.filter(e => e.path !== path && dir(e.path) === path).map(e => ({ ...e, backend: this.kind })); }
+      mkdir(path, ...args) { return finish(this._mkdir(path), args); }
+      async _mkdir(path) { path = norm(path); if (path === '/') return true; await this._mkdir(dir(path)); await this.put({ path, name: base(path), type: 'dir', size: 0, mtime: Date.now() }); return true; }
+      readFile(path, mode = 'arrayBuffer', ...args) { if (typeof mode === 'function') { args.unshift(mode); mode = 'arrayBuffer'; } return finish(this._readFile(path, mode), args); }
+      async _readFile(path, mode) { const e = await this._stat(path); if (e.type !== 'file') throw new Error('不是文件'); return await blobByMode(e.blob || new Blob(['']), mode); }
+      writeFile(path, data, ...args) { return finish(this._writeFile(path, data), args); }
+      async _writeFile(path, data) { await this._mkdir(dir(path)); const blob = dataToBlob(data); await this.put({ path: norm(path), name: base(path), type: 'file', size: blob.size, mtime: Date.now(), mime: blob.type, blob }); return true; }
+      unlink(path, ...args) { return finish(this._remove(path), args); }
+      rmdir(path, ...args) { return finish(this._remove(path), args); }
+      remove(path, ...args) { return finish(this._remove(path), args); }
+      async _remove(path) { path = norm(path); const all = await this.all(); await this.store.tx('entries', 'readwrite', s => { for (const e of all) if (e.path === path || e.path.startsWith(path + '/')) s.delete(e.path); }); return true; }
+      exists(path, ...args) { return finish(this._stat(path).then(() => true).catch(() => false), args); }
+      rename(src, dst, ...args) { return finish(this._rename(src, dst), args); }
+      async _rename(src, dst) { await copyBetween(this, src, this, dst); await this._remove(src); return true; }
+      async clear() { const all = await this.all(); await this.store.tx('entries', 'readwrite', s => all.forEach(e => s.delete(e.path))); await this.init(); }
+    }
+
+    class LSBackend {
+      constructor() { this.kind = 'localStorage'; this.key = 'aster.lsfs'; }
+      async init() { const m = this.map(); if (!m['/']) { m['/'] = { path:'/', name:'/', type:'dir', size:0, mtime:Date.now() }; this.save(m); } }
+      map() { try { return JSON.parse(localStorage.getItem(this.key) || '{}'); } catch { return {}; } }
+      save(m) { localStorage.setItem(this.key, JSON.stringify(m)); }
+      stat(path, ...args) { return finish(Promise.resolve().then(() => { const e = this.map()[norm(path)]; if (!e) throw new Error('不存在'); return { ...e, backend:this.kind }; }), args); }
+      readdir(path, ...args) { return finish(Promise.resolve(Object.values(this.map()).filter(e => e.path !== norm(path) && dir(e.path) === norm(path)).map(e => ({...e, backend:this.kind}))), args); }
+      mkdir(path, ...args) { return finish(this._mkdir(path), args); }
+      async _mkdir(path) { const p = norm(path); const m = this.map(); if (p !== '/' && !m[dir(p)]) await this._mkdir(dir(p)); const next = this.map(); next[p] = { path:p, name:base(p), type:'dir', size:0, mtime:Date.now() }; this.save(next); return true; }
+      readFile(path, mode = 'arrayBuffer', ...args) { if (typeof mode === 'function') { args.unshift(mode); mode = 'arrayBuffer'; } return finish(Promise.resolve().then(async () => { const e = this.map()[norm(path)]; const bin = atob(e.data || ''); const arr = Uint8Array.from(bin, c => c.charCodeAt(0)); const blob = new Blob([arr], { type: e.mime || '' }); return await blobByMode(blob, mode); }), args); }
+      writeFile(path, data, ...args) { return finish(Promise.resolve().then(async () => { const blob = dataToBlob(data); const buf = new Uint8Array(await blob.arrayBuffer()); let bin = ''; buf.forEach(b => bin += String.fromCharCode(b)); const m = this.map(); const p = norm(path); m[p] = { path:p, name:base(p), type:'file', size:blob.size, mtime:Date.now(), mime:blob.type, data:btoa(bin) }; this.save(m); return true; }), args); }
+      unlink(path, ...args) { return this.remove(path, ...args); }
+      rmdir(path, ...args) { return this.remove(path, ...args); }
+      remove(path, ...args) { return finish(Promise.resolve().then(() => { const m = this.map(); const p = norm(path); Object.keys(m).forEach(k => { if (k === p || k.startsWith(p + '/')) delete m[k]; }); this.save(m); return true; }), args); }
+      exists(path, ...args) { return finish(this.stat(path).then(() => true).catch(() => false), args); }
+      rename(src, dst, ...args) { return finish(copyBetween(this, src, this, dst).then(() => this.remove(src)), args); }
+      async clear() { localStorage.removeItem(this.key); await this.init(); }
+    }
+
+    class FSABackend {
+      constructor(handle) { this.kind = 'file-system-access'; this.rootHandle = handle; }
+      async init() { if (!this.rootHandle) throw new Error('目录句柄无效'); if (this.rootHandle.queryPermission) { let p = await this.rootHandle.queryPermission({ mode: 'readwrite' }); if (p !== 'granted') p = await this.rootHandle.requestPermission({ mode: 'readwrite' }); if (p !== 'granted') throw new Error('目录权限被拒绝'); } }
+      parts(path) { return norm(path).split('/').filter(Boolean); }
+      async dirHandle(path, create = false) { let h = this.rootHandle; for (const p of this.parts(path)) h = await h.getDirectoryHandle(p, { create }); return h; }
+      async parent(path, create = false) { const ps = this.parts(path); const name = ps.pop(); const parent = await this.dirHandle('/' + ps.join('/'), create); return { parent, name }; }
+      stat(path, ...args) { return finish(this._stat(path), args); }
+      async _stat(path) { path = norm(path); if (path === '/') return { path, name: '/', type: 'dir', size: 0, mtime: Date.now(), backend: this.kind }; const { parent, name } = await this.parent(path); try { await parent.getDirectoryHandle(name); return { path, name, type:'dir', size:0, mtime:Date.now(), backend:this.kind }; } catch { const h = await parent.getFileHandle(name); const f = await h.getFile(); return { path, name, type:'file', size:f.size, mtime:f.lastModified, mime:f.type, backend:this.kind }; } }
+      readdir(path, ...args) { return finish(this._readdir(path), args); }
+      async _readdir(path) { const d = await this.dirHandle(path); const out = []; for await (const [name, h] of d.entries()) { const p = join(path, name); if (h.kind === 'directory') out.push({ path:p, name, type:'dir', size:0, mtime:Date.now(), backend:this.kind }); else { const f = await h.getFile(); out.push({ path:p, name, type:'file', size:f.size, mtime:f.lastModified, mime:f.type, backend:this.kind }); } } return out; }
+      mkdir(path, ...args) { return finish(this.dirHandle(path, true).then(() => true), args); }
+      readFile(path, mode = 'arrayBuffer', ...args) { if (typeof mode === 'function') { args.unshift(mode); mode = 'arrayBuffer'; } return finish(this._readFile(path, mode), args); }
+      async _readFile(path, mode) { const { parent, name } = await this.parent(path); const h = await parent.getFileHandle(name); return await blobByMode(await h.getFile(), mode); }
+      writeFile(path, data, ...args) { return finish(this._writeFile(path, data), args); }
+      async _writeFile(path, data) { const { parent, name } = await this.parent(path, true); const h = await parent.getFileHandle(name, { create:true }); const w = await h.createWritable(); await w.write(dataToBlob(data)); await w.close(); return true; }
+      unlink(path, ...args) { return finish(this._remove(path, false), args); }
+      rmdir(path, ...args) { return finish(this._remove(path, true), args); }
+      remove(path, ...args) { return finish(this._remove(path, true), args); }
+      async _remove(path, recursive) { const { parent, name } = await this.parent(path); await parent.removeEntry(name, { recursive }); return true; }
+      exists(path, ...args) { return finish(this._stat(path).then(() => true).catch(() => false), args); }
+      rename(src, dst, ...args) { return finish(copyBetween(this, src, this, dst).then(() => this._remove(src, true)), args); }
+    }
+
+    async function copyBetween(srcBackend, src, dstBackend, dst) {
+      const st = await srcBackend.stat(src);
+      if (st.type === 'dir') {
+        await dstBackend.mkdir(dst);
+        const list = await srcBackend.readdir(src);
+        for (const item of list) await copyBetween(srcBackend, item.path, dstBackend, join(dst, item.name));
+      } else {
+        await dstBackend.writeFile(dst, await srcBackend.readFile(src, 'blob'));
+      }
+    }
+
+    class UnifiedFS {
+      constructor(root) { this.root = root; this.mounts = []; }
+      async init() { await this.root.init(); await this.mkdir('/Desktop'); await this.mkdir('/Documents'); await this.mkdir('/Pictures'); await this.mkdir('/Downloads'); await this.mkdir('/mnt/local'); }
+      route(path) { path = norm(path); let match = null; for (const m of this.mounts) if (path === m.path || path.startsWith(m.path + '/')) if (!match || m.path.length > match.path.length) match = m; return match ? { backend: match.backend, sub: norm(path.slice(match.path.length) || '/'), mount: match } : { backend: this.root, sub: path, mount: null }; }
+      stat(path, ...args) { return finish(this._stat(path), args); }
+      async _stat(path) { path = norm(path); const r = this.route(path); const s = await r.backend.stat(r.sub); return { ...s, path, name: base(path), mountPath: r.mount && r.mount.path }; }
+      readdir(path, ...args) { return finish(this._readdir(path), args); }
+      async _readdir(path) { path = norm(path); const r = this.route(path); let list = await r.backend.readdir(r.sub).catch(e => { throw e; }); list = list.map(i => ({ ...i, path: r.mount ? join(r.mount.path, i.path) : i.path })); if (path === '/mnt/local') { const names = new Set(list.map(i => i.name)); for (const m of this.mounts) if (!names.has(base(m.path))) list.push({ path:m.path, name:base(m.path), type:'dir', size:0, mtime:Date.now(), backend:m.backend.kind, mounted:true }); } return list; }
+      mkdir(path, ...args) { return finish((async () => { const r = this.route(path); return await r.backend.mkdir(r.sub); })(), args); }
+      readFile(path, mode = 'arrayBuffer', ...args) { if (typeof mode === 'function') { args.unshift(mode); mode = 'arrayBuffer'; } return finish((async () => { const r = this.route(path); return await r.backend.readFile(r.sub, mode); })(), args); }
+      writeFile(path, data, ...args) { return finish((async () => { const r = this.route(path); return await r.backend.writeFile(r.sub, data); })(), args); }
+      unlink(path, ...args) { return finish(this.remove(path), args); }
+      rmdir(path, ...args) { return finish(this.remove(path), args); }
+      remove(path, ...args) { return finish((async () => { const r = this.route(path); if (r.mount && norm(path) === r.mount.path) { this.unmount(path); return true; } return await r.backend.remove(r.sub); })(), args); }
+      exists(path, ...args) { return finish(this.stat(path).then(() => true).catch(() => false), args); }
+      rename(src, dst, ...args) { return finish((async () => { const a = this.route(src), b = this.route(dst); if (a.backend === b.backend) return await a.backend.rename(a.sub, b.sub); await copyBetween(a.backend, a.sub, b.backend, b.sub); await a.backend.remove(a.sub); return true; })(), args); }
+      async copy(src, dst) { const a = this.route(src), b = this.route(dst); await copyBetween(a.backend, a.sub, b.backend, b.sub); }
+      async mountDirectory() { if (!window.showDirectoryPicker) throw new Error('当前浏览器不支持目录挂载'); const handle = await showDirectoryPicker({ mode: 'readwrite' }); const backend = new FSABackend(handle); await backend.init(); const name = safeName(handle.name || 'folder'); const path = '/mnt/local/' + name; this.mounts = this.mounts.filter(m => m.path !== path); this.mounts.push({ path, backend, label:name }); const prev = LocalState.get('mountNames', []); if (!prev.includes(name)) LocalState.set('mountNames', prev.concat(name)); return path; }
+      unmount(path) { path = norm(path); this.mounts = this.mounts.filter(m => m.path !== path); notify('已卸载 ' + path); }
+      mountsInfo() { return this.mounts.map(m => ({ path:m.path, name:base(m.path), backend:m.backend.kind })); }
+      async usage() {
+        const breakdown = new Map(); let total = 0; const walk = async p => { for (const it of await this.readdir(p).catch(() => [])) { if (it.type === 'dir') await walk(it.path); else { total += it.size || 0; const k = groupByExt(ext(it.path)); breakdown.set(k, (breakdown.get(k) || 0) + (it.size || 0)); } } };
+        await walk('/'); const estimate = navigator.storage && navigator.storage.estimate ? await navigator.storage.estimate() : { usage: total, quota: 0 }; return { total, estimate, breakdown: Array.from(breakdown, ([type, size]) => ({ type, size })) };
+      }
+      async reset() { await this.root.clear(); this.mounts = []; await this.init(); LocalState.del('seeded'); LocalState.del('wallpaper'); LocalState.del('iconPositions'); state.iconPositions = {}; await seedFiles(); }
+    }
+
+    function safeName(s) { return String(s).replace(/[\\/:*?"<>|]/g, '_').slice(0, 80) || 'item'; }
+    function groupByExt(e) { if (MIME_IMAGE.has(e)) return '图片'; if (MIME_AUDIO.has(e)) return '音频'; if (MIME_VIDEO.has(e)) return '视频'; if (MIME_TEXT.has(e)) return '文本和代码'; if (MIME_ARCHIVE.has(e)) return '压缩包'; if (e === 'pdf') return 'PDF'; return '其他'; }
+
+    let fs;
+    window.fs = null;
+
+    async function makeRootBackend() {
+      const order = [OPFSBackend, IDBBackend, LSBackend];
+      for (const Ctor of order) {
+        const b = new Ctor();
+        try { await b.init(); $('#storageStatus').textContent = b.kind.toUpperCase() + ' 已连接'; return b; }
+        catch (e) { console.warn('backend fail', e); }
+      }
+      throw new Error('没有可用的浏览器存储后端');
+    }
+
+    async function seedFiles() {
+      if (LocalState.get('seeded', false)) return;
+      await fs.writeFile('/Desktop/说明.txt', 'Aster FS 是一个单文件 Web OS。\n\n所有内置应用通过全局 fs API 访问文件。根后端优先使用 OPFS，若不可用自动降级到 IndexedDB，再到 LocalStorage。\n\n把本机文件拖到桌面即可导入；在文件管理器中可挂载真实文件夹到 /mnt/local。');
+      await fs.writeFile('/Documents/demo.csv', 'name,role,score\nLian,designer,91\nMoss,engineer,96\nKite,writer,88');
+      await fs.writeFile('/Desktop/live-page.html', '<!DOCTYPE html>\n<html><head><meta charset="utf-8"><style>body{margin:0;display:grid;place-items:center;min-height:100vh;background:#071015;color:#b7f4ff;font-family:serif}h1{font-size:64px}</style></head><body><h1>Aster HTML</h1></body></html>');
+      await fs.writeFile('/Documents/notes.md', '# Aster FS\n\n- OPFS 持久化\n- 统一挂载路由\n- 原生媒体预览\n');
+      LocalState.set('seeded', true);
+    }
+
+    const wallpapers = {
+      cavern: `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#0a1117"/><stop offset=".5" stop-color="#162633"/><stop offset="1" stop-color="#030506"/></linearGradient><filter id="n"><feTurbulence type="fractalNoise" baseFrequency=".012" numOctaves="4"/><feColorMatrix values="0 0 0 .8 0 0 0 0 .95 0 0 0 0 1 0 0 0 0 .4 0"/></filter></defs><rect width="1600" height="900" fill="url(#g)"/><path d="M0 80 290 0l70 420L0 530Z" fill="#647585" opacity=".52"/><path d="M1600 0 1310 40l-130 410 420-110Z" fill="#2e3c48" opacity=".58"/><path d="M420 900 820 470l190 430Z" fill="#dcecff" opacity=".72"/><path d="M720 900 1040 550l360 350Z" fill="#9eb6c8" opacity=".45"/><rect width="1600" height="900" filter="url(#n)" opacity=".36"/></svg>')}`,
+      ember: `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900"><rect width="1600" height="900" fill="#090604"/><circle cx="1160" cy="190" r="430" fill="#5a1c0e" opacity=".6"/><path d="M0 720 C300 580 420 780 760 620 S1250 540 1600 710 V900 H0Z" fill="#f08b3e" opacity=".28"/><path d="M0 0h1600v900H0z" fill="none" stroke="#ffd38a" stroke-opacity=".16" stroke-width="2"/><g stroke="#ffd38a" stroke-opacity=".08">' + Array.from({length:40},(_,i)=>`<path d="M${i*44} 0v900"/>`).join('') + '</g></svg>')}`,
+      paper: `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900"><rect width="1600" height="900" fill="#d8d2bf"/><path d="M80 120h1440v660H80z" fill="#1b2529" opacity=".92"/><path d="M150 190h1300v520H150z" fill="none" stroke="#b7f4ff" stroke-opacity=".22"/><path d="M0 0h1600v900H0z" fill="#000" opacity=".16"/><circle cx="260" cy="680" r="180" fill="#d8ff7a" opacity=".18"/></svg>')}`
+    };
+
+    function applyWallpaper() {
+      const wp = LocalState.get('wallpaper', { type:'builtin', key:'cavern' });
+      const src = wp.type === 'custom' && wp.url ? wp.url : wallpapers[wp.key] || wallpapers.cavern;
+      $('#wallpaperLayer').style.backgroundImage = `url("${src}")`;
+    }
+
+    async function restoreWallpaperFromFS() {
+      const wp = LocalState.get('wallpaper', { type:'builtin', key:'cavern' });
+      if (wp.type !== 'custom' || !wp.path) return applyWallpaper();
+      try {
+        const url = await fs.readFile(wp.path, 'dataURL');
+        $('#wallpaperLayer').style.backgroundImage = `url("${url}")`;
+      } catch {
+        LocalState.set('wallpaper', { type:'builtin', key:'cavern' });
+        applyWallpaper();
+      }
+    }
+
+    function notify(message) {
+      const el = document.createElement('div');
+      el.className = 'toast';
+      el.textContent = message;
+      $('#toastHost').append(el);
+      setTimeout(() => { el.style.opacity = '0'; el.style.transform = 'translateX(18px)'; setTimeout(() => el.remove(), 260); }, 3600);
+    }
+
+    function showContext(items, x, y) {
+      const menu = $('#contextMenu');
+      menu.innerHTML = items.map((it, i) => it === 'sep' ? '<hr style="border-color:rgba(230,250,255,.12);margin:6px 0">' : `<button class="menu-item" data-i="${i}">${it.icon || ''}<span>${it.label}</span></button>`).join('');
+      menu.style.display = 'block';
+      menu.style.left = Math.min(x, innerWidth - 230) + 'px';
+      menu.style.top = Math.min(y, innerHeight - 280) + 'px';
+      $$('.menu-item', menu).forEach(btn => btn.onclick = () => { const it = items[Number(btn.dataset.i)]; menu.style.display = 'none'; it.action && it.action(); });
+    }
+    document.addEventListener('pointerdown', e => { if (!e.target.closest('.context-menu') && !e.target.closest('#startMenu')) { $('#contextMenu').style.display = 'none'; if (!e.target.closest('#startButton')) $('#startMenu').style.display = 'none'; } });
+
+    const apps = [
+      { id:'explorer', label:'文件资源管理器', icon:'folder', open:() => openExplorer('/Desktop') },
+      { id:'editor', label:'文本编辑器', icon:'text', open:() => openTextEditor('/Documents/notes.md') },
+      { id:'browser', label:'网页浏览器', icon:'browser', open:() => openBrowser('about:blank') },
+      { id:'calc', label:'计算器', icon:'calc', open:openCalculator },
+      { id:'paint', label:'画板', icon:'paint', open:openPaint },
+      { id:'settings', label:'设置', icon:'settings', open:openSettings }
+    ];
+
+    function openWindow({ appId, title, iconName, width = 860, height = 560, render }) {
+      const id = uid();
+      const el = document.createElement('section');
+      el.className = 'window';
+      el.dataset.id = id;
+      const x = Math.max(8, 80 + state.windows.size * 24), y = Math.max(58, 88 + state.windows.size * 18);
+      el.style.cssText = `width:${Math.min(width, innerWidth - 32)}px;height:${Math.min(height, innerHeight - 116)}px;left:${x}px;top:${y}px;z-index:${++state.z}`;
+      el.innerHTML = `<header class="titlebar"><span style="color:var(--accent)">${icon(iconName,18)}</span><div class="title">${htmlEscape(title)}</div><div class="window-controls"><button class="control-button min">${icon('min',16)}</button><button class="control-button max">${icon('max',15)}</button><button class="control-button close">${icon('close',16)}</button></div></header><div class="window-body"></div><div class="resize-handle resize-e"></div><div class="resize-handle resize-s"></div><div class="resize-handle resize-se"></div>`;
+      $('#windows').append(el);
+      const api = {
+        id, el, body: $('.window-body', el),
+        setTitle(t) { $('.title', el).textContent = t; const tb = $(`.task-button[data-id="${id}"]`); if (tb) tb.textContent = t; },
+        close() { state.windows.delete(id); el.remove(); renderTasks(); },
+        minimize() { el.style.display = 'none'; el.dataset.minimized = '1'; renderTasks(); },
+        focus() { focusWindow(id); },
+        maximize() { toggleMax(el); }
+      };
+      state.windows.set(id, { id, appId, title, iconName, el, api });
+      bindWindow(el, api);
+      render(api.body, api);
+      focusWindow(id);
+      renderTasks();
+      return api;
+    }
+
+    function focusWindow(id) {
+      const w = state.windows.get(id); if (!w) return;
+      $$('.window').forEach(n => n.classList.remove('active'));
+      w.el.style.zIndex = ++state.z;
+      w.el.style.display = 'flex';
+      w.el.dataset.minimized = '0';
+      w.el.classList.add('active');
+      state.active = id;
+      renderTasks();
+    }
+
+    function toggleMax(el) {
+      if (el.dataset.maxed === '1') { const r = JSON.parse(el.dataset.prev); Object.assign(el.style, r); el.dataset.maxed = '0'; }
+      else { el.dataset.prev = JSON.stringify({ left:el.style.left, top:el.style.top, width:el.style.width, height:el.style.height }); Object.assign(el.style, { left:'8px', top:'66px', width:'calc(100vw - 16px)', height:'calc(100vh - 144px)' }); el.dataset.maxed = '1'; }
+    }
+
+    function bindWindow(el, api) {
+      el.addEventListener('pointerdown', () => api.focus());
+      $('.close', el).onclick = api.close;
+      $('.min', el).onclick = api.minimize;
+      $('.max', el).onclick = api.maximize;
+      const bar = $('.titlebar', el);
+      bar.addEventListener('pointerdown', e => {
+        if (e.target.closest('button') || el.dataset.maxed === '1') return;
+        const start = { x:e.clientX, y:e.clientY, l:el.offsetLeft, t:el.offsetTop };
+        bar.setPointerCapture(e.pointerId);
+        const move = ev => { el.style.left = Math.max(0, Math.min(innerWidth - 80, start.l + ev.clientX - start.x)) + 'px'; el.style.top = Math.max(0, Math.min(innerHeight - 80, start.t + ev.clientY - start.y)) + 'px'; };
+        const up = () => { bar.removeEventListener('pointermove', move); bar.removeEventListener('pointerup', up); };
+        bar.addEventListener('pointermove', move); bar.addEventListener('pointerup', up);
+      });
+      [['.resize-e','e'],['.resize-s','s'],['.resize-se','se']].forEach(([sel, mode]) => $(sel, el).addEventListener('pointerdown', e => {
+        e.preventDefault(); const start = { x:e.clientX, y:e.clientY, w:el.offsetWidth, h:el.offsetHeight }; e.target.setPointerCapture(e.pointerId);
+        const move = ev => { if (mode.includes('e')) el.style.width = Math.max(320, start.w + ev.clientX - start.x) + 'px'; if (mode.includes('s')) el.style.height = Math.max(230, start.h + ev.clientY - start.y) + 'px'; };
+        const up = () => { e.target.removeEventListener('pointermove', move); e.target.removeEventListener('pointerup', up); };
+        e.target.addEventListener('pointermove', move); e.target.addEventListener('pointerup', up);
+      }));
+    }
+
+    function renderTasks() {
+      $('#taskList').innerHTML = Array.from(state.windows.values()).map(w => `<button class="task-button ${w.el.dataset.minimized === '1' ? 'minimized' : ''}" data-id="${w.id}">${htmlEscape($('.title', w.el).textContent)}</button>`).join('');
+      $$('.task-button').forEach(b => b.onclick = () => focusWindow(b.dataset.id));
+    }
+
+    async function renderDesktop() {
+      state.iconPositions = LocalState.get('iconPositions', {});
+      const grid = $('#desktopGrid'); grid.innerHTML = '';
+      const entries = await fs.readdir('/Desktop').catch(() => []);
+      const all = apps.map(a => ({ kind:'app', key:'app:' + a.id, name:a.label, icon:a.icon, open:a.open })).concat(entries.map(e => ({ kind:'file', key:'file:' + e.path, name:e.name, icon:fileIcon(e), path:e.path, open:() => openPath(e.path) })));
+      all.forEach((it, idx) => {
+        const pos = state.iconPositions[it.key] || { x: 10 + (idx % 2) * 96, y: 10 + Math.floor(idx / 2) * 104 };
+        const el = document.createElement('button');
+        el.className = 'desktop-icon'; el.dataset.key = it.key; el.style.left = pos.x + 'px'; el.style.top = pos.y + 'px'; el.style.animationDelay = (idx * 35) + 'ms';
+        el.innerHTML = `<div class="glyph">${icon(it.icon, 42)}</div><span>${htmlEscape(it.name)}</span>`;
+        grid.append(el);
+        let moved = false;
+        el.addEventListener('pointerdown', e => {
+          if (e.button !== 0) return; moved = false;
+          if (!el.classList.contains('selected')) $$('.desktop-icon', grid).forEach(n => n.classList.remove('selected'));
+          el.classList.add('selected');
+          const group = $$('.desktop-icon.selected', grid).map(node => ({ node, key:node.dataset.key, l:node.offsetLeft, t:node.offsetTop }));
+          const start = { x:e.clientX, y:e.clientY };
+          el.setPointerCapture(e.pointerId);
+          const move = ev => { const dx = ev.clientX - start.x, dy = ev.clientY - start.y; if (Math.hypot(dx,dy) > 5) moved = true; if (moved) group.forEach(g => { g.node.style.left = Math.max(0, Math.min(grid.clientWidth - 84, g.l + dx)) + 'px'; g.node.style.top = Math.max(0, Math.min(grid.clientHeight - 88, g.t + dy)) + 'px'; }); };
+          const up = () => { el.removeEventListener('pointermove', move); el.removeEventListener('pointerup', up); if (moved) { group.forEach(g => state.iconPositions[g.key] = { x:g.node.offsetLeft, y:g.node.offsetTop }); LocalState.set('iconPositions', state.iconPositions); } else if (group.length === 1) it.open(); };
+          el.addEventListener('pointermove', move); el.addEventListener('pointerup', up);
+        });
+        el.addEventListener('contextmenu', e => { e.preventDefault(); if (it.kind === 'file') showFileMenu(it.path, e.clientX, e.clientY, renderDesktop); });
+      });
+    }
+
+    function bindDesktopInteractions() {
+      const grid = $('#desktopGrid'); const box = $('#selectionBox');
+      grid.addEventListener('pointerdown', e => {
+        if (e.target.closest('.desktop-icon') || e.button !== 0) return;
+        const r = grid.getBoundingClientRect(); const start = { x:e.clientX, y:e.clientY };
+        box.style.display = 'block'; box.style.left = start.x + 'px'; box.style.top = start.y + 'px'; box.style.width = '0px'; box.style.height = '0px';
+        const move = ev => { const x = Math.min(start.x, ev.clientX), y = Math.min(start.y, ev.clientY), w = Math.abs(ev.clientX - start.x), h = Math.abs(ev.clientY - start.y); Object.assign(box.style, { left:x+'px', top:y+'px', width:w+'px', height:h+'px' }); const br = box.getBoundingClientRect(); $$('.desktop-icon', grid).forEach(ic => { const ir = ic.getBoundingClientRect(); ic.classList.toggle('selected', !(ir.right < br.left || ir.left > br.right || ir.bottom < br.top || ir.top > br.bottom)); }); };
+        const up = () => { box.style.display = 'none'; grid.removeEventListener('pointermove', move); grid.removeEventListener('pointerup', up); };
+        grid.addEventListener('pointermove', move); grid.addEventListener('pointerup', up);
+      });
+      grid.addEventListener('contextmenu', e => { if (e.target.closest('.desktop-icon')) return; e.preventDefault(); showContext([
+        { label:'刷新桌面', icon:icon('logo',16), action:renderDesktop },
+        { label:'新建文件夹', icon:icon('folder',16), action:async()=>{ const n = prompt('文件夹名称', '新建文件夹'); if (n) { await fs.mkdir('/Desktop/' + safeName(n)); renderDesktop(); } } },
+        { label:'新建文本', icon:icon('text',16), action:async()=>{ const p = await uniquePath('/Desktop', '新建文本.txt'); await fs.writeFile(p, ''); renderDesktop(); openTextEditor(p); } },
+        'sep',
+        { label:'导入文件', icon:icon('upload',16), action:() => pickFiles('/Desktop') },
+        { label:'挂载真实文件夹', icon:icon('folder',16), action:mountFolder },
+        { label:'上传壁纸', icon:icon('image',16), action:() => $('#wallpaperInput').click() },
+        { label:'全屏模式', icon:icon('max',16), action:() => document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen() }
+      ], e.clientX, e.clientY); });
+      grid.addEventListener('dragover', e => e.preventDefault());
+      grid.addEventListener('drop', async e => { e.preventDefault(); await importDrop(e.dataTransfer, '/Desktop'); renderDesktop(); });
+    }
+
+    function renderStartMenu() {
+      const menu = $('#startMenu');
+      menu.innerHTML = `<div class="start-title">Aster FS</div><div class="launcher-grid">${apps.map(a => `<button class="menu-item" data-app="${a.id}">${icon(a.icon,20)}<span>${a.label}</span></button>`).join('')}</div>`;
+      $$('.menu-item', menu).forEach(b => b.onclick = () => { menu.style.display = 'none'; apps.find(a => a.id === b.dataset.app).open(); });
+    }
+
+    function fileIcon(e) { const x = ext(e.path || e.name); if (e.type === 'dir') return 'folder'; if (MIME_IMAGE.has(x)) return 'image'; if (MIME_TEXT.has(x)) return x === 'html' ? 'code' : 'text'; if (MIME_AUDIO.has(x) || MIME_VIDEO.has(x)) return 'play'; if (x === 'pdf') return 'pdf'; if (MIME_ARCHIVE.has(x)) return 'archive'; return 'file'; }
+
+    async function openPath(path, prefer) {
+      const st = await fs.stat(path);
+      if (st.type === 'dir') return openExplorer(path);
+      const x = ext(path);
+      if (prefer === 'browser') return openFileInBrowser(path);
+      if (prefer === 'source') return openTextEditor(path);
+      if (x === 'html') return openHtmlWorkbench(path);
+      if (MIME_IMAGE.has(x)) return openImage(path);
+      if (MIME_AUDIO.has(x) || MIME_VIDEO.has(x)) return openMedia(path);
+      if (x === 'pdf') return openPdf(path);
+      if (MIME_ARCHIVE.has(x) || base(path).toLowerCase().endsWith('.tar.gz')) return openArchive(path);
+      return openTextEditor(path);
+    }
+
+    async function uniquePath(folder, name) {
+      let p = join(folder, safeName(name)); const dot = name.lastIndexOf('.'); const stem = dot > 0 ? name.slice(0, dot) : name; const suffix = dot > 0 ? name.slice(dot) : ''; let i = 1;
+      while (await fs.exists(p)) p = join(folder, safeName(stem + '-' + i++ + suffix));
+      return p;
+    }
+
+    function openExplorer(startPath = '/') {
+      openWindow({ appId:'explorer', title:'文件资源管理器 - ' + startPath, iconName:'folder', width:960, height:620, render(body, api) {
+        let current = norm(startPath), sort = { key:'name', dir:1 }, selected = new Set();
+        body.innerHTML = `<div class="app-shell"><div class="toolbar"><button class="tool-button up">上级</button><input class="path-input" value="${htmlEscape(current)}"><button class="tool-button go">进入</button><button class="tool-button new-file">新建文件</button><button class="tool-button new-folder">新建文件夹</button><button class="tool-button import">导入</button><button class="tool-button export">导出</button><button class="tool-button mount">挂载文件夹</button></div><div class="content-split"><aside class="sidebar"></aside><main class="file-pane"></main></div></div>`;
+        const pane = $('.file-pane', body), pathInput = $('.path-input', body), side = $('.sidebar', body);
+        side.innerHTML = ['/Desktop','/Documents','/Pictures','/Downloads','/mnt/local'].map(p => `<button class="side-link" data-p="${p}">${icon(p.includes('mnt')?'folder':'folder',16)}${p}</button>`).join('');
+        $$('.side-link', side).forEach(b => b.onclick = () => navigate(b.dataset.p));
+        async function navigate(p) { current = norm(p); pathInput.value = current; api.setTitle('文件资源管理器 - ' + current); selected.clear(); await load(); }
+        async function load() {
+          let rows = await fs.readdir(current).catch(e => { pane.innerHTML = `<div class="empty">${htmlEscape(e.message)}</div>`; return []; });
+          rows.sort((a,b) => { const k = sort.key; let av = k === 'type' ? (a.type === 'dir' ? '0' : ext(a.path)) : k === 'size' ? (a.size||0) : k === 'mtime' ? (a.mtime||0) : a.name.toLowerCase(); return av > (k === 'type' ? (b.type === 'dir' ? '0' : ext(b.path)) : k === 'size' ? (b.size||0) : k === 'mtime' ? (b.mtime||0) : b.name.toLowerCase()) ? sort.dir : -sort.dir; });
+          if (!rows.length) { pane.innerHTML = '<div class="empty">此文件夹为空。可以拖入本机文件，或使用工具栏创建内容。</div>'; return; }
+          pane.innerHTML = `<table class="file-table"><thead><tr><th data-k="name">名称</th><th data-k="mtime">修改日期</th><th data-k="type">类型</th><th data-k="size">大小</th></tr></thead><tbody>${rows.map(r => `<tr draggable="true" data-path="${htmlEscape(r.path)}" data-type="${r.type}" class="${selected.has(r.path)?'selected':''}"><td><div class="name-cell"><span style="color:var(--accent)">${icon(fileIcon(r),16)}</span>${htmlEscape(r.name)}</div></td><td>${dateFmt(r.mtime)}</td><td>${r.type === 'dir' ? '文件夹' : (ext(r.path).toUpperCase() || r.mime || '文件')}</td><td>${r.type === 'dir' ? '-' : sizeFmt(r.size)}</td></tr>`).join('')}</tbody></table>`;
+          $$('th', pane).forEach(th => th.onclick = () => { const k = th.dataset.k; sort = { key:k, dir: sort.key === k ? -sort.dir : 1 }; load(); });
+          $$('tr[data-path]', pane).forEach(row => {
+            const p = row.dataset.path;
+            row.onclick = e => { if (!e.ctrlKey && !e.metaKey) selected.clear(); selected.has(p) ? selected.delete(p) : selected.add(p); $$('tr[data-path]', pane).forEach(r => r.classList.toggle('selected', selected.has(r.dataset.path))); };
+            row.ondblclick = async () => { const st = await fs.stat(p); st.type === 'dir' ? navigate(p) : openPath(p); };
+            row.oncontextmenu = e => { e.preventDefault(); if (!selected.has(p)) { selected.clear(); selected.add(p); } showFileMenu(p, e.clientX, e.clientY, load, current, selected); };
+            row.ondragstart = async e => { const paths = selected.size ? Array.from(selected) : [p]; e.dataTransfer.setData('application/x-vfs-paths', JSON.stringify(paths)); e.dataTransfer.setData('text/plain', paths.join('\n')); const st = await fs.stat(p); if (st.type === 'file') prepareDragDownload(row, p); if (row.dataset.downloadUrl) e.dataTransfer.setData('DownloadURL', `${row.dataset.mime || 'application/octet-stream'}:${base(p)}:${row.dataset.downloadUrl}`); };
+            row.ondragover = async e => { if (row.dataset.type === 'dir') e.preventDefault(); };
+            row.ondrop = async e => { e.preventDefault(); if (row.dataset.type !== 'dir') return; await handleMoveDrop(e.dataTransfer, p); await load(); };
+            if (row.dataset.type === 'file') prepareDragDownload(row, p);
+          });
+        }
+        pane.ondragover = e => e.preventDefault();
+        pane.ondrop = async e => { e.preventDefault(); await handleMoveDrop(e.dataTransfer, current); await load(); };
+        $('.up', body).onclick = () => navigate(dir(current));
+        $('.go', body).onclick = async () => { const p = norm(pathInput.value); const st = await fs.stat(p); st.type === 'dir' ? navigate(p) : openPath(p); };
+        $('.new-file', body).onclick = async () => { const n = prompt('文件名', 'untitled.txt'); if (n) { const p = await uniquePath(current, n); await fs.writeFile(p, ''); await load(); openTextEditor(p); } };
+        $('.new-folder', body).onclick = async () => { const n = prompt('文件夹名', '新建文件夹'); if (n) { await fs.mkdir(await uniquePath(current, n)); await load(); } };
+        $('.import', body).onclick = () => pickFiles(current, load);
+        $('.export', body).onclick = async () => { for (const p of selected) await downloadPath(p); };
+        $('.mount', body).onclick = async () => { await mountFolder(); await load(); };
+        load();
+      }});
+    }
+
+    function showFileMenu(path, x, y, after = () => {}, cwd = dir(path), selected = new Set([path])) {
+      const items = [
+        { label:'打开', icon:icon('file',16), action:() => openPath(path) }
+      ];
+      if (ext(path) === 'html') items.push({ label:'在系统浏览器中打开', icon:icon('browser',16), action:() => openPath(path, 'browser') }, { label:'编辑源代码', icon:icon('code',16), action:() => openPath(path, 'source') });
+      items.push('sep',
+        { label:'复制', icon:icon('copy',16), action:() => { state.clipboard = { mode:'copy', paths:Array.from(selected) }; notify('已复制 ' + selected.size + ' 项'); } },
+        { label:'粘贴', icon:icon('down',16), action:async()=>{ if (!state.clipboard) return; for (const p of state.clipboard.paths) await fs.copy(p, await uniquePath(cwd, base(p))); after(); } },
+        { label:'重命名', icon:icon('text',16), action:async()=>{ const n = prompt('新名称', base(path)); if (n) { await fs.rename(path, join(dir(path), safeName(n))); after(); renderDesktop(); } } },
+        { label:'删除', icon:icon('trash',16), action:async()=>{ if (confirm('删除选中项目?')) { for (const p of selected) await fs.remove(p); after(); renderDesktop(); } } },
+        { label:'导出到电脑', icon:icon('down',16), action:async()=>downloadPath(path) }
+      );
+      showContext(items, x, y);
+    }
+
+    async function prepareDragDownload(row, path) {
+      if (row.dataset.downloadUrl) return;
+      try { const blob = await fs.readFile(path, 'blob'); const url = URL.createObjectURL(blob); row.dataset.downloadUrl = url; row.dataset.mime = blob.type || mimeByExt(ext(path)); }
+      catch {}
+    }
+
+    async function handleMoveDrop(dt, dest) {
+      if (dt.files && dt.files.length) return importDrop(dt, dest);
+      const raw = dt.getData('application/x-vfs-paths');
+      if (!raw) return;
+      const paths = JSON.parse(raw);
+      for (const p of paths) if (norm(p) !== norm(dest) && !norm(dest).startsWith(norm(p) + '/')) await fs.rename(p, await uniquePath(dest, base(p)));
+      renderDesktop();
+    }
+
+    function pickFiles(dest, after) { const input = $('#fileImport'); input.onchange = async () => { for (const f of input.files) await fs.writeFile(await uniquePath(dest, f.name), f); input.value = ''; after && after(); renderDesktop(); notify('导入完成'); }; input.click(); }
+
+    async function importDrop(dt, dest) {
+      const items = Array.from(dt.items || []);
+      if (items[0] && items[0].getAsFileSystemHandle) {
+        for (const item of items) { const h = await item.getAsFileSystemHandle(); if (h) await importHandle(h, dest); }
+      } else {
+        for (const f of Array.from(dt.files || [])) await fs.writeFile(await uniquePath(dest, f.name), f);
+      }
+      notify('已导入到 ' + dest);
+    }
+
+    async function importHandle(handle, dest) {
+      if (handle.kind === 'file') { const f = await handle.getFile(); await fs.writeFile(await uniquePath(dest, f.name), f); return; }
+      const folder = await uniquePath(dest, handle.name); await fs.mkdir(folder);
+      for await (const [, child] of handle.entries()) await importHandle(child, folder);
+    }
+
+    async function downloadPath(path) {
+      const st = await fs.stat(path);
+      if (st.type === 'dir') { notify('文件夹请先打包或逐项导出'); return; }
+      const blob = await fs.readFile(path, 'blob'); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = base(path); a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1500);
+    }
+
+    function mimeByExt(x) {
+      const map = { html:'text/html', css:'text/css', js:'text/javascript', json:'application/json', svg:'image/svg+xml', png:'image/png', jpg:'image/jpeg', jpeg:'image/jpeg', webp:'image/webp', gif:'image/gif', pdf:'application/pdf', mp3:'audio/mpeg', wav:'audio/wav', mp4:'video/mp4', webm:'video/webm' };
+      return map[x] || 'application/octet-stream';
+    }
+
+    function syntax(s) {
+      return htmlEscape(s)
+        .replace(/(&lt;\/?[\w:-]+|&gt;)/g, '<span class="syntax-tag">$1</span>')
+        .replace(/(".*?"|'.*?')/g, '<span class="syntax-string">$1</span>')
+        .replace(/\b(const|let|var|function|return|async|await|class|new|if|else|for|while|import|export|from|try|catch|true|false|null)\b/g, '<span class="syntax-key">$1</span>')
+        .replace(/\b(\d+(?:\.\d+)?)\b/g, '<span class="syntax-num">$1</span>');
+    }
+
+    function openTextEditor(path) {
+      openWindow({ appId:'editor', title:'文本编辑器 - ' + path, iconName:'text', width:940, height:620, render(body, api) {
+        const x = ext(path); let mode = MIME_TEXT.has(x) ? 'text' : 'text';
+        body.innerHTML = `<div class="app-shell"><div class="toolbar"><span class="tool-button" style="pointer-events:none">${htmlEscape(path)}</span><button class="tool-button save">保存</button>${['csv','tsv'].includes(x) ? '<button class="tool-button raw">文本视图</button><button class="tool-button table-view">表格视图</button>' : ''}</div><div class="editor-layout"><div class="editor-pane"><textarea class="code-area" spellcheck="false"></textarea></div><div class="preview-pane"><pre class="highlight"></pre></div></div></div>`;
+        const ta = $('.code-area', body), hi = $('.highlight', body);
+        const refresh = () => hi.innerHTML = syntax(ta.value);
+        fs.readFile(path, 'text').then(t => { ta.value = t; refresh(); });
+        ta.addEventListener('input', refresh);
+        ta.addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); $('.save', body).click(); } });
+        $('.save', body).onclick = async () => { await fs.writeFile(path, ta.value); refresh(); notify('已保存 ' + base(path)); };
+        const raw = $('.raw', body), table = $('.table-view', body);
+        if (table) table.onclick = () => { const sep = x === 'tsv' ? '\t' : ','; hi.innerHTML = `<div style="overflow:auto;height:100%"><table class="data-table">${ta.value.split(/\r?\n/).filter(Boolean).map((r,i)=>`<tr>${r.split(sep).map(c=>`${i===0?'<th>':'<td>'}${htmlEscape(c)}${i===0?'</th>':'</td>'}`).join('')}</tr>`).join('')}</table></div>`; };
+        if (raw) raw.onclick = refresh;
+      }});
+    }
+
+    function openHtmlWorkbench(path) {
+      openWindow({ appId:'html', title:'HTML 工作台 - ' + path, iconName:'code', width:1120, height:680, render(body) {
+        body.innerHTML = `<div class="app-shell"><div class="toolbar"><span class="tool-button" style="pointer-events:none">${htmlEscape(path)}</span><button class="tool-button save">保存</button><button class="tool-button browser">在系统浏览器中打开</button><button class="tool-button source">编辑源代码</button></div><div class="editor-layout"><div class="editor-pane"><textarea class="code-area" spellcheck="false"></textarea></div><div class="preview-pane"><iframe sandbox="allow-scripts allow-forms allow-modals allow-popups"></iframe></div></div></div>`;
+        const ta = $('.code-area', body), frame = $('iframe', body); let url = null;
+        const preview = () => { if (url) URL.revokeObjectURL(url); url = URL.createObjectURL(new Blob([ta.value], { type:'text/html' })); frame.src = url; };
+        let tmr; const schedule = () => { clearTimeout(tmr); tmr = setTimeout(preview, 220); };
+        fs.readFile(path, 'text').then(t => { ta.value = t; preview(); });
+        ta.addEventListener('input', schedule);
+        $('.save', body).onclick = async () => { await fs.writeFile(path, ta.value); preview(); notify('HTML 已保存'); };
+        $('.browser', body).onclick = () => openBrowser(URL.createObjectURL(new Blob([ta.value], { type:'text/html' })));
+        $('.source', body).onclick = () => openTextEditor(path);
+      }});
+    }
+
+    async function fileBlobUrl(path, type) { const blob = await fs.readFile(path, 'blob'); return URL.createObjectURL(type ? new Blob([blob], { type }) : blob); }
+    async function openFileInBrowser(path) { openBrowser(await fileBlobUrl(path, 'text/html')); }
+
+    function openBrowser(start) {
+      openWindow({ appId:'browser', title:'网页浏览器', iconName:'browser', width:980, height:620, render(body) {
+        body.innerHTML = `<div class="app-shell"><div class="toolbar"><button class="tool-button back">后退</button><button class="tool-button reload">刷新</button><input class="path-input" value="${htmlEscape(start || 'about:blank')}"><button class="tool-button go">打开</button></div><iframe sandbox="allow-scripts allow-forms allow-modals allow-popups allow-same-origin"></iframe></div>`;
+        const frame = $('iframe', body), input = $('.path-input', body);
+        const go = async () => { let v = input.value.trim() || 'about:blank'; if (v.startsWith('/')) v = await fileBlobUrl(v, mimeByExt(ext(v))); frame.src = v; };
+        $('.go', body).onclick = go; $('.reload', body).onclick = () => frame.src = frame.src; $('.back', body).onclick = () => { try { frame.contentWindow.history.back(); } catch {} };
+        go();
+      }});
+    }
+
+    async function openImage(path) {
+      const url = await fileBlobUrl(path); let zoom = 1;
+      openWindow({ appId:'image', title:'图片查看器 - ' + base(path), iconName:'image', width:900, height:620, render(body) {
+        body.innerHTML = `<div class="app-shell"><div class="toolbar"><button class="tool-button zin">放大</button><button class="tool-button zout">缩小</button><button class="tool-button reset">重置</button></div><div class="viewer"><img src="${url}"></div></div>`;
+        const img = $('img', body); const apply = () => img.style.transform = `scale(${zoom})`;
+        $('.zin', body).onclick = () => { zoom *= 1.18; apply(); }; $('.zout', body).onclick = () => { zoom /= 1.18; apply(); }; $('.reset', body).onclick = () => { zoom = 1; apply(); };
+      }});
+    }
+
+    async function openMedia(path) {
+      const x = ext(path), url = await fileBlobUrl(path, mimeByExt(x));
+      openWindow({ appId:'media', title:'媒体播放器 - ' + base(path), iconName:'play', width:860, height:560, render(body) {
+        body.innerHTML = `<div class="viewer"><div class="media-box">${MIME_VIDEO.has(x) ? `<video src="${url}" controls></video>` : `<audio src="${url}" controls></audio>`}<div style="font:13px var(--mono);color:var(--muted)">${htmlEscape(path)}</div></div></div>`;
+      }});
+    }
+
+    async function openPdf(path) { const url = await fileBlobUrl(path, 'application/pdf'); openWindow({ appId:'pdf', title:'PDF - ' + base(path), iconName:'pdf', width:920, height:650, render:body => body.innerHTML = `<iframe src="${url}"></iframe>` }); }
+
+    function openCalculator() {
+      openWindow({ appId:'calc', title:'计算器', iconName:'calc', width:360, height:500, render(body) {
+        const keys = ['7','8','9','/','4','5','6','*','1','2','3','-','0','.','=','+'];
+        body.innerHTML = `<div style="height:100%;display:grid;grid-template-rows:90px 1fr;padding:12px;gap:10px"><input class="plain-input display" style="height:100%;font-size:28px;text-align:right" value="0"><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px"><button class="tool-button clear" style="grid-column:span 2">清除</button><button class="tool-button del">退格</button><button class="tool-button key">%</button>${keys.map(k=>`<button class="tool-button key">${k}</button>`).join('')}</div></div>`;
+        const d = $('.display', body); $$('.key', body).forEach(b => b.onclick = () => { const k = b.textContent; if (k === '=') { try { if (/^[\d+\-*/%.()\s]+$/.test(d.value)) d.value = Function('return ' + d.value)(); } catch { d.value = '错误'; } } else d.value = d.value === '0' ? k : d.value + k; }); $('.clear', body).onclick = () => d.value = '0'; $('.del', body).onclick = () => d.value = d.value.slice(0,-1) || '0';
+      }});
+    }
+
+    function openPaint() {
+      openWindow({ appId:'paint', title:'画板', iconName:'paint', width:900, height:620, render(body) {
+        body.innerHTML = `<div class="app-shell"><div class="toolbar"><input type="color" class="color" value="#0a1117"><input type="range" class="width" min="1" max="36" value="5"><button class="tool-button clear">清空</button><button class="tool-button save">保存到 Pictures</button></div><div style="flex:1;min-height:0"><canvas class="paint-canvas"></canvas></div></div>`;
+        const c = $('canvas', body), ctx = c.getContext('2d'); let drawing = false;
+        const resize = () => { const r = c.getBoundingClientRect(); const img = ctx.getImageData(0,0,c.width||1,c.height||1); c.width = Math.max(1, r.width * devicePixelRatio); c.height = Math.max(1, r.height * devicePixelRatio); ctx.fillStyle = '#f7fbff'; ctx.fillRect(0,0,c.width,c.height); try { ctx.putImageData(img,0,0); } catch {} }; setTimeout(resize, 40);
+        const point = e => { const r = c.getBoundingClientRect(); return { x:(e.clientX-r.left)*devicePixelRatio, y:(e.clientY-r.top)*devicePixelRatio }; };
+        c.onpointerdown = e => { drawing = true; c.setPointerCapture(e.pointerId); const p = point(e); ctx.beginPath(); ctx.moveTo(p.x,p.y); };
+        c.onpointermove = e => { if (!drawing) return; const p = point(e); ctx.strokeStyle = $('.color', body).value; ctx.lineWidth = $('.width', body).value * devicePixelRatio; ctx.lineCap = 'round'; ctx.lineTo(p.x,p.y); ctx.stroke(); };
+        c.onpointerup = () => drawing = false; $('.clear', body).onclick = () => { ctx.fillStyle = '#f7fbff'; ctx.fillRect(0,0,c.width,c.height); };
+        $('.save', body).onclick = async () => { const blob = await new Promise(r => c.toBlob(r, 'image/png')); const p = await uniquePath('/Pictures', 'painting.png'); await fs.writeFile(p, blob); notify('已保存 ' + p); renderDesktop(); };
+      }});
+    }
+
+    async function openArchive(path) {
+      openWindow({ appId:'archive', title:'解压器 - ' + base(path), iconName:'archive', width:760, height:520, render(body) {
+        body.innerHTML = `<div class="app-shell"><div class="toolbar"><button class="tool-button extract">解压到 Downloads</button><span class="tool-button" style="pointer-events:none">${htmlEscape(path)}</span></div><div class="file-pane log"><div class="empty">准备读取压缩包。支持 tar、tar.gz、tgz、gz，以及常见 zip 存储/deflate 条目。</div></div></div>`;
+        $('.extract', body).onclick = async () => {
+          const log = $('.log', body); log.innerHTML = '<div class="empty">解压中...</div>';
+          try { const folder = await uniquePath('/Downloads', base(path).replace(/\.(tar\.gz|tgz|zip|gz|tar)$/i, '') + '-extracted'); await fs.mkdir(folder); const names = await extractArchive(path, folder); log.innerHTML = `<div class="empty">已解压到 ${folder}</div><table class="file-table"><tbody>${names.map(n=>`<tr><td>${htmlEscape(n)}</td></tr>`).join('')}</tbody></table>`; }
+          catch (e) { log.innerHTML = `<div class="empty">${htmlEscape(e.message)}</div>`; }
+        };
+      }});
+    }
+
+    async function dsInflate(buf, format) {
+      if (!('DecompressionStream' in window)) throw new Error('浏览器不支持 DecompressionStream');
+      const stream = new Blob([buf]).stream().pipeThrough(new DecompressionStream(format));
+      return await new Response(stream).arrayBuffer();
+    }
+
+    async function extractArchive(path, outFolder) {
+      let buf = await fs.readFile(path); const name = base(path).toLowerCase();
+      if (name.endsWith('.tar.gz') || name.endsWith('.tgz')) { buf = await dsInflate(buf, 'gzip'); return await extractTar(buf, outFolder); }
+      if (name.endsWith('.gz')) { const raw = await dsInflate(buf, 'gzip'); const out = join(outFolder, base(path).replace(/\.gz$/i, '')); await fs.writeFile(out, raw); return [out]; }
+      if (name.endsWith('.tar')) return await extractTar(buf, outFolder);
+      if (name.endsWith('.zip')) return await extractZip(buf, outFolder);
+      throw new Error('不支持的压缩格式');
+    }
+
+    async function extractTar(buf, outFolder) {
+      const u = new Uint8Array(buf), names = []; let off = 0;
+      while (off + 512 <= u.length) {
+        const name = dec.decode(u.slice(off, off + 100)).replace(/\0.*$/, ''); if (!name) break;
+        const size = parseInt(dec.decode(u.slice(off + 124, off + 136)).replace(/\0.*$/, '').trim() || '0', 8); const type = String.fromCharCode(u[off + 156]); const out = join(outFolder, name);
+        if (type === '5') await fs.mkdir(out); else { await fs.mkdir(dir(out)); await fs.writeFile(out, u.slice(off + 512, off + 512 + size)); names.push(out); }
+        off += 512 + Math.ceil(size / 512) * 512;
+      }
+      return names;
+    }
+
+    async function extractZip(buf, outFolder) {
+      const view = new DataView(buf); const u = new Uint8Array(buf); let off = 0, names = [];
+      while (off + 30 < u.length && view.getUint32(off, true) === 0x04034b50) {
+        const method = view.getUint16(off + 8, true), comp = view.getUint32(off + 18, true), nameLen = view.getUint16(off + 26, true), extra = view.getUint16(off + 28, true);
+        const name = dec.decode(u.slice(off + 30, off + 30 + nameLen)); const dataStart = off + 30 + nameLen + extra; const data = u.slice(dataStart, dataStart + comp); off = dataStart + comp;
+        if (!name || name.includes('..')) continue; const out = join(outFolder, name);
+        if (name.endsWith('/')) await fs.mkdir(out); else { let raw; if (method === 0) raw = data; else if (method === 8) raw = new Uint8Array(await dsInflate(data, 'deflate-raw')); else throw new Error('ZIP 压缩方法不支持: ' + method); await fs.mkdir(dir(out)); await fs.writeFile(out, raw); names.push(out); }
+      }
+      return names;
+    }
+
+    function openSettings() {
+      openWindow({ appId:'settings', title:'设置', iconName:'settings', width:900, height:640, render(body) {
+        async function render() {
+          const u = await fs.usage(); const quota = u.estimate.quota || Math.max(u.total, 1); const originUsed = u.estimate.usage || u.total;
+          body.innerHTML = `<div class="app-shell"><div class="toolbar"><button class="tool-button refresh">刷新</button><button class="tool-button reset">一键重置</button><button class="tool-button mount">挂载真实文件夹</button></div><div class="settings-grid"><section class="settings-block"><h2 style="font-size:22px;margin:0 0 10px">存储占用</h2><p style="font:12px var(--mono);color:var(--muted)">VFS 文件: ${sizeFmt(u.total)} / Origin 已用: ${sizeFmt(originUsed)} / 配额: ${sizeFmt(quota)}</p><div class="meter"><span style="width:${Math.min(100, originUsed / quota * 100)}%"></span></div>${u.breakdown.map(b=>`<p style="font:12px var(--mono)">${b.type}: ${sizeFmt(b.size)}</p><div class="meter"><span style="width:${u.total ? Math.max(2, b.size/u.total*100) : 0}%"></span></div>`).join('') || '<p style="font:12px var(--mono);color:var(--muted)">暂无文件</p>'}</section><section class="settings-block"><h2 style="font-size:22px;margin:0 0 10px">壁纸系统</h2><div style="display:grid;gap:8px">${Object.keys(wallpapers).map(k=>`<button class="tool-button wp" data-k="${k}">使用 ${k}</button>`).join('')}<button class="tool-button upload-wp">上传自定义壁纸</button></div></section><section class="settings-block"><h2 style="font-size:22px;margin:0 0 10px">挂载管理</h2><div class="mounts">${fs.mountsInfo().map(m=>`<p style="font:12px var(--mono);display:flex;gap:8px;align-items:center;justify-content:space-between"><span>${htmlEscape(m.path)}</span><button class="tool-button unmount" data-p="${htmlEscape(m.path)}">卸载</button></p>`).join('') || '<p style="font:12px var(--mono);color:var(--muted)">尚未挂载真实文件夹</p>'}</div><p style="font:12px var(--mono);color:var(--muted)">刷新页面后浏览器可能要求重新授权。之前挂载过: ${(LocalState.get('mountNames', []) || []).join(', ') || '无'}</p></section><section class="settings-block"><h2 style="font-size:22px;margin:0 0 10px">后端状态</h2><p style="font:12px var(--mono);color:var(--muted)">根文件系统: ${fs.root.kind}</p><p style="font:12px var(--mono);color:var(--muted)">IndexedDB 用于降级文件系统，LocalStorage 与 Cookie 用于偏好、壁纸、图标位置和挂载提示。</p></section></div></div>`;
+          $('.refresh', body).onclick = render; $('.reset', body).onclick = async () => { if (confirm('清除虚拟文件系统并重置?')) { await fs.reset(); applyWallpaper(); renderDesktop(); render(); notify('系统已重置'); } };
+          $('.mount', body).onclick = async () => { await mountFolder(); render(); };
+          $$('.wp', body).forEach(b => b.onclick = () => { LocalState.set('wallpaper', { type:'builtin', key:b.dataset.k }); applyWallpaper(); });
+          $('.upload-wp', body).onclick = () => $('#wallpaperInput').click();
+          $$('.unmount', body).forEach(b => b.onclick = () => { fs.unmount(b.dataset.p); renderDesktop(); render(); });
+        }
+        render();
+      }});
+    }
+
+    async function mountFolder() {
+      try { const p = await fs.mountDirectory(); notify('已挂载到 ' + p); renderDesktop(); }
+      catch (e) { notify(e.message); }
+    }
+
+    function bindGlobalControls() {
+      $('#brandButton').innerHTML = icon('logo', 20) + '<span>Aster FS</span>';
+      $('#startButton').innerHTML = icon('logo', 21);
+      $('#quickImport').innerHTML = icon('upload', 20);
+      $('#quickSettings').innerHTML = icon('settings', 20);
+      $('#startButton').onclick = () => { const m = $('#startMenu'); m.style.display = m.style.display === 'block' ? 'none' : 'block'; };
+      $('#brandButton').onclick = () => openExplorer('/');
+      $('#quickImport').onclick = () => pickFiles('/Desktop');
+      $('#quickSettings').onclick = openSettings;
+      $('#wallpaperInput').onchange = async e => { const f = e.target.files[0]; if (!f) return; const p = '/Pictures/wallpaper-' + Date.now() + '-' + safeName(f.name); await fs.writeFile(p, f); LocalState.set('wallpaper', { type:'custom', path:p }); await restoreWallpaperFromFS(); e.target.value = ''; notify('壁纸已保存到 OPFS'); };
+      setInterval(() => $('#clock').textContent = new Date().toLocaleTimeString('zh-CN', { hour:'2-digit', minute:'2-digit' }), 1000);
+    }
+
+    async function init() {
+      applyWallpaper(); bindGlobalControls(); bindDesktopInteractions(); renderStartMenu();
+      fs = new UnifiedFS(await makeRootBackend()); await fs.init(); window.fs = fs; await seedFiles(); await restoreWallpaperFromFS();
+      const prev = LocalState.get('mountNames', []); if (prev && prev.length) notify('之前挂载过真实文件夹: ' + prev.join(', ') + '。请在设置或文件管理器中重新挂载授权。');
+      await renderDesktop(); await sleep(500); $('#boot').classList.add('hide');
+    }
+
+    init().catch(e => { $('#boot').innerHTML = '<div class="boot-mark">启动失败: ' + htmlEscape(e.message) + '</div>'; console.error(e); });
+  })();
+  </script>
+</body>
+</html>

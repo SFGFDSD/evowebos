@@ -1,0 +1,3558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VOLT OS</title>
+<style>
+  :root {
+    --yellow: #FFD700;
+    --yellow-bright: #FFE44D;
+    --yellow-dim: #B8960C;
+    --yellow-glow: #FFD70066;
+    --yellow-pale: #FFF8DC;
+    --bg-dark: #0A0A0A;
+    --bg-panel: #111111;
+    --bg-window: #0D0D0D;
+    --bg-titlebar: #161616;
+    --bg-hover: #1A1A1A;
+    --bg-active: #222200;
+    --border: #2A2A2A;
+    --border-yellow: #FFD70044;
+    --text: #E8E8E8;
+    --text-dim: #888888;
+    --text-yellow: #FFD700;
+    --shadow-yellow: 0 0 20px #FFD70033;
+    --shadow-window: 0 20px 60px #00000088, 0 0 0 1px #2A2A2A;
+    --font-mono: 'Courier New', monospace;
+    --font-ui: -apple-system, 'Segoe UI', sans-serif;
+    --radius: 8px;
+    --radius-lg: 12px;
+    --transition: all 0.15s ease;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  
+  body {
+    width: 100vw; height: 100vh;
+    overflow: hidden;
+    background: var(--bg-dark);
+    color: var(--text);
+    font-family: var(--font-ui);
+    user-select: none;
+  }
+
+  /* DESKTOP */
+  #desktop {
+    width: 100%; height: 100%;
+    position: relative;
+    background:
+      radial-gradient(ellipse at 20% 80%, #FFD70008 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 20%, #FFD70006 0%, transparent 50%),
+      linear-gradient(135deg, #0A0A0A 0%, #0F0F0A 100%);
+  }
+
+  #desktop-grid {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 40px;
+    display: grid;
+    grid-template-rows: repeat(auto-fill, 80px);
+    grid-template-columns: repeat(auto-fill, 80px);
+    align-content: start;
+    padding: 16px;
+    gap: 4px;
+  }
+
+  /* TASKBAR */
+  #taskbar {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    height: 40px;
+    background: #111111EE;
+    border-top: 1px solid #FFD70022;
+    backdrop-filter: blur(20px);
+    display: flex;
+    align-items: center;
+    padding: 0 8px;
+    gap: 4px;
+    z-index: 9999;
+  }
+
+  #start-btn {
+    display: flex; align-items: center; justify-content: center;
+    width: 36px; height: 30px;
+    background: var(--yellow);
+    border: none; border-radius: 6px;
+    cursor: pointer;
+    transition: var(--transition);
+    flex-shrink: 0;
+  }
+  #start-btn:hover { background: var(--yellow-bright); box-shadow: 0 0 12px var(--yellow-glow); }
+  #start-btn svg { width: 18px; height: 18px; }
+
+  #taskbar-divider {
+    width: 1px; height: 20px;
+    background: #333; margin: 0 4px;
+    flex-shrink: 0;
+  }
+
+  #taskbar-tasks {
+    display: flex; align-items: center;
+    gap: 3px; flex: 1;
+    overflow: hidden;
+  }
+
+  .task-btn {
+    display: flex; align-items: center; gap: 6px;
+    padding: 0 10px;
+    height: 28px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 5px;
+    cursor: pointer;
+    color: var(--text-dim);
+    font-size: 12px;
+    transition: var(--transition);
+    white-space: nowrap;
+    max-width: 160px;
+    overflow: hidden;
+  }
+  .task-btn:hover { background: var(--bg-hover); border-color: var(--border); color: var(--text); }
+  .task-btn.active {
+    background: var(--bg-active);
+    border-color: var(--border-yellow);
+    color: var(--yellow);
+  }
+  .task-btn svg { width: 14px; height: 14px; flex-shrink: 0; }
+  .task-label { overflow: hidden; text-overflow: ellipsis; }
+
+  #taskbar-right {
+    display: flex; align-items: center; gap: 8px;
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+
+  #clock {
+    font-size: 11px;
+    color: var(--text-dim);
+    font-family: var(--font-mono);
+    letter-spacing: 0.5px;
+  }
+
+  /* START MENU */
+  #start-menu {
+    position: fixed;
+    bottom: 44px; left: 8px;
+    width: 320px;
+    background: #111111F0;
+    border: 1px solid #FFD70033;
+    border-radius: 12px;
+    backdrop-filter: blur(30px);
+    box-shadow: 0 -4px 40px #00000088, 0 0 20px #FFD70011;
+    z-index: 99999;
+    overflow: hidden;
+    display: none;
+    flex-direction: column;
+  }
+  #start-menu.open { display: flex; }
+
+  #start-header {
+    padding: 16px;
+    border-bottom: 1px solid #1E1E1E;
+    display: flex; align-items: center; gap: 12px;
+  }
+
+  #start-logo {
+    width: 36px; height: 36px;
+    background: var(--yellow);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  #start-logo svg { width: 22px; height: 22px; }
+
+  #start-title { font-size: 16px; font-weight: 700; color: var(--yellow); letter-spacing: 2px; }
+  #start-subtitle { font-size: 10px; color: var(--text-dim); letter-spacing: 1px; }
+
+  #start-search {
+    padding: 10px 14px;
+    border-bottom: 1px solid #1A1A1A;
+  }
+  #start-search input {
+    width: 100%;
+    background: #0A0A0A;
+    border: 1px solid #2A2A2A;
+    border-radius: 6px;
+    padding: 7px 10px;
+    color: var(--text);
+    font-size: 12px;
+    outline: none;
+    transition: var(--transition);
+  }
+  #start-search input:focus { border-color: var(--yellow-dim); }
+
+  #start-apps {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 2px;
+    padding: 8px;
+    max-height: 280px;
+    overflow-y: auto;
+  }
+
+  .start-app {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 6px;
+    padding: 12px 6px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: var(--transition);
+  }
+  .start-app:hover { background: var(--bg-hover); }
+  .start-app svg { width: 28px; height: 28px; }
+  .start-app-name { font-size: 10px; color: var(--text-dim); text-align: center; line-height: 1.2; }
+
+  #start-footer {
+    padding: 8px;
+    border-top: 1px solid #1A1A1A;
+    display: flex; gap: 4px;
+  }
+
+  .start-footer-btn {
+    flex: 1;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 7px;
+    border-radius: 6px;
+    cursor: pointer;
+    background: transparent;
+    border: 1px solid #222;
+    color: var(--text-dim);
+    font-size: 11px;
+    transition: var(--transition);
+  }
+  .start-footer-btn:hover { background: var(--bg-hover); color: var(--text); border-color: #333; }
+  .start-footer-btn svg { width: 14px; height: 14px; }
+
+  /* WINDOWS */
+  .window {
+    position: absolute;
+    background: var(--bg-window);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-window);
+    min-width: 300px;
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: box-shadow 0.2s ease;
+  }
+  .window.focused {
+    border-color: #FFD70033;
+    box-shadow: var(--shadow-window), 0 0 0 1px #FFD70022;
+  }
+  .window.maximized {
+    position: fixed !important;
+    top: 0 !important; left: 0 !important;
+    width: 100vw !important;
+    height: calc(100vh - 40px) !important;
+    border-radius: 0;
+    border: none;
+  }
+
+  .window-titlebar {
+    display: flex; align-items: center;
+    height: 34px;
+    padding: 0 8px 0 12px;
+    background: var(--bg-titlebar);
+    border-bottom: 1px solid var(--border);
+    cursor: move;
+    flex-shrink: 0;
+    gap: 8px;
+  }
+
+  .window-icon { width: 16px; height: 16px; flex-shrink: 0; }
+  .window-title {
+    flex: 1;
+    font-size: 12px;
+    color: var(--text-dim);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 500;
+  }
+  .window.focused .window-title { color: var(--text); }
+
+  .window-controls { display: flex; gap: 5px; }
+  .wc-btn {
+    width: 22px; height: 22px;
+    border: 1px solid #2A2A2A;
+    border-radius: 4px;
+    background: transparent;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: var(--transition);
+  }
+  .wc-btn:hover { background: #222; border-color: #444; }
+  .wc-btn.close:hover { background: #3A0000; border-color: #660000; }
+  .wc-btn svg { width: 10px; height: 10px; pointer-events: none; }
+
+  .window-content {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+
+  .window-resize {
+    position: absolute;
+    bottom: 0; right: 0;
+    width: 14px; height: 14px;
+    cursor: se-resize;
+    z-index: 10;
+  }
+
+  /* DESKTOP ICONS */
+  .desktop-icon {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 5px;
+    width: 72px; height: 72px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: var(--transition);
+    padding: 6px;
+  }
+  .desktop-icon:hover { background: #FFD70011; }
+  .desktop-icon.selected { background: #FFD70022; }
+  .desktop-icon svg { width: 36px; height: 36px; }
+  .desktop-icon-label {
+    font-size: 10px;
+    color: var(--text);
+    text-align: center;
+    line-height: 1.2;
+    text-shadow: 0 1px 3px #000;
+    max-width: 68px;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+
+  /* CONTEXT MENU */
+  .ctx-menu {
+    position: fixed;
+    background: #141414F0;
+    border: 1px solid #2A2A2A;
+    border-radius: 8px;
+    padding: 4px;
+    min-width: 170px;
+    z-index: 999999;
+    backdrop-filter: blur(20px);
+    box-shadow: 0 10px 30px #000000AA;
+    display: none;
+  }
+  .ctx-menu.show { display: block; }
+  .ctx-item {
+    display: flex; align-items: center; gap: 9px;
+    padding: 7px 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--text-dim);
+    transition: var(--transition);
+  }
+  .ctx-item:hover { background: var(--bg-hover); color: var(--text); }
+  .ctx-item.danger:hover { background: #1A0000; color: #FF4444; }
+  .ctx-item svg { width: 14px; height: 14px; flex-shrink: 0; }
+  .ctx-sep { height: 1px; background: #1E1E1E; margin: 3px 0; }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #2A2A2A; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #FFD70044; }
+
+  /* FILE MANAGER */
+  .fm-toolbar {
+    display: flex; align-items: center; gap: 6px;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    flex-wrap: wrap;
+  }
+  .fm-btn {
+    display: flex; align-items: center; gap: 5px;
+    padding: 5px 10px;
+    background: transparent;
+    border: 1px solid #252525;
+    border-radius: 5px;
+    color: var(--text-dim);
+    font-size: 11px;
+    cursor: pointer;
+    transition: var(--transition);
+  }
+  .fm-btn:hover { background: var(--bg-hover); color: var(--text); border-color: #333; }
+  .fm-btn svg { width: 13px; height: 13px; }
+  .fm-btn.active { background: var(--bg-active); color: var(--yellow); border-color: var(--border-yellow); }
+
+  .fm-path {
+    display: flex; align-items: center;
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--border);
+    background: #0A0A0A;
+    gap: 3px;
+    flex-shrink: 0;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+  }
+  .fm-crumb {
+    font-size: 11px;
+    color: var(--text-dim);
+    cursor: pointer;
+    padding: 2px 5px;
+    border-radius: 3px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .fm-crumb:hover { color: var(--yellow); }
+  .fm-crumb.last { color: var(--text); cursor: default; }
+  .fm-crumb-sep { color: #333; font-size: 11px; flex-shrink: 0; }
+
+  .fm-body {
+    display: flex; flex: 1; overflow: hidden;
+  }
+  .fm-sidebar {
+    width: 140px;
+    border-right: 1px solid var(--border);
+    padding: 8px 6px;
+    overflow-y: auto;
+    flex-shrink: 0;
+  }
+  .fm-sidebar-section {
+    font-size: 9px;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 4px 6px 2px;
+    margin-top: 6px;
+  }
+  .fm-sidebar-item {
+    display: flex; align-items: center; gap: 7px;
+    padding: 5px 8px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--text-dim);
+    transition: var(--transition);
+  }
+  .fm-sidebar-item:hover { background: var(--bg-hover); color: var(--text); }
+  .fm-sidebar-item.active { background: var(--bg-active); color: var(--yellow); }
+  .fm-sidebar-item svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+  .fm-main { flex: 1; overflow: auto; padding: 8px; }
+  .fm-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, 80px);
+    gap: 4px;
+  }
+  .fm-list { display: flex; flex-direction: column; gap: 1px; }
+
+  .fm-item {
+    display: flex; flex-direction: column;
+    align-items: center;
+    padding: 8px 4px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: var(--transition);
+    border: 1px solid transparent;
+    gap: 5px;
+  }
+  .fm-item:hover { background: var(--bg-hover); border-color: var(--border); }
+  .fm-item.selected { background: var(--bg-active); border-color: var(--border-yellow); }
+  .fm-item svg { width: 32px; height: 32px; }
+  .fm-item-name {
+    font-size: 10px; text-align: center;
+    color: var(--text);
+    max-width: 72px;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    line-height: 1.3;
+  }
+
+  .fm-list-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 5px 8px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: var(--transition);
+    border: 1px solid transparent;
+  }
+  .fm-list-item:hover { background: var(--bg-hover); }
+  .fm-list-item.selected { background: var(--bg-active); border-color: var(--border-yellow); }
+  .fm-list-item svg { width: 16px; height: 16px; flex-shrink: 0; }
+  .fm-list-name { flex: 1; font-size: 12px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .fm-list-meta { font-size: 10px; color: var(--text-dim); white-space: nowrap; }
+
+  .fm-status {
+    display: flex; align-items: center;
+    padding: 4px 10px;
+    border-top: 1px solid var(--border);
+    background: #0A0A0A;
+    font-size: 10px;
+    color: var(--text-dim);
+    flex-shrink: 0;
+    gap: 12px;
+  }
+
+  /* TEXT EDITOR */
+  .editor-toolbar {
+    display: flex; align-items: center; gap: 6px;
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    flex-wrap: wrap;
+  }
+  .editor-info {
+    margin-left: auto;
+    font-size: 10px;
+    color: var(--text-dim);
+    font-family: var(--font-mono);
+  }
+  .editor-area {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+  }
+  .editor-gutter {
+    width: 42px;
+    background: #0A0A0A;
+    border-right: 1px solid var(--border);
+    padding: 12px 0;
+    overflow: hidden;
+    flex-shrink: 0;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: #333;
+    line-height: 1.6;
+    text-align: right;
+    padding-right: 8px;
+  }
+  .editor-textarea {
+    flex: 1;
+    background: var(--bg-window);
+    border: none;
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    line-height: 1.6;
+    padding: 12px;
+    resize: none;
+    outline: none;
+    overflow: auto;
+    tab-size: 4;
+  }
+  .editor-status {
+    display: flex; align-items: center; gap: 12px;
+    padding: 4px 10px;
+    border-top: 1px solid var(--border);
+    background: #0A0A0A;
+    font-size: 10px;
+    color: var(--text-dim);
+    flex-shrink: 0;
+    font-family: var(--font-mono);
+  }
+
+  /* TERMINAL */
+  .term-output {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 1.7;
+    background: #060606;
+  }
+  .term-line { margin-bottom: 1px; word-break: break-all; }
+  .term-prompt { color: var(--yellow); }
+  .term-cmd { color: var(--text); }
+  .term-out { color: #AAAAAA; }
+  .term-err { color: #FF6666; }
+  .term-ok { color: #66FF88; }
+  .term-info { color: #66AAFF; }
+  .term-hl { color: var(--yellow-bright); }
+
+  .term-input-row {
+    display: flex; align-items: center;
+    padding: 8px 12px;
+    border-top: 1px solid var(--border);
+    background: #060606;
+    flex-shrink: 0;
+  }
+  .term-prompt-display { color: var(--yellow); font-family: var(--font-mono); font-size: 12px; white-space: nowrap; }
+  .term-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    outline: none;
+    margin-left: 8px;
+    caret-color: var(--yellow);
+  }
+
+  /* IMAGE VIEWER */
+  .img-viewer {
+    flex: 1;
+    display: flex; align-items: center; justify-content: center;
+    background: #050505;
+    overflow: auto;
+    padding: 16px;
+  }
+  .img-viewer img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 4px; }
+  .img-viewer canvas { max-width: 100%; max-height: 100%; }
+
+  /* PAINT */
+  .paint-toolbar {
+    display: flex; align-items: center; gap: 4px;
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    flex-wrap: wrap;
+    background: #0A0A0A;
+  }
+  .paint-tool {
+    width: 30px; height: 30px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 5px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    background: transparent;
+    transition: var(--transition);
+  }
+  .paint-tool:hover { background: var(--bg-hover); border-color: var(--border); }
+  .paint-tool.active { background: var(--bg-active); border-color: var(--border-yellow); }
+  .paint-tool svg { width: 16px; height: 16px; }
+  .paint-sep { width: 1px; height: 20px; background: var(--border); margin: 0 4px; }
+  .paint-color-btn {
+    width: 26px; height: 26px;
+    border-radius: 4px;
+    border: 2px solid #333;
+    cursor: pointer;
+    transition: var(--transition);
+  }
+  .paint-color-btn.active { border-color: var(--yellow); }
+  #paint-canvas {
+    cursor: crosshair;
+    display: block;
+  }
+  .paint-canvas-wrap {
+    flex: 1; overflow: auto;
+    background: #050505;
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-start;
+    padding: 16px;
+  }
+
+  /* SETTINGS */
+  .settings-layout {
+    display: flex; flex: 1; overflow: hidden;
+  }
+  .settings-nav {
+    width: 150px;
+    border-right: 1px solid var(--border);
+    padding: 8px 6px;
+    overflow-y: auto;
+  }
+  .settings-nav-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--text-dim);
+    transition: var(--transition);
+  }
+  .settings-nav-item:hover { background: var(--bg-hover); color: var(--text); }
+  .settings-nav-item.active { background: var(--bg-active); color: var(--yellow); }
+  .settings-nav-item svg { width: 14px; height: 14px; flex-shrink: 0; }
+  .settings-content {
+    flex: 1; overflow-y: auto; padding: 16px;
+  }
+  .settings-section-title {
+    font-size: 14px; font-weight: 600;
+    color: var(--yellow);
+    margin-bottom: 14px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .settings-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 12px;
+    background: #0D0D0D;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    margin-bottom: 6px;
+  }
+  .settings-label { font-size: 12px; color: var(--text); }
+  .settings-desc { font-size: 10px; color: var(--text-dim); margin-top: 2px; }
+  .settings-value { font-size: 11px; color: var(--text-dim); font-family: var(--font-mono); }
+  .toggle {
+    width: 36px; height: 20px;
+    background: #222;
+    border-radius: 10px;
+    position: relative;
+    cursor: pointer;
+    transition: var(--transition);
+    border: 1px solid #333;
+    flex-shrink: 0;
+  }
+  .toggle.on { background: var(--yellow-dim); border-color: var(--yellow-dim); }
+  .toggle::after {
+    content: '';
+    position: absolute;
+    width: 14px; height: 14px;
+    background: #555;
+    border-radius: 50%;
+    top: 2px; left: 2px;
+    transition: var(--transition);
+  }
+  .toggle.on::after { background: var(--yellow); left: 18px; }
+
+  /* SYSTEM MONITOR */
+  .sysmon-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    padding: 12px;
+    overflow-y: auto;
+    flex: 1;
+  }
+  .sysmon-card {
+    background: #0A0A0A;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+  }
+  .sysmon-card-title {
+    font-size: 10px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  .sysmon-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--yellow);
+    font-family: var(--font-mono);
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .sysmon-unit { font-size: 12px; color: var(--text-dim); }
+  .sysmon-bar {
+    height: 6px;
+    background: #1A1A1A;
+    border-radius: 3px;
+    overflow: hidden;
+    margin-top: 8px;
+  }
+  .sysmon-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--yellow-dim), var(--yellow));
+    border-radius: 3px;
+    transition: width 0.5s ease;
+  }
+  .sysmon-chart {
+    height: 60px;
+    position: relative;
+    margin-top: 8px;
+  }
+
+  /* CALCULATOR */
+  .calc-layout {
+    flex: 1;
+    display: flex; flex-direction: column;
+    padding: 12px;
+    gap: 8px;
+    background: #060606;
+  }
+  .calc-display {
+    background: #0A0A0A;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px;
+    text-align: right;
+  }
+  .calc-expr { font-size: 11px; color: var(--text-dim); font-family: var(--font-mono); min-height: 16px; }
+  .calc-result { font-size: 30px; color: var(--yellow); font-family: var(--font-mono); font-weight: 700; word-break: break-all; }
+  .calc-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    flex: 1;
+  }
+  .calc-btn {
+    background: #111;
+    border: 1px solid #1E1E1E;
+    border-radius: 7px;
+    color: var(--text);
+    font-size: 14px;
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-mono);
+  }
+  .calc-btn:hover { background: var(--bg-hover); border-color: #333; }
+  .calc-btn:active { background: #222; }
+  .calc-btn.op { color: var(--yellow); }
+  .calc-btn.special { background: #0D0D00; border-color: #2A2A00; color: var(--yellow-dim); }
+  .calc-btn.eq { background: var(--yellow); color: #000; border-color: var(--yellow); font-weight: 700; }
+  .calc-btn.eq:hover { background: var(--yellow-bright); }
+  .calc-btn.zero { grid-column: span 2; }
+
+  /* NOTEPAD WELCOME / etc */
+  .app-empty {
+    flex: 1;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 12px;
+    color: var(--text-dim);
+  }
+  .app-empty svg { width: 48px; height: 48px; opacity: 0.3; }
+  .app-empty-title { font-size: 14px; color: var(--text-dim); }
+  .app-empty-desc { font-size: 11px; color: #444; text-align: center; }
+
+  /* NOTIFICATIONS */
+  #notifications {
+    position: fixed;
+    top: 12px; right: 12px;
+    display: flex; flex-direction: column; gap: 8px;
+    z-index: 999999;
+    pointer-events: none;
+  }
+  .notif {
+    background: #141414F0;
+    border: 1px solid #FFD70033;
+    border-radius: 8px;
+    padding: 10px 14px;
+    display: flex; align-items: flex-start; gap: 10px;
+    min-width: 260px; max-width: 320px;
+    box-shadow: 0 4px 20px #000000AA;
+    pointer-events: all;
+    animation: notifIn 0.3s ease;
+  }
+  .notif svg { width: 16px; height: 16px; flex-shrink: 0; margin-top: 1px; }
+  .notif-title { font-size: 12px; font-weight: 600; color: var(--text); }
+  .notif-msg { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+  @keyframes notifIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+  @keyframes notifOut { to { opacity: 0; transform: translateX(20px); } }
+
+  /* MODAL / DIALOG */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: #00000088;
+    z-index: 999998;
+    display: none; align-items: center; justify-content: center;
+    backdrop-filter: blur(4px);
+  }
+  .modal-overlay.show { display: flex; }
+  .modal {
+    background: var(--bg-panel);
+    border: 1px solid #FFD70033;
+    border-radius: 12px;
+    padding: 20px;
+    min-width: 300px; max-width: 480px;
+    box-shadow: 0 20px 60px #000000AA;
+  }
+  .modal-title { font-size: 14px; font-weight: 600; color: var(--yellow); margin-bottom: 12px; }
+  .modal-body { font-size: 12px; color: var(--text-dim); margin-bottom: 16px; line-height: 1.6; }
+  .modal-input {
+    width: 100%;
+    background: #0A0A0A;
+    border: 1px solid #2A2A2A;
+    border-radius: 6px;
+    padding: 8px 10px;
+    color: var(--text);
+    font-size: 12px;
+    outline: none;
+    margin-bottom: 12px;
+    transition: var(--transition);
+  }
+  .modal-input:focus { border-color: var(--yellow-dim); }
+  .modal-footer { display: flex; gap: 8px; justify-content: flex-end; }
+  .btn {
+    padding: 7px 16px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    border: 1px solid #333;
+    background: transparent;
+    color: var(--text-dim);
+    transition: var(--transition);
+  }
+  .btn:hover { background: var(--bg-hover); color: var(--text); }
+  .btn.primary {
+    background: var(--yellow);
+    color: #000;
+    border-color: var(--yellow);
+    font-weight: 600;
+  }
+  .btn.primary:hover { background: var(--yellow-bright); }
+  .btn.danger { color: #FF4444; border-color: #330000; }
+  .btn.danger:hover { background: #1A0000; border-color: #660000; }
+
+  /* SELECTION */
+  .selection-rect {
+    position: fixed;
+    border: 1px solid var(--yellow);
+    background: #FFD70011;
+    pointer-events: none;
+    z-index: 100;
+  }
+
+  /* LOADING */
+  #boot-screen {
+    position: fixed; inset: 0;
+    background: #000;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    z-index: 9999999;
+    gap: 20px;
+    transition: opacity 0.6s ease;
+  }
+  .boot-logo {
+    width: 80px; height: 80px;
+    background: var(--yellow);
+    border-radius: 20px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 40px var(--yellow-glow);
+    animation: bootPulse 1s ease-in-out infinite alternate;
+  }
+  .boot-logo svg { width: 50px; height: 50px; }
+  @keyframes bootPulse { from { box-shadow: 0 0 20px var(--yellow-glow); } to { box-shadow: 0 0 60px var(--yellow-glow); } }
+  .boot-title { font-size: 28px; font-weight: 800; color: var(--yellow); letter-spacing: 6px; }
+  .boot-sub { font-size: 11px; color: var(--text-dim); letter-spacing: 3px; }
+  .boot-progress {
+    width: 200px; height: 2px;
+    background: #1A1A1A;
+    border-radius: 1px;
+    overflow: hidden;
+  }
+  .boot-progress-fill {
+    height: 100%;
+    background: var(--yellow);
+    border-radius: 1px;
+    animation: bootLoad 1.5s ease-out forwards;
+  }
+  @keyframes bootLoad { from { width: 0%; } to { width: 100%; } }
+
+  /* WEATHER WIDGET */
+  #weather-widget {
+    position: absolute;
+    top: 12px; right: 12px;
+    background: #111111CC;
+    border: 1px solid #FFD70022;
+    border-radius: 10px;
+    padding: 10px 14px;
+    backdrop-filter: blur(20px);
+    pointer-events: none;
+  }
+  .weather-temp { font-size: 22px; font-weight: 700; color: var(--yellow); font-family: var(--font-mono); }
+  .weather-desc { font-size: 10px; color: var(--text-dim); }
+
+  /* MISC */
+  input[type="color"] { border: none; background: none; cursor: pointer; padding: 0; }
+  
+  .spin { animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .fade-in { animation: fadeIn 0.2s ease; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+  /* MUSIC PLAYER */
+  .music-player {
+    flex: 1;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 20px;
+    gap: 16px;
+    background: #060606;
+  }
+  .music-art {
+    width: 120px; height: 120px;
+    background: linear-gradient(135deg, #1A1A00, #2A2A00);
+    border: 2px solid var(--border-yellow);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 8px 30px #FFD70022;
+  }
+  .music-art svg { width: 60px; height: 60px; }
+  .music-title { font-size: 14px; font-weight: 600; color: var(--text); text-align: center; }
+  .music-artist { font-size: 11px; color: var(--text-dim); }
+  .music-progress {
+    width: 100%;
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .music-progress-bar {
+    height: 4px; background: #1A1A1A; border-radius: 2px;
+    cursor: pointer; overflow: hidden;
+  }
+  .music-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--yellow-dim), var(--yellow));
+    border-radius: 2px;
+    transition: width 0.5s linear;
+  }
+  .music-times { display: flex; justify-content: space-between; font-size: 10px; color: var(--text-dim); font-family: var(--font-mono); }
+  .music-controls { display: flex; align-items: center; gap: 16px; }
+  .music-ctrl-btn {
+    width: 32px; height: 32px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 50%;
+    cursor: pointer;
+    background: transparent;
+    border: 1px solid transparent;
+    transition: var(--transition);
+    color: var(--text-dim);
+  }
+  .music-ctrl-btn:hover { background: var(--bg-hover); color: var(--text); }
+  .music-ctrl-btn.play {
+    width: 44px; height: 44px;
+    background: var(--yellow);
+    border-color: var(--yellow);
+    color: #000;
+  }
+  .music-ctrl-btn.play:hover { background: var(--yellow-bright); }
+  .music-ctrl-btn svg { width: 16px; height: 16px; }
+  .music-ctrl-btn.play svg { width: 20px; height: 20px; }
+
+  /* ABOUT */
+  .about-content {
+    flex: 1;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 24px;
+    gap: 12px;
+    background: linear-gradient(135deg, #060606, #0A0800);
+  }
+  .about-logo-big {
+    width: 80px; height: 80px;
+    background: var(--yellow);
+    border-radius: 20px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 30px var(--yellow-glow);
+  }
+  .about-logo-big svg { width: 50px; height: 50px; }
+  .about-name { font-size: 28px; font-weight: 800; color: var(--yellow); letter-spacing: 4px; }
+  .about-version { font-size: 12px; color: var(--text-dim); }
+  .about-tagline { font-size: 12px; color: var(--text-dim); text-align: center; max-width: 280px; }
+  .about-stats {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 8px; width: 100%; max-width: 340px; margin-top: 8px;
+  }
+  .about-stat {
+    background: #0A0A0A;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px;
+    text-align: center;
+  }
+  .about-stat-val { font-size: 18px; font-weight: 700; color: var(--yellow); font-family: var(--font-mono); }
+  .about-stat-label { font-size: 9px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; }
+</style>
+</head>
+<body>
+
+<!-- BOOT -->
+<div id="boot-screen">
+  <div class="boot-logo">
+    <svg viewBox="0 0 50 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M28 6L10 28H24L22 44L40 22H26L28 6Z" fill="#000" stroke="#000" stroke-width="1"/>
+    </svg>
+  </div>
+  <div class="boot-title">VOLT OS</div>
+  <div class="boot-sub">ENERGIZED COMPUTING</div>
+  <div class="boot-progress"><div class="boot-progress-fill"></div></div>
+</div>
+
+<!-- DESKTOP -->
+<div id="desktop">
+  <div id="desktop-grid"></div>
+  <div id="weather-widget">
+    <div class="weather-temp" id="w-temp">22°C</div>
+    <div class="weather-desc" id="w-desc">Sunny</div>
+  </div>
+</div>
+
+<!-- TASKBAR -->
+<div id="taskbar">
+  <button id="start-btn" title="VOLT Menu">
+    <svg viewBox="0 0 18 18" fill="none">
+      <path d="M10 2L3 10H8L7 16L15 8H10L10 2Z" fill="#000"/>
+    </svg>
+  </button>
+  <div class="taskbar-divider"></div>
+  <div id="taskbar-tasks"></div>
+  <div id="taskbar-right">
+    <div id="clock">00:00:00</div>
+  </div>
+</div>
+
+<!-- START MENU -->
+<div id="start-menu">
+  <div id="start-header">
+    <div id="start-logo">
+      <svg viewBox="0 0 22 22" fill="none">
+        <path d="M12 2L4 12H10L8 20L18 10H12L12 2Z" fill="#000"/>
+      </svg>
+    </div>
+    <div>
+      <div id="start-title">VOLT OS</div>
+      <div id="start-subtitle">ENERGIZED COMPUTING</div>
+    </div>
+  </div>
+  <div id="start-search"><input id="app-search" placeholder="Search apps..." autocomplete="off"/></div>
+  <div id="start-apps"></div>
+  <div id="start-footer">
+    <button class="start-footer-btn" onclick="OS.showSettings()">
+      <svg viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="2.5" stroke="#888" stroke-width="1.2"/><path d="M7 1v2M7 11v2M1 7h2M11 7h2M2.9 2.9l1.4 1.4M9.7 9.7l1.4 1.4M2.9 11.1l1.4-1.4M9.7 4.3l1.4-1.4" stroke="#888" stroke-width="1.2" stroke-linecap="round"/></svg>
+      Settings
+    </button>
+    <button class="start-footer-btn" onclick="OS.shutdown()">
+      <svg viewBox="0 0 14 14" fill="none"><path d="M7 2v5M4 3.5A5 5 0 1 0 10 3.5" stroke="#888" stroke-width="1.4" stroke-linecap="round"/></svg>
+      Shutdown
+    </button>
+  </div>
+</div>
+
+<!-- CONTEXT MENUS -->
+<div class="ctx-menu" id="desktop-ctx">
+  <div class="ctx-item" onclick="OS.apps.fileManager.open()">
+    <svg viewBox="0 0 14 14" fill="none"><path d="M1 3h5l1 1.5H13v8H1V3z" stroke="#FFD700" stroke-width="1.2" stroke-linejoin="round"/></svg>
+    Open File Manager
+  </div>
+  <div class="ctx-item" onclick="OS.apps.terminal.open()">
+    <svg viewBox="0 0 14 14" fill="none"><rect x="1" y="2" width="12" height="10" rx="2" stroke="#FFD700" stroke-width="1.2"/><path d="M3.5 5.5L6 7.5 3.5 9.5M7 9.5h3.5" stroke="#FFD700" stroke-width="1.2" stroke-linecap="round"/></svg>
+    Open Terminal
+  </div>
+  <div class="ctx-sep"></div>
+  <div class="ctx-item" onclick="OS.newFolderOnDesktop()">
+    <svg viewBox="0 0 14 14" fill="none"><path d="M1 3h5l1 1.5H13v8H1V3z" stroke="#888" stroke-width="1.2" stroke-linejoin="round"/><path d="M7 6.5v4M5 8.5h4" stroke="#888" stroke-width="1.2" stroke-linecap="round"/></svg>
+    New Folder
+  </div>
+  <div class="ctx-item" onclick="OS.newFileOnDesktop()">
+    <svg viewBox="0 0 14 14" fill="none"><path d="M3 1h6l4 4v8H3V1z" stroke="#888" stroke-width="1.2" stroke-linejoin="round"/><path d="M9 1v4h4M7 6v4M5 8h4" stroke="#888" stroke-width="1.2" stroke-linecap="round"/></svg>
+    New File
+  </div>
+  <div class="ctx-sep"></div>
+  <div class="ctx-item" onclick="OS.apps.settings.open()">
+    <svg viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="2.5" stroke="#888" stroke-width="1.2"/><path d="M7 1v2M7 11v2M1 7h2M11 7h2" stroke="#888" stroke-width="1.2" stroke-linecap="round"/></svg>
+    Display Settings
+  </div>
+</div>
+
+<div class="ctx-menu" id="file-ctx">
+  <div class="ctx-item" id="ctx-open">
+    <svg viewBox="0 0 14 14" fill="none"><path d="M2 2h4l1 1.5H12v8H2V2z" stroke="#FFD700" stroke-width="1.2" stroke-linejoin="round"/></svg>
+    Open
+  </div>
+  <div class="ctx-item" id="ctx-rename">
+    <svg viewBox="0 0 14 14" fill="none"><path d="M9.5 2.5l2 2-6 6H3.5v-2l6-6z" stroke="#888" stroke-width="1.2" stroke-linejoin="round"/></svg>
+    Rename
+  </div>
+  <div class="ctx-sep"></div>
+  <div class="ctx-item" id="ctx-copy">
+    <svg viewBox="0 0 14 14" fill="none"><rect x="4" y="4" width="9" height="9" rx="1.5" stroke="#888" stroke-width="1.2"/><path d="M2 10V2h8" stroke="#888" stroke-width="1.2" stroke-linecap="round"/></svg>
+    Copy
+  </div>
+  <div class="ctx-item" id="ctx-cut">
+    <svg viewBox="0 0 14 14" fill="none"><path d="M3 3l8 8M11 3L3 11" stroke="#888" stroke-width="1.2" stroke-linecap="round"/></svg>
+    Cut
+  </div>
+  <div class="ctx-item" id="ctx-paste" style="display:none">
+    <svg viewBox="0 0 14 14" fill="none"><rect x="2" y="4" width="9" height="9" rx="1.5" stroke="#888" stroke-width="1.2"/><path d="M5 4V2h4v2" stroke="#888" stroke-width="1.2" stroke-linecap="round"/></svg>
+    Paste
+  </div>
+  <div class="ctx-sep"></div>
+  <div class="ctx-item danger" id="ctx-delete">
+    <svg viewBox="0 0 14 14" fill="none"><path d="M2 4h10M5 4V2h4v2M4 4v8h6V4" stroke="#FF4444" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    Delete
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal" id="modal">
+    <div class="modal-title" id="modal-title"></div>
+    <div class="modal-body" id="modal-body"></div>
+    <input class="modal-input" id="modal-input" style="display:none"/>
+    <div class="modal-footer" id="modal-footer"></div>
+  </div>
+</div>
+
+<!-- NOTIFICATIONS -->
+<div id="notifications"></div>
+
+<!-- SELECTION -->
+<div class="selection-rect" id="selection-rect" style="display:none"></div>
+
+<script>
+// ============================================================
+// VOLT OS - Core System
+// ============================================================
+
+const OS = (() => {
+
+// ============================================================
+// FILESYSTEM
+// ============================================================
+const FS = (() => {
+  const KEY = 'volt_fs_v1';
+  const META_KEY = 'volt_meta_v1';
+  
+  let tree = null;
+  let meta = null;
+
+  function defaultTree() {
+    const now = Date.now();
+    return {
+      '/': {
+        type: 'dir',
+        created: now, modified: now,
+        children: {
+          'home': {
+            type: 'dir', created: now, modified: now,
+            children: {
+              'Documents': { type: 'dir', created: now, modified: now, children: {} },
+              'Pictures': { type: 'dir', created: now, modified: now, children: {} },
+              'Music': { type: 'dir', created: now, modified: now, children: {} },
+              'Downloads': { type: 'dir', created: now, modified: now, children: {} },
+              'Desktop': { type: 'dir', created: now, modified: now, children: {} },
+            }
+          },
+          'tmp': { type: 'dir', created: now, modified: now, children: {} },
+          'system': {
+            type: 'dir', created: now, modified: now,
+            children: {
+              'README.txt': {
+                type: 'file', created: now, modified: now,
+                content: `VOLT OS v1.0\n==============\n\nWelcome to VOLT OS - the most energized web operating system.\n\nFeatures:\n- Robust localStorage filesystem\n- Multi-window management\n- Terminal with full filesystem access\n- Text editor with syntax highlighting\n- File manager with grid/list views\n- Paint application\n- System monitor\n- Calculator\n- Music player\n- Settings panel\n\nHotkeys:\n- Click & drag windows to move\n- Double-click titlebar to maximize\n- Right-click desktop for context menu\n- Right-click files for file operations\n\nFilesystem:\n- Tree-based structure in localStorage\n- Full CRUD operations\n- Metadata (created/modified timestamps)\n- Copy, cut, paste, rename, delete\n\nEnjoy VOLT OS!`
+              }
+            }
+          }
+        }
+      }
+    };
+  }
+
+  function defaultMeta() {
+    return {
+      desktopItems: [
+        { name: 'Documents', path: '/home/Documents', app: 'fileManager' },
+        { name: 'Pictures', path: '/home/Pictures', app: 'fileManager' },
+        { name: 'Terminal', path: null, app: 'terminal' },
+        { name: 'Text Editor', path: null, app: 'textEditor' },
+        { name: 'System Monitor', path: null, app: 'sysMonitor' },
+        { name: 'About', path: null, app: 'about' },
+      ],
+      wallpaper: 'default',
+      volume: 80,
+      userName: 'volt',
+    };
+  }
+
+  function load() {
+    try {
+      const raw = localStorage.getItem(KEY);
+      tree = raw ? JSON.parse(raw) : defaultTree();
+    } catch(e) { tree = defaultTree(); }
+    try {
+      const rawM = localStorage.getItem(META_KEY);
+      meta = rawM ? JSON.parse(rawM) : defaultMeta();
+    } catch(e) { meta = defaultMeta(); }
+  }
+
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(tree)); } catch(e) { notify('Storage full', 'Could not save filesystem', 'error'); }
+    try { localStorage.setItem(META_KEY, JSON.stringify(meta)); } catch(e) {}
+  }
+
+  function parsePath(path) {
+    if (!path || path === '/') return [];
+    return path.replace(/^\//, '').replace(/\/$/, '').split('/').filter(Boolean);
+  }
+
+  function getNode(path) {
+    if (path === '/') return tree['/'];
+    const parts = parsePath(path);
+    let node = tree['/'];
+    for (const p of parts) {
+      if (!node || node.type !== 'dir' || !node.children[p]) return null;
+      node = node.children[p];
+    }
+    return node;
+  }
+
+  function getParentAndName(path) {
+    const parts = parsePath(path);
+    if (!parts.length) return { parent: null, name: '' };
+    const name = parts.pop();
+    const parentPath = '/' + parts.join('/');
+    return { parent: getNode(parentPath || '/'), name, parentPath: parentPath || '/' };
+  }
+
+  function mkdir(path) {
+    const { parent, name, parentPath } = getParentAndName(path);
+    if (!parent || parent.type !== 'dir') return { ok: false, err: 'Parent not found' };
+    if (parent.children[name]) return { ok: false, err: 'Already exists' };
+    const now = Date.now();
+    parent.children[name] = { type: 'dir', created: now, modified: now, children: {} };
+    parent.modified = now;
+    save();
+    return { ok: true };
+  }
+
+  function writeFile(path, content = '') {
+    const { parent, name, parentPath } = getParentAndName(path);
+    if (!parent || parent.type !== 'dir') return { ok: false, err: 'Parent not found' };
+    const now = Date.now();
+    if (parent.children[name]) {
+      parent.children[name].content = content;
+      parent.children[name].modified = now;
+    } else {
+      parent.children[name] = { type: 'file', created: now, modified: now, content };
+    }
+    parent.modified = now;
+    save();
+    return { ok: true };
+  }
+
+  function readFile(path) {
+    const node = getNode(path);
+    if (!node || node.type !== 'file') return { ok: false, err: 'Not a file' };
+    return { ok: true, content: node.content || '' };
+  }
+
+  function rm(path) {
+    const { parent, name } = getParentAndName(path);
+    if (!parent || !parent.children[name]) return { ok: false, err: 'Not found' };
+    delete parent.children[name];
+    parent.modified = Date.now();
+    save();
+    return { ok: true };
+  }
+
+  function rename(path, newName) {
+    const { parent, name } = getParentAndName(path);
+    if (!parent || !parent.children[name]) return { ok: false, err: 'Not found' };
+    if (parent.children[newName]) return { ok: false, err: 'Already exists' };
+    parent.children[newName] = parent.children[name];
+    parent.children[newName].modified = Date.now();
+    delete parent.children[name];
+    parent.modified = Date.now();
+    save();
+    return { ok: true };
+  }
+
+  function copy(srcPath, dstPath) {
+    const srcNode = getNode(srcPath);
+    if (!srcNode) return { ok: false, err: 'Source not found' };
+    const { parent, name } = getParentAndName(dstPath);
+    if (!parent) return { ok: false, err: 'Destination parent not found' };
+    const now = Date.now();
+    const cloned = JSON.parse(JSON.stringify(srcNode));
+    cloned.modified = now;
+    parent.children[name] = cloned;
+    parent.modified = now;
+    save();
+    return { ok: true };
+  }
+
+  function move(srcPath, dstPath) {
+    const r = copy(srcPath, dstPath);
+    if (!r.ok) return r;
+    return rm(srcPath);
+  }
+
+  function ls(path) {
+    const node = getNode(path);
+    if (!node || node.type !== 'dir') return { ok: false, err: 'Not a directory' };
+    const entries = Object.entries(node.children).map(([name, n]) => ({
+      name, type: n.type, created: n.created, modified: n.modified,
+      size: n.type === 'file' ? (n.content || '').length : null
+    }));
+    return { ok: true, entries };
+  }
+
+  function exists(path) { return !!getNode(path); }
+  function isDir(path) { const n = getNode(path); return !!(n && n.type === 'dir'); }
+
+  function getMeta() { return meta; }
+  function saveMeta(updates) { Object.assign(meta, updates); save(); }
+
+  function storageInfo() {
+    let used = 0;
+    try {
+      for (const k in localStorage) {
+        if (localStorage.hasOwnProperty(k)) used += localStorage[k].length + k.length;
+      }
+    } catch(e) {}
+    return { used, total: 5 * 1024 * 1024, usedBytes: used };
+  }
+
+  function du(path) {
+    const node = getNode(path);
+    if (!node) return 0;
+    if (node.type === 'file') return (node.content || '').length;
+    let total = 0;
+    for (const child in node.children) {
+      const childPath = path === '/' ? '/' + child : path + '/' + child;
+      total += du(childPath);
+    }
+    return total;
+  }
+
+  function find(dirPath, query) {
+    const results = [];
+    function walk(p) {
+      const node = getNode(p);
+      if (!node) return;
+      const name = p.split('/').pop();
+      if (name && name.toLowerCase().includes(query.toLowerCase())) results.push({ path: p, type: node.type });
+      if (node.type === 'dir') {
+        for (const child in node.children) {
+          walk((p === '/' ? '' : p) + '/' + child);
+        }
+      }
+    }
+    walk(dirPath);
+    return results;
+  }
+
+  load();
+  return { getNode, parsePath, mkdir, writeFile, readFile, rm, rename, copy, move, ls, exists, isDir, getMeta, saveMeta, storageInfo, du, find, save, load };
+})();
+
+// ============================================================
+// WINDOW MANAGER
+// ============================================================
+const WM = (() => {
+  let windows = [];
+  let zCounter = 100;
+  let activeWin = null;
+
+  function create({ id, title, icon, width = 700, height = 480, x, y, content, resizable = true, minWidth = 300, minHeight = 200 }) {
+    const existing = document.getElementById('win-' + id);
+    if (existing) { focus(id); return existing; }
+
+    const sw = window.innerWidth, sh = window.innerHeight - 40;
+    x = x ?? Math.max(20, Math.floor(Math.random() * (sw - width - 60)) + 20);
+    y = y ?? Math.max(20, Math.floor(Math.random() * (sh - height - 60)) + 20);
+
+    const win = document.createElement('div');
+    win.className = 'window';
+    win.id = 'win-' + id;
+    win.style.cssText = `left:${x}px;top:${y}px;width:${width}px;height:${height}px;z-index:${++zCounter}`;
+    win.dataset.id = id;
+    win.dataset.minWidth = minWidth;
+    win.dataset.minHeight = minHeight;
+
+    win.innerHTML = `
+      <div class="window-titlebar" data-win="${id}">
+        <div class="window-icon">${icon || defaultIcon()}</div>
+        <div class="window-title" id="wt-${id}">${title}</div>
+        <div class="window-controls">
+          <div class="wc-btn" onclick="WM.minimize('${id}')" title="Minimize">
+            <svg viewBox="0 0 10 10"><line x1="2" y1="5" x2="8" y2="5" stroke="#888" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </div>
+          <div class="wc-btn" onclick="WM.toggleMaximize('${id}')" title="Maximize">
+            <svg viewBox="0 0 10 10"><rect x="2" y="2" width="6" height="6" stroke="#888" stroke-width="1.2" fill="none" rx="1"/></svg>
+          </div>
+          <div class="wc-btn close" onclick="WM.close('${id}')" title="Close">
+            <svg viewBox="0 0 10 10"><line x1="2" y1="2" x2="8" y2="8" stroke="#888" stroke-width="1.5" stroke-linecap="round"/><line x1="8" y1="2" x2="2" y2="8" stroke="#888" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </div>
+        </div>
+      </div>
+      <div class="window-content" id="wc-${id}"></div>
+      ${resizable ? '<div class="window-resize" data-win="'+id+'"></div>' : ''}
+    `;
+
+    document.getElementById('desktop').appendChild(win);
+
+    const wc = document.getElementById('wc-' + id);
+    if (typeof content === 'string') wc.innerHTML = content;
+    else if (content instanceof Node) wc.appendChild(content);
+    else if (typeof content === 'function') content(wc);
+
+    setupDrag(win);
+    if (resizable) setupResize(win.querySelector('.window-resize'));
+
+    win.addEventListener('mousedown', () => focus(id));
+
+    windows.push({ id, title, icon, minimized: false, maximized: false, savedPos: null });
+    focus(id);
+    updateTaskbar();
+    return win;
+  }
+
+  function defaultIcon() {
+    return `<svg viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="14" height="14" rx="3" stroke="#FFD700" stroke-width="1.2"/></svg>`;
+  }
+
+  function focus(id) {
+    const win = document.getElementById('win-' + id);
+    if (!win) return;
+    document.querySelectorAll('.window').forEach(w => w.classList.remove('focused'));
+    win.style.zIndex = ++zCounter;
+    win.classList.add('focused');
+    activeWin = id;
+    updateTaskbar();
+  }
+
+  function close(id) {
+    const win = document.getElementById('win-' + id);
+    if (win) win.remove();
+    windows = windows.filter(w => w.id !== id);
+    if (activeWin === id) activeWin = windows.length ? windows[windows.length-1].id : null;
+    updateTaskbar();
+    // Cleanup app state
+    if (OS.appCleanup[id]) { OS.appCleanup[id](); delete OS.appCleanup[id]; }
+  }
+
+  function minimize(id) {
+    const win = document.getElementById('win-' + id);
+    if (!win) return;
+    const w = windows.find(w => w.id === id);
+    if (!w) return;
+    if (w.minimized) {
+      win.style.display = '';
+      w.minimized = false;
+      focus(id);
+    } else {
+      win.style.display = 'none';
+      w.minimized = true;
+      activeWin = null;
+    }
+    updateTaskbar();
+  }
+
+  function toggleMaximize(id) {
+    const win = document.getElementById('win-' + id);
+    const w = windows.find(w => w.id === id);
+    if (!win || !w) return;
+    if (w.maximized) {
+      win.classList.remove('maximized');
+      if (w.savedPos) {
+        const p = w.savedPos;
+        win.style.left = p.x + 'px'; win.style.top = p.y + 'px';
+        win.style.width = p.w + 'px'; win.style.height = p.h + 'px';
+      }
+      w.maximized = false;
+    } else {
+      w.savedPos = { x: parseInt(win.style.left), y: parseInt(win.style.top), w: parseInt(win.style.width), h: parseInt(win.style.height) };
+      win.classList.add('maximized');
+      w.maximized = true;
+    }
+  }
+
+  function setTitle(id, title) {
+    const el = document.getElementById('wt-' + id);
+    if (el) el.textContent = title;
+    const w = windows.find(w => w.id === id);
+    if (w) w.title = title;
+    updateTaskbar();
+  }
+
+  function updateTaskbar() {
+    const tasks = document.getElementById('taskbar-tasks');
+    tasks.innerHTML = '';
+    windows.forEach(w => {
+      const btn = document.createElement('div');
+      btn.className = 'task-btn' + (activeWin === w.id && !w.minimized ? ' active' : '');
+      btn.innerHTML = `<span class="task-label">${w.title}</span>`;
+      btn.onclick = () => {
+        if (w.minimized) { minimize(w.id); }
+        else if (activeWin === w.id) { minimize(w.id); }
+        else { const win = document.getElementById('win-'+w.id); if (win) { win.style.display=''; w.minimized=false; } focus(w.id); }
+      };
+      tasks.appendChild(btn);
+    });
+  }
+
+  function setupDrag(win) {
+    const titlebar = win.querySelector('.window-titlebar');
+    let dragging = false, ox = 0, oy = 0;
+    titlebar.addEventListener('mousedown', (e) => {
+      if (e.target.closest('.window-controls')) return;
+      const w = windows.find(w => w.id === win.dataset.id);
+      if (w && w.maximized) return;
+      dragging = true;
+      ox = e.clientX - parseInt(win.style.left);
+      oy = e.clientY - parseInt(win.style.top);
+      e.preventDefault();
+    });
+    titlebar.addEventListener('dblclick', (e) => {
+      if (e.target.closest('.window-controls')) return;
+      toggleMaximize(win.dataset.id);
+    });
+    document.addEventListener('mousemove', (e) => {
+      if (!dragging) return;
+      const nx = e.clientX - ox;
+      const ny = Math.max(0, e.clientY - oy);
+      win.style.left = nx + 'px';
+      win.style.top = ny + 'px';
+    });
+    document.addEventListener('mouseup', () => { dragging = false; });
+  }
+
+  function setupResize(handle) {
+    if (!handle) return;
+    let resizing = false, startX, startY, startW, startH;
+    const win = handle.closest('.window');
+    handle.addEventListener('mousedown', (e) => {
+      resizing = true;
+      startX = e.clientX; startY = e.clientY;
+      startW = parseInt(win.style.width);
+      startH = parseInt(win.style.height);
+      e.preventDefault(); e.stopPropagation();
+    });
+    document.addEventListener('mousemove', (e) => {
+      if (!resizing) return;
+      const nw = Math.max(parseInt(win.dataset.minWidth), startW + e.clientX - startX);
+      const nh = Math.max(parseInt(win.dataset.minHeight), startH + e.clientY - startY);
+      win.style.width = nw + 'px';
+      win.style.height = nh + 'px';
+      win.dispatchEvent(new CustomEvent('wm-resize'));
+    });
+    document.addEventListener('mouseup', () => { resizing = false; });
+  }
+
+  function getActive() { return activeWin; }
+  function getAll() { return windows; }
+  function getEl(id) { return document.getElementById('win-' + id); }
+
+  return { create, close, minimize, toggleMaximize, focus, setTitle, updateTaskbar, getActive, getAll, getEl };
+})();
+
+// ============================================================
+// NOTIFICATIONS
+// ============================================================
+function notify(title, msg = '', type = 'info') {
+  const icons = {
+    info: `<svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="#66AAFF" stroke-width="1.3"/><path d="M8 7v5M8 5.5V5" stroke="#66AAFF" stroke-width="1.5" stroke-linecap="round"/></svg>`,
+    success: `<svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="#66FF88" stroke-width="1.3"/><path d="M5 8l2 2 4-4" stroke="#66FF88" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+    error: `<svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="#FF6666" stroke-width="1.3"/><path d="M5.5 5.5l5 5M10.5 5.5l-5 5" stroke="#FF6666" stroke-width="1.5" stroke-linecap="round"/></svg>`,
+    warning: `<svg viewBox="0 0 16 16" fill="none"><path d="M8 2L14.5 13.5H1.5L8 2z" stroke="#FFD700" stroke-width="1.3" stroke-linejoin="round"/><path d="M8 7v3.5M8 12.5v.5" stroke="#FFD700" stroke-width="1.5" stroke-linecap="round"/></svg>`,
+  };
+  const el = document.createElement('div');
+  el.className = 'notif';
+  el.innerHTML = `${icons[type] || icons.info}<div><div class="notif-title">${title}</div>${msg ? `<div class="notif-msg">${msg}</div>` : ''}</div>`;
+  document.getElementById('notifications').appendChild(el);
+  setTimeout(() => { el.style.animation = 'notifOut 0.3s ease forwards'; setTimeout(() => el.remove(), 300); }, 3000);
+}
+
+// ============================================================
+// MODAL
+// ============================================================
+function modal({ title, body, input, inputVal = '', inputPlaceholder = '', buttons }) {
+  return new Promise(resolve => {
+    document.getElementById('modal-title').textContent = title;
+    document.getElementById('modal-body').textContent = body || '';
+    document.getElementById('modal-body').style.display = body ? '' : 'none';
+    const inp = document.getElementById('modal-input');
+    if (input) {
+      inp.style.display = '';
+      inp.value = inputVal;
+      inp.placeholder = inputPlaceholder;
+      setTimeout(() => { inp.focus(); inp.select(); }, 50);
+    } else { inp.style.display = 'none'; }
+    const footer = document.getElementById('modal-footer');
+    footer.innerHTML = '';
+    buttons.forEach(b => {
+      const btn = document.createElement('button');
+      btn.className = 'btn' + (b.primary ? ' primary' : '') + (b.danger ? ' danger' : '');
+      btn.textContent = b.label;
+      btn.onclick = () => {
+        document.getElementById('modal-overlay').classList.remove('show');
+        resolve(b.value !== undefined ? b.value : (input ? inp.value : b.label));
+      };
+      footer.appendChild(btn);
+    });
+    inp.onkeydown = (e) => { if (e.key === 'Enter') { footer.querySelector('.btn.primary')?.click(); } };
+    document.getElementById('modal-overlay').classList.add('show');
+    document.getElementById('modal-overlay').onclick = (e) => {
+      if (e.target.id === 'modal-overlay') {
+        document.getElementById('modal-overlay').classList.remove('show');
+        resolve(null);
+      }
+    };
+  });
+}
+
+// ============================================================
+// APPS
+// ============================================================
+const appCleanup = {};
+
+// SVG ICONS
+const ICONS = {
+  folder: `<svg viewBox="0 0 32 32" fill="none"><path d="M3 8h10l2 2.5H29v18H3V8z" fill="#1A1400" stroke="#FFD700" stroke-width="1.5" stroke-linejoin="round"/><path d="M3 10.5h26" stroke="#FFD700" stroke-width="1" opacity=".5"/></svg>`,
+  file: `<svg viewBox="0 0 32 32" fill="none"><path d="M7 3h13l7 7v19H7V3z" fill="#0D0D0D" stroke="#888" stroke-width="1.5" stroke-linejoin="round"/><path d="M20 3v7h7" stroke="#888" stroke-width="1.5" stroke-linejoin="round"/></svg>`,
+  fileTxt: `<svg viewBox="0 0 32 32" fill="none"><path d="M7 3h13l7 7v19H7V3z" fill="#0D0D0D" stroke="#FFD700" stroke-width="1.5" stroke-linejoin="round"/><path d="M20 3v7h7" stroke="#FFD700" stroke-width="1.5"/><path d="M11 17h10M11 21h7" stroke="#FFD700" stroke-width="1.3" stroke-linecap="round"/></svg>`,
+  fileImg: `<svg viewBox="0 0 32 32" fill="none"><path d="M7 3h13l7 7v19H7V3z" fill="#0D0D0D" stroke="#66AAFF" stroke-width="1.5" stroke-linejoin="round"/><path d="M20 3v7h7" stroke="#66AAFF" stroke-width="1.5"/><circle cx="13" cy="17" r="2" fill="#66AAFF"/><path d="M9 26l5-5 4 4 2-2 5 5" stroke="#66AAFF" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  terminal: `<svg viewBox="0 0 32 32" fill="none"><rect x="2" y="4" width="28" height="24" rx="4" fill="#060606" stroke="#FFD700" stroke-width="1.5"/><path d="M8 13l5 4.5L8 22" stroke="#FFD700" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 22h7" stroke="#FFD700" stroke-width="1.8" stroke-linecap="round"/></svg>`,
+  editor: `<svg viewBox="0 0 32 32" fill="none"><rect x="2" y="2" width="24" height="28" rx="3" fill="#0D0D0D" stroke="#FFD700" stroke-width="1.5"/><path d="M22 2v6l4-2-4 2v22" stroke="#FFD700" stroke-width="1" opacity=".5"/><path d="M7 10h12M7 15h12M7 20h8" stroke="#FFD700" stroke-width="1.3" stroke-linecap="round"/></svg>`,
+  fileManager: `<svg viewBox="0 0 32 32" fill="none"><path d="M2 8h12l2 2.5H30v18H2V8z" fill="#0D0D0D" stroke="#FFD700" stroke-width="1.5" stroke-linejoin="round"/></svg>`,
+  paint: `<svg viewBox="0 0 32 32" fill="none"><path d="M6 26c0-1.1.9-2 2-2a2 2 0 0 1 0 4c-1.1 0-2-.9-2-2z" fill="#FF6666"/><path d="M9 24L22 6" stroke="#888" stroke-width="2.5" stroke-linecap="round"/><circle cx="22" cy="6" r="3" fill="#66AAFF" stroke="#444" stroke-width="1"/></svg>`,
+  calculator: `<svg viewBox="0 0 32 32" fill="none"><rect x="4" y="2" width="24" height="28" rx="4" fill="#0D0D0D" stroke="#FFD700" stroke-width="1.5"/><rect x="8" y="7" width="16" height="5" rx="1.5" fill="#0A0A00" stroke="#FFD700" stroke-width="1"/><rect x="8" y="16" width="4" height="3" rx="1" fill="#333"/><rect x="14" y="16" width="4" height="3" rx="1" fill="#333"/><rect x="20" y="16" width="4" height="3" rx="1" fill="#FFD700"/><rect x="8" y="22" width="4" height="3" rx="1" fill="#333"/><rect x="14" y="22" width="4" height="3" rx="1" fill="#333"/><rect x="20" y="22" width="4" height="3" rx="1" fill="#FFD700"/></svg>`,
+  settings: `<svg viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="5" stroke="#FFD700" stroke-width="1.5"/><path d="M16 4v4M16 24v4M4 16h4M24 16h4M7.03 7.03l2.83 2.83M22.14 22.14l2.83 2.83M7.03 24.97l2.83-2.83M22.14 9.86l2.83-2.83" stroke="#FFD700" stroke-width="1.5" stroke-linecap="round"/></svg>`,
+  monitor: `<svg viewBox="0 0 32 32" fill="none"><rect x="2" y="3" width="28" height="20" rx="3" fill="#060606" stroke="#FFD700" stroke-width="1.5"/><path d="M10 28h12M16 23v5" stroke="#FFD700" stroke-width="1.5" stroke-linecap="round"/><path d="M7 8l4 4 4-4 4 4 4-4" stroke="#66FF88" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  music: `<svg viewBox="0 0 32 32" fill="none"><circle cx="11" cy="24" r="4" fill="#1A0A00" stroke="#FFD700" stroke-width="1.5"/><circle cx="25" cy="20" r="4" fill="#1A0A00" stroke="#FFD700" stroke-width="1.5"/><path d="M15 24V8l14-4v12" stroke="#FFD700" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  about: `<svg viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="13" fill="#0A0A00" stroke="#FFD700" stroke-width="1.5"/><path d="M16 14v8M16 11v-1" stroke="#FFD700" stroke-width="2" stroke-linecap="round"/></svg>`,
+  voltIcon: `<svg viewBox="0 0 16 16" fill="none"><path d="M9 1.5L3 9h5L7 14.5l6-7.5H9V1.5z" fill="#000"/></svg>`,
+};
+
+function getFileIcon(name, type, size = 32) {
+  if (type === 'dir') return ICONS.folder;
+  const ext = name.split('.').pop().toLowerCase();
+  if (['txt','md','log','csv','json','js','css','html','py','sh','c','cpp'].includes(ext)) return ICONS.fileTxt;
+  if (['png','jpg','jpeg','gif','bmp','svg','webp'].includes(ext)) return ICONS.fileImg;
+  return ICONS.file;
+}
+
+// ============================================================
+// FILE MANAGER APP
+// ============================================================
+const apps = {};
+
+apps.fileManager = {
+  viewMode: 'grid',
+  currentPath: '/home',
+  selected: null,
+  clipboard: null,
+
+  open(path) {
+    const self = apps.fileManager;
+    self.currentPath = path || '/home';
+    const winId = 'fileManager';
+
+    if (document.getElementById('win-fileManager')) {
+      self.navigate(self.currentPath);
+      WM.focus(winId);
+      return;
+    }
+
+    WM.create({
+      id: winId,
+      title: 'File Manager',
+      icon: ICONS.fileManager,
+      width: 760, height: 500,
+      content: (el) => { el.style.flexDirection='column'; el.style.display='flex'; self.buildUI(el); }
+    });
+  },
+
+  buildUI(el) {
+    const self = apps.fileManager;
+    el.innerHTML = `
+      <div class="fm-toolbar">
+        <button class="fm-btn" id="fm-back" onclick="apps.fileManager.goBack()">
+          <svg viewBox="0 0 13 13" fill="none"><path d="M8 2L3 6.5 8 11" stroke="#888" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Back
+        </button>
+        <button class="fm-btn" id="fm-up" onclick="apps.fileManager.goUp()">
+          <svg viewBox="0 0 13 13" fill="none"><path d="M2 8L6.5 3 11 8" stroke="#888" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Up
+        </button>
+        <button class="fm-btn" id="fm-refresh" onclick="apps.fileManager.refresh()">
+          <svg viewBox="0 0 13 13" fill="none"><path d="M10.5 6.5A4 4 0 1 1 6.5 2.5" stroke="#888" stroke-width="1.5" stroke-linecap="round"/><path d="M10.5 2.5v4h-4" stroke="#888" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Refresh
+        </button>
+        <button class="fm-btn" onclick="apps.fileManager.newFolder()">
+          <svg viewBox="0 0 13 13" fill="none"><path d="M1 3h5l1 1.5H12v8H1V3z" stroke="#888" stroke-width="1.2" stroke-linejoin="round"/><path d="M6.5 6.5v4M4.5 8.5h4" stroke="#888" stroke-width="1.2" stroke-linecap="round"/></svg>
+          New Folder
+        </button>
+        <button class="fm-btn" onclick="apps.fileManager.newFile()">
+          <svg viewBox="0 0 13 13" fill="none"><path d="M2 1h6l3 3v8H2V1z" stroke="#888" stroke-width="1.2" stroke-linejoin="round"/><path d="M6.5 5.5v4M4.5 7.5h4" stroke="#888" stroke-width="1.2" stroke-linecap="round"/></svg>
+          New File
+        </button>
+        <button class="fm-btn" id="fm-view-grid" onclick="apps.fileManager.setView('grid')">
+          <svg viewBox="0 0 13 13" fill="none"><rect x="1" y="1" width="4.5" height="4.5" rx="1" stroke="#888" stroke-width="1.2"/><rect x="7.5" y="1" width="4.5" height="4.5" rx="1" stroke="#888" stroke-width="1.2"/><rect x="1" y="7.5" width="4.5" height="4.5" rx="1" stroke="#888" stroke-width="1.2"/><rect x="7.5" y="7.5" width="4.5" height="4.5" rx="1" stroke="#888" stroke-width="1.2"/></svg>
+        </button>
+        <button class="fm-btn" id="fm-view-list" onclick="apps.fileManager.setView('list')">
+          <svg viewBox="0 0 13 13" fill="none"><path d="M4 3h8M4 6.5h8M4 10h8M1.5 3h.1M1.5 6.5h.1M1.5 10h.1" stroke="#888" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </button>
+        <div style="flex:1"></div>
+        <input id="fm-search" placeholder="Search..." style="background:#0A0A0A;border:1px solid #222;border-radius:5px;padding:4px 8px;color:#888;font-size:11px;outline:none;width:130px" oninput="apps.fileManager.search(this.value)">
+      </div>
+      <div class="fm-path" id="fm-path"></div>
+      <div class="fm-body">
+        <div class="fm-sidebar">
+          <div class="fm-sidebar-section">Bookmarks</div>
+          <div class="fm-sidebar-item" onclick="apps.fileManager.navigate('/')">
+            <svg viewBox="0 0 14 14" fill="none"><path d="M1 7L7 1l6 6" stroke="#888" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 5v7h3v-3h2v3h3V5" stroke="#888" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Root
+          </div>
+          <div class="fm-sidebar-item" onclick="apps.fileManager.navigate('/home')">
+            <svg viewBox="0 0 14 14" fill="none"><path d="M1 7L7 1l6 6" stroke="#FFD700" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 5v7h3v-3h2v3h3V5" stroke="#FFD700" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Home
+          </div>
+          <div class="fm-sidebar-item" onclick="apps.fileManager.navigate('/home/Documents')">
+            <svg viewBox="0 0 14 14" fill="none"><path d="M1 3h5l1 1.5H13v8H1V3z" stroke="#888" stroke-width="1.2" stroke-linejoin="round"/></svg>
+            Documents
+          </div>
+          <div class="fm-sidebar-item" onclick="apps.fileManager.navigate('/home/Pictures')">
+            <svg viewBox="0 0 14 14" fill="none"><path d="M1 3h5l1 1.5H13v8H1V3z" stroke="#888" stroke-width="1.2" stroke-linejoin="round"/></svg>
+            Pictures
+          </div>
+          <div class="fm-sidebar-item" onclick="apps.fileManager.navigate('/home/Music')">
+            <svg viewBox="0 0 14 14" fill="none"><path d="M1 3h5l1 1.5H13v8H1V3z" stroke="#888" stroke-width="1.2" stroke-linejoin="round"/></svg>
+            Music
+          </div>
+          <div class="fm-sidebar-item" onclick="apps.fileManager.navigate('/home/Downloads')">
+            <svg viewBox="0 0 14 14" fill="none"><path d="M1 3h5l1 1.5H13v8H1V3z" stroke="#888" stroke-width="1.2" stroke-linejoin="round"/></svg>
+            Downloads
+          </div>
+          <div class="fm-sidebar-section" style="margin-top:8px">System</div>
+          <div class="fm-sidebar-item" onclick="apps.fileManager.navigate('/tmp')">
+            <svg viewBox="0 0 14 14" fill="none"><path d="M1 3h5l1 1.5H13v8H1V3z" stroke="#888" stroke-width="1.2" stroke-linejoin="round"/></svg>
+            Tmp
+          </div>
+          <div class="fm-sidebar-item" onclick="apps.fileManager.navigate('/system')">
+            <svg viewBox="0 0 14 14" fill="none"><path d="M1 3h5l1 1.5H13v8H1V3z" stroke="#888" stroke-width="1.2" stroke-linejoin="round"/></svg>
+            System
+          </div>
+        </div>
+        <div class="fm-main" id="fm-main"></div>
+      </div>
+      <div class="fm-status" id="fm-status"></div>
+    `;
+    self.navigate(self.currentPath);
+  },
+
+  history: [],
+  histIdx: -1,
+
+  navigate(path) {
+    const self = apps.fileManager;
+    if (!FS.exists(path)) {
+      notify('File Manager', 'Path does not exist: ' + path, 'error');
+      return;
+    }
+    if (!FS.isDir(path)) {
+      // open file
+      self.openItem(path, 'file');
+      return;
+    }
+    self.currentPath = path;
+    self.selected = null;
+    if (self.histIdx < self.history.length - 1) self.history = self.history.slice(0, self.histIdx + 1);
+    self.history.push(path);
+    self.histIdx = self.history.length - 1;
+    self.render();
+  },
+
+  goBack() {
+    const self = apps.fileManager;
+    if (self.histIdx > 0) { self.histIdx--; self.currentPath = self.history[self.histIdx]; self.render(); }
+  },
+  goUp() {
+    const self = apps.fileManager;
+    const parts = self.currentPath.replace(/\/$/, '').split('/');
+    if (parts.length > 1) { parts.pop(); self.navigate(parts.join('/') || '/'); }
+  },
+  refresh() { apps.fileManager.render(); },
+
+  setView(mode) {
+    const self = apps.fileManager;
+    self.viewMode = mode;
+    self.render();
+  },
+
+  render() {
+    const self = apps.fileManager;
+    if (!document.getElementById('fm-main')) return;
+
+    // Path breadcrumbs
+    const pathEl = document.getElementById('fm-path');
+    if (pathEl) {
+      const parts = self.currentPath === '/' ? [''] : self.currentPath.split('/');
+      let html = '';
+      let built = '';
+      parts.forEach((p, i) => {
+        const label = p || 'root';
+        built = i === 0 ? '/' : built + '/' + p;
+        const isLast = i === parts.length - 1;
+        const path = built;
+        html += `<span class="fm-crumb ${isLast?'last':''}" onclick="${isLast?'':''}" data-p="${path}">${label}</span>`;
+        if (!isLast) html += `<span class="fm-crumb-sep">/</span>`;
+      });
+      pathEl.innerHTML = html;
+      pathEl.querySelectorAll('.fm-crumb:not(.last)').forEach(c => {
+        c.onclick = () => self.navigate(c.dataset.p);
+      });
+    }
+
+    const res = FS.ls(self.currentPath);
+    const main = document.getElementById('fm-main');
+    if (!res.ok || !main) return;
+
+    const entries = res.entries.sort((a, b) => {
+      if (a.type !== b.type) return a.type === 'dir' ? -1 : 1;
+      return a.name.localeCompare(b.name);
+    });
+
+    main.innerHTML = '';
+    if (!entries.length) {
+      main.innerHTML = `<div class="app-empty"><svg viewBox="0 0 32 32" fill="none"><path d="M2 8h12l2 2.5H30v18H2V8z" stroke="#333" stroke-width="1.5"/></svg><div class="app-empty-title">Empty Folder</div></div>`;
+    } else {
+      if (self.viewMode === 'grid') {
+        const grid = document.createElement('div');
+        grid.className = 'fm-grid';
+        entries.forEach(e => {
+          const item = document.createElement('div');
+          item.className = 'fm-item' + (self.selected === e.name ? ' selected' : '');
+          item.innerHTML = `${getFileIcon(e.name, e.type)}<div class="fm-item-name">${e.name}</div>`;
+          item.onclick = (ev) => { self.selected = e.name; self.render(); ev.stopPropagation(); };
+          item.ondblclick = () => self.openItem(self.currentPath + '/' + e.name, e.type);
+          item.oncontextmenu = (ev) => { ev.preventDefault(); self.selected = e.name; self.render(); showFileCtx(ev, self.currentPath + '/' + e.name, e.type); };
+          grid.appendChild(item);
+        });
+        main.appendChild(grid);
+      } else {
+        const list = document.createElement('div');
+        list.className = 'fm-list';
+        entries.forEach(e => {
+          const item = document.createElement('div');
+          item.className = 'fm-list-item' + (self.selected === e.name ? ' selected' : '');
+          const size = e.type === 'file' ? formatSize(e.size) : '--';
+          const mod = e.modified ? new Date(e.modified).toLocaleDateString() : '';
+          item.innerHTML = `${getFileIcon(e.name, e.type)}<span class="fm-list-name">${e.name}</span><span class="fm-list-meta">${mod}</span><span class="fm-list-meta">${size}</span>`;
+          item.onclick = (ev) => { self.selected = e.name; self.render(); ev.stopPropagation(); };
+          item.ondblclick = () => self.openItem(self.currentPath + '/' + e.name, e.type);
+          item.oncontextmenu = (ev) => { ev.preventDefault(); self.selected = e.name; self.render(); showFileCtx(ev, self.currentPath + '/' + e.name, e.type); };
+          list.appendChild(item);
+        });
+        main.appendChild(list);
+      }
+    }
+
+    // Status bar
+    const st = document.getElementById('fm-status');
+    if (st) {
+      const info = FS.storageInfo();
+      st.textContent = `${entries.length} items  |  Storage: ${formatSize(info.usedBytes)} used`;
+    }
+
+    // View buttons
+    const gb = document.getElementById('fm-view-grid');
+    const lb = document.getElementById('fm-view-list');
+    if (gb) gb.classList.toggle('active', self.viewMode === 'grid');
+    if (lb) lb.classList.toggle('active', self.viewMode === 'list');
+
+    WM.setTitle('fileManager', 'File Manager - ' + self.currentPath);
+  },
+
+  search(q) {
+    const self = apps.fileManager;
+    if (!q) { self.render(); return; }
+    const results = FS.find(self.currentPath, q);
+    const main = document.getElementById('fm-main');
+    if (!main) return;
+    main.innerHTML = '';
+    if (!results.length) {
+      main.innerHTML = `<div class="app-empty"><div class="app-empty-title">No results for "${q}"</div></div>`;
+      return;
+    }
+    const list = document.createElement('div');
+    list.className = 'fm-list';
+    results.forEach(r => {
+      const name = r.path.split('/').pop();
+      const item = document.createElement('div');
+      item.className = 'fm-list-item';
+      item.innerHTML = `${getFileIcon(name, r.type)}<span class="fm-list-name">${r.path}</span>`;
+      item.ondblclick = () => {
+        if (r.type === 'dir') self.navigate(r.path);
+        else self.openItem(r.path, r.type);
+      };
+      list.appendChild(item);
+    });
+    main.appendChild(list);
+  },
+
+  openItem(path, type) {
+    if (type === 'dir') { apps.fileManager.navigate(path); return; }
+    const name = path.split('/').pop();
+    const ext = name.split('.').pop().toLowerCase();
+    if (['txt','md','log','json','js','css','html','py','sh','c','cpp','csv'].includes(ext)) {
+      apps.textEditor.open(path);
+    } else {
+      apps.textEditor.open(path);
+    }
+  },
+
+  async newFolder() {
+    const self = apps.fileManager;
+    const name = await modal({ title: 'New Folder', input: true, inputPlaceholder: 'Folder name', buttons: [{ label: 'Cancel' }, { label: 'Create', primary: true }] });
+    if (!name || name === 'Cancel' || name === 'Create') return;
+    const r = FS.mkdir(self.currentPath + '/' + name);
+    if (r.ok) { notify('Folder Created', name, 'success'); self.render(); }
+    else notify('Error', r.err, 'error');
+  },
+
+  async newFile() {
+    const self = apps.fileManager;
+    const name = await modal({ title: 'New File', input: true, inputPlaceholder: 'File name (e.g. notes.txt)', inputVal: 'untitled.txt', buttons: [{ label: 'Cancel' }, { label: 'Create', primary: true }] });
+    if (!name || name === 'Cancel' || name === 'Create') return;
+    const r = FS.writeFile(self.currentPath + '/' + name, '');
+    if (r.ok) { notify('File Created', name, 'success'); self.render(); apps.textEditor.open(self.currentPath + '/' + name); }
+    else notify('Error', r.err, 'error');
+  },
+};
+
+// ============================================================
+// TEXT EDITOR APP
+// ============================================================
+apps.textEditor = {
+  currentFile: null,
+  modified: false,
+
+  open(path) {
+    const self = apps.textEditor;
+    const winId = 'textEditor';
+    const existing = document.getElementById('win-textEditor');
+
+    if (!path) {
+      if (!existing) {
+        WM.create({
+          id: winId, title: 'Text Editor', icon: ICONS.editor,
+          width: 680, height: 520,
+          content: (el) => { el.style.flexDirection='column'; el.style.display='flex'; self.buildUI(el, null, ''); }
+        });
+      } else WM.focus(winId);
+      return;
+    }
+
+    const res = FS.readFile(path);
+    const content = res.ok ? res.content : '';
+    const name = path.split('/').pop();
+
+    if (!existing) {
+      WM.create({
+        id: winId, title: `${name} - Text Editor`, icon: ICONS.editor,
+        width: 680, height: 520,
+        content: (el) => { el.style.flexDirection='column'; el.style.display='flex'; self.buildUI(el, path, content); }
+      });
+    } else {
+      if (self.modified) {
+        self.promptSave().then(() => { self.loadFile(path, content); });
+      } else { self.loadFile(path, content); WM.focus(winId); }
+    }
+  },
+
+  buildUI(el, path, content) {
+    const self = apps.textEditor;
+    self.currentFile = path;
+    self.modified = false;
+
+    el.innerHTML = `
+      <div class="editor-toolbar">
+        <button class="fm-btn" onclick="apps.textEditor.save()">
+          <svg viewBox="0 0 13 13" fill="none"><path d="M2 2h7l2 2v8H2V2z" stroke="#888" stroke-width="1.2" stroke-linejoin="round"/><rect x="4" y="2" width="4" height="3" fill="#888"/><rect x="3" y="7" width="7" height="4" rx=".5" stroke="#888" stroke-width="1" fill="none"/></svg>
+          Save
+        </button>
+        <button class="fm-btn" onclick="apps.textEditor.saveAs()">
+          <svg viewBox="0 0 13 13" fill="none"><path d="M2 2h7l2 2v8H2V2z" stroke="#888" stroke-width="1.2" stroke-linejoin="round"/><path d="M9 11V8M7.5 10L9 11.5 10.5 10" stroke="#888" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Save As
+        </button>
+        <button class="fm-btn" onclick="apps.textEditor.openFile()">
+          <svg viewBox="0 0 13 13" fill="none"><path d="M1 3h5l1 1.5H12v7H1V3z" stroke="#888" stroke-width="1.2" stroke-linejoin="round"/></svg>
+          Open
+        </button>
+        <button class="fm-btn" onclick="apps.textEditor.newFile()">
+          <svg viewBox="0 0 13 13" fill="none"><path d="M2 1h6l3 3v8H2V1z" stroke="#888" stroke-width="1.2" stroke-linejoin="round"/><path d="M6.5 5v4M4.5 7h4" stroke="#888" stroke-width="1.2" stroke-linecap="round"/></svg>
+          New
+        </button>
+        <div class="editor-info" id="editor-info">${path || 'Untitled'}</div>
+      </div>
+      <div class="editor-area">
+        <div class="editor-gutter" id="editor-gutter">1</div>
+        <textarea class="editor-textarea" id="editor-textarea" spellcheck="false" placeholder="Start typing...">${escapeHTML(content)}</textarea>
+      </div>
+      <div class="editor-status">
+        <span id="editor-pos">Ln 1, Col 1</span>
+        <span id="editor-chars">0 chars</span>
+        <span id="editor-lines">1 lines</span>
+        <span id="editor-modified" style="color:var(--yellow);display:none">MODIFIED</span>
+      </div>
+    `;
+
+    const ta = document.getElementById('editor-textarea');
+    const gutter = document.getElementById('editor-gutter');
+
+    function updateGutter() {
+      const lines = ta.value.split('\n').length;
+      let html = '';
+      for (let i = 1; i <= lines; i++) html += i + '\n';
+      gutter.textContent = html;
+      gutter.scrollTop = ta.scrollTop;
+    }
+
+    function updateStatus() {
+      const pos = ta.selectionStart;
+      const before = ta.value.substring(0, pos);
+      const ln = before.split('\n').length;
+      const col = before.split('\n').pop().length + 1;
+      const el1 = document.getElementById('editor-pos');
+      const el2 = document.getElementById('editor-chars');
+      const el3 = document.getElementById('editor-lines');
+      if (el1) el1.textContent = `Ln ${ln}, Col ${col}`;
+      if (el2) el2.textContent = `${ta.value.length} chars`;
+      if (el3) el3.textContent = `${ta.value.split('\n').length} lines`;
+    }
+
+    ta.addEventListener('input', () => {
+      self.modified = true;
+      document.getElementById('editor-modified').style.display = '';
+      updateGutter();
+      updateStatus();
+    });
+    ta.addEventListener('keydown', (e) => {
+      if (e.ctrlKey && e.key === 's') { e.preventDefault(); self.save(); }
+      if (e.key === 'Tab') { e.preventDefault(); const s = ta.selectionStart, en = ta.selectionEnd; ta.value = ta.value.substring(0,s) + '    ' + ta.value.substring(en); ta.selectionStart = ta.selectionEnd = s+4; updateGutter(); }
+    });
+    ta.addEventListener('scroll', () => { gutter.scrollTop = ta.scrollTop; });
+    ta.addEventListener('click', updateStatus);
+    ta.addEventListener('keyup', updateStatus);
+
+    updateGutter();
+    updateStatus();
+    ta.focus();
+  },
+
+  loadFile(path, content) {
+    const self = apps.textEditor;
+    self.currentFile = path;
+    self.modified = false;
+    const ta = document.getElementById('editor-textarea');
+    if (ta) ta.value = content;
+    const info = document.getElementById('editor-info');
+    if (info) info.textContent = path || 'Untitled';
+    const modEl = document.getElementById('editor-modified');
+    if (modEl) modEl.style.display = 'none';
+    WM.setTitle('textEditor', (path ? path.split('/').pop() : 'Untitled') + ' - Text Editor');
+  },
+
+  save() {
+    const self = apps.textEditor;
+    if (!self.currentFile) { self.saveAs(); return; }
+    const ta = document.getElementById('editor-textarea');
+    if (!ta) return;
+    const r = FS.writeFile(self.currentFile, ta.value);
+    if (r.ok) {
+      self.modified = false;
+      const modEl = document.getElementById('editor-modified');
+      if (modEl) modEl.style.display = 'none';
+      notify('Saved', self.currentFile, 'success');
+    } else notify('Save Error', r.err, 'error');
+  },
+
+  async saveAs() {
+    const self = apps.textEditor;
+    const name = await modal({ title: 'Save As', input: true, inputPlaceholder: 'File path (e.g. /home/notes.txt)', inputVal: self.currentFile || '/home/Documents/', buttons: [{ label: 'Cancel' }, { label: 'Save', primary: true }] });
+    if (!name || name === 'Cancel' || name === 'Save') return;
+    self.currentFile = name;
+    self.save();
+  },
+
+  async openFile() {
+    const name = await modal({ title: 'Open File', input: true, inputPlaceholder: 'File path', inputVal: '/home/', buttons: [{ label: 'Cancel' }, { label: 'Open', primary: true }] });
+    if (!name || name === 'Cancel' || name === 'Open') return;
+    const r = FS.readFile(name);
+    if (r.ok) apps.textEditor.loadFile(name, r.content);
+    else notify('Open Error', r.err, 'error');
+  },
+
+  newFile() {
+    apps.textEditor.loadFile(null, '');
+  },
+
+  promptSave() {
+    return modal({ title: 'Unsaved Changes', body: 'Save changes before switching?', buttons: [{ label: 'Discard' }, { label: 'Save', primary: true, value: 'save' }] }).then(r => {
+      if (r === 'save') apps.textEditor.save();
+    });
+  },
+};
+
+// ============================================================
+// TERMINAL APP
+// ============================================================
+apps.terminal = {
+  cwd: '/home',
+  history: [],
+  histIdx: -1,
+  env: { USER: 'volt', SHELL: '/bin/volt', HOME: '/home' },
+
+  open() {
+    const winId = 'terminal';
+    if (document.getElementById('win-terminal')) { WM.focus(winId); return; }
+    WM.create({
+      id: winId, title: 'Terminal', icon: ICONS.terminal,
+      width: 620, height: 420,
+      content: (el) => { el.style.flexDirection='column'; el.style.display='flex'; apps.terminal.buildUI(el); }
+    });
+  },
+
+  buildUI(el) {
+    const self = apps.terminal;
+    el.innerHTML = `
+      <div class="term-output" id="term-output"></div>
+      <div class="term-input-row">
+        <span class="term-prompt-display" id="term-prompt-display">${self.getPrompt()}</span>
+        <input class="term-input" id="term-input" autocomplete="off" autocorrect="off" spellcheck="false" autofocus/>
+      </div>
+    `;
+
+    self.print(`<span class="term-hl">VOLT OS Terminal v1.0</span>`, 'out');
+    self.print(`Type <span class="term-hl">help</span> for available commands.`, 'out');
+    self.print('', 'out');
+
+    const inp = document.getElementById('term-input');
+    if (inp) {
+      inp.focus();
+      inp.onkeydown = (e) => {
+        if (e.key === 'Enter') {
+          const cmd = inp.value.trim();
+          inp.value = '';
+          if (cmd) { self.history.unshift(cmd); self.histIdx = -1; }
+          self.execCmd(cmd);
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          if (self.histIdx < self.history.length - 1) { self.histIdx++; inp.value = self.history[self.histIdx]; }
+        } else if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          if (self.histIdx > 0) { self.histIdx--; inp.value = self.history[self.histIdx]; }
+          else { self.histIdx = -1; inp.value = ''; }
+        } else if (e.key === 'Tab') {
+          e.preventDefault();
+          self.autocomplete(inp);
+        } else if (e.ctrlKey && e.key === 'l') {
+          e.preventDefault();
+          const out = document.getElementById('term-output');
+          if (out) out.innerHTML = '';
+        }
+      };
+    }
+  },
+
+  getPrompt() {
+    const self = apps.terminal;
+    return `volt@voltOS:<span style="color:#66AAFF">${self.cwd}</span>$`;
+  },
+
+  print(text, cls = 'out') {
+    const out = document.getElementById('term-output');
+    if (!out) return;
+    const line = document.createElement('div');
+    line.className = 'term-line term-' + cls;
+    line.innerHTML = text;
+    out.appendChild(line);
+    out.scrollTop = out.scrollHeight;
+  },
+
+  autocomplete(inp) {
+    const self = apps.terminal;
+    const val = inp.value;
+    const parts = val.split(' ');
+    if (parts.length <= 1) return;
+    const partial = parts[parts.length - 1];
+    const dir = partial.includes('/') ? partial.substring(0, partial.lastIndexOf('/') + 1) : self.cwd;
+    const basePart = partial.includes('/') ? partial.substring(partial.lastIndexOf('/') + 1) : partial;
+    const absDir = dir.startsWith('/') ? dir : self.cwd + '/' + dir;
+    const ls = FS.ls(absDir.replace(/\/+$/, '') || '/');
+    if (!ls.ok) return;
+    const matches = ls.entries.filter(e => e.name.startsWith(basePart));
+    if (matches.length === 1) {
+      parts[parts.length - 1] = (partial.includes('/') ? dir : '') + matches[0].name + (matches[0].type === 'dir' ? '/' : '');
+      inp.value = parts.join(' ');
+    } else if (matches.length > 1) {
+      self.print(matches.map(m => m.name).join('  '), 'out');
+    }
+  },
+
+  resolvePath(p) {
+    const self = apps.terminal;
+    if (!p || p === '.') return self.cwd;
+    if (p === '..') {
+      const parts = self.cwd.split('/').filter(Boolean);
+      parts.pop();
+      return '/' + parts.join('/') || '/';
+    }
+    if (p.startsWith('/')) return p.replace(/\/+/g, '/').replace(/\/$/, '') || '/';
+    let base = self.cwd;
+    const segs = p.split('/');
+    for (const s of segs) {
+      if (!s || s === '.') continue;
+      if (s === '..') { const ps = base.split('/').filter(Boolean); ps.pop(); base = '/' + ps.join('/') || '/'; }
+      else base = (base === '/' ? '' : base) + '/' + s;
+    }
+    return base || '/';
+  },
+
+  execCmd(raw) {
+    const self = apps.terminal;
+    if (!raw) {
+      self.print(`<span class="term-prompt">${self.getPrompt()}</span> `, 'out');
+      return;
+    }
+    self.print(`<span class="term-prompt">${self.getPrompt()}</span> <span class="term-cmd">${escapeHTML(raw)}</span>`, 'out');
+
+    const updatePrompt = () => {
+      const pd = document.getElementById('term-prompt-display');
+      if (pd) pd.innerHTML = self.getPrompt();
+    };
+
+    const parts = raw.match(/(?:[^\s"']+|"[^"]*"|'[^']*')+/g) || [];
+    const args = parts.map(p => p.replace(/^["']|["']$/g, ''));
+    const cmd = args[0];
+
+    const cmds = {
+      help: () => {
+        const help = [
+          ['ls', 'List directory contents'],
+          ['cd <path>', 'Change directory'],
+          ['pwd', 'Print working directory'],
+          ['mkdir <name>', 'Create directory'],
+          ['touch <name>', 'Create empty file'],
+          ['cat <file>', 'Display file contents'],
+          ['echo <text>', 'Print text'],
+          ['write <file> <text>', 'Write text to file'],
+          ['cp <src> <dst>', 'Copy file/folder'],
+          ['mv <src> <dst>', 'Move/rename file/folder'],
+          ['rm <path>', 'Delete file/folder'],
+          ['find <query>', 'Search for files'],
+          ['du <path>', 'Disk usage'],
+          ['df', 'Filesystem info'],
+          ['history', 'Command history'],
+          ['clear', 'Clear terminal'],
+          ['date', 'Show date/time'],
+          ['whoami', 'Current user'],
+          ['env', 'Environment variables'],
+          ['open <app>', 'Open application'],
+          ['neofetch', 'System info'],
+        ];
+        help.forEach(([c, d]) => self.print(`  <span class="term-hl">${c.padEnd(22)}</span><span class="term-out">${d}</span>`, 'out'));
+      },
+      ls: () => {
+        const path = args[1] ? self.resolvePath(args[1]) : self.cwd;
+        const res = FS.ls(path);
+        if (!res.ok) { self.print('ls: ' + res.err, 'err'); return; }
+        if (!res.entries.length) { self.print('(empty)', 'out'); return; }
+        const sorted = res.entries.sort((a,b) => a.type !== b.type ? (a.type==='dir'?-1:1) : a.name.localeCompare(b.name));
+        const all = args.includes('-l');
+        if (all) {
+          sorted.forEach(e => {
+            const d = e.type==='dir' ? '<span style="color:#FFD700">d</span>' : '-';
+            const size = e.type==='file' ? formatSize(e.size||0).padStart(8) : '     dir';
+            const mod = e.modified ? new Date(e.modified).toLocaleString() : '';
+            const name = e.type==='dir' ? `<span style="color:#FFD700">${e.name}/</span>` : e.name;
+            self.print(`${d} ${size}  ${mod}  ${name}`, 'out');
+          });
+        } else {
+          const line = sorted.map(e => e.type==='dir' ? `<span style="color:#FFD700">${e.name}/</span>` : `<span>${e.name}</span>`).join('  ');
+          self.print(line, 'out');
+        }
+      },
+      cd: () => {
+        const path = args[1] ? self.resolvePath(args[1]) : '/home';
+        if (!FS.exists(path)) { self.print(`cd: ${path}: No such directory`, 'err'); return; }
+        if (!FS.isDir(path)) { self.print(`cd: ${path}: Not a directory`, 'err'); return; }
+        self.cwd = path;
+        updatePrompt();
+      },
+      pwd: () => self.print(self.cwd, 'out'),
+      mkdir: () => {
+        if (!args[1]) { self.print('mkdir: missing operand', 'err'); return; }
+        const path = self.resolvePath(args[1]);
+        const r = FS.mkdir(path);
+        if (!r.ok) self.print('mkdir: ' + r.err, 'err');
+        else self.print(`Directory created: ${path}`, 'ok');
+      },
+      touch: () => {
+        if (!args[1]) { self.print('touch: missing operand', 'err'); return; }
+        const path = self.resolvePath(args[1]);
+        const r = FS.writeFile(path, FS.exists(path) ? (FS.readFile(path).content || '') : '');
+        if (!r.ok) self.print('touch: ' + r.err, 'err');
+        else self.print(`Created: ${path}`, 'ok');
+      },
+      cat: () => {
+        if (!args[1]) { self.print('cat: missing operand', 'err'); return; }
+        const path = self.resolvePath(args[1]);
+        const r = FS.readFile(path);
+        if (!r.ok) { self.print('cat: ' + r.err, 'err'); return; }
+        r.content.split('\n').forEach(line => self.print(escapeHTML(line), 'out'));
+      },
+      echo: () => {
+        const text = args.slice(1).join(' ');
+        // Handle redirect
+        const ri = args.indexOf('>'), rai = args.indexOf('>>');
+        if (ri > -1 && ri < args.length - 1) {
+          const content = args.slice(1, ri).join(' ');
+          const file = self.resolvePath(args[ri+1]);
+          FS.writeFile(file, content);
+          self.print(`Written to ${file}`, 'ok');
+        } else if (rai > -1 && rai < args.length - 1) {
+          const content = args.slice(1, rai).join(' ');
+          const file = self.resolvePath(args[rai+1]);
+          const existing = FS.readFile(file);
+          FS.writeFile(file, (existing.ok ? existing.content + '\n' : '') + content);
+          self.print(`Appended to ${file}`, 'ok');
+        } else {
+          self.print(escapeHTML(text), 'out');
+        }
+      },
+      write: () => {
+        if (!args[1]) { self.print('write: missing file operand', 'err'); return; }
+        const path = self.resolvePath(args[1]);
+        const content = args.slice(2).join(' ');
+        const r = FS.writeFile(path, content);
+        if (!r.ok) self.print('write: ' + r.err, 'err');
+        else self.print(`Written to ${path}`, 'ok');
+      },
+      cp: () => {
+        if (!args[1] || !args[2]) { self.print('cp: missing operands', 'err'); return; }
+        const src = self.resolvePath(args[1]), dst = self.resolvePath(args[2]);
+        const r = FS.copy(src, dst);
+        if (!r.ok) self.print('cp: ' + r.err, 'err');
+        else self.print(`Copied ${src} -> ${dst}`, 'ok');
+      },
+      mv: () => {
+        if (!args[1] || !args[2]) { self.print('mv: missing operands', 'err'); return; }
+        const src = self.resolvePath(args[1]), dst = self.resolvePath(args[2]);
+        const r = FS.move(src, dst);
+        if (!r.ok) self.print('mv: ' + r.err, 'err');
+        else self.print(`Moved ${src} -> ${dst}`, 'ok');
+      },
+      rm: () => {
+        if (!args[1]) { self.print('rm: missing operand', 'err'); return; }
+        const path = self.resolvePath(args[1]);
+        const r = FS.rm(path);
+        if (!r.ok) self.print('rm: ' + r.err, 'err');
+        else self.print(`Removed: ${path}`, 'ok');
+      },
+      find: () => {
+        const query = args[1] || '';
+        const results = FS.find(self.cwd, query);
+        if (!results.length) { self.print('No results found', 'out'); return; }
+        results.forEach(r => self.print(`${r.type==='dir'?'<span style="color:#FFD700">d</span>':'-'} ${r.path}`, 'out'));
+      },
+      du: () => {
+        const path = args[1] ? self.resolvePath(args[1]) : self.cwd;
+        const size = FS.du(path);
+        self.print(`${formatSize(size)}\t${path}`, 'out');
+      },
+      df: () => {
+        const info = FS.storageInfo();
+        const pct = Math.round(info.usedBytes / info.total * 100);
+        self.print(`Filesystem       Used    Total   Use%`, 'out');
+        self.print(`localStorage     ${formatSize(info.usedBytes).padEnd(8)} ${formatSize(info.total).padEnd(8)} ${pct}%`, 'out');
+      },
+      history: () => {
+        self.history.slice(0, 30).forEach((h, i) => self.print(`  ${String(i+1).padStart(3)}  ${escapeHTML(h)}`, 'out'));
+      },
+      clear: () => {
+        const out = document.getElementById('term-output');
+        if (out) out.innerHTML = '';
+      },
+      date: () => self.print(new Date().toString(), 'out'),
+      whoami: () => self.print(self.env.USER, 'out'),
+      env: () => {
+        Object.entries(self.env).forEach(([k,v]) => self.print(`${k}=${v}`, 'out'));
+        self.print(`CWD=${self.cwd}`, 'out');
+      },
+      open: () => {
+        const name = args[1];
+        const appMap = { filemanager: 'fileManager', fm: 'fileManager', terminal: 'terminal', editor: 'textEditor', text: 'textEditor', paint: 'paint', calc: 'calculator', calculator: 'calculator', settings: 'settings', monitor: 'sysMonitor', sysmon: 'sysMonitor', music: 'music', about: 'about' };
+        const appKey = appMap[name?.toLowerCase()];
+        if (appKey && apps[appKey]) { apps[appKey].open(); self.print(`Opening ${name}...`, 'ok'); }
+        else self.print(`open: unknown app '${name}'`, 'err');
+      },
+      neofetch: () => {
+        const info = FS.storageInfo();
+        const now = new Date();
+        self.print(`<span style="color:#FFD700">    ████████</span>    <span class="term-hl">volt</span>@<span class="term-hl">voltOS</span>`, 'out');
+        self.print(`<span style="color:#FFD700">  ████████████</span>  OS: VOLT OS 1.0`, 'out');
+        self.print(`<span style="color:#FFD700">████████████████</span>  Shell: VoltShell`, 'out');
+        self.print(`<span style="color:#FFD700">████████████████</span>  Engine: ${navigator.userAgent.split(' ').slice(-2).join(' ')}`, 'out');
+        self.print(`<span style="color:#FFD700">████████████████</span>  Storage: ${formatSize(info.usedBytes)} / ${formatSize(info.total)}`, 'out');
+        self.print(`<span style="color:#FFD700">  ████████████</span>  Uptime: ${Math.round(performance.now()/1000)}s`, 'out');
+        self.print(`<span style="color:#FFD700">    ████████</span>  Kernel: WebOS ${now.getFullYear()}`, 'out');
+        self.print('', 'out');
+        self.print('<span style="color:#333">█</span><span style="color:#888">█</span><span style="color:#EEE">█</span><span style="color:#FFD700">█</span><span style="color:#FF8800">█</span><span style="color:#FF4444">█</span><span style="color:#44FF88">█</span><span style="color:#4488FF">█</span>', 'out');
+      },
+      exit: () => { WM.close('terminal'); },
+      quit: () => { WM.close('terminal'); },
+    };
+
+    if (cmds[cmd]) {
+      try { cmds[cmd](); }
+      catch(e) { self.print('Error: ' + e.message, 'err'); }
+    } else {
+      self.print(`voltsh: command not found: <span class="term-hl">${escapeHTML(cmd)}</span> — try 'help'`, 'err');
+    }
+  },
+};
+
+// ============================================================
+// PAINT APP
+// ============================================================
+apps.paint = {
+  tool: 'pen',
+  color: '#FFD700',
+  bgColor: '#000000',
+  size: 4,
+  drawing: false,
+  lastX: 0, lastY: 0,
+  ctx: null,
+  canvas: null,
+  currentFile: null,
+
+  open() {
+    const winId = 'paint';
+    if (document.getElementById('win-paint')) { WM.focus(winId); return; }
+    WM.create({
+      id: winId, title: 'Paint', icon: ICONS.paint,
+      width: 720, height: 520,
+      content: (el) => { el.style.flexDirection='column'; el.style.display='flex'; apps.paint.buildUI(el); }
+    });
+    appCleanup[winId] = () => { apps.paint.ctx = null; apps.paint.canvas = null; };
+  },
+
+  buildUI(el) {
+    const self = apps.paint;
+    const colors = ['#FFD700','#FF8800','#FF4444','#FF44AA','#AA44FF','#4488FF','#44AAFF','#44FF88','#88FF44','#FFFFFF','#AAAAAA','#555555','#222222','#000000','#8B4513','#006400'];
+
+    el.innerHTML = `
+      <div class="paint-toolbar">
+        <div class="paint-tool active" id="pt-pen" onclick="apps.paint.setTool('pen')" title="Pen">
+          <svg viewBox="0 0 16 16" fill="none"><path d="M12 2l2 2-8 8H4v-2L12 2z" stroke="#888" stroke-width="1.2" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="paint-tool" id="pt-line" onclick="apps.paint.setTool('line')" title="Line">
+          <svg viewBox="0 0 16 16" fill="none"><line x1="2" y1="14" x2="14" y2="2" stroke="#888" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </div>
+        <div class="paint-tool" id="pt-rect" onclick="apps.paint.setTool('rect')" title="Rectangle">
+          <svg viewBox="0 0 16 16" fill="none"><rect x="2" y="4" width="12" height="8" rx="1" stroke="#888" stroke-width="1.2"/></svg>
+        </div>
+        <div class="paint-tool" id="pt-circle" onclick="apps.paint.setTool('circle')" title="Circle">
+          <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5.5" stroke="#888" stroke-width="1.2"/></svg>
+        </div>
+        <div class="paint-tool" id="pt-fill" onclick="apps.paint.setTool('fill')" title="Fill">
+          <svg viewBox="0 0 16 16" fill="none"><path d="M3 12l7-7 1 1-7 7H3v-1z" stroke="#888" stroke-width="1.2"/><path d="M13 9c.5.5.5 1 0 1.5S12 11 13 9z" stroke="#888" stroke-width="1.2"/></svg>
+        </div>
+        <div class="paint-tool" id="pt-eraser" onclick="apps.paint.setTool('eraser')" title="Eraser">
+          <svg viewBox="0 0 16 16" fill="none"><rect x="2" y="7" width="12" height="7" rx="1" stroke="#888" stroke-width="1.2"/><path d="M5 7V5a3 3 0 0 1 6 0v2" stroke="#888" stroke-width="1.2"/></svg>
+        </div>
+        <div class="paint-sep"></div>
+        <input type="range" id="pt-size" min="1" max="40" value="4" style="width:70px;accent-color:var(--yellow);cursor:pointer" oninput="apps.paint.size=+this.value;document.getElementById('pt-size-val').textContent=this.value">
+        <span id="pt-size-val" style="font-size:11px;color:var(--text-dim);font-family:var(--font-mono);width:20px">4</span>
+        <div class="paint-sep"></div>
+        <div style="display:flex;flex-wrap:wrap;max-width:100px;gap:2px">
+          ${colors.map(c => `<div class="paint-color-btn ${c===self.color?'active':''}" style="background:${c}" onclick="apps.paint.setColor('${c}')" title="${c}"></div>`).join('')}
+        </div>
+        <div class="paint-sep"></div>
+        <label style="font-size:10px;color:var(--text-dim);display:flex;align-items:center;gap:4px">
+          <svg viewBox="0 0 13 13" fill="none" style="width:12px;height:12px"><rect x="1" y="1" width="11" height="11" rx="2" stroke="#888" stroke-width="1.2"/></svg>
+          BG<input type="color" value="#000000" id="pt-bg" onchange="apps.paint.setBg(this.value)" style="width:26px;height:22px;border-radius:4px;overflow:hidden">
+        </label>
+        <div class="paint-sep"></div>
+        <button class="fm-btn" onclick="apps.paint.clear()">
+          <svg viewBox="0 0 13 13" fill="none"><path d="M2 2l9 9M11 2L2 11" stroke="#888" stroke-width="1.5" stroke-linecap="round"/></svg>
+          Clear
+        </button>
+        <button class="fm-btn" onclick="apps.paint.save()">
+          <svg viewBox="0 0 13 13" fill="none"><path d="M2 2h7l2 2v8H2V2z" stroke="#888" stroke-width="1.2" stroke-linejoin="round"/></svg>
+          Save
+        </button>
+      </div>
+      <div class="paint-canvas-wrap" id="paint-wrap">
+        <canvas id="paint-canvas" width="800" height="600"></canvas>
+      </div>
+    `;
+
+    self.canvas = document.getElementById('paint-canvas');
+    self.ctx = self.canvas.getContext('2d');
+    self.ctx.fillStyle = '#000000';
+    self.ctx.fillRect(0, 0, 800, 600);
+    self.ctx.lineCap = 'round';
+    self.ctx.lineJoin = 'round';
+
+    let startX, startY, snapshot;
+
+    self.canvas.addEventListener('mousedown', (e) => {
+      const r = self.canvas.getBoundingClientRect();
+      self.lastX = e.clientX - r.left;
+      self.lastY = e.clientY - r.top;
+      startX = self.lastX; startY = self.lastY;
+      self.drawing = true;
+      if (['line','rect','circle'].includes(self.tool)) snapshot = self.ctx.getImageData(0, 0, 800, 600);
+      if (self.tool === 'fill') self.floodFill(Math.round(self.lastX), Math.round(self.lastY));
+      if (self.tool === 'pen' || self.tool === 'eraser') {
+        self.ctx.beginPath();
+        self.ctx.moveTo(self.lastX, self.lastY);
+      }
+    });
+
+    self.canvas.addEventListener('mousemove', (e) => {
+      if (!self.drawing) return;
+      const r = self.canvas.getBoundingClientRect();
+      const x = e.clientX - r.left, y = e.clientY - r.top;
+      if (self.tool === 'pen') {
+        self.ctx.strokeStyle = self.color;
+        self.ctx.lineWidth = self.size;
+        self.ctx.lineTo(x, y);
+        self.ctx.stroke();
+      } else if (self.tool === 'eraser') {
+        self.ctx.strokeStyle = self.bgColor;
+        self.ctx.lineWidth = self.size * 3;
+        self.ctx.lineTo(x, y);
+        self.ctx.stroke();
+      } else if (['line','rect','circle'].includes(self.tool)) {
+        self.ctx.putImageData(snapshot, 0, 0);
+        self.ctx.strokeStyle = self.color;
+        self.ctx.lineWidth = self.size;
+        self.ctx.beginPath();
+        if (self.tool === 'line') { self.ctx.moveTo(startX, startY); self.ctx.lineTo(x, y); }
+        else if (self.tool === 'rect') { self.ctx.rect(startX, startY, x-startX, y-startY); }
+        else if (self.tool === 'circle') {
+          const rx = Math.abs(x-startX)/2, ry = Math.abs(y-startY)/2;
+          self.ctx.ellipse(startX+(x-startX)/2, startY+(y-startY)/2, rx, ry, 0, 0, Math.PI*2);
+        }
+        self.ctx.stroke();
+      }
+      self.lastX = x; self.lastY = y;
+    });
+
+    document.addEventListener('mouseup', () => {
+      if (self.drawing) { self.drawing = false; self.ctx.beginPath(); }
+    });
+  },
+
+  setTool(tool) {
+    const self = apps.paint;
+    self.tool = tool;
+    document.querySelectorAll('.paint-tool').forEach(t => t.classList.remove('active'));
+    const el = document.getElementById('pt-' + tool);
+    if (el) el.classList.add('active');
+    if (self.ctx) { self.ctx.beginPath(); }
+  },
+
+  setColor(c) {
+    apps.paint.color = c;
+    document.querySelectorAll('.paint-color-btn').forEach(b => b.classList.toggle('active', b.style.background === c || b.style.backgroundColor === c));
+  },
+
+  setBg(c) { apps.paint.bgColor = c; },
+
+  clear() {
+    const self = apps.paint;
+    if (!self.ctx) return;
+    self.ctx.fillStyle = self.bgColor;
+    self.ctx.fillRect(0, 0, 800, 600);
+  },
+
+  async save() {
+    const self = apps.paint;
+    if (!self.canvas) return;
+    const name = await modal({ title: 'Save Image', input: true, inputPlaceholder: 'File name', inputVal: '/home/Pictures/drawing.png', buttons: [{ label: 'Cancel' }, { label: 'Save', primary: true }] });
+    if (!name || name === 'Cancel' || name === 'Save') return;
+    const data = self.canvas.toDataURL('image/png');
+    const r = FS.writeFile(name, data);
+    if (r.ok) { notify('Saved', name, 'success'); self.currentFile = name; }
+    else notify('Error', r.err, 'error');
+  },
+
+  floodFill(x, y) {
+    const self = apps.paint;
+    const ctx = self.ctx;
+    const w = 800, h = 600;
+    const imgData = ctx.getImageData(0, 0, w, h);
+    const data = imgData.data;
+    const idx = (y * w + x) * 4;
+    const tr = data[idx], tg = data[idx+1], tb = data[idx+2], ta = data[idx+3];
+    const fc = hexToRGBA(self.color);
+    if (tr===fc[0]&&tg===fc[1]&&tb===fc[2]) return;
+    const stack = [[x, y]];
+    while (stack.length) {
+      const [cx, cy] = stack.pop();
+      if (cx < 0 || cx >= w || cy < 0 || cy >= h) continue;
+      const i = (cy * w + cx) * 4;
+      if (data[i]!==tr||data[i+1]!==tg||data[i+2]!==tb||data[i+3]!==ta) continue;
+      data[i]=fc[0]; data[i+1]=fc[1]; data[i+2]=fc[2]; data[i+3]=255;
+      stack.push([cx+1,cy],[cx-1,cy],[cx,cy+1],[cx,cy-1]);
+    }
+    ctx.putImageData(imgData, 0, 0);
+  },
+};
+
+// ============================================================
+// CALCULATOR APP
+// ============================================================
+apps.calculator = {
+  expr: '',
+  result: '0',
+  lastOp: false,
+
+  open() {
+    const winId = 'calculator';
+    if (document.getElementById('win-calculator')) { WM.focus(winId); return; }
+    WM.create({
+      id: winId, title: 'Calculator', icon: ICONS.calculator,
+      width: 280, height: 420, resizable: false,
+      minWidth: 280, minHeight: 420,
+      content: (el) => { el.style.flexDirection='column'; el.style.display='flex'; apps.calculator.buildUI(el); }
+    });
+  },
+
+  buildUI(el) {
+    const self = apps.calculator;
+    const btns = [
+      { l: 'C', cls: 'special', a: 'clear' }, { l: '+/-', cls: 'special', a: 'negate' }, { l: '%', cls: 'special op', a: '%' }, { l: '/', cls: 'op', a: '/' },
+      { l: '7', a: '7' }, { l: '8', a: '8' }, { l: '9', a: '9' }, { l: '*', cls: 'op', a: '*' },
+      { l: '4', a: '4' }, { l: '5', a: '5' }, { l: '6', a: '6' }, { l: '-', cls: 'op', a: '-' },
+      { l: '1', a: '1' }, { l: '2', a: '2' }, { l: '3', a: '3' }, { l: '+', cls: 'op', a: '+' },
+      { l: '0', a: '0', cls: 'zero' }, { l: '.', a: '.' }, { l: '=', cls: 'eq', a: '=' },
+    ];
+    el.innerHTML = `
+      <div class="calc-layout">
+        <div class="calc-display">
+          <div class="calc-expr" id="calc-expr"></div>
+          <div class="calc-result" id="calc-result">0</div>
+        </div>
+        <div class="calc-grid" id="calc-grid"></div>
+      </div>
+    `;
+    const grid = document.getElementById('calc-grid');
+    btns.forEach(b => {
+      const btn = document.createElement('button');
+      btn.className = 'calc-btn ' + (b.cls || '');
+      btn.textContent = b.l;
+      btn.onclick = () => self.press(b.a);
+      grid.appendChild(btn);
+    });
+    document.addEventListener('keydown', self.keyHandler = (e) => {
+      if (!document.getElementById('win-calculator')) return;
+      const map = { '0':'0','1':'1','2':'2','3':'3','4':'4','5':'5','6':'6','7':'7','8':'8','9':'9','.':'.','+'  :'+','-':'-','*':'*','/':'/','Enter':'=','Backspace':'back','Escape':'clear','%':'%' };
+      if (map[e.key]) { e.preventDefault(); self.press(map[e.key]); }
+    });
+    appCleanup['calculator'] = () => document.removeEventListener('keydown', self.keyHandler);
+  },
+
+  press(a) {
+    const self = apps.calculator;
+    if (a === 'clear') { self.expr = ''; self.result = '0'; }
+    else if (a === 'negate') {
+      try { self.result = String(-parseFloat(self.result)); } catch(e) {}
+    }
+    else if (a === '=') {
+      try {
+        const full = self.expr + self.result;
+        self.result = String(Function('"use strict"; return (' + full + ')')());
+        if (self.result === 'Infinity' || self.result === 'NaN') self.result = 'Error';
+        self.expr = '';
+      } catch(e) { self.result = 'Error'; self.expr = ''; }
+    }
+    else if (a === 'back') {
+      self.result = self.result.length > 1 ? self.result.slice(0, -1) : '0';
+    }
+    else if (['+','-','*','/','%'].includes(a)) {
+      self.expr += self.result + a;
+      self.result = '0';
+      self.lastOp = true;
+    }
+    else {
+      if (self.lastOp || self.result === '0') { self.result = a === '.' ? '0.' : a; self.lastOp = false; }
+      else { if (a === '.' && self.result.includes('.')) return; self.result += a; }
+    }
+    const r = document.getElementById('calc-result');
+    const e = document.getElementById('calc-expr');
+    if (r) r.textContent = self.result;
+    if (e) e.textContent = self.expr;
+  },
+};
+
+// ============================================================
+// SYSTEM MONITOR APP
+// ============================================================
+apps.sysMonitor = {
+  interval: null,
+  charts: {},
+
+  open() {
+    const winId = 'sysMonitor';
+    if (document.getElementById('win-sysMonitor')) { WM.focus(winId); return; }
+    WM.create({
+      id: winId, title: 'System Monitor', icon: ICONS.monitor,
+      width: 560, height: 440,
+      content: (el) => { el.style.flexDirection='column'; el.style.display='flex'; apps.sysMonitor.buildUI(el); }
+    });
+    appCleanup[winId] = () => { clearInterval(apps.sysMonitor.interval); };
+  },
+
+  buildUI(el) {
+    const self = apps.sysMonitor;
+    el.innerHTML = `
+      <div class="sysmon-grid">
+        <div class="sysmon-card">
+          <div class="sysmon-card-title">Storage Used</div>
+          <div><span class="sysmon-value" id="sm-storage">--</span><span class="sysmon-unit"> KB</span></div>
+          <div class="sysmon-bar"><div class="sysmon-bar-fill" id="sm-storage-bar" style="width:0%"></div></div>
+        </div>
+        <div class="sysmon-card">
+          <div class="sysmon-card-title">Files & Folders</div>
+          <div><span class="sysmon-value" id="sm-files">--</span></div>
+          <div style="font-size:10px;color:var(--text-dim);margin-top:4px" id="sm-files-desc">items in filesystem</div>
+        </div>
+        <div class="sysmon-card">
+          <div class="sysmon-card-title">Open Windows</div>
+          <div><span class="sysmon-value" id="sm-wins">--</span></div>
+          <div style="font-size:10px;color:var(--text-dim);margin-top:4px">active processes</div>
+        </div>
+        <div class="sysmon-card">
+          <div class="sysmon-card-title">Uptime</div>
+          <div><span class="sysmon-value" id="sm-uptime">--</span><span class="sysmon-unit">s</span></div>
+        </div>
+        <div class="sysmon-card" style="grid-column:span 2">
+          <div class="sysmon-card-title">Storage Distribution</div>
+          <canvas id="sm-chart" height="80" width="100%" style="width:100%"></canvas>
+        </div>
+        <div class="sysmon-card">
+          <div class="sysmon-card-title">Browser</div>
+          <div style="font-size:11px;color:var(--text-dim);line-height:1.8" id="sm-browser"></div>
+        </div>
+        <div class="sysmon-card">
+          <div class="sysmon-card-title">Filesystem Keys</div>
+          <div style="font-size:11px;color:var(--text-dim);line-height:1.8" id="sm-keys"></div>
+        </div>
+      </div>
+    `;
+
+    const ua = navigator.userAgent;
+    const browser = ua.match(/(Chrome|Firefox|Safari|Edge|Opera)[\/\s](\d+)/)?.[0] || 'Unknown';
+    document.getElementById('sm-browser').innerHTML = `Browser: ${browser}<br>Screen: ${screen.width}x${screen.height}<br>Lang: ${navigator.language}<br>Cookies: ${navigator.cookieEnabled?'On':'Off'}`;
+
+    let lsKeys = 0;
+    try { lsKeys = localStorage.length; } catch(e){}
+    document.getElementById('sm-keys').innerHTML = `LS Keys: ${lsKeys}<br>FS Key: volt_fs_v1<br>Meta Key: volt_meta_v1`;
+
+    self.update();
+    self.interval = setInterval(() => self.update(), 1000);
+  },
+
+  countNodes(path = '/') {
+    let c = 0;
+    const node = FS.getNode(path);
+    if (!node || node.type !== 'dir') return 1;
+    c++;
+    for (const child in node.children) {
+      c += this.countNodes((path === '/' ? '' : path) + '/' + child);
+    }
+    return c;
+  },
+
+  update() {
+    const info = FS.storageInfo();
+    const pct = Math.round(info.usedBytes / info.total * 100);
+    const el1 = document.getElementById('sm-storage');
+    const el2 = document.getElementById('sm-storage-bar');
+    const el3 = document.getElementById('sm-files');
+    const el4 = document.getElementById('sm-wins');
+    const el5 = document.getElementById('sm-uptime');
+    if (el1) el1.textContent = (info.usedBytes / 1024).toFixed(1);
+    if (el2) el2.style.width = pct + '%';
+    if (el3) el3.textContent = this.countNodes();
+    if (el4) el4.textContent = WM.getAll().length;
+    if (el5) el5.textContent = Math.round(performance.now() / 1000);
+
+    const c = document.getElementById('sm-chart');
+    if (c) {
+      const ctx = c.getContext('2d');
+      const w = c.offsetWidth; c.width = w;
+      ctx.clearRect(0, 0, w, 80);
+      // Draw usage bar
+      const dirs = ['/home', '/system', '/tmp'];
+      const sizes = dirs.map(d => FS.du(d));
+      const total = sizes.reduce((a,b) => a+b, 0) || 1;
+      const colors = ['#FFD700', '#FF8800', '#4488FF'];
+      let x = 0;
+      sizes.forEach((s, i) => {
+        const bw = (s / total) * w;
+        ctx.fillStyle = colors[i];
+        ctx.fillRect(x, 10, bw, 30);
+        x += bw;
+      });
+      // Legend
+      dirs.forEach((d, i) => {
+        ctx.fillStyle = colors[i];
+        ctx.fillRect(i * (w/3), 50, 12, 12);
+        ctx.fillStyle = '#888';
+        ctx.font = '10px monospace';
+        ctx.fillText(`${d} (${formatSize(sizes[i])})`, i*(w/3)+16, 61);
+      });
+    }
+  },
+};
+
+// ============================================================
+// MUSIC PLAYER APP
+// ============================================================
+apps.music = {
+  playing: false,
+  pos: 0,
+  duration: 210,
+  interval: null,
+  songs: [
+    { title: 'Electric Pulse', artist: 'VOLT Synth', duration: 214 },
+    { title: 'Yellow Thunder', artist: 'Energy Wave', duration: 187 },
+    { title: 'Neon Drive', artist: 'Circuit Board', duration: 243 },
+    { title: 'Data Stream', artist: 'Binary Flux', duration: 198 },
+  ],
+  current: 0,
+
+  open() {
+    const winId = 'music';
+    if (document.getElementById('win-music')) { WM.focus(winId); return; }
+    WM.create({
+      id: winId, title: 'Music Player', icon: ICONS.music,
+      width: 320, height: 460, resizable: false,
+      content: (el) => { el.style.flexDirection='column'; el.style.display='flex'; apps.music.buildUI(el); }
+    });
+    appCleanup[winId] = () => { clearInterval(apps.music.interval); apps.music.playing = false; };
+  },
+
+  buildUI(el) {
+    const self = apps.music;
+    self.duration = self.songs[self.current].duration;
+    el.innerHTML = `
+      <div class="music-player">
+        <div class="music-art">
+          <svg viewBox="0 0 60 60" fill="none">
+            <circle cx="30" cy="30" r="20" stroke="#FFD700" stroke-width="1.5" stroke-dasharray="4 3"/>
+            <circle cx="30" cy="30" r="8" fill="#1A1400" stroke="#FFD700" stroke-width="1.5"/>
+            <circle cx="30" cy="30" r="3" fill="#FFD700"/>
+          </svg>
+        </div>
+        <div style="text-align:center">
+          <div class="music-title" id="music-title">${self.songs[self.current].title}</div>
+          <div class="music-artist" id="music-artist">${self.songs[self.current].artist}</div>
+        </div>
+        <div class="music-progress">
+          <div class="music-progress-bar" onclick="apps.music.seek(event)">
+            <div class="music-progress-fill" id="music-fill" style="width:0%"></div>
+          </div>
+          <div class="music-times">
+            <span id="music-time">0:00</span>
+            <span id="music-dur">${self.fmtTime(self.duration)}</span>
+          </div>
+        </div>
+        <div class="music-controls">
+          <div class="music-ctrl-btn" onclick="apps.music.prev()" title="Previous">
+            <svg viewBox="0 0 16 16" fill="none"><path d="M3 3v10M13 3L7 8l6 5V3z" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="music-ctrl-btn play" id="music-play" onclick="apps.music.toggle()" title="Play/Pause">
+            <svg id="music-play-icon" viewBox="0 0 16 16" fill="none"><path d="M5 3l8 5-8 5V3z" fill="currentColor"/></svg>
+          </div>
+          <div class="music-ctrl-btn" onclick="apps.music.next()" title="Next">
+            <svg viewBox="0 0 16 16" fill="none"><path d="M13 3v10M3 3l6 5-6 5V3z" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+        </div>
+        <div style="font-size:9px;color:var(--text-dim);text-align:center;margin-top:4px">Virtual player - no audio output</div>
+        <div style="margin-top:8px;width:100%">
+          ${self.songs.map((s,i) => `<div onclick="apps.music.play(${i})" style="padding:6px 10px;border-radius:6px;cursor:pointer;font-size:11px;display:flex;justify-content:space-between;align-items:center;${i===self.current?'background:var(--bg-active);color:var(--yellow)':'color:var(--text-dim)'}" id="music-item-${i}">
+            <span>${s.title}</span><span style="font-family:var(--font-mono);font-size:10px">${self.fmtTime(s.duration)}</span>
+          </div>`).join('')}
+        </div>
+      </div>
+    `;
+  },
+
+  toggle() {
+    const self = apps.music;
+    if (self.playing) { self.pause(); } else { self.resume(); }
+  },
+
+  resume() {
+    const self = apps.music;
+    self.playing = true;
+    const icon = document.getElementById('music-play-icon');
+    if (icon) icon.innerHTML = `<rect x="4" y="3" width="3" height="10" rx="1" fill="currentColor"/><rect x="9" y="3" width="3" height="10" rx="1" fill="currentColor"/>`;
+    self.interval = setInterval(() => {
+      self.pos = Math.min(self.pos + 1, self.duration);
+      self.updateProgress();
+      if (self.pos >= self.duration) { self.next(); }
+    }, 1000);
+  },
+
+  pause() {
+    const self = apps.music;
+    self.playing = false;
+    clearInterval(self.interval);
+    const icon = document.getElementById('music-play-icon');
+    if (icon) icon.innerHTML = `<path d="M5 3l8 5-8 5V3z" fill="currentColor"/>`;
+  },
+
+  play(idx) {
+    const self = apps.music;
+    clearInterval(self.interval);
+    self.current = idx;
+    self.pos = 0;
+    self.duration = self.songs[idx].duration;
+    const title = document.getElementById('music-title');
+    const artist = document.getElementById('music-artist');
+    const dur = document.getElementById('music-dur');
+    if (title) title.textContent = self.songs[idx].title;
+    if (artist) artist.textContent = self.songs[idx].artist;
+    if (dur) dur.textContent = self.fmtTime(self.duration);
+    self.songs.forEach((_, i) => {
+      const it = document.getElementById('music-item-'+i);
+      if (it) { it.style.background = i===idx?'var(--bg-active)':''; it.style.color = i===idx?'var(--yellow)':'var(--text-dim)'; }
+    });
+    self.updateProgress();
+    if (self.playing) { clearInterval(self.interval); self.resume(); }
+    WM.setTitle('music', `${self.songs[idx].title} - Music Player`);
+  },
+
+  prev() { const self = apps.music; self.play((self.current - 1 + self.songs.length) % self.songs.length); },
+  next() { const self = apps.music; self.play((self.current + 1) % self.songs.length); },
+
+  seek(e) {
+    const self = apps.music;
+    const bar = e.currentTarget;
+    const pct = e.offsetX / bar.offsetWidth;
+    self.pos = Math.round(pct * self.duration);
+    self.updateProgress();
+  },
+
+  updateProgress() {
+    const self = apps.music;
+    const fill = document.getElementById('music-fill');
+    const time = document.getElementById('music-time');
+    if (fill) fill.style.width = (self.pos / self.duration * 100) + '%';
+    if (time) time.textContent = self.fmtTime(self.pos);
+  },
+
+  fmtTime(s) { return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`; },
+};
+
+// ============================================================
+// SETTINGS APP
+// ============================================================
+apps.settings = {
+  section: 'about',
+
+  open() {
+    const winId = 'settings';
+    if (document.getElementById('win-settings')) { WM.focus(winId); return; }
+    WM.create({
+      id: winId, title: 'Settings', icon: ICONS.settings,
+      width: 560, height: 440,
+      content: (el) => { el.style.flexDirection='column'; el.style.display='flex'; apps.settings.buildUI(el); }
+    });
+  },
+
+  buildUI(el) {
+    const self = apps.settings;
+    el.innerHTML = `
+      <div class="settings-layout">
+        <div class="settings-nav">
+          <div class="settings-nav-item active" onclick="apps.settings.showSection('system')" data-s="system">
+            <svg viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="12" height="12" rx="2.5" stroke="currentColor" stroke-width="1.2"/><path d="M4 7h6M7 4v6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+            System
+          </div>
+          <div class="settings-nav-item" onclick="apps.settings.showSection('storage')" data-s="storage">
+            <svg viewBox="0 0 14 14" fill="none"><rect x="1" y="4" width="12" height="3" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="1" y="9" width="12" height="3" rx="1" stroke="currentColor" stroke-width="1.2"/><circle cx="11" cy="5.5" r="0.8" fill="currentColor"/><circle cx="11" cy="10.5" r="0.8" fill="currentColor"/></svg>
+            Storage
+          </div>
+          <div class="settings-nav-item" onclick="apps.settings.showSection('appearance')" data-s="appearance">
+            <svg viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.2"/><path d="M7 1.5v5.5l3.5 3.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+            Appearance
+          </div>
+          <div class="settings-nav-item" onclick="apps.settings.showSection('about')" data-s="about">
+            <svg viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.2"/><path d="M7 6.5v4M7 5v-.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            About
+          </div>
+        </div>
+        <div class="settings-content" id="settings-content"></div>
+      </div>
+    `;
+    self.showSection('system');
+  },
+
+  showSection(s) {
+    const self = apps.settings;
+    self.section = s;
+    document.querySelectorAll('.settings-nav-item').forEach(it => it.classList.toggle('active', it.dataset.s === s));
+    const content = document.getElementById('settings-content');
+    if (!content) return;
+    const meta = FS.getMeta();
+    const info = FS.storageInfo();
+
+    const sections = {
+      system: `
+        <div class="settings-section-title">System</div>
+        <div class="settings-item">
+          <div><div class="settings-label">User Name</div><div class="settings-desc">Current system user</div></div>
+          <div class="settings-value">${meta.userName}</div>
+        </div>
+        <div class="settings-item">
+          <div><div class="settings-label">OS Version</div><div class="settings-desc">VOLT OS version</div></div>
+          <div class="settings-value">1.0.0</div>
+        </div>
+        <div class="settings-item">
+          <div><div class="settings-label">Uptime</div><div class="settings-desc">Session duration</div></div>
+          <div class="settings-value">${Math.round(performance.now()/1000)}s</div>
+        </div>
+        <div class="settings-item">
+          <div><div class="settings-label">Open Windows</div></div>
+          <div class="settings-value">${WM.getAll().length}</div>
+        </div>
+        <div style="margin-top:12px">
+          <button class="btn" onclick="OS.clearData()">Reset Filesystem</button>
+          <span style="font-size:10px;color:var(--text-dim);margin-left:8px">Deletes all files</span>
+        </div>
+      `,
+      storage: `
+        <div class="settings-section-title">Storage</div>
+        <div class="settings-item">
+          <div><div class="settings-label">localStorage Used</div></div>
+          <div class="settings-value">${formatSize(info.usedBytes)}</div>
+        </div>
+        <div class="settings-item">
+          <div><div class="settings-label">Total Capacity</div></div>
+          <div class="settings-value">${formatSize(info.total)}</div>
+        </div>
+        <div class="settings-item">
+          <div><div class="settings-label">Filesystem Root</div></div>
+          <div class="settings-value">${formatSize(FS.du('/'))}</div>
+        </div>
+        <div style="margin-top:8px">
+          <div class="sysmon-bar"><div class="sysmon-bar-fill" style="width:${Math.round(info.usedBytes/info.total*100)}%"></div></div>
+          <div style="font-size:10px;color:var(--text-dim);margin-top:4px">${Math.round(info.usedBytes/info.total*100)}% used</div>
+        </div>
+        <div style="margin-top:12px;display:flex;gap:8px">
+          <button class="btn" onclick="OS.exportFS()">Export FS</button>
+          <button class="btn" onclick="OS.importFS()">Import FS</button>
+        </div>
+      `,
+      appearance: `
+        <div class="settings-section-title">Appearance</div>
+        <div class="settings-item">
+          <div><div class="settings-label">Theme</div><div class="settings-desc">Current color theme</div></div>
+          <div class="settings-value">Energy Yellow</div>
+        </div>
+        <div class="settings-item">
+          <div><div class="settings-label">Desktop Icons</div><div class="settings-desc">Show desktop icons</div></div>
+          <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+        </div>
+        <div class="settings-item">
+          <div><div class="settings-label">Animations</div><div class="settings-desc">Enable UI animations</div></div>
+          <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+        </div>
+        <div class="settings-item">
+          <div><div class="settings-label">Taskbar Position</div></div>
+          <div class="settings-value">Bottom</div>
+        </div>
+      `,
+      about: `
+        <div class="settings-section-title">About VOLT OS</div>
+        <div style="background:#0A0A0A;border:1px solid var(--border);border-radius:8px;padding:16px;text-align:center;margin-bottom:12px">
+          <div style="font-size:20px;font-weight:800;color:var(--yellow);letter-spacing:3px;margin-bottom:4px">VOLT OS</div>
+          <div style="font-size:11px;color:var(--text-dim)">Version 1.0.0 — Energized Computing</div>
+        </div>
+        <div class="settings-item"><div><div class="settings-label">Engine</div></div><div class="settings-value">Web Browser</div></div>
+        <div class="settings-item"><div><div class="settings-label">Storage</div></div><div class="settings-value">localStorage</div></div>
+        <div class="settings-item"><div><div class="settings-label">Filesystem</div></div><div class="settings-value">VoltFS v1</div></div>
+        <div class="settings-item"><div><div class="settings-label">Renderer</div></div><div class="settings-value">HTML5 Canvas + CSS</div></div>
+        <div class="settings-item"><div><div class="settings-label">Build</div></div><div class="settings-value">${new Date().getFullYear()}</div></div>
+      `,
+    };
+    content.innerHTML = sections[s] || '';
+  },
+};
+
+// ============================================================
+// ABOUT APP
+// ============================================================
+apps.about = {
+  open() {
+    const winId = 'about';
+    if (document.getElementById('win-about')) { WM.focus(winId); return; }
+    WM.create({
+      id: winId, title: 'About VOLT OS', icon: ICONS.about,
+      width: 400, height: 440, resizable: false,
+      content: (el) => { el.style.flexDirection='column'; el.style.display='flex'; apps.about.buildUI(el); }
+    });
+  },
+
+  buildUI(el) {
+    const info = FS.storageInfo();
+    el.innerHTML = `
+      <div class="about-content">
+        <div class="about-logo-big">
+          <svg viewBox="0 0 50 50" fill="none">
+            <path d="M28 6L10 28H24L22 44L40 22H26L28 6Z" fill="#000" stroke="#000" stroke-width="1"/>
+          </svg>
+        </div>
+        <div class="about-name">VOLT OS</div>
+        <div class="about-version">Version 1.0.0 — Build ${new Date().getFullYear()}</div>
+        <div class="about-tagline">The most energized web-based operating system. Built with pure HTML, CSS, and JavaScript. Powered by localStorage.</div>
+        <div class="about-stats">
+          <div class="about-stat"><div class="about-stat-val">${WM.getAll().length}</div><div class="about-stat-label">Windows</div></div>
+          <div class="about-stat"><div class="about-stat-val">${formatSize(info.usedBytes)}</div><div class="about-stat-label">Storage</div></div>
+          <div class="about-stat"><div class="about-stat-val">${Math.round(performance.now()/1000)}s</div><div class="about-stat-label">Uptime</div></div>
+        </div>
+        <div style="margin-top:8px;display:flex;gap:8px">
+          <button class="btn primary" onclick="WM.close('about')">OK</button>
+          <button class="btn" onclick="apps.settings.open();WM.close('about')">Settings</button>
+        </div>
+      </div>
+    `;
+  },
+};
+
+// ============================================================
+// CONTEXT MENUS
+// ============================================================
+let ctxTarget = null;
+
+function showFileCtx(e, path, type) {
+  ctxTarget = { path, type };
+  const ctx = document.getElementById('file-ctx');
+  ctx.style.left = Math.min(e.clientX, window.innerWidth - 180) + 'px';
+  ctx.style.top = Math.min(e.clientY, window.innerHeight - 200) + 'px';
+  ctx.classList.add('show');
+
+  document.getElementById('ctx-open').onclick = () => {
+    ctx.classList.remove('show');
+    if (type === 'dir') apps.fileManager.navigate(path);
+    else apps.textEditor.open(path);
+  };
+
+  document.getElementById('ctx-rename').onclick = async () => {
+    ctx.classList.remove('show');
+    const name = path.split('/').pop();
+    const newName = await modal({ title: 'Rename', input: true, inputVal: name, buttons: [{ label: 'Cancel' }, { label: 'Rename', primary: true }] });
+    if (!newName || newName === 'Cancel' || newName === 'Rename') return;
+    const r = FS.rename(path, newName);
+    if (r.ok) { notify('Renamed', newName, 'success'); apps.fileManager.render(); }
+    else notify('Error', r.err, 'error');
+  };
+
+  document.getElementById('ctx-copy').onclick = () => {
+    ctx.classList.remove('show');
+    apps.fileManager.clipboard = { path, op: 'copy' };
+    notify('Copied', path.split('/').pop(), 'info');
+  };
+
+  document.getElementById('ctx-cut').onclick = () => {
+    ctx.classList.remove('show');
+    apps.fileManager.clipboard = { path, op: 'cut' };
+    notify('Cut', path.split('/').pop(), 'info');
+  };
+
+  document.getElementById('ctx-delete').onclick = async () => {
+    ctx.classList.remove('show');
+    const name = path.split('/').pop();
+    const r2 = await modal({ title: 'Delete', body: `Delete "${name}"? This cannot be undone.`, buttons: [{ label: 'Cancel' }, { label: 'Delete', danger: true }] });
+    if (r2 !== 'Delete') return;
+    const r = FS.rm(path);
+    if (r.ok) { notify('Deleted', name, 'success'); apps.fileManager.render(); refreshDesktop(); }
+    else notify('Error', r.err, 'error');
+  };
+}
+
+// ============================================================
+// DESKTOP
+// ============================================================
+function refreshDesktop() {
+  const meta = FS.getMeta();
+  const grid = document.getElementById('desktop-grid');
+  grid.innerHTML = '';
+
+  const defaultItems = [
+    { name: 'File Manager', app: 'fileManager', icon: ICONS.fileManager },
+    { name: 'Terminal', app: 'terminal', icon: ICONS.terminal },
+    { name: 'Text Editor', app: 'textEditor', icon: ICONS.editor },
+    { name: 'Paint', app: 'paint', icon: ICONS.paint },
+    { name: 'Calculator', app: 'calculator', icon: ICONS.calculator },
+    { name: 'System Monitor', app: 'sysMonitor', icon: ICONS.monitor },
+    { name: 'Music', app: 'music', icon: ICONS.music },
+    { name: 'Settings', app: 'settings', icon: ICONS.settings },
+    { name: 'About', app: 'about', icon: ICONS.about },
+    { name: 'Documents', app: 'fileManager', path: '/home/Documents', icon: ICONS.folder },
+    { name: 'Downloads', app: 'fileManager', path: '/home/Downloads', icon: ICONS.folder },
+  ];
+
+  defaultItems.forEach(item => {
+    const el = document.createElement('div');
+    el.className = 'desktop-icon';
+    el.innerHTML = `${item.icon}<div class="desktop-icon-label">${item.name}</div>`;
+    el.onclick = () => {
+      document.querySelectorAll('.desktop-icon').forEach(d => d.classList.remove('selected'));
+      el.classList.add('selected');
+    };
+    el.ondblclick = () => {
+      if (item.path) apps[item.app].open(item.path);
+      else apps[item.app].open();
+    };
+    grid.appendChild(el);
+  });
+}
+
+// ============================================================
+// START MENU
+// ============================================================
+function buildStartMenu() {
+  const appList = [
+    { name: 'File Manager', app: 'fileManager', icon: ICONS.fileManager },
+    { name: 'Terminal', app: 'terminal', icon: ICONS.terminal },
+    { name: 'Text Editor', app: 'textEditor', icon: ICONS.editor },
+    { name: 'Paint', app: 'paint', icon: ICONS.paint },
+    { name: 'Calculator', app: 'calculator', icon: ICONS.calculator },
+    { name: 'System Monitor', app: 'sysMonitor', icon: ICONS.monitor },
+    { name: 'Music Player', app: 'music', icon: ICONS.music },
+    { name: 'Settings', app: 'settings', icon: ICONS.settings },
+    { name: 'About', app: 'about', icon: ICONS.about },
+  ];
+
+  const startApps = document.getElementById('start-apps');
+  startApps.innerHTML = '';
+  appList.forEach(a => {
+    const el = document.createElement('div');
+    el.className = 'start-app';
+    el.dataset.name = a.name.toLowerCase();
+    el.innerHTML = `${a.icon}<div class="start-app-name">${a.name}</div>`;
+    el.onclick = () => { apps[a.app].open(); document.getElementById('start-menu').classList.remove('open'); };
+    startApps.appendChild(el);
+  });
+
+  document.getElementById('app-search').addEventListener('input', (e) => {
+    const q = e.target.value.toLowerCase();
+    document.querySelectorAll('.start-app').forEach(a => {
+      a.style.display = (!q || a.dataset.name.includes(q)) ? '' : 'none';
+    });
+  });
+}
+
+// ============================================================
+// CLOCK & WEATHER
+// ============================================================
+function startClock() {
+  function update() {
+    const now = new Date();
+    const h = String(now.getHours()).padStart(2, '0');
+    const m = String(now.getMinutes()).padStart(2, '0');
+    const s = String(now.getSeconds()).padStart(2, '0');
+    const clock = document.getElementById('clock');
+    if (clock) clock.textContent = `${h}:${m}:${s}`;
+  }
+  update();
+  setInterval(update, 1000);
+
+  // Simulated weather
+  const weathers = ['Sunny', 'Cloudy', 'Rainy', 'Windy', 'Clear'];
+  const temps = [18, 22, 15, 25, 20];
+  const idx = Math.floor(Math.random() * weathers.length);
+  document.getElementById('w-temp').textContent = temps[idx] + '°C';
+  document.getElementById('w-desc').textContent = weathers[idx];
+}
+
+// ============================================================
+// UTILITIES
+// ============================================================
+function escapeHTML(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function formatSize(bytes) {
+  if (!bytes || bytes < 0) return '0 B';
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
+  return (bytes/(1024*1024)).toFixed(2) + ' MB';
+}
+
+function hexToRGBA(hex) {
+  const r = parseInt(hex.slice(1,3),16);
+  const g = parseInt(hex.slice(3,5),16);
+  const b = parseInt(hex.slice(5,7),16);
+  return [r, g, b, 255];
+}
+
+// ============================================================
+// OS-LEVEL FUNCTIONS
+// ============================================================
+function showSettings() { apps.settings.open(); }
+
+function shutdown() {
+  modal({ title: 'Shutdown', body: 'Shut down VOLT OS?', buttons: [{ label: 'Cancel' }, { label: 'Shutdown', danger: true }] }).then(r => {
+    if (r === 'Shutdown') {
+      document.body.style.transition = 'opacity 0.5s';
+      document.body.style.opacity = '0';
+      setTimeout(() => { document.body.innerHTML = '<div style="background:#000;width:100vw;height:100vh;display:flex;align-items:center;justify-content:center;color:#333;font-family:monospace;font-size:14px">VOLT OS — System Halted</div>'; document.body.style.opacity='1'; }, 500);
+    }
+  });
+}
+
+async function newFolderOnDesktop() {
+  const name = await modal({ title: 'New Folder on Desktop', input: true, inputPlaceholder: 'Folder name', buttons: [{ label: 'Cancel' }, { label: 'Create', primary: true }] });
+  if (!name || name === 'Cancel' || name === 'Create') return;
+  const r = FS.mkdir('/home/Desktop/' + name);
+  if (r.ok) { notify('Folder Created', name, 'success'); refreshDesktop(); }
+  else notify('Error', r.err, 'error');
+}
+
+async function newFileOnDesktop() {
+  const name = await modal({ title: 'New File on Desktop', input: true, inputPlaceholder: 'File name', inputVal: 'untitled.txt', buttons: [{ label: 'Cancel' }, { label: 'Create', primary: true }] });
+  if (!name || name === 'Cancel' || name === 'Create') return;
+  const r = FS.writeFile('/home/Desktop/' + name, '');
+  if (r.ok) { notify('File Created', name, 'success'); refreshDesktop(); apps.textEditor.open('/home/Desktop/' + name); }
+  else notify('Error', r.err, 'error');
+}
+
+function clearData() {
+  modal({ title: 'Reset Filesystem', body: 'This will delete ALL files and reset the filesystem. Are you sure?', buttons: [{ label: 'Cancel' }, { label: 'Reset', danger: true }] }).then(r => {
+    if (r === 'Reset') {
+      localStorage.removeItem('volt_fs_v1');
+      localStorage.removeItem('volt_meta_v1');
+      notify('Filesystem Reset', 'Page will reload', 'warning');
+      setTimeout(() => location.reload(), 1500);
+    }
+  });
+}
+
+function exportFS() {
+  const data = localStorage.getItem('volt_fs_v1');
+  const blob = new Blob([data], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'voltfs_backup.json'; a.click();
+  URL.revokeObjectURL(url);
+  notify('Exported', 'voltfs_backup.json', 'success');
+}
+
+function importFS() {
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = '.json';
+  inp.onchange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        JSON.parse(ev.target.result); // validate
+        localStorage.setItem('volt_fs_v1', ev.target.result);
+        notify('Imported', 'Reloading...', 'success');
+        setTimeout(() => location.reload(), 1000);
+      } catch(err) { notify('Import Error', 'Invalid filesystem file', 'error'); }
+    };
+    reader.readAsText(file);
+  };
+  inp.click();
+}
+
+// ============================================================
+// EVENT LISTENERS
+// ============================================================
+function setupEvents() {
+  // Start button
+  document.getElementById('start-btn').onclick = (e) => {
+    e.stopPropagation();
+    document.getElementById('start-menu').classList.toggle('open');
+  };
+
+  // Close menus on click outside
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('#start-menu') && !e.target.closest('#start-btn')) {
+      document.getElementById('start-menu').classList.remove('open');
+    }
+    document.querySelectorAll('.ctx-menu').forEach(m => m.classList.remove('show'));
+    document.querySelectorAll('.desktop-icon').forEach(d => d.classList.remove('selected'));
+  });
+
+  // Desktop right click
+  document.getElementById('desktop').addEventListener('contextmenu', (e) => {
+    if (e.target.closest('.window') || e.target.closest('.desktop-icon') || e.target.closest('#taskbar')) return;
+    e.preventDefault();
+    const ctx = document.getElementById('desktop-ctx');
+    ctx.style.left = Math.min(e.clientX, window.innerWidth - 200) + 'px';
+    ctx.style.top = Math.min(e.clientY, window.innerHeight - 200) + 'px';
+    ctx.classList.add('show');
+  });
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.altKey) {
+      if (e.key === 't') apps.terminal.open();
+      if (e.key === 'f') apps.fileManager.open();
+      if (e.key === 'e') apps.textEditor.open();
+    }
+    if (e.key === 'Escape') {
+      document.getElementById('start-menu').classList.remove('open');
+      document.querySelectorAll('.ctx-menu').forEach(m => m.classList.remove('show'));
+    }
+  });
+
+  // Window focus on desktop click
+  document.getElementById('desktop').addEventListener('mousedown', (e) => {
+    if (!e.target.closest('.window')) {
+      document.querySelectorAll('.window').forEach(w => w.classList.remove('focused'));
+    }
+  });
+}
+
+// ============================================================
+// BOOT SEQUENCE
+// ============================================================
+function boot() {
+  setTimeout(() => {
+    const boot = document.getElementById('boot-screen');
+    boot.style.opacity = '0';
+    setTimeout(() => {
+      boot.remove();
+      setupEvents();
+      buildStartMenu();
+      refreshDesktop();
+      startClock();
+      notify('Welcome to VOLT OS', 'System ready. Press Ctrl+Alt+T for terminal.', 'success');
+    }, 600);
+  }, 2000);
+}
+
+// Public API
+return {
+  FS, WM, apps, appCleanup,
+  notify, modal,
+  showSettings, shutdown,
+  newFolderOnDesktop, newFileOnDesktop,
+  clearData, exportFS, importFS,
+  boot,
+};
+
+})(); // end OS
+
+// ============================================================
+// EXPOSE GLOBALLY
+// ============================================================
+window.OS = OS;
+window.WM = OS.WM;
+window.FS = OS.FS;
+window.apps = OS.apps;
+
+OS.boot();
+</script>
+</body>
+</html>

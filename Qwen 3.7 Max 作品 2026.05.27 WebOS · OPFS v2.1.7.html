@@ -1,0 +1,3134 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>WebOS · OPFS</title>
+<style>
+:root{
+  --bg-0:#0e0f1a;
+  --bg-1:#151726;
+  --bg-2:#1c1f33;
+  --bg-3:#242842;
+  --bg-hover:#2c3052;
+  --bg-active:rgba(130,170,255,.18);
+  --border:#323756;
+  --border-soft:#262a42;
+  --text:#dfe4ff;
+  --text-dim:#8f97bf;
+  --text-mute:#5a6185;
+  --accent:#82aaff;
+  --accent-2:#c792ea;
+  --accent-3:#89ddff;
+  --success:#c3e88d;
+  --warn:#ffcb6b;
+  --danger:#ff5370;
+  --shadow:0 10px 40px rgba(0,0,0,.55), 0 2px 8px rgba(0,0,0,.35);
+  --radius:8px;
+  --radius-lg:14px;
+  --font-display:'JetBrains Mono','SF Mono','Menlo',monospace;
+  --font-ui:'IBM Plex Sans','Inter',system-ui,-apple-system,sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;overflow:hidden;}
+body{
+  font-family:var(--font-ui);
+  background:var(--bg-0);
+  color:var(--text);
+  -webkit-font-smoothing:antialiased;
+  user-select:none;
+  -webkit-user-select:none;
+  font-size:13px;
+  line-height:1.45;
+}
+::selection{background:var(--accent);color:#000;}
+
+/* Desktop */
+#desktop{
+  position:fixed;inset:0 0 48px 0;
+  background:#0a0b14;
+  background-image:
+    radial-gradient(ellipse at 20% 10%, rgba(130,170,255,.12), transparent 50%),
+    radial-gradient(ellipse at 80% 90%, rgba(199,146,234,.10), transparent 55%),
+    radial-gradient(ellipse at 50% 50%, rgba(137,221,255,.05), transparent 60%),
+    linear-gradient(135deg,#0a0b14 0%, #151726 50%, #0a0b14 100%);
+  background-size:cover;
+  background-position:center;
+  overflow:hidden;
+  transition:background-image .3s ease;
+}
+#desktop::before{
+  content:'';position:absolute;inset:0;pointer-events:none;
+  background-image:
+    linear-gradient(rgba(255,255,255,.015) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.015) 1px,transparent 1px);
+  background-size:48px 48px;
+  mask-image:radial-gradient(ellipse at center, black 30%, transparent 75%);
+}
+
+/* Desktop Icons */
+#desktop-icons-layer{position:absolute;inset:0;overflow:hidden;}
+.desktop-icons{
+  position:absolute;top:16px;left:16px;
+  display:grid;grid-auto-flow:column;grid-template-rows:repeat(auto-fill,92px);
+  gap:6px;padding:8px;
+}
+.d-icon{
+  position:absolute;width:84px;height:84px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:4px;padding:6px 4px;border-radius:var(--radius);
+  cursor:pointer;transition:background .15s ease, transform .15s ease;
+}
+.d-icon:hover{background:rgba(130,170,255,.08);}
+.d-icon.selected{background:var(--bg-active);outline:1px solid rgba(130,170,255,.35);}
+.d-icon.dragging{opacity:.4;transition:none;}
+.d-icon .ico{width:36px;height:36px;color:var(--accent);flex-shrink:0;}
+.d-icon .lbl{
+  font-size:11px;text-align:center;color:var(--text);
+  max-width:80px;line-height:1.2;
+  text-shadow:0 1px 3px rgba(0,0,0,.8);
+  overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+  word-break:break-word;
+}
+
+/* Taskbar */
+#taskbar{
+  position:fixed;bottom:0;left:0;right:0;height:48px;
+  background:rgba(14,15,26,.85);
+  backdrop-filter:blur(24px) saturate(180%);
+  -webkit-backdrop-filter:blur(24px) saturate(180%);
+  border-top:1px solid var(--border-soft);
+  display:flex;align-items:center;padding:0 8px;gap:4px;z-index:10000;
+}
+.tb-start{
+  width:40px;height:36px;display:flex;align-items:center;justify-content:center;
+  border-radius:var(--radius);cursor:pointer;transition:background .15s;
+}
+.tb-start:hover{background:var(--bg-hover);}
+.tb-start svg{width:20px;height:20px;color:var(--accent);}
+.tb-apps{flex:1;display:flex;gap:3px;overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+.tb-apps::-webkit-scrollbar{display:none;}
+.tb-app{
+  min-width:44px;max-width:180px;height:36px;padding:0 10px;
+  display:flex;align-items:center;gap:8px;
+  background:var(--bg-2);border:1px solid transparent;
+  border-radius:var(--radius);cursor:pointer;transition:all .15s;
+  position:relative;flex-shrink:0;
+}
+.tb-app:hover{background:var(--bg-hover);}
+.tb-app.active{border-color:var(--accent);background:rgba(130,170,255,.12);}
+.tb-app.minimized::after{
+  content:'';position:absolute;bottom:-4px;left:50%;transform:translateX(-50%);
+  width:4px;height:4px;border-radius:50%;background:var(--text-mute);
+}
+.tb-app.active::after{background:var(--accent);}
+.tb-app svg{width:16px;height:16px;color:var(--text);flex-shrink:0;}
+.tb-app .nm{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tb-tray{display:flex;align-items:center;gap:10px;padding:0 8px;color:var(--text-dim);font-size:11px;}
+.tb-clock{text-align:right;line-height:1.2;font-family:var(--font-display);}
+
+/* Start Menu */
+#start-menu{
+  position:fixed;bottom:56px;left:8px;width:360px;max-height:520px;
+  background:rgba(21,23,38,.96);backdrop-filter:blur(30px);
+  border:1px solid var(--border);border-radius:var(--radius-lg);
+  box-shadow:var(--shadow);display:none;flex-direction:column;
+  overflow:hidden;z-index:10001;
+}
+#start-menu.active{display:flex;animation:slideUp .2s cubic-bezier(.2,.9,.3,1.2);}
+@keyframes slideUp{from{opacity:0;transform:translateY(12px) scale(.98);}to{opacity:1;transform:none;}}
+.sm-header{padding:14px 14px 10px;border-bottom:1px solid var(--border-soft);}
+.sm-search{
+  width:100%;padding:9px 12px;background:var(--bg-0);
+  border:1px solid var(--border);border-radius:var(--radius);
+  color:var(--text);font-size:13px;outline:none;font-family:inherit;
+}
+.sm-search:focus{border-color:var(--accent);}
+.sm-apps{flex:1;overflow-y:auto;padding:6px;}
+.sm-app{
+  display:flex;align-items:center;gap:12px;padding:9px 10px;
+  border-radius:var(--radius);cursor:pointer;transition:background .15s;
+}
+.sm-app:hover{background:var(--bg-hover);}
+.sm-app svg{width:24px;height:24px;color:var(--accent);}
+.sm-app-info{flex:1;min-width:0;}
+.sm-app-name{font-size:13px;font-weight:500;}
+.sm-app-desc{font-size:11px;color:var(--text-mute);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.sm-footer{padding:8px 12px;border-top:1px solid var(--border-soft);display:flex;gap:6px;justify-content:flex-end;}
+.sm-footer-btn{
+  padding:6px 10px;font-size:11px;background:transparent;color:var(--text-dim);
+  border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;
+  display:flex;align-items:center;gap:6px;
+}
+.sm-footer-btn:hover{background:var(--bg-hover);color:var(--text);}
+.sm-footer-btn svg{width:14px;height:14px;}
+
+/* Windows */
+#windows-layer{position:fixed;inset:0 0 48px 0;pointer-events:none;z-index:1000;}
+.win{
+  position:absolute;background:var(--bg-1);border:1px solid var(--border);
+  border-radius:var(--radius-lg);box-shadow:var(--shadow);
+  display:flex;flex-direction:column;min-width:320px;min-height:220px;
+  pointer-events:auto;overflow:hidden;
+  animation:winOpen .25s cubic-bezier(.2,.9,.3,1.1);
+}
+@keyframes winOpen{from{opacity:0;transform:scale(.95) translateY(8px);}to{opacity:1;transform:none;}}
+.win.max{
+  top:0!important;left:0!important;
+  width:100%!important;height:100%!important;
+  border-radius:0;border:none;
+}
+.win.min{display:none;}
+.win.focused{border-color:rgba(130,170,255,.4);box-shadow:0 20px 60px rgba(0,0,0,.6),0 0 0 1px rgba(130,170,255,.2);}
+.win-head{
+  height:36px;background:var(--bg-2);border-bottom:1px solid var(--border-soft);
+  display:flex;align-items:center;padding:0 4px 0 12px;cursor:move;
+  flex-shrink:0;gap:8px;
+}
+.win.focused .win-head{background:linear-gradient(90deg,var(--bg-2),rgba(130,170,255,.06));}
+.win-title{flex:1;font-size:12px;font-weight:500;color:var(--text-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.win.focused .win-title{color:var(--text);}
+.win-ctrls{display:flex;}
+.win-ctrl{
+  width:32px;height:36px;display:flex;align-items:center;justify-content:center;
+  cursor:pointer;transition:background .12s;
+}
+.win-ctrl:hover{background:var(--bg-hover);}
+.win-ctrl svg{width:12px;height:12px;stroke:var(--text-dim);fill:none;stroke-width:1.6;}
+.win-ctrl.close:hover{background:var(--danger);}
+.win-ctrl.close:hover svg{stroke:white;}
+.win-body{flex:1;overflow:auto;position:relative;background:var(--bg-0);min-height:0;}
+.win-resize{
+  position:absolute;width:14px;height:14px;right:0;bottom:0;
+  cursor:nwse-resize;z-index:10;
+}
+.win-resize::after{
+  content:'';position:absolute;right:3px;bottom:3px;width:6px;height:6px;
+  border-right:1.5px solid var(--text-mute);border-bottom:1.5px solid var(--text-mute);
+}
+
+/* Context Menu */
+.ctx{
+  position:fixed;background:rgba(21,23,38,.98);backdrop-filter:blur(24px);
+  border:1px solid var(--border);border-radius:var(--radius);
+  box-shadow:var(--shadow);min-width:200px;padding:4px;z-index:30000;display:none;
+}
+.ctx.active{display:block;animation:ctxIn .12s ease;}
+@keyframes ctxIn{from{opacity:0;transform:scale(.96);}to{opacity:1;transform:none;}}
+.ctx-item{
+  padding:7px 10px;border-radius:6px;cursor:pointer;
+  display:flex;align-items:center;gap:10px;font-size:12.5px;transition:background .1s;
+}
+.ctx-item:hover{background:var(--bg-active);color:var(--accent);}
+.ctx-item.disabled{opacity:.4;cursor:not-allowed;}
+.ctx-item.disabled:hover{background:transparent;color:inherit;}
+.ctx-item svg{width:15px;height:15px;color:var(--text-dim);flex-shrink:0;}
+.ctx-item:hover svg{color:var(--accent);}
+.ctx-sep{height:1px;background:var(--border-soft);margin:4px 6px;}
+.ctx-item .shortcut{margin-left:auto;color:var(--text-mute);font-size:11px;font-family:var(--font-display);}
+
+/* File Explorer */
+.fe{display:flex;height:100%;flex-direction:column;}
+.fe-toolbar{
+  height:42px;background:var(--bg-1);border-bottom:1px solid var(--border-soft);
+  display:flex;align-items:center;padding:0 8px;gap:6px;flex-shrink:0;
+}
+.tb-btn{
+  width:30px;height:30px;display:flex;align-items:center;justify-content:center;
+  border-radius:6px;cursor:pointer;transition:background .12s;color:var(--text-dim);
+}
+.tb-btn:hover{background:var(--bg-hover);color:var(--text);}
+.tb-btn:disabled{opacity:.3;cursor:not-allowed;}
+.tb-btn svg{width:16px;height:16px;}
+.fe-breadcrumb{
+  flex:1;display:flex;align-items:center;gap:2px;
+  padding:5px 10px;background:var(--bg-0);border-radius:6px;
+  font-size:12px;overflow-x:auto;min-width:0;font-family:var(--font-display);
+}
+.fe-breadcrumb::-webkit-scrollbar{display:none;}
+.bc-item{color:var(--text-dim);cursor:pointer;white-space:nowrap;padding:2px 4px;border-radius:4px;}
+.bc-item:hover{color:var(--accent);background:var(--bg-hover);}
+.bc-sep{color:var(--text-mute);}
+.fe-search{
+  width:160px;padding:5px 10px;background:var(--bg-0);
+  border:1px solid var(--border);border-radius:6px;color:var(--text);
+  font-size:12px;outline:none;font-family:inherit;
+}
+.fe-search:focus{border-color:var(--accent);}
+.fe-main{display:flex;flex:1;min-height:0;}
+.fe-side{
+  width:180px;background:var(--bg-1);border-right:1px solid var(--border-soft);
+  padding:8px 6px;overflow-y:auto;flex-shrink:0;
+}
+.fe-side-title{
+  font-size:10px;font-weight:600;color:var(--text-mute);
+  text-transform:uppercase;letter-spacing:.5px;padding:8px 10px 6px;
+}
+.side-item{
+  display:flex;align-items:center;gap:8px;padding:6px 10px;
+  border-radius:6px;cursor:pointer;font-size:12.5px;
+  color:var(--text-dim);transition:background .12s;
+}
+.side-item:hover{background:var(--bg-hover);color:var(--text);}
+.side-item.active{background:var(--bg-active);color:var(--accent);}
+.side-item svg{width:15px;height:15px;flex-shrink:0;}
+.side-item.mount{color:var(--success);}
+.fe-content{flex:1;display:flex;flex-direction:column;min-width:0;}
+.fe-list-head{
+  display:grid;grid-template-columns:32px 1fr 130px 80px 90px;gap:8px;
+  padding:6px 14px;font-size:11px;font-weight:600;color:var(--text-mute);
+  text-transform:uppercase;letter-spacing:.4px;
+  border-bottom:1px solid var(--border-soft);background:var(--bg-1);
+  flex-shrink:0;
+}
+.fe-list-head > div{cursor:pointer;user-select:none;display:flex;align-items:center;gap:4px;}
+.fe-list-head > div:hover{color:var(--text-dim);}
+.fe-list-head .sort-ind{color:var(--accent);font-size:9px;}
+.fe-list{flex:1;overflow-y:auto;padding:2px 0;}
+.f-item{
+  display:grid;grid-template-columns:32px 1fr 130px 80px 90px;gap:8px;
+  padding:6px 14px;align-items:center;cursor:pointer;
+  transition:background .1s;border-radius:0;
+}
+.f-item:hover{background:var(--bg-hover);}
+.f-item.selected{background:var(--bg-active);}
+.f-item.drop-target{background:rgba(195,232,141,.1);outline:1px dashed var(--success);}
+.f-item svg{width:20px;height:20px;flex-shrink:0;}
+.f-item-name{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.f-item-meta{font-size:11.5px;color:var(--text-mute);font-family:var(--font-display);}
+.f-item-editing{
+  background:var(--bg-0)!important;padding:4px 8px!important;
+}
+.f-item-editing input{
+  width:100%;padding:3px 6px;background:var(--bg-0);
+  border:1px solid var(--accent);border-radius:4px;color:var(--text);
+  font-size:13px;outline:none;font-family:inherit;
+}
+.fe-status{
+  height:24px;background:var(--bg-1);border-top:1px solid var(--border-soft);
+  display:flex;align-items:center;padding:0 12px;font-size:11px;color:var(--text-mute);
+  gap:16px;flex-shrink:0;
+}
+
+/* Text Editor */
+.ed{display:flex;flex-direction:column;height:100%;}
+.ed-tabs{
+  height:34px;background:var(--bg-1);border-bottom:1px solid var(--border-soft);
+  display:flex;align-items:center;overflow-x:auto;flex-shrink:0;
+}
+.ed-tab{
+  height:34px;padding:0 12px;display:flex;align-items:center;gap:6px;
+  background:transparent;border-right:1px solid var(--border-soft);
+  cursor:pointer;font-size:12px;color:var(--text-dim);white-space:nowrap;
+}
+.ed-tab.active{background:var(--bg-0);color:var(--text);}
+.ed-tab .close{opacity:.5;font-size:14px;padding:0 2px;}
+.ed-tab .close:hover{opacity:1;color:var(--danger);}
+.ed-toolbar{
+  height:36px;background:var(--bg-1);border-bottom:1px solid var(--border-soft);
+  display:flex;align-items:center;padding:0 8px;gap:4px;flex-shrink:0;
+}
+.ed-toolbar-sep{width:1px;height:20px;background:var(--border-soft);margin:0 4px;}
+.ed-file-info{margin-left:auto;font-size:11px;color:var(--text-mute);font-family:var(--font-display);}
+.ed-body{flex:1;display:flex;min-height:0;position:relative;}
+.ed-gutter{
+  width:48px;background:var(--bg-1);border-right:1px solid var(--border-soft);
+  padding:12px 8px 12px 0;text-align:right;font-family:var(--font-display);
+  font-size:12px;color:var(--text-mute);line-height:1.6;overflow:hidden;user-select:none;
+}
+.ed-area{flex:1;position:relative;overflow:auto;background:var(--bg-0);}
+.ed-area textarea{
+  width:100%;height:100%;background:transparent;color:var(--text);
+  border:none;padding:12px 14px;
+  font-family:var(--font-display);font-size:13px;line-height:1.6;
+  resize:none;outline:none;tab-size:2;white-space:pre;overflow-wrap:normal;
+}
+.ed-split{display:flex;flex:1;min-height:0;}
+.ed-preview{
+  flex:1;background:white;position:relative;
+}
+.ed-preview iframe{width:100%;height:100%;border:none;}
+.ed-preview-label{
+  position:absolute;top:6px;right:10px;font-size:10px;color:#666;
+  background:rgba(255,255,255,.9);padding:2px 6px;border-radius:4px;z-index:2;
+  font-family:var(--font-display);
+}
+
+/* Spreadsheet */
+.ss{display:flex;flex-direction:column;height:100%;}
+.ss-tabs{
+  height:34px;background:var(--bg-1);border-bottom:1px solid var(--border-soft);
+  display:flex;align-items:center;padding:0 8px;gap:4px;flex-shrink:0;
+}
+.ss-tab{
+  padding:5px 12px;background:var(--bg-2);border-radius:6px;
+  font-size:12px;cursor:pointer;color:var(--text-dim);
+}
+.ss-tab.active{background:var(--accent);color:#000;}
+.ss-body{flex:1;overflow:auto;min-height:0;background:var(--bg-0);}
+.ss-table{
+  width:100%;border-collapse:collapse;font-family:var(--font-display);font-size:12px;
+}
+.ss-table th,.ss-table td{
+  padding:6px 10px;border:1px solid var(--border-soft);text-align:left;white-space:nowrap;
+}
+.ss-table th{background:var(--bg-2);color:var(--text-dim);font-weight:600;position:sticky;top:0;}
+.ss-table td[contenteditable]{cursor:text;user-select:text;}
+.ss-table td[contenteditable]:focus{outline:1px solid var(--accent);background:var(--bg-1);}
+.ss-table tr:nth-child(even) td{background:rgba(255,255,255,.015);}
+
+/* Image Viewer */
+.iv{height:100%;display:flex;flex-direction:column;background:#000;}
+.iv-toolbar{
+  height:36px;background:rgba(21,23,38,.9);border-bottom:1px solid var(--border-soft);
+  display:flex;align-items:center;padding:0 8px;gap:4px;flex-shrink:0;
+}
+.iv-stage{flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;}
+.iv-stage img{max-width:100%;max-height:100%;object-fit:contain;transition:transform .2s ease;}
+.iv-info{position:absolute;bottom:10px;left:10px;background:rgba(0,0,0,.7);color:#fff;padding:4px 10px;border-radius:4px;font-size:11px;font-family:var(--font-display);}
+
+/* Media Player */
+.mp{height:100%;display:flex;flex-direction:column;background:#000;}
+.mp-stage{flex:1;display:flex;align-items:center;justify-content:center;padding:16px;overflow:hidden;}
+.mp-stage audio,.mp-stage video{max-width:100%;max-height:100%;}
+
+/* Calculator */
+.calc{padding:16px;display:flex;flex-direction:column;gap:10px;height:100%;background:var(--bg-1);}
+.calc-disp{
+  background:var(--bg-0);padding:18px;border-radius:var(--radius);
+  text-align:right;font-size:30px;font-weight:300;
+  font-family:var(--font-display);min-height:72px;
+  display:flex;align-items:center;justify-content:flex-end;overflow:hidden;
+  border:1px solid var(--border-soft);
+}
+.calc-disp .prev{font-size:13px;color:var(--text-mute);margin-bottom:4px;}
+.calc-btns{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;flex:1;}
+.cb{
+  background:var(--bg-2);border:none;border-radius:var(--radius);
+  color:var(--text);font-size:16px;cursor:pointer;transition:all .12s;
+  font-family:var(--font-display);
+}
+.cb:hover{background:var(--bg-hover);}
+.cb:active{transform:scale(.95);}
+.cb.op{background:var(--accent);color:#000;font-weight:600;}
+.cb.op:hover{background:#9abcff;}
+.cb.eq{background:var(--accent-2);color:#000;font-weight:600;}
+.cb.eq:hover{background:#d8aaff;}
+.cb.fn{background:var(--bg-3);color:var(--text-dim);}
+
+/* Settings */
+.stg{display:flex;height:100%;}
+.stg-side{width:180px;background:var(--bg-1);border-right:1px solid var(--border-soft);padding:8px 6px;overflow-y:auto;}
+.stg-content{flex:1;padding:24px;overflow-y:auto;}
+.stg-section{margin-bottom:28px;}
+.stg-h{font-size:16px;font-weight:600;margin-bottom:12px;color:var(--text);}
+.stg-sub{font-size:11px;color:var(--text-mute);margin-bottom:16px;text-transform:uppercase;letter-spacing:.5px;font-weight:600;}
+.stg-card{background:var(--bg-1);border:1px solid var(--border-soft);border-radius:var(--radius);padding:14px;margin-bottom:10px;}
+.stg-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px;}
+.stg-row:last-child{margin-bottom:0;}
+.stg-label{font-size:13px;color:var(--text);}
+.stg-val{font-size:12px;color:var(--text-dim);font-family:var(--font-display);}
+.storage-bar{height:24px;background:var(--bg-0);border-radius:6px;overflow:hidden;margin-bottom:10px;border:1px solid var(--border-soft);}
+.storage-used{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-2));transition:width .4s ease;}
+.stg-btn{
+  background:var(--bg-2);color:var(--text);border:1px solid var(--border);
+  padding:8px 14px;border-radius:var(--radius);cursor:pointer;font-size:13px;
+  transition:all .15s;font-family:inherit;
+}
+.stg-btn:hover{background:var(--bg-hover);border-color:var(--accent);}
+.stg-btn.danger{background:var(--danger);border-color:var(--danger);color:#000;}
+.stg-btn.danger:hover{background:#ff7a8f;}
+.wp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.wp-item{
+  aspect-ratio:16/10;border-radius:6px;cursor:pointer;
+  border:2px solid transparent;transition:all .15s;overflow:hidden;
+  position:relative;background-size:cover;background-position:center;
+}
+.wp-item:hover{transform:translateY(-2px);}
+.wp-item.active{border-color:var(--accent);}
+.wp-item.upload{
+  background:var(--bg-2);display:flex;align-items:center;justify-content:center;
+  border:2px dashed var(--border);color:var(--text-mute);font-size:11px;
+}
+.wp-item.upload:hover{border-color:var(--accent);color:var(--accent);}
+
+/* Browser */
+.br{display:flex;flex-direction:column;height:100%;}
+.br-toolbar{
+  height:40px;background:var(--bg-1);border-bottom:1px solid var(--border-soft);
+  display:flex;align-items:center;padding:0 8px;gap:6px;flex-shrink:0;
+}
+.br-url{
+  flex:1;padding:6px 12px;background:var(--bg-0);
+  border:1px solid var(--border);border-radius:6px;color:var(--text);
+  font-size:12px;outline:none;font-family:var(--font-display);
+}
+.br-url:focus{border-color:var(--accent);}
+.br-body{flex:1;background:white;}
+.br-body iframe{width:100%;height:100%;border:none;}
+
+/* Paint */
+.pnt{display:flex;flex-direction:column;height:100%;}
+.pnt-toolbar{
+  height:44px;background:var(--bg-1);border-bottom:1px solid var(--border-soft);
+  display:flex;align-items:center;padding:0 8px;gap:6px;flex-shrink:0;
+}
+.pnt-tool{
+  width:32px;height:32px;display:flex;align-items:center;justify-content:center;
+  background:var(--bg-2);border-radius:6px;cursor:pointer;
+  border:1px solid transparent;
+}
+.pnt-tool:hover{background:var(--bg-hover);}
+.pnt-tool.active{border-color:var(--accent);background:var(--bg-active);}
+.pnt-tool svg{width:16px;height:16px;}
+.pnt-colors{display:flex;gap:3px;}
+.pnt-color{width:22px;height:22px;border-radius:50%;cursor:pointer;border:2px solid transparent;}
+.pnt-color.active{border-color:var(--text);}
+.pnt-size{width:60px;padding:4px 6px;background:var(--bg-0);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:11px;outline:none;}
+.pnt-body{flex:1;background:#fff;overflow:hidden;cursor:crosshair;}
+.pnt-body canvas{display:block;}
+
+/* Dialogs */
+.dlg-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(6px);
+  z-index:50000;display:flex;align-items:center;justify-content:center;
+  animation:fadeIn .15s ease;
+}
+@keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+.dlg{
+  background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-lg);
+  box-shadow:var(--shadow);min-width:360px;max-width:500px;overflow:hidden;
+  animation:dlgIn .2s cubic-bezier(.2,.9,.3,1.1);
+}
+@keyframes dlgIn{from{opacity:0;transform:scale(.95) translateY(8px);}to{opacity:1;transform:none;}}
+.dlg-head{padding:14px 18px;border-bottom:1px solid var(--border-soft);}
+.dlg-title{font-size:15px;font-weight:600;}
+.dlg-body{padding:18px;}
+.dlg-body input[type=text]{
+  width:100%;padding:9px 12px;background:var(--bg-0);
+  border:1px solid var(--border);border-radius:6px;color:var(--text);
+  font-size:13px;outline:none;font-family:inherit;
+}
+.dlg-body input[type=text]:focus{border-color:var(--accent);}
+.dlg-body label{display:block;font-size:12px;color:var(--text-dim);margin-bottom:6px;}
+.dlg-foot{padding:12px 18px;border-top:1px solid var(--border-soft);display:flex;justify-content:flex-end;gap:8px;}
+.dlg-btn{
+  padding:8px 16px;border-radius:6px;border:1px solid var(--border);
+  background:var(--bg-2);color:var(--text);font-size:12.5px;cursor:pointer;font-family:inherit;
+}
+.dlg-btn:hover{background:var(--bg-hover);}
+.dlg-btn.primary{background:var(--accent);color:#000;border-color:var(--accent);font-weight:500;}
+.dlg-btn.primary:hover{background:#9abcff;}
+
+/* Toast */
+.toast-layer{position:fixed;top:16px;right:16px;z-index:60000;display:flex;flex-direction:column;gap:8px;pointer-events:none;}
+.toast{
+  background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius);
+  padding:10px 14px;box-shadow:var(--shadow);max-width:320px;pointer-events:auto;
+  display:flex;align-items:center;gap:10px;font-size:12.5px;
+  animation:toastIn .25s cubic-bezier(.2,.9,.3,1.1);
+  border-left:3px solid var(--accent);
+}
+.toast.success{border-left-color:var(--success);}
+.toast.error{border-left-color:var(--danger);}
+.toast.warn{border-left-color:var(--warn);}
+@keyframes toastIn{from{opacity:0;transform:translateX(20px);}to{opacity:1;transform:none;}}
+.toast.out{animation:toastOut .2s ease forwards;}
+@keyframes toastOut{to{opacity:0;transform:translateX(20px);}}
+.toast svg{width:16px;height:16px;flex-shrink:0;}
+
+/* Selection box */
+.sel-box{
+  position:fixed;border:1px solid var(--accent);
+  background:rgba(130,170,255,.08);pointer-events:none;z-index:9999;
+}
+
+/* Drag overlay */
+.drag-ghost{
+  position:fixed;pointer-events:none;z-index:100000;
+  background:var(--bg-2);border:1px solid var(--accent);
+  border-radius:6px;padding:6px 10px;font-size:12px;color:var(--text);
+  box-shadow:var(--shadow);white-space:nowrap;
+}
+
+/* Desktop drop zone highlight */
+#desktop.drop-hover::after{
+  content:'';position:absolute;inset:0;pointer-events:none;
+  background:rgba(130,170,255,.05);border:2px dashed var(--accent);
+  animation:pulse 1s ease infinite;
+}
+@keyframes pulse{0%,100%{opacity:.5;}50%{opacity:1;}}
+
+/* Mobile */
+@media (max-width:768px){
+  #taskbar{height:56px;}
+  #desktop{bottom:56px;}
+  #windows-layer{bottom:56px;}
+  .tb-app .nm{display:none;}
+  .tb-app{min-width:40px;padding:0 8px;}
+  .win{min-width:280px!important;min-height:200px!important;}
+  .fe-side{width:140px;}
+  .fe-list-head,.f-item{grid-template-columns:28px 1fr 80px;}
+  .fe-list-head > div:nth-child(4),.fe-list-head > div:nth-child(5),
+  .f-item > div:nth-child(4),.f-item > div:nth-child(5){display:none;}
+  .fe-search{width:100px;}
+  .ed-gutter{width:32px;font-size:10px;}
+}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:5px;border:2px solid var(--bg-0);}
+::-webkit-scrollbar-thumb:hover{background:var(--text-mute);}
+::-webkit-scrollbar-corner{background:transparent;}
+</style>
+</head>
+<body>
+
+<div id="desktop">
+  <div id="desktop-icons-layer"></div>
+</div>
+
+<div id="windows-layer"></div>
+
+<div id="taskbar">
+  <div class="tb-start" id="start-btn" title="开始">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+      <path d="M3 3 L11 4.5 L11 11.5 L3 11.5 Z"/>
+      <path d="M12.5 4.5 L21 3 L21 11.5 L12.5 11.5 Z"/>
+      <path d="M3 12.5 L11 12.5 L11 19.5 L3 21 Z"/>
+      <path d="M12.5 12.5 L21 12.5 L21 21 L12.5 19.5 Z"/>
+    </svg>
+  </div>
+  <div class="tb-apps" id="tb-apps"></div>
+  <div class="tb-tray">
+    <div class="tb-clock" id="clock"></div>
+  </div>
+</div>
+
+<div id="start-menu">
+  <div class="sm-header">
+    <input type="text" class="sm-search" placeholder="搜索应用或文件..." id="sm-search" autocomplete="off">
+  </div>
+  <div class="sm-apps" id="sm-apps"></div>
+  <div class="sm-footer">
+    <button class="sm-footer-btn" id="sm-mount">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><polyline points="9 14 12 11 15 14"/></svg>
+      挂载文件夹
+    </button>
+    <button class="sm-footer-btn" id="sm-power">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg>
+    </button>
+  </div>
+</div>
+
+<div class="ctx" id="ctx-menu"></div>
+<div class="toast-layer" id="toast-layer"></div>
+
+<script>
+'use strict';
+
+// ============================================================
+// SVG Icons
+// ============================================================
+const ICONS = {
+  folder: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>',
+  folderOpen: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 20h14a2 2 0 0 0 2-2v-1H8a2 2 0 0 0-2 1l-2 2zM20 17V9a2 2 0 0 0-2-2h-6l-2-3H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h1"/></svg>',
+  file: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>',
+  image: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>',
+  video: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>',
+  audio: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>',
+  code: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>',
+  text: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="14" y2="17"/></svg>',
+  pdf: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><text x="12" y="17" text-anchor="middle" font-size="6" font-weight="700" fill="currentColor" stroke="none">PDF</text></svg>',
+  archive: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/></svg>',
+  mount: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>',
+  // App icons
+  explorer: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 7v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-6l-2-2H5a2 2 0 0 0-2 2z"/><line x1="9" y1="13" x2="15" y2="13"/></svg>',
+  notepad: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>',
+  calc: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="11" x2="8" y2="11"/><line x1="12" y1="11" x2="12" y2="11"/><line x1="16" y1="11" x2="16" y2="11"/><line x1="8" y1="15" x2="8" y2="15"/><line x1="12" y1="15" x2="12" y2="15"/><line x1="16" y1="15" x2="16" y2="15"/><line x1="8" y1="19" x2="16" y2="19"/></svg>',
+  settings: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
+  browser: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
+  paint: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="13.5" cy="6.5" r=".5"/><circle cx="17.5" cy="10.5" r=".5"/><circle cx="8.5" cy="7.5" r=".5"/><circle cx="6.5" cy="12.5" r=".5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>',
+  table: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>',
+  refresh: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>',
+  upload: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>',
+  download: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>',
+  copy: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>',
+  paste: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>',
+  trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>',
+  rename: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>',
+  newFile: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>',
+  fullscreen: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>',
+};
+
+// ============================================================
+// VFS: Unified File System (OPFS + Local Mounts)
+// ============================================================
+const VFS = {
+  opfsRoot: null,
+  mounts: new Map(), // path -> {handle, name}
+  clipboard: null,
+  
+  async init() {
+    this.opfsRoot = await navigator.storage.getDirectory();
+    // Load mount metadata from IndexedDB
+    await this._loadMountMeta();
+    // Ensure default dirs
+    await this.mkdir('/Documents');
+    await this.mkdir('/Pictures');
+    await this.mkdir('/Downloads');
+    await this.mkdir('/Desktop');
+    await this.mkdir('/mnt');
+    console.log('VFS ready');
+  },
+  
+  _idb() {
+    return new Promise((res, rej) => {
+      const req = indexedDB.open('webos-meta', 1);
+      req.onupgradeneeded = () => req.result.createObjectStore('meta');
+      req.onsuccess = () => res(req.result);
+      req.onerror = () => rej(req.error);
+    });
+  },
+  
+  async _loadMountMeta() {
+    try {
+      const db = await this._idb();
+      const tx = db.transaction('meta', 'readonly');
+      const req = tx.objectStore('meta').get('mounts');
+      await new Promise(r => { req.onsuccess = r; req.onerror = r; });
+      this._savedMounts = req.result || [];
+    } catch { this._savedMounts = []; }
+  },
+  
+  async _saveMountMeta() {
+    try {
+      const db = await this._idb();
+      const tx = db.transaction('meta', 'readwrite');
+      const data = Array.from(this.mounts.entries()).map(([path, m]) => ({
+        path, name: m.name
+      }));
+      tx.objectStore('meta').put(data, 'mounts');
+    } catch {}
+  },
+  
+  getSavedMounts() { return this._savedMounts || []; },
+  
+  // Parse path, return {mount, subpath} or null for OPFS
+  _resolve(path) {
+    if (!path.startsWith('/')) path = '/' + path;
+    // Check mounts (longest prefix match)
+    let match = null, matchLen = 0;
+    for (const [mp, m] of this.mounts.entries()) {
+      if (path === mp || path.startsWith(mp + '/')) {
+        if (mp.length > matchLen) { match = { mount: m, mountPath: mp }; matchLen = mp.length; }
+      }
+    }
+    if (match) {
+      const sub = path.slice(matchLen) || '/';
+      return { mount: match.mount, subpath: sub };
+    }
+    return null;
+  },
+  
+  // Get OPFS directory handle for given path
+  async _opfsDir(path, create = false) {
+    let h = this.opfsRoot;
+    const parts = path.split('/').filter(Boolean);
+    for (const p of parts) {
+      h = await h.getDirectoryHandle(p, { create });
+    }
+    return h;
+  },
+  
+  async _localDir(handle, subpath, create = false) {
+    let h = handle;
+    const parts = subpath.split('/').filter(Boolean);
+    for (const p of parts) {
+      h = await h.getDirectoryHandle(p, { create });
+    }
+    return h;
+  },
+  
+  // Public API — all work with both OPFS and local paths uniformly
+  async stat(path) {
+    if (path === '/' || path === '') {
+      return { type: 'directory', size: 0, modified: Date.now(), name: '' };
+    }
+    const res = this._resolve(path);
+    const parts = path.split('/').filter(Boolean);
+    const name = parts[parts.length - 1];
+    const parentPath = '/' + parts.slice(0, -1).join('/');
+    
+    try {
+      let parentHandle;
+      if (res) {
+        parentHandle = res.subpath === '/' 
+          ? res.mount.handle
+          : await this._localDir(res.mount.handle, res.subpath.split('/').slice(0, -1).join('/') || '/');
+        const entryName = res.subpath.split('/').filter(Boolean).pop();
+        if (!entryName) return { type: 'directory', size: 0, modified: Date.now(), name };
+        try {
+          const dh = await parentHandle.getDirectoryHandle(entryName);
+          return { type: 'directory', size: 0, modified: Date.now(), name };
+        } catch {
+          const fh = await parentHandle.getFileHandle(entryName);
+          const f = await fh.getFile();
+          return { type: 'file', size: f.size, modified: f.lastModified, name };
+        }
+      } else {
+        parentHandle = await this._opfsDir(parentPath);
+        try {
+          await parentHandle.getDirectoryHandle(name);
+          return { type: 'directory', size: 0, modified: Date.now(), name };
+        } catch {
+          const fh = await parentHandle.getFileHandle(name);
+          const f = await fh.getFile();
+          return { type: 'file', size: f.size, modified: f.lastModified, name };
+        }
+      }
+    } catch (e) {
+      throw new Error('Path not found: ' + path);
+    }
+  },
+  
+  async readdir(path = '/') {
+    const entries = [];
+    
+    if (path === '/') {
+      // Show OPFS root entries
+      for await (const [name, handle] of this.opfsRoot.entries()) {
+        const st = handle.kind === 'directory'
+          ? { type: 'directory', size: 0, modified: Date.now() }
+          : { type: 'file', size: (await handle.getFile()).size, modified: (await handle.getFile()).lastModified };
+        entries.push({ name, ...st });
+      }
+      // Show mounts as virtual folders
+      for (const [mp, m] of this.mounts.entries()) {
+        const mpParts = mp.split('/').filter(Boolean);
+        if (mpParts.length === 2 && mpParts[0] === 'mnt') {
+          entries.push({ name: mpParts[1], type: 'directory', size: 0, modified: Date.now(), mount: true });
+        } else if (mpParts.length === 1) {
+          entries.push({ name: mpParts[0], type: 'directory', size: 0, modified: Date.now(), mount: true });
+        }
+      }
+      return entries;
+    }
+    
+    // Check if path is a mount parent (e.g. /mnt)
+    const parts = path.split('/').filter(Boolean);
+    if (parts.length === 1 && parts[0] === 'mnt') {
+      for (const [mp, m] of this.mounts.entries()) {
+        const mpParts = mp.split('/').filter(Boolean);
+        if (mpParts.length >= 2 && mpParts[0] === 'mnt') {
+          entries.push({ name: mpParts[1], type: 'directory', size: 0, modified: Date.now(), mount: true });
+        }
+      }
+      return entries;
+    }
+    
+    const res = this._resolve(path);
+    try {
+      let handle;
+      if (res) {
+        handle = res.subpath === '/' ? res.mount.handle : await this._localDir(res.mount.handle, res.subpath);
+      } else {
+        handle = await this._opfsDir(path);
+      }
+      for await (const [name, h] of handle.entries()) {
+        if (h.kind === 'directory') {
+          entries.push({ name, type: 'directory', size: 0, modified: Date.now() });
+        } else {
+          const f = await h.getFile();
+          entries.push({ name, type: 'file', size: f.size, modified: f.lastModified });
+        }
+      }
+      return entries;
+    } catch (e) {
+      throw new Error('Cannot read directory: ' + path);
+    }
+  },
+  
+  async readFile(path) {
+    const res = this._resolve(path);
+    const parts = path.split('/').filter(Boolean);
+    const name = parts.pop();
+    
+    let parentHandle;
+    if (res) {
+      const subParts = res.subpath.split('/').filter(Boolean);
+      subParts.pop();
+      parentHandle = subParts.length === 0 ? res.mount.handle : await this._localDir(res.mount.handle, subParts.join('/'));
+    } else {
+      parentHandle = await this._opfsDir(parts.join('/') || '/');
+    }
+    
+    const fh = await parentHandle.getFileHandle(name);
+    const f = await fh.getFile();
+    return await f.arrayBuffer();
+  },
+  
+  async readText(path) {
+    const buf = await this.readFile(path);
+    return new TextDecoder().decode(buf);
+  },
+  
+  async writeFile(path, content) {
+    const res = this._resolve(path);
+    const parts = path.split('/').filter(Boolean);
+    const name = parts.pop();
+    const dirPath = '/' + parts.join('/');
+    
+    let parentHandle;
+    if (res) {
+      const subParts = res.subpath.split('/').filter(Boolean);
+      subParts.pop();
+      parentHandle = subParts.length === 0 ? res.mount.handle : await this._localDir(res.mount.handle, subParts.join('/'), true);
+    } else {
+      await this.mkdir(dirPath || '/');
+      parentHandle = await this._opfsDir(parts.join('/') || '/');
+    }
+    
+    const fh = await parentHandle.getFileHandle(name, { create: true });
+    const w = await fh.createWritable();
+    if (typeof content === 'string') await w.write(new TextEncoder().encode(content));
+    else await w.write(content);
+    await w.close();
+  },
+  
+  async mkdir(path) {
+    if (path === '/' || !path) return;
+    const res = this._resolve(path);
+    if (res) {
+      await this._localDir(res.mount.handle, res.subpath, true);
+      return;
+    }
+    await this._opfsDir(path, true);
+  },
+  
+  async unlink(path) {
+    const parts = path.split('/').filter(Boolean);
+    const name = parts.pop();
+    const parentPath = '/' + parts.join('/');
+    const res = this._resolve(path);
+    
+    let parentHandle;
+    if (res) {
+      const subParts = res.subpath.split('/').filter(Boolean);
+      subParts.pop();
+      parentHandle = subParts.length === 0 ? res.mount.handle : await this._localDir(res.mount.handle, subParts.join('/'));
+    } else {
+      parentHandle = await this._opfsDir(parts.join('/') || '/');
+    }
+    await parentHandle.removeEntry(name, { recursive: true });
+  },
+  
+  async rename(oldPath, newPath) {
+    const oldParts = oldPath.split('/').filter(Boolean);
+    const oldName = oldParts.pop();
+    const oldParentPath = '/' + oldParts.join('/');
+    const newParts = newPath.split('/').filter(Boolean);
+    const newName = newParts.pop();
+    
+    const res = this._resolve(oldPath);
+    if (res) {
+      // Local FS rename (same parent only for simplicity)
+      const subParts = res.subpath.split('/').filter(Boolean);
+      subParts.pop();
+      const parentHandle = subParts.length === 0 ? res.mount.handle : await this._localDir(res.mount.handle, subParts.join('/'));
+      const st = await this.stat(oldPath);
+      if (st.type === 'file') {
+        const fh = await parentHandle.getFileHandle(oldName);
+        const f = await fh.getFile();
+        const buf = await f.arrayBuffer();
+        await this.writeFile(newPath, buf);
+        await parentHandle.removeEntry(oldName);
+      } else {
+        throw new Error('Folder rename on local mounts not fully supported');
+      }
+    } else {
+      // OPFS rename
+      const st = await this.stat(oldPath);
+      if (st.type === 'file') {
+        const buf = await this.readFile(oldPath);
+        await this.writeFile(newPath, buf);
+        await this.unlink(oldPath);
+      } else {
+        await this._copyDir(oldPath, newPath);
+        await this.unlink(oldPath);
+      }
+    }
+  },
+  
+  async copy(src, dst) {
+    const st = await this.stat(src);
+    if (st.type === 'file') {
+      const buf = await this.readFile(src);
+      await this.writeFile(dst, buf);
+    } else {
+      await this._copyDir(src, dst);
+    }
+  },
+  
+  async _copyDir(src, dst) {
+    await this.mkdir(dst);
+    const entries = await this.readdir(src);
+    for (const e of entries) {
+      const s = src === '/' ? '/' + e.name : src + '/' + e.name;
+      const d = dst === '/' ? '/' + e.name : dst + '/' + e.name;
+      await this.copy(s, d);
+    }
+  },
+  
+  async exists(path) {
+    try { await this.stat(path); return true; } catch { return false; }
+  },
+  
+  async mountLocal(handle) {
+    const name = handle.name || 'local-' + Date.now();
+    const mountPath = '/mnt/' + name;
+    this.mounts.set(mountPath, { handle, name });
+    await this._saveMountMeta();
+    return mountPath;
+  },
+  
+  async unmount(path) {
+    this.mounts.delete(path);
+    await this._saveMountMeta();
+  },
+  
+  async getStorageEstimate() {
+    const q = await navigator.storage.estimate();
+    return { used: q.usage || 0, quota: q.quota || 0 };
+  },
+  
+  async reset() {
+    for await (const [name] of this.opfsRoot.entries()) {
+      await this.opfsRoot.removeEntry(name, { recursive: true });
+    }
+    this.mounts.clear();
+    await this._saveMountMeta();
+    const db = await this._idb();
+    db.transaction('meta', 'readwrite').objectStore('meta').clear();
+  }
+};
+
+// ============================================================
+// Utility
+// ============================================================
+const fmtSize = (b) => {
+  if (!b || b === 0) return '—';
+  const u = ['B','KB','MB','GB','TB'];
+  let i = 0;
+  while (b >= 1024 && i < u.length - 1) { b /= 1024; i++; }
+  return b.toFixed(b < 10 && i > 0 ? 1 : 0) + ' ' + u[i];
+};
+const fmtDate = (ts) => {
+  if (!ts) return '—';
+  const d = new Date(ts);
+  const now = new Date();
+  const sameDay = d.toDateString() === now.toDateString();
+  if (sameDay) return d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+  return d.toLocaleDateString('zh-CN') + ' ' + d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+};
+const getExt = (name) => {
+  const m = name.match(/\.([^.\\/]+)$/);
+  return m ? m[1].toLowerCase() : '';
+};
+const getIconForFile = (name) => {
+  const ext = getExt(name);
+  if (['png','jpg','jpeg','gif','svg','webp','bmp','ico','avif'].includes(ext)) return ICONS.image;
+  if (['mp4','webm','ogv','mov','mkv'].includes(ext)) return ICONS.video;
+  if (['mp3','wav','ogg','flac','aac','m4a','opus'].includes(ext)) return ICONS.audio;
+  if (['html','css','js','ts','json','xml','yaml','yml','py','java','c','cpp','rs','go','sh','md','jsx','tsx','vue','svelte'].includes(ext)) return ICONS.code;
+  if (['pdf'].includes(ext)) return ICONS.pdf;
+  if (['zip','gz','tar','tgz','rar','7z'].includes(ext)) return ICONS.archive;
+  if (['txt','log','ini','cfg','conf','csv','tsv'].includes(ext)) return ICONS.text;
+  return ICONS.file;
+};
+const el = (html) => {
+  const t = document.createElement('template');
+  t.innerHTML = html.trim();
+  return t.content.firstElementChild;
+};
+
+// ============================================================
+// Toast
+// ============================================================
+const Toast = {
+  show(msg, type = 'info', duration = 2800) {
+    const layer = document.getElementById('toast-layer');
+    const t = el(`<div class="toast ${type}"><span>${msg}</span></div>`);
+    layer.appendChild(t);
+    setTimeout(() => {
+      t.classList.add('out');
+      setTimeout(() => t.remove(), 200);
+    }, duration);
+  }
+};
+
+// ============================================================
+// Dialogs
+// ============================================================
+const Dialog = {
+  prompt(title, defaultValue = '', placeholder = '') {
+    return new Promise((resolve) => {
+      const overlay = el(`<div class="dlg-overlay"></div>`);
+      const dlg = el(`
+        <div class="dlg">
+          <div class="dlg-head"><div class="dlg-title">${title}</div></div>
+          <div class="dlg-body">
+            <label>输入内容</label>
+            <input type="text" value="${defaultValue.replace(/"/g,'&quot;')}" placeholder="${placeholder}">
+          </div>
+          <div class="dlg-foot">
+            <button class="dlg-btn" data-act="cancel">取消</button>
+            <button class="dlg-btn primary" data-act="ok">确定</button>
+          </div>
+        </div>
+      `);
+      overlay.appendChild(dlg);
+      const input = dlg.querySelector('input');
+      input.focus(); input.select();
+      const close = (val) => { overlay.remove(); resolve(val); };
+      dlg.querySelector('[data-act=cancel]').onclick = () => close(null);
+      dlg.querySelector('[data-act=ok]').onclick = () => close(input.value);
+      input.addEventListener('keydown', e => {
+        if (e.key === 'Enter') close(input.value);
+        if (e.key === 'Escape') close(null);
+      });
+      overlay.addEventListener('click', e => { if (e.target === overlay) close(null); });
+      document.body.appendChild(overlay);
+    });
+  },
+  
+  confirm(title, message) {
+    return new Promise((resolve) => {
+      const overlay = el(`<div class="dlg-overlay"></div>`);
+      const dlg = el(`
+        <div class="dlg">
+          <div class="dlg-head"><div class="dlg-title">${title}</div></div>
+          <div class="dlg-body"><p style="color:var(--text-dim);line-height:1.5">${message}</p></div>
+          <div class="dlg-foot">
+            <button class="dlg-btn" data-act="cancel">取消</button>
+            <button class="dlg-btn primary" data-act="ok">确定</button>
+          </div>
+        </div>
+      `);
+      overlay.appendChild(dlg);
+      const close = (v) => { overlay.remove(); resolve(v); };
+      dlg.querySelector('[data-act=cancel]').onclick = () => close(false);
+      dlg.querySelector('[data-act=ok]').onclick = () => close(true);
+      overlay.addEventListener('click', e => { if (e.target === overlay) close(false); });
+      document.body.appendChild(overlay);
+    });
+  }
+};
+
+// ============================================================
+// Window Manager
+// ============================================================
+const WM = {
+  windows: new Map(),
+  z: 1000,
+  active: null,
+  
+  create(opts) {
+    const id = 'w' + Date.now() + Math.floor(Math.random() * 1000);
+    const w = el(`
+      <div class="win" id="${id}">
+        <div class="win-head">
+          <div class="win-title">${opts.title || ''}</div>
+          <div class="win-ctrls">
+            <div class="win-ctrl min" title="最小化"><svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/></svg></div>
+            <div class="win-ctrl max" title="最大化"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="1"/></svg></div>
+            <div class="win-ctrl close" title="关闭"><svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg></div>
+          </div>
+        </div>
+        <div class="win-body"></div>
+        <div class="win-resize"></div>
+      </div>
+    `);
+    const body = w.querySelector('.win-body');
+    if (typeof opts.content === 'string') body.innerHTML = opts.content;
+    else if (opts.content instanceof HTMLElement) body.appendChild(opts.content);
+    
+    // Size & position
+    const vw = window.innerWidth, vh = window.innerHeight - 48;
+    const width = Math.min(opts.width || 820, vw - 20);
+    const height = Math.min(opts.height || 560, vh - 20);
+    w.style.width = width + 'px';
+    w.style.height = height + 'px';
+    const x = opts.x != null ? opts.x : Math.max(10, (vw - width) / 2 + (this.windows.size * 24) % 100 - 50);
+    const y = opts.y != null ? opts.y : Math.max(10, (vh - height) / 2 + (this.windows.size * 24) % 100 - 50);
+    w.style.left = x + 'px';
+    w.style.top = y + 'px';
+    w.style.zIndex = ++this.z;
+    
+    document.getElementById('windows-layer').appendChild(w);
+    
+    const data = {
+      id, el: w, title: opts.title, icon: opts.icon,
+      minimized: false, maximized: false,
+      prev: null, onclose: opts.onclose, app: opts.app
+    };
+    this.windows.set(id, data);
+    
+    this._bindEvents(data);
+    this.focus(id);
+    this._refreshTaskbar();
+    
+    return { id, el: w, body, data, close: () => this.close(id), focus: () => this.focus(id) };
+  },
+  
+  _bindEvents(d) {
+    const w = d.el;
+    const head = w.querySelector('.win-head');
+    
+    // Drag
+    let drag = null;
+    const onDown = (e) => {
+      if (d.maximized) return;
+      if (e.target.closest('.win-ctrl')) return;
+      const t = e.touches ? e.touches[0] : e;
+      drag = { x: t.clientX - w.offsetLeft, y: t.clientY - w.offsetTop };
+      this.focus(d.id);
+      e.preventDefault();
+    };
+    const onMove = (e) => {
+      if (!drag) return;
+      const t = e.touches ? e.touches[0] : e;
+      w.style.left = Math.max(0, t.clientX - drag.x) + 'px';
+      w.style.top = Math.max(0, Math.min(window.innerHeight - 100, t.clientY - drag.y)) + 'px';
+    };
+    const onUp = () => { drag = null; };
+    head.addEventListener('mousedown', onDown);
+    head.addEventListener('touchstart', onDown, { passive: false });
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('touchmove', onMove, { passive: false });
+    document.addEventListener('mouseup', onUp);
+    document.addEventListener('touchend', onUp);
+    
+    // Resize
+    const rs = w.querySelector('.win-resize');
+    let rz = null;
+    rs.addEventListener('mousedown', (e) => {
+      if (d.maximized) return;
+      rz = { x: e.clientX, y: e.clientY, w: w.offsetWidth, h: w.offsetHeight };
+      e.preventDefault();
+    });
+    document.addEventListener('mousemove', (e) => {
+      if (!rz) return;
+      w.style.width = Math.max(320, rz.w + e.clientX - rz.x) + 'px';
+      w.style.height = Math.max(220, rz.h + e.clientY - rz.y) + 'px';
+    });
+    document.addEventListener('mouseup', () => { rz = null; });
+    
+    // Controls
+    w.querySelector('.min').onclick = (e) => { e.stopPropagation(); this.minimize(d.id); };
+    w.querySelector('.max').onclick = (e) => { e.stopPropagation(); this.toggleMax(d.id); };
+    w.querySelector('.close').onclick = (e) => { e.stopPropagation(); this.close(d.id); };
+    
+    // Double-click to max
+    head.addEventListener('dblclick', (e) => {
+      if (e.target.closest('.win-ctrl')) return;
+      this.toggleMax(d.id);
+    });
+    
+    // Focus
+    w.addEventListener('mousedown', () => this.focus(d.id));
+  },
+  
+  focus(id) {
+    const d = this.windows.get(id);
+    if (!d) return;
+    if (d.minimized) {
+      d.el.classList.remove('min');
+      d.minimized = false;
+    }
+    d.el.style.zIndex = ++this.z;
+    this.windows.forEach((x, k) => x.el.classList.toggle('focused', k === id));
+    this.active = id;
+    this._refreshTaskbar();
+  },
+  
+  minimize(id) {
+    const d = this.windows.get(id);
+    if (!d) return;
+    d.el.classList.add('min');
+    d.minimized = true;
+    this._refreshTaskbar();
+  },
+  
+  toggleMax(id) {
+    const d = this.windows.get(id);
+    if (!d) return;
+    if (d.maximized) {
+      d.el.classList.remove('max');
+      if (d.prev) {
+        d.el.style.left = d.prev.l; d.el.style.top = d.prev.t;
+        d.el.style.width = d.prev.w; d.el.style.height = d.prev.h;
+      }
+      d.maximized = false;
+    } else {
+      d.prev = { l: d.el.style.left, t: d.el.style.top, w: d.el.style.width, h: d.el.style.height };
+      d.el.classList.add('max');
+      d.maximized = true;
+    }
+  },
+  
+  close(id) {
+    const d = this.windows.get(id);
+    if (!d) return;
+    if (d.onclose) d.onclose();
+    d.el.style.animation = 'winOpen .18s reverse';
+    setTimeout(() => {
+      d.el.remove();
+      this.windows.delete(id);
+      this._refreshTaskbar();
+    }, 170);
+  },
+  
+  _refreshTaskbar() {
+    const tb = document.getElementById('tb-apps');
+    tb.innerHTML = '';
+    this.windows.forEach((d, id) => {
+      const t = el(`
+        <div class="tb-app ${this.active === id && !d.minimized ? 'active' : ''} ${d.minimized ? 'minimized' : ''}">
+          ${d.icon || ICONS.file}
+          <span class="nm">${d.title}</span>
+        </div>
+      `);
+      t.onclick = () => {
+        if (d.minimized || this.active !== id) this.focus(id);
+        else this.minimize(id);
+      };
+      tb.appendChild(t);
+    });
+  }
+};
+
+// ============================================================
+// Context Menu
+// ============================================================
+const ContextMenu = {
+  el: document.getElementById('ctx-menu'),
+  show(x, y, items) {
+    this.el.innerHTML = '';
+    items.forEach(it => {
+      if (it === 'sep') {
+        this.el.appendChild(el('<div class="ctx-sep"></div>'));
+        return;
+      }
+      const item = el(`
+        <div class="ctx-item ${it.disabled ? 'disabled' : ''}">
+          ${it.icon || ''}
+          <span>${it.label}</span>
+          ${it.shortcut ? `<span class="shortcut">${it.shortcut}</span>` : ''}
+        </div>
+      `);
+      if (!it.disabled) item.onclick = () => { this.hide(); it.action && it.action(); };
+      this.el.appendChild(item);
+    });
+    this.el.classList.add('active');
+    // Position
+    const rect = this.el.getBoundingClientRect();
+    const w = this.el.offsetWidth, h = this.el.offsetHeight;
+    const maxX = window.innerWidth - w - 8;
+    const maxY = window.innerHeight - h - 8;
+    this.el.style.left = Math.min(x, maxX) + 'px';
+    this.el.style.top = Math.min(y, maxY) + 'px';
+  },
+  hide() { this.el.classList.remove('active'); }
+};
+document.addEventListener('click', () => ContextMenu.hide());
+document.addEventListener('contextmenu', (e) => {
+  if (!e.target.closest('.ctx')) e.preventDefault();
+});
+
+// ============================================================
+// Apps
+// ============================================================
+const Apps = {
+  registry: new Map(),
+  
+  register(id, def) { this.registry.set(id, def); },
+  
+  launch(id, args = {}) {
+    const app = this.registry.get(id);
+    if (!app) { Toast.show('应用不存在', 'error'); return; }
+    try { app.launch(args); }
+    catch (e) { console.error(e); Toast.show('启动失败: ' + e.message, 'error'); }
+  }
+};
+
+// ---------- File Explorer ----------
+Apps.register('explorer', {
+  name: '文件资源管理器', icon: ICONS.explorer, desc: '浏览和管理文件',
+  launch(args = {}) {
+    const win = WM.create({
+      title: '文件资源管理器', icon: ICONS.explorer, width: 920, height: 580, app: 'explorer'
+    });
+    FE.create(win, args.path || '/');
+  }
+});
+
+const FE = {
+  instances: new Map(),
+  
+  create(win, initialPath) {
+    const container = el(`
+      <div class="fe">
+        <div class="fe-toolbar">
+          <div class="tb-btn" data-act="back" title="后退"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><polyline points="15 18 9 12 15 6"/></svg></div>
+          <div class="tb-btn" data-act="fwd" title="前进"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><polyline points="9 18 15 12 9 6"/></svg></div>
+          <div class="tb-btn" data-act="up" title="上一级"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><polyline points="18 15 12 9 6 15"/></svg></div>
+          <div class="tb-btn" data-act="refresh" title="刷新">${ICONS.refresh}</div>
+          <div class="fe-breadcrumb"></div>
+          <input class="fe-search" placeholder="搜索..." type="text">
+        </div>
+        <div class="fe-main">
+          <div class="fe-side">
+            <div class="fe-side-title">快速访问</div>
+            <div class="side-item" data-path="/Desktop">${ICONS.folder}<span>桌面</span></div>
+            <div class="side-item" data-path="/Documents">${ICONS.folder}<span>文档</span></div>
+            <div class="side-item" data-path="/Pictures">${ICONS.image}<span>图片</span></div>
+            <div class="side-item" data-path="/Downloads">${ICONS.download}<span>下载</span></div>
+            <div class="fe-side-title" style="margin-top:8px">根目录</div>
+            <div class="side-item" data-path="/">${ICONS.folder}<span>根目录</span></div>
+            <div class="fe-side-title" style="margin-top:8px">挂载</div>
+            <div class="fe-mounts"></div>
+          </div>
+          <div class="fe-content">
+            <div class="fe-list-head">
+              <div></div>
+              <div data-sort="name">名称 <span class="sort-ind"></span></div>
+              <div data-sort="modified">修改时间 <span class="sort-ind"></span></div>
+              <div data-sort="type">类型 <span class="sort-ind"></span></div>
+              <div data-sort="size">大小 <span class="sort-ind"></span></div>
+            </div>
+            <div class="fe-list"></div>
+            <div class="fe-status"><span class="fe-count"></span><span class="fe-total"></span></div>
+          </div>
+        </div>
+      </div>
+    `);
+    win.body.appendChild(container);
+    
+    const state = {
+      path: initialPath, history: [initialPath], hi: 0,
+      sort: 'name', sortDir: 1, selected: new Set(), filter: '',
+    };
+    
+    const render = async () => {
+      const list = container.querySelector('.fe-list');
+      const bc = container.querySelector('.fe-breadcrumb');
+      const status = container.querySelector('.fe-status');
+      list.innerHTML = '<div style="padding:20px;color:var(--text-mute)">加载中...</div>';
+      
+      try {
+        let entries = await VFS.readdir(state.path);
+        
+        // Filter
+        if (state.filter) {
+          entries = entries.filter(e => e.name.toLowerCase().includes(state.filter.toLowerCase()));
+        }
+        
+        // Sort
+        const sortFn = (a, b) => {
+          if (a.type !== b.type) return a.type === 'directory' ? -1 : 1;
+          let c = 0;
+          if (state.sort === 'name') c = a.name.localeCompare(b.name);
+          else if (state.sort === 'modified') c = (a.modified || 0) - (b.modified || 0);
+          else if (state.sort === 'size') c = (a.size || 0) - (b.size || 0);
+          else if (state.sort === 'type') c = getExt(a.name).localeCompare(getExt(b.name));
+          return c * state.sortDir;
+        };
+        entries.sort(sortFn);
+        
+        // Breadcrumb
+        bc.innerHTML = '';
+        const parts = state.path.split('/').filter(Boolean);
+        const root = el(`<span class="bc-item" data-path="/">/</span>`);
+        root.onclick = () => navigate('/');
+        bc.appendChild(root);
+        let acc = '';
+        parts.forEach(p => {
+          acc += '/' + p;
+          bc.appendChild(el('<span class="bc-sep">/</span>'));
+          const item = el(`<span class="bc-item" data-path="${acc}">${p}</span>`);
+          item.onclick = () => navigate(acc);
+          bc.appendChild(item);
+        });
+        
+        // List
+        list.innerHTML = '';
+        if (entries.length === 0) {
+          list.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-mute);font-size:12px">此文件夹为空<br><br>拖拽文件到此处上传</div>';
+        }
+        entries.forEach(entry => {
+          const row = el(`
+            <div class="f-item" data-name="${entry.name}" data-type="${entry.type}" draggable="true">
+              <div style="color:${entry.mount ? 'var(--success)' : (entry.type === 'directory' ? 'var(--accent-3)' : 'var(--text-dim)')}">${entry.mount ? ICONS.mount : (entry.type === 'directory' ? ICONS.folder : getIconForFile(entry.name))}</div>
+              <div class="f-item-name">${entry.name}</div>
+              <div class="f-item-meta">${fmtDate(entry.modified)}</div>
+              <div class="f-item-meta">${entry.type === 'directory' ? '文件夹' : (getExt(entry.name).toUpperCase() || '文件')}</div>
+              <div class="f-item-meta">${entry.type === 'directory' ? '—' : fmtSize(entry.size)}</div>
+            </div>
+          `);
+          
+          // Click
+          row.addEventListener('click', (e) => {
+            if (e.ctrlKey || e.metaKey) {
+              if (state.selected.has(entry.name)) { state.selected.delete(entry.name); row.classList.remove('selected'); }
+              else { state.selected.add(entry.name); row.classList.add('selected'); }
+            } else {
+              state.selected.clear();
+              list.querySelectorAll('.f-item').forEach(x => x.classList.remove('selected'));
+              state.selected.add(entry.name);
+              row.classList.add('selected');
+            }
+            updateStatus();
+          });
+          
+          // Double click
+          row.addEventListener('dblclick', () => openItem(state.path, entry));
+          
+          // Right click
+          row.addEventListener('contextmenu', (e) => {
+            e.preventDefault(); e.stopPropagation();
+            if (!state.selected.has(entry.name)) {
+              state.selected.clear();
+              list.querySelectorAll('.f-item').forEach(x => x.classList.remove('selected'));
+              state.selected.add(entry.name);
+              row.classList.add('selected');
+            }
+            showContextMenu(e.clientX, e.clientY, state.path, entry);
+          });
+          
+          // Drag
+          row.addEventListener('dragstart', (e) => {
+            e.stopPropagation();
+            const path = state.path === '/' ? '/' + entry.name : state.path + '/' + entry.name;
+            e.dataTransfer.setData('application/x-webos-path', path);
+            e.dataTransfer.setData('text/plain', path);
+            e.dataTransfer.effectAllowed = 'copyMove';
+            // Try setting a download URL for external drop
+            if (entry.type === 'file') {
+              (async () => {
+                try {
+                  const buf = await VFS.readFile(path);
+                  const blob = new Blob([buf]);
+                  const url = URL.createObjectURL(blob);
+                  e.dataTransfer.setData('DownloadURL', `application/octet-stream:${entry.name}:${url}`);
+                } catch {}
+              })();
+            }
+          });
+          
+          // Drop on folder item
+          if (entry.type === 'directory') {
+            row.addEventListener('dragover', (e) => { e.preventDefault(); row.classList.add('drop-target'); });
+            row.addEventListener('dragleave', () => row.classList.remove('drop-target'));
+            row.addEventListener('drop', async (e) => {
+              e.preventDefault(); e.stopPropagation();
+              row.classList.remove('drop-target');
+              const srcPath = e.dataTransfer.getData('application/x-webos-path');
+              const targetDir = state.path === '/' ? '/' + entry.name : state.path + '/' + entry.name;
+              if (srcPath) {
+                const srcName = srcPath.split('/').pop();
+                try {
+                  await VFS.rename(srcPath, targetDir + '/' + srcName);
+                  Toast.show('已移动 ' + srcName, 'success');
+                  render();
+                  // Refresh other FE instances
+                  FE.refreshAll();
+                } catch (err) { Toast.show('移动失败: ' + err.message, 'error'); }
+              }
+            });
+          }
+          
+          list.appendChild(row);
+        });
+        
+        // Status
+        const updateStatus = () => {
+          const dirs = entries.filter(e => e.type === 'directory').length;
+          const files = entries.length - dirs;
+          const totalSize = entries.reduce((a, b) => a + (b.size || 0), 0);
+          container.querySelector('.fe-count').textContent = `${entries.length} 项 (${dirs} 文件夹, ${files} 文件)`;
+          container.querySelector('.fe-total').textContent = state.selected.size ? ` · 已选 ${state.selected.size} 项` : (totalSize ? ` · 共 ${fmtSize(totalSize)}` : '');
+        };
+        updateStatus();
+        
+        // Update side highlight
+        container.querySelectorAll('.side-item').forEach(s => {
+          s.classList.toggle('active', s.dataset.path === state.path);
+        });
+        
+        // Sort indicators
+        container.querySelectorAll('.fe-list-head > div[data-sort]').forEach(h => {
+          const ind = h.querySelector('.sort-ind');
+          if (h.dataset.sort === state.sort) ind.textContent = state.sortDir > 0 ? '▲' : '▼';
+          else ind.textContent = '';
+        });
+        
+      } catch (e) {
+        list.innerHTML = `<div style="padding:20px;color:var(--danger)">加载失败: ${e.message}</div>`;
+      }
+      
+      // Render mounts sidebar
+      const mountsEl = container.querySelector('.fe-mounts');
+      mountsEl.innerHTML = '';
+      if (VFS.mounts.size === 0) {
+        mountsEl.innerHTML = '<div style="padding:4px 10px;font-size:11px;color:var(--text-mute)">未挂载</div>';
+      } else {
+        VFS.mounts.forEach((m, p) => {
+          const item = el(`<div class="side-item mount" data-path="${p}">${ICONS.mount}<span>${m.name}</span></div>`);
+          item.onclick = () => navigate(p);
+          item.oncontextmenu = (e) => {
+            e.preventDefault(); e.stopPropagation();
+            ContextMenu.show(e.clientX, e.clientY, [
+              { label: '卸载', icon: ICONS.trash, action: async () => {
+                if (await Dialog.confirm('卸载', `确定卸载 "${m.name}" 吗？`)) {
+                  await VFS.unmount(p);
+                  Toast.show('已卸载', 'success');
+                  render();
+                }
+              }}
+            ]);
+          };
+          mountsEl.appendChild(item);
+        });
+      }
+    };
+    
+    const navigate = (path, pushHistory = true) => {
+      state.path = path;
+      state.selected.clear();
+      if (pushHistory) {
+        state.history = state.history.slice(0, state.hi + 1);
+        state.history.push(path);
+        state.hi = state.history.length - 1;
+      }
+      render();
+      win.el.querySelector('.win-title').textContent = '文件资源管理器 · ' + (path === '/' ? '/' : path.split('/').pop());
+    };
+    
+    const openItem = async (dirPath, entry) => {
+      const fullPath = dirPath === '/' ? '/' + entry.name : dirPath + '/' + entry.name;
+      if (entry.type === 'directory') {
+        navigate(fullPath);
+      } else {
+        openFile(fullPath, entry.name);
+      }
+    };
+    
+    const showContextMenu = (x, y, dirPath, entry) => {
+      const fullPath = entry ? (dirPath === '/' ? '/' + entry.name : dirPath + '/' + entry.name) : dirPath;
+      const items = [];
+      
+      if (entry) {
+        items.push({ label: '打开', icon: entry.type === 'directory' ? ICONS.folderOpen : ICONS.file, action: () => openItem(dirPath, entry) });
+        if (entry.type === 'file') {
+          items.push({ label: '以文本方式打开', icon: ICONS.text, action: () => Apps.launch('notepad', { path: fullPath }) });
+          items.push({ label: '导出到本地', icon: ICONS.download, action: () => exportFile(fullPath, entry.name) });
+        }
+        items.push('sep');
+        items.push({ label: '复制', icon: ICONS.copy, shortcut: 'Ctrl+C', action: () => { VFS.clipboard = { op: 'copy', path: fullPath }; Toast.show('已复制', 'info', 1200); } });
+        items.push({ label: '重命名', icon: ICONS.rename, action: async () => {
+          const newName = await Dialog.prompt('重命名', entry.name);
+          if (newName && newName !== entry.name) {
+            const newPath = dirPath === '/' ? '/' + newName : dirPath + '/' + newName;
+            try { await VFS.rename(fullPath, newPath); Toast.show('已重命名', 'success'); render(); FE.refreshAll(); }
+            catch (e) { Toast.show(e.message, 'error'); }
+          }
+        }});
+        items.push({ label: '删除', icon: ICONS.trash, action: async () => {
+          if (await Dialog.confirm('删除', `确定删除 "${entry.name}" 吗？`)) {
+            try { await VFS.unlink(fullPath); Toast.show('已删除', 'success'); render(); FE.refreshAll(); }
+            catch (e) { Toast.show(e.message, 'error'); }
+          }
+        }});
+      } else {
+        items.push({ label: '新建文件夹', icon: ICONS.folder, action: async () => {
+          const name = await Dialog.prompt('新建文件夹', '新建文件夹');
+          if (name) { try { await VFS.mkdir(dirPath === '/' ? '/' + name : dirPath + '/' + name); render(); } catch (e) { Toast.show(e.message, 'error'); } }
+        }});
+        items.push({ label: '新建文本文件', icon: ICONS.newFile, action: async () => {
+          const name = await Dialog.prompt('新建文本文件', '新建文件.txt');
+          if (name) { try { await VFS.writeFile(dirPath === '/' ? '/' + name : dirPath + '/' + name, ''); render(); } catch (e) { Toast.show(e.message, 'error'); } }
+        }});
+        items.push('sep');
+        items.push({ 
+          label: '粘贴', icon: ICONS.paste, shortcut: 'Ctrl+V',
+          disabled: !VFS.clipboard,
+          action: async () => {
+            if (!VFS.clipboard) return;
+            const srcName = VFS.clipboard.path.split('/').pop();
+            const dst = dirPath === '/' ? '/' + srcName : dirPath + '/' + srcName;
+            try {
+              await VFS.copy(VFS.clipboard.path, dst);
+              Toast.show('已粘贴', 'success');
+              render(); FE.refreshAll();
+            } catch (e) { Toast.show(e.message, 'error'); }
+          }
+        });
+        items.push('sep');
+        items.push({ label: '上传文件', icon: ICONS.upload, action: () => uploadToDir(dirPath) });
+        items.push({ label: '刷新', icon: ICONS.refresh, shortcut: 'F5', action: render });
+      }
+      
+      ContextMenu.show(x, y, items);
+    };
+    
+    const uploadToDir = async (dirPath) => {
+      const input = el('<input type="file" multiple style="display:none">');
+      document.body.appendChild(input);
+      input.onchange = async () => {
+        for (const f of input.files) {
+          try {
+            const buf = await f.arrayBuffer();
+            await VFS.writeFile(dirPath === '/' ? '/' + f.name : dirPath + '/' + f.name, buf);
+          } catch (e) { Toast.show('上传失败: ' + f.name, 'error'); }
+        }
+        Toast.show(`已上传 ${input.files.length} 个文件`, 'success');
+        render(); FE.refreshAll();
+        input.remove();
+      };
+      input.click();
+    };
+    
+    const exportFile = async (path, name) => {
+      try {
+        const buf = await VFS.readFile(path);
+        const blob = new Blob([buf]);
+        const url = URL.createObjectURL(blob);
+        const a = el(`<a href="${url}" download="${name}" style="display:none"></a>`);
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 100);
+      } catch (e) { Toast.show('导出失败: ' + e.message, 'error'); }
+    };
+    
+    // Toolbar buttons
+    container.querySelector('[data-act=back]').onclick = () => {
+      if (state.hi > 0) { state.hi--; state.path = state.history[state.hi]; render(); }
+    };
+    container.querySelector('[data-act=fwd]').onclick = () => {
+      if (state.hi < state.history.length - 1) { state.hi++; state.path = state.history[state.hi]; render(); }
+    };
+    container.querySelector('[data-act=up]').onclick = () => {
+      if (state.path === '/') return;
+      const parts = state.path.split('/').filter(Boolean);
+      parts.pop();
+      navigate('/' + parts.join('/') || '/');
+    };
+    container.querySelector('[data-act=refresh]').onclick = render;
+    
+    // Search
+    const search = container.querySelector('.fe-search');
+    search.addEventListener('input', (e) => { state.filter = e.target.value; render(); });
+    
+    // Sort headers
+    container.querySelectorAll('.fe-list-head > div[data-sort]').forEach(h => {
+      h.onclick = () => {
+        if (state.sort === h.dataset.sort) state.sortDir *= -1;
+        else { state.sort = h.dataset.sort; state.sortDir = 1; }
+        render();
+      };
+    });
+    
+    // Sidebar
+    container.querySelectorAll('.side-item[data-path]').forEach(s => {
+      s.onclick = () => navigate(s.dataset.path);
+    });
+    
+    // Context on empty area
+    const contentArea = container.querySelector('.fe-content');
+    contentArea.addEventListener('contextmenu', (e) => {
+      if (e.target.closest('.f-item')) return;
+      e.preventDefault();
+      state.selected.clear();
+      container.querySelectorAll('.f-item').forEach(x => x.classList.remove('selected'));
+      showContextMenu(e.clientX, e.clientY, state.path, null);
+    });
+    
+    // Content area click to deselect
+    container.querySelector('.fe-list').addEventListener('click', (e) => {
+      if (e.target.closest('.f-item')) return;
+      state.selected.clear();
+      container.querySelectorAll('.f-item').forEach(x => x.classList.remove('selected'));
+      container.querySelector('.fe-count').textContent = container.querySelector('.fe-count').textContent.split(' · ')[0];
+    });
+    
+    // Drag & drop upload
+    const listArea = container.querySelector('.fe-list');
+    listArea.addEventListener('dragover', (e) => {
+      if (e.dataTransfer.types.includes('application/x-webos-path')) return;
+      e.preventDefault();
+      contentArea.style.background = 'rgba(130,170,255,.04)';
+    });
+    listArea.addEventListener('dragleave', (e) => {
+      if (e.target === listArea) contentArea.style.background = '';
+    });
+    listArea.addEventListener('drop', async (e) => {
+      contentArea.style.background = '';
+      if (e.dataTransfer.files.length > 0) {
+        e.preventDefault();
+        for (const f of e.dataTransfer.files) {
+          try {
+            const buf = await f.arrayBuffer();
+            await VFS.writeFile(state.path === '/' ? '/' + f.name : state.path + '/' + f.name, buf);
+          } catch (err) { Toast.show('上传失败: ' + f.name, 'error'); }
+        }
+        Toast.show(`已上传 ${e.dataTransfer.files.length} 个文件`, 'success');
+        render(); FE.refreshAll();
+      }
+    });
+    
+    // Keyboard shortcuts
+    win.el.addEventListener('keydown', (e) => {
+      if (e.target.tagName === 'INPUT') return;
+      if ((e.ctrlKey || e.metaKey) && e.key === 'c' && state.selected.size > 0) {
+        const name = Array.from(state.selected)[0];
+        VFS.clipboard = { op: 'copy', path: state.path === '/' ? '/' + name : state.path + '/' + name };
+        Toast.show('已复制', 'info', 1200);
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'v' && VFS.clipboard) {
+        (async () => {
+          const srcName = VFS.clipboard.path.split('/').pop();
+          const dst = state.path === '/' ? '/' + srcName : state.path + '/' + srcName;
+          try {
+            await VFS.copy(VFS.clipboard.path, dst);
+            Toast.show('已粘贴', 'success');
+            render();
+          } catch (err) { Toast.show(err.message, 'error'); }
+        })();
+      }
+      if (e.key === 'Delete' && state.selected.size > 0) {
+        (async () => {
+          for (const name of state.selected) {
+            try { await VFS.unlink(state.path === '/' ? '/' + name : state.path + '/' + name); } catch {}
+          }
+          Toast.show('已删除', 'success');
+          render(); FE.refreshAll();
+        })();
+      }
+      if (e.key === 'F5') { e.preventDefault(); render(); }
+    });
+    win.el.tabIndex = 0;
+    
+    // Store for refresh
+    this.instances.set(win.id, { render, navigate, state });
+    win.data.onclose = () => this.instances.delete(win.id);
+    
+    render();
+  },
+  
+  refreshAll() {
+    this.instances.forEach(i => i.render());
+  }
+};
+
+// ---------- Open File (router) ----------
+async function openFile(path, name = null) {
+  name = name || path.split('/').pop();
+  const ext = getExt(name);
+  
+  const textExts = ['txt','md','js','ts','jsx','tsx','css','html','htm','json','xml','yaml','yml','py','java','c','cpp','h','hpp','rs','go','sh','bash','log','ini','cfg','conf','toml','vue','svelte','php','rb','pl','lua','r','sql','bat','ps1'];
+  const tableExts = ['csv','tsv'];
+  const imgExts = ['png','jpg','jpeg','gif','svg','webp','bmp','ico','avif'];
+  const audioExts = ['mp3','wav','ogg','flac','aac','m4a','opus'];
+  const videoExts = ['mp4','webm','ogv','mov','mkv'];
+  const archiveExts = ['zip','gz','tar','tgz'];
+  
+  if (textExts.includes(ext)) Apps.launch('notepad', { path });
+  else if (tableExts.includes(ext)) Apps.launch('table', { path });
+  else if (ext === 'html' || ext === 'htm') Apps.launch('notepad', { path, preview: true });
+  else if (imgExts.includes(ext)) Apps.launch('image', { path });
+  else if (audioExts.includes(ext)) Apps.launch('audio', { path });
+  else if (videoExts.includes(ext)) Apps.launch('video', { path });
+  else if (ext === 'pdf') Apps.launch('pdf', { path });
+  else if (archiveExts.includes(ext)) Apps.launch('archive', { path });
+  else {
+    // Fallback: open as text
+    Apps.launch('notepad', { path });
+  }
+}
+
+// ---------- Notepad ----------
+Apps.register('notepad', {
+  name: '记事本', icon: ICONS.notepad, desc: '文本与代码编辑器',
+  launch(args = {}) {
+    const win = WM.create({
+      title: '记事本', icon: ICONS.notepad, width: 780, height: 540, app: 'notepad'
+    });
+    const c = el(`
+      <div class="ed">
+        <div class="ed-toolbar">
+          <div class="tb-btn" data-act="open" title="打开">${ICONS.folder}</div>
+          <div class="tb-btn" data-act="save" title="保存 (Ctrl+S)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg></div>
+          <div class="tb-btn" data-act="saveas" title="另存为"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg></div>
+          <div class="ed-toolbar-sep"></div>
+          <div class="tb-btn" data-act="preview" title="预览 HTML" style="display:none">${ICONS.browser}</div>
+          <div class="ed-file-info" id="ed-info"></div>
+        </div>
+        <div class="ed-body">
+          <div class="ed-gutter">1</div>
+          <div class="ed-area"><textarea spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"></textarea></div>
+        </div>
+      </div>
+    `);
+    win.body.appendChild(c);
+    
+    const ta = c.querySelector('textarea');
+    const gutter = c.querySelector('.ed-gutter');
+    const info = c.querySelector('#ed-info');
+    let currentPath = null;
+    let dirty = false;
+    let previewWin = null;
+    const isHtml = args.path && /\.html?$/i.test(args.path);
+    
+    const updateGutter = () => {
+      const lines = ta.value.split('\n').length;
+      gutter.innerHTML = Array.from({length: Math.max(1, lines)}, (_, i) => i + 1).join('<br>');
+    };
+    
+    const updateInfo = () => {
+      const lines = ta.value.split('\n').length;
+      const chars = ta.value.length;
+      info.textContent = `${lines} 行 · ${chars} 字符${dirty ? ' · 已修改' : ''}`;
+    };
+    
+    const loadFile = async (path) => {
+      try {
+        const text = await VFS.readText(path);
+        ta.value = text;
+        currentPath = path;
+        dirty = false;
+        win.el.querySelector('.win-title').textContent = '记事本 · ' + path.split('/').pop();
+        updateGutter(); updateInfo();
+        if (isHtml && args.preview) openPreview();
+      } catch (e) { Toast.show('无法打开文件', 'error'); }
+    };
+    
+    const save = async () => {
+      if (!currentPath) {
+        const p = await Dialog.prompt('保存为', '/Documents/untitled.txt');
+        if (!p) return;
+        currentPath = p;
+      }
+      try {
+        await VFS.writeFile(currentPath, ta.value);
+        dirty = false;
+        updateInfo();
+        Toast.show('已保存', 'success', 1500);
+        FE.refreshAll();
+        if (isHtml && previewWin) updatePreview();
+      } catch (e) { Toast.show('保存失败: ' + e.message, 'error'); }
+    };
+    
+    const openPreview = () => {
+      if (!isHtml) return;
+      if (previewWin) { previewWin.focus(); return; }
+      previewWin = Apps._openHtmlPreview(currentPath || '未命名.html', ta.value, () => { previewWin = null; });
+    };
+    
+    const updatePreview = () => {
+      if (previewWin && previewWin.update) previewWin.update(ta.value);
+    };
+    
+    if (isHtml) c.querySelector('[data-act=preview]').style.display = '';
+    
+    ta.addEventListener('input', () => { dirty = true; updateGutter(); updateInfo(); if (isHtml) updatePreview(); });
+    ta.addEventListener('scroll', () => { gutter.scrollTop = ta.scrollTop; });
+    ta.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); save(); }
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        const s = ta.selectionStart, en = ta.selectionEnd;
+        ta.value = ta.value.slice(0, s) + '  ' + ta.value.slice(en);
+        ta.selectionStart = ta.selectionEnd = s + 2;
+        dirty = true;
+      }
+    });
+    
+    c.querySelector('[data-act=save]').onclick = save;
+    c.querySelector('[data-act=saveas]').onclick = async () => {
+      const p = await Dialog.prompt('另存为', currentPath || '/Documents/untitled.txt');
+      if (p) { currentPath = p; await save(); }
+    };
+    c.querySelector('[data-act=open]').onclick = async () => {
+      const p = await Dialog.prompt('打开文件路径', '/');
+      if (p) loadFile(p);
+    };
+    c.querySelector('[data-act=preview]').onclick = openPreview;
+    
+    if (args.path) loadFile(args.path);
+    else { ta.value = ''; updateGutter(); updateInfo(); }
+    
+    win.data.onclose = () => {
+      if (previewWin) previewWin.close();
+    };
+  },
+  
+  _openHtmlPreview(name, html, onClose) {
+    const win = WM.create({
+      title: '预览 · ' + name, icon: ICONS.browser, width: 720, height: 520
+    });
+    const c = el(`
+      <div style="height:100%;display:flex;flex-direction:column">
+        <div class="ed-toolbar">
+          <div class="tb-btn" data-act="refresh" title="刷新">${ICONS.refresh}</div>
+          <div class="tb-btn" data-act="browser" title="在浏览器应用中打开">${ICONS.browser}</div>
+          <span style="flex:1"></span>
+          <span style="font-size:11px;color:var(--text-mute);font-family:var(--font-display)">实时预览</span>
+        </div>
+        <div style="flex:1;background:white;position:relative;min-height:0">
+          <iframe sandbox="allow-scripts allow-same-origin" style="width:100%;height:100%;border:none"></iframe>
+        </div>
+      </div>
+    `);
+    win.body.appendChild(c);
+    const iframe = c.querySelector('iframe');
+    let blobUrl = null;
+    const render = (content) => {
+      if (blobUrl) URL.revokeObjectURL(blobUrl);
+      const blob = new Blob([content], { type: 'text/html' });
+      blobUrl = URL.createObjectURL(blob);
+      iframe.src = blobUrl;
+    };
+    render(html);
+    c.querySelector('[data-act=refresh]').onclick = () => render(iframe.dataset.last || html);
+    c.querySelector('[data-act=browser]').onclick = () => {
+      const blob = new Blob([iframe.dataset.last || html], { type: 'text/html' });
+      Apps.launch('browser', { url: URL.createObjectURL(blob) });
+    };
+    win.data.onclose = () => { if (blobUrl) URL.revokeObjectURL(blobUrl); onClose && onClose(); };
+    return { focus: () => win.focus(), close: () => win.close(), update: (content) => { iframe.dataset.last = content; render(content); } };
+  }
+});
+
+// ---------- Table (CSV/TSV) ----------
+Apps.register('table', {
+  name: '表格', icon: ICONS.table, desc: 'CSV/TSV 表格编辑器',
+  launch(args = {}) {
+    const win = WM.create({
+      title: '表格', icon: ICONS.table, width: 820, height: 540, app: 'table'
+    });
+    const c = el(`
+      <div class="ss">
+        <div class="ss-tabs">
+          <div class="ss-tab active" data-view="table">表格视图</div>
+          <div class="ss-tab" data-view="text">文本视图</div>
+          <span style="flex:1"></span>
+          <div class="ss-tab" data-act="save">保存</div>
+        </div>
+        <div class="ss-body" id="ss-table-view"></div>
+        <div class="ss-body" id="ss-text-view" style="display:none">
+          <textarea spellcheck="false" style="width:100%;height:100%;background:var(--bg-0);color:var(--text);border:none;padding:12px;font-family:var(--font-display);font-size:13px;resize:none;outline:none"></textarea>
+        </div>
+      </div>
+    `);
+    win.body.appendChild(c);
+    
+    let currentPath = null;
+    let delimiter = ',';
+    let rows = [];
+    let currentView = 'table';
+    
+    const parse = (text) => {
+      if (!text.trim()) return [];
+      // Simple CSV parser
+      const result = [];
+      const lines = text.split(/\r?\n/);
+      for (const line of lines) {
+        const row = [];
+        let cur = '', inQ = false;
+        for (let i = 0; i < line.length; i++) {
+          const ch = line[i];
+          if (ch === '"' && !inQ) { inQ = true; continue; }
+          if (ch === '"' && inQ && line[i+1] === '"') { cur += '"'; i++; continue; }
+          if (ch === '"' && inQ) { inQ = false; continue; }
+          if (ch === delimiter && !inQ) { row.push(cur); cur = ''; continue; }
+          cur += ch;
+        }
+        row.push(cur);
+        if (row.length === 1 && row[0] === '' && line === '') continue;
+        result.push(row);
+      }
+      return result;
+    };
+    
+    const stringify = () => {
+      return rows.map(r => r.map(c => {
+        if (c == null) return '';
+        if (c.includes(delimiter) || c.includes('"') || c.includes('\n')) {
+          return '"' + c.replace(/"/g, '""') + '"';
+        }
+        return c;
+      }).join(delimiter)).join('\n');
+    };
+    
+    const renderTable = () => {
+      const tv = c.querySelector('#ss-table-view');
+      if (!rows.length) { tv.innerHTML = '<div style="padding:20px;color:var(--text-mute)">空表格</div>'; return; }
+      const maxCols = Math.max(...rows.map(r => r.length));
+      let html = '<table class="ss-table"><thead><tr><th>#</th>';
+      for (let i = 0; i < maxCols; i++) html += `<th>${String.fromCharCode(65 + i)}</th>`;
+      html += '</tr></thead><tbody>';
+      rows.forEach((row, r) => {
+        html += `<tr><td style="background:var(--bg-2);color:var(--text-mute);text-align:center">${r+1}</td>`;
+        for (let i = 0; i < maxCols; i++) {
+          html += `<td contenteditable data-r="${r}" data-c="${i}">${row[i] || ''}</td>`;
+        }
+        html += '</tr>';
+      });
+      html += '</tbody></table>';
+      tv.innerHTML = html;
+      tv.querySelectorAll('td[contenteditable]').forEach(td => {
+        td.addEventListener('blur', () => {
+          const r = +td.dataset.r, co = +td.dataset.c;
+          if (!rows[r]) rows[r] = [];
+          rows[r][co] = td.textContent;
+          c.querySelector('#ss-text-view textarea').value = stringify();
+        });
+      });
+    };
+    
+    const load = async (path) => {
+      try {
+        const text = await VFS.readText(path);
+        delimiter = path.endsWith('.tsv') ? '\t' : ',';
+        rows = parse(text);
+        currentPath = path;
+        c.querySelector('#ss-text-view textarea').value = text;
+        renderTable();
+        win.el.querySelector('.win-title').textContent = '表格 · ' + path.split('/').pop();
+      } catch (e) { Toast.show('打开失败', 'error'); }
+    };
+    
+    c.querySelectorAll('.ss-tab[data-view]').forEach(t => {
+      t.onclick = () => {
+        c.querySelectorAll('.ss-tab[data-view]').forEach(x => x.classList.remove('active'));
+        t.classList.add('active');
+        currentView = t.dataset.view;
+        c.querySelector('#ss-table-view').style.display = currentView === 'table' ? '' : 'none';
+        c.querySelector('#ss-text-view').style.display = currentView === 'text' ? '' : 'none';
+        if (currentView === 'text') c.querySelector('#ss-text-view textarea').value = stringify();
+        else { rows = parse(c.querySelector('#ss-text-view textarea').value); renderTable(); }
+      };
+    });
+    
+    c.querySelector('[data-act=save]').onclick = async () => {
+      if (!currentPath) { Toast.show('无路径', 'error'); return; }
+      try {
+        await VFS.writeFile(currentPath, stringify());
+        Toast.show('已保存', 'success');
+      } catch (e) { Toast.show('保存失败', 'error'); }
+    };
+    
+    if (args.path) load(args.path);
+  }
+});
+
+// ---------- Image Viewer ----------
+Apps.register('image', {
+  name: '图片查看器', icon: ICONS.image, desc: '查看图片',
+  launch(args = {}) {
+    if (!args.path) return;
+    const name = args.path.split('/').pop();
+    const win = WM.create({
+      title: name, icon: ICONS.image, width: 720, height: 520, app: 'image'
+    });
+    const c = el(`
+      <div class="iv">
+        <div class="iv-toolbar">
+          <div class="tb-btn" data-act="zoomout" title="缩小"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg></div>
+          <div class="tb-btn" data-act="zoomin" title="放大"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg></div>
+          <div class="tb-btn" data-act="reset" title="重置">1:1</div>
+          <span style="flex:1"></span>
+          <div class="tb-btn" data-act="export" title="导出">${ICONS.download}</div>
+        </div>
+        <div class="iv-stage">
+          <img id="iv-img">
+          <div class="iv-info" id="iv-info"></div>
+        </div>
+      </div>
+    `);
+    win.body.appendChild(c);
+    const img = c.querySelector('#iv-img');
+    const info = c.querySelector('#iv-info');
+    let scale = 1, url = null;
+    
+    (async () => {
+      try {
+        const buf = await VFS.readFile(args.path);
+        const blob = new Blob([buf]);
+        url = URL.createObjectURL(blob);
+        img.src = url;
+        img.onload = () => {
+          info.textContent = `${img.naturalWidth} × ${img.naturalHeight} · ${fmtSize(buf.byteLength)}`;
+        };
+      } catch (e) { Toast.show('加载失败', 'error'); }
+    })();
+    
+    c.querySelector('[data-act=zoomin]').onclick = () => { scale = Math.min(10, scale * 1.25); img.style.transform = `scale(${scale})`; };
+    c.querySelector('[data-act=zoomout]').onclick = () => { scale = Math.max(.1, scale / 1.25); img.style.transform = `scale(${scale})`; };
+    c.querySelector('[data-act=reset]').onclick = () => { scale = 1; img.style.transform = ''; };
+    c.querySelector('[data-act=export]').onclick = async () => {
+      const buf = await VFS.readFile(args.path);
+      const blob = new Blob([buf]);
+      const u = URL.createObjectURL(blob);
+      const a = el(`<a href="${u}" download="${name}" style="display:none"></a>`);
+      document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(u); a.remove(); }, 100);
+    };
+    
+    img.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      scale = e.deltaY < 0 ? Math.min(10, scale * 1.1) : Math.max(.1, scale / 1.1);
+      img.style.transform = `scale(${scale})`;
+    });
+    
+    win.data.onclose = () => { if (url) URL.revokeObjectURL(url); };
+  }
+});
+
+// ---------- Audio Player ----------
+Apps.register('audio', {
+  name: '音频播放器', icon: ICONS.audio, desc: '播放音频',
+  launch(args = {}) {
+    if (!args.path) return;
+    const name = args.path.split('/').pop();
+    const win = WM.create({ title: name, icon: ICONS.audio, width: 420, height: 180, app: 'audio' });
+    const c = el(`<div class="mp"><div class="mp-stage"><audio controls></audio></div></div>`);
+    win.body.appendChild(c);
+    const au = c.querySelector('audio');
+    (async () => {
+      const buf = await VFS.readFile(args.path);
+      au.src = URL.createObjectURL(new Blob([buf]));
+    })();
+  }
+});
+
+// ---------- Video Player ----------
+Apps.register('video', {
+  name: '视频播放器', icon: ICONS.video, desc: '播放视频',
+  launch(args = {}) {
+    if (!args.path) return;
+    const name = args.path.split('/').pop();
+    const win = WM.create({ title: name, icon: ICONS.video, width: 720, height: 480, app: 'video' });
+    const c = el(`<div class="mp"><div class="mp-stage"><video controls></video></div></div>`);
+    win.body.appendChild(c);
+    const vi = c.querySelector('video');
+    (async () => {
+      const buf = await VFS.readFile(args.path);
+      vi.src = URL.createObjectURL(new Blob([buf]));
+    })();
+  }
+});
+
+// ---------- PDF Viewer ----------
+Apps.register('pdf', {
+  name: 'PDF 查看器', icon: ICONS.pdf, desc: '查看 PDF 文档',
+  launch(args = {}) {
+    if (!args.path) return;
+    const name = args.path.split('/').pop();
+    const win = WM.create({ title: name, icon: ICONS.pdf, width: 800, height: 600, app: 'pdf' });
+    const c = el(`<div style="width:100%;height:100%;background:white"></div>`);
+    win.body.appendChild(c);
+    (async () => {
+      const buf = await VFS.readFile(args.path);
+      const url = URL.createObjectURL(new Blob([buf], { type: 'application/pdf' }));
+      const iframe = el(`<iframe src="${url}" style="width:100%;height:100%;border:none"></iframe>`);
+      c.appendChild(iframe);
+      win.data.onclose = () => URL.revokeObjectURL(url);
+    })();
+  }
+});
+
+// ---------- Archive Extractor ----------
+Apps.register('archive', {
+  name: '压缩包', icon: ICONS.archive, desc: '解压压缩文件',
+  launch(args = {}) {
+    if (!args.path) return;
+    const name = args.path.split('/').pop();
+    const win = WM.create({ title: name, icon: ICONS.archive, width: 560, height: 420, app: 'archive' });
+    const c = el(`
+      <div style="padding:24px">
+        <h3 style="margin-bottom:12px">${name}</h3>
+        <p style="color:var(--text-dim);margin-bottom:16px;font-size:13px">解压此压缩文件到当前目录。</p>
+        <div id="ar-status" style="color:var(--text-mute);margin-bottom:16px">准备中...</div>
+        <button class="stg-btn" id="ar-extract">解压到 ${args.path.replace(/[^/]+$/, '') || '/'}</button>
+      </div>
+    `);
+    win.body.appendChild(c);
+    const ext = getExt(name);
+    c.querySelector('#ar-extract').onclick = async () => {
+      const status = c.querySelector('#ar-status');
+      try {
+        status.textContent = '读取文件...';
+        const buf = await VFS.readFile(args.path);
+        const targetDir = args.path.replace(/\/[^/]+$/, '') || '/';
+        
+        if (ext === 'zip') {
+          status.textContent = '解压 ZIP...';
+          await extractZip(buf, targetDir, status);
+        } else if (ext === 'gz' && !name.endsWith('.tar.gz')) {
+          status.textContent = '解压 GZ...';
+          const ds = new DecompressionStream('gzip');
+          const stream = new Blob([buf]).stream().pipeThrough(ds);
+          const decompressed = await new Response(stream).arrayBuffer();
+          const outName = name.replace(/\.gz$/, '');
+          await VFS.writeFile(targetDir + '/' + outName, decompressed);
+        } else {
+          Toast.show('不支持的压缩格式', 'error');
+          return;
+        }
+        status.textContent = '完成！';
+        Toast.show('解压完成', 'success');
+        FE.refreshAll();
+      } catch (e) {
+        status.textContent = '失败: ' + e.message;
+        Toast.show('解压失败: ' + e.message, 'error');
+      }
+    };
+  }
+});
+
+// Simple ZIP extractor (no dependencies)
+async function extractZip(buffer, targetDir, statusEl) {
+  // Minimal ZIP parser
+  const dv = new DataView(buffer);
+  const u8 = new Uint8Array(buffer);
+  const dec = new TextDecoder('utf-8');
+  
+  // Find End of Central Directory
+  let eocdOffset = -1;
+  for (let i = buffer.byteLength - 22; i >= 0 && i > buffer.byteLength - 65557; i--) {
+    if (dv.getUint32(i, true) === 0x06054b50) { eocdOffset = i; break; }
+  }
+  if (eocdOffset < 0) throw new Error('无效的 ZIP 文件');
+  
+  const cdOffset = dv.getUint32(eocdOffset + 16, true);
+  const cdCount = dv.getUint16(eocdOffset + 10, true);
+  
+  let pos = cdOffset;
+  for (let i = 0; i < cdCount; i++) {
+    if (dv.getUint32(pos, true) !== 0x02014b50) throw new Error('CD 错误');
+    const compMethod = dv.getUint16(pos + 10, true);
+    const compSize = dv.getUint32(pos + 20, true);
+    const uncompSize = dv.getUint32(pos + 24, true);
+    const nameLen = dv.getUint16(pos + 28, true);
+    const extraLen = dv.getUint16(pos + 30, true);
+    const commentLen = dv.getUint16(pos + 32, true);
+    const localOffset = dv.getUint32(pos + 42, true);
+    const fname = dec.decode(u8.subarray(pos + 46, pos + 46 + nameLen));
+    
+    // Read local file header
+    const lpos = localOffset;
+    const lNameLen = dv.getUint16(lpos + 26, true);
+    const lExtraLen = dv.getUint16(lpos + 28, true);
+    const dataStart = lpos + 30 + lNameLen + lExtraLen;
+    const dataEnd = dataStart + compSize;
+    
+    const outPath = (targetDir === '/' ? '/' : targetDir + '/') + fname;
+    
+    if (fname.endsWith('/')) {
+      await VFS.mkdir(outPath.slice(0, -1));
+    } else if (compSize > 0 || uncompSize > 0) {
+      if (statusEl) statusEl.textContent = '解压: ' + fname;
+      let data;
+      if (compMethod === 0) {
+        data = buffer.slice(dataStart, dataEnd);
+      } else if (compMethod === 8) {
+        // Deflate - use DecompressionStream with 'deflate-raw'
+        const comp = buffer.slice(dataStart, dataEnd);
+        const ds = new DecompressionStream('deflate-raw');
+        const stream = new Blob([comp]).stream().pipeThrough(ds);
+        data = await new Response(stream).arrayBuffer();
+      } else {
+        throw new Error('不支持的压缩方法: ' + compMethod);
+      }
+      await VFS.writeFile(outPath, data);
+    }
+    
+    pos += 46 + nameLen + extraLen + commentLen;
+  }
+}
+
+// ---------- Calculator ----------
+Apps.register('calc', {
+  name: '计算器', icon: ICONS.calc, desc: '科学计算器',
+  launch() {
+    const win = WM.create({ title: '计算器', icon: ICONS.calc, width: 320, height: 480, app: 'calc' });
+    const c = el(`
+      <div class="calc">
+        <div class="calc-disp">
+          <div><div class="prev" id="calc-prev"></div><div id="calc-cur">0</div></div>
+        </div>
+        <div class="calc-btns">
+          <button class="cb fn" data-v="C">C</button>
+          <button class="cb fn" data-v="±">±</button>
+          <button class="cb fn" data-v="%">%</button>
+          <button class="cb op" data-v="÷">÷</button>
+          <button class="cb" data-v="7">7</button>
+          <button class="cb" data-v="8">8</button>
+          <button class="cb" data-v="9">9</button>
+          <button class="cb op" data-v="×">×</button>
+          <button class="cb" data-v="4">4</button>
+          <button class="cb" data-v="5">5</button>
+          <button class="cb" data-v="6">6</button>
+          <button class="cb op" data-v="-">−</button>
+          <button class="cb" data-v="1">1</button>
+          <button class="cb" data-v="2">2</button>
+          <button class="cb" data-v="3">3</button>
+          <button class="cb op" data-v="+">+</button>
+          <button class="cb" data-v="0" style="grid-column:span 2">0</button>
+          <button class="cb" data-v=".">.</button>
+          <button class="cb eq" data-v="=">=</button>
+        </div>
+      </div>
+    `);
+    win.body.appendChild(c);
+    let cur = '0', prev = '', op = '';
+    const d = c.querySelector('#calc-cur'), p = c.querySelector('#calc-prev');
+    const render = () => { d.textContent = cur; p.textContent = prev ? `${prev} ${op}` : ''; };
+    c.querySelectorAll('.cb').forEach(b => b.onclick = () => {
+      const v = b.dataset.v;
+      if (v === 'C') { cur = '0'; prev = ''; op = ''; }
+      else if (v === '±') cur = String(-parseFloat(cur));
+      else if (v === '%') cur = String(parseFloat(cur) / 100);
+      else if ('+-×÷'.includes(v)) {
+        if (op && prev) {
+          const r = calc(parseFloat(prev), parseFloat(cur), op);
+          cur = String(r); prev = ''; op = '';
+        }
+        prev = cur; cur = '0'; op = v;
+      }
+      else if (v === '=') {
+        if (op && prev) {
+          cur = String(calc(parseFloat(prev), parseFloat(cur), op));
+          prev = ''; op = '';
+        }
+      }
+      else if (v === '.') { if (!cur.includes('.')) cur += '.'; }
+      else { if (cur === '0') cur = v; else cur += v; }
+      render();
+    });
+    const calc = (a, b, o) => o === '+' ? a+b : o === '-' ? a-b : o === '×' ? a*b : o === '÷' ? (b===0?0:a/b) : 0;
+  }
+});
+
+// ---------- Browser ----------
+Apps.register('browser', {
+  name: '浏览器', icon: ICONS.browser, desc: '网页浏览器',
+  launch(args = {}) {
+    const win = WM.create({ title: '浏览器', icon: ICONS.browser, width: 880, height: 600, app: 'browser' });
+    const c = el(`
+      <div class="br">
+        <div class="br-toolbar">
+          <div class="tb-btn" data-act="back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><polyline points="15 18 9 12 15 6"/></svg></div>
+          <div class="tb-btn" data-act="fwd"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><polyline points="9 18 15 12 9 6"/></svg></div>
+          <div class="tb-btn" data-act="reload">${ICONS.refresh}</div>
+          <input class="br-url" value="${args.url || 'https://example.com'}">
+          <div class="tb-btn" data-act="go">→</div>
+        </div>
+        <div class="br-body"><iframe sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe></div>
+      </div>
+    `);
+    win.body.appendChild(c);
+    const iframe = c.querySelector('iframe'), urlInput = c.querySelector('.br-url');
+    const go = () => {
+      let u = urlInput.value.trim();
+      if (!u.startsWith('blob:') && !u.startsWith('data:') && !u.startsWith('http://') && !u.startsWith('https://')) {
+        if (u.includes('.') && !u.includes(' ')) u = 'https://' + u;
+        else u = 'https://duckduckgo.com/?q=' + encodeURIComponent(u);
+      }
+      iframe.src = u;
+    };
+    urlInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); });
+    c.querySelector('[data-act=go]').onclick = go;
+    c.querySelector('[data-act=reload]').onclick = () => { iframe.src = iframe.src; };
+    c.querySelector('[data-act=back]').onclick = () => { try { iframe.contentWindow.history.back(); } catch {} };
+    c.querySelector('[data-act=fwd]').onclick = () => { try { iframe.contentWindow.history.forward(); } catch {} };
+    go();
+  }
+});
+
+// ---------- Paint ----------
+Apps.register('paint', {
+  name: '画板', icon: ICONS.paint, desc: '绘图工具',
+  launch() {
+    const win = WM.create({ title: '画板', icon: ICONS.paint, width: 800, height: 560, app: 'paint' });
+    const colors = ['#000000','#ffffff','#ff5370','#ffcb6b','#c3e88d','#89ddff','#82aaff','#c792ea'];
+    const c = el(`
+      <div class="pnt">
+        <div class="pnt-toolbar">
+          <div class="pnt-tool active" data-tool="pen" title="画笔"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/></svg></div>
+          <div class="pnt-tool" data-tool="eraser" title="橡皮"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20 20H7L3 16c-.8-.8-.8-2 0-2.8L14 2l8 8L11 21"/></svg></div>
+          <input class="pnt-size" type="number" value="3" min="1" max="50">
+          <div class="pnt-colors">${colors.map((co,i) => `<div class="pnt-color ${i===0?'active':''}" data-c="${co}" style="background:${co}"></div>`).join('')}</div>
+          <span style="flex:1"></span>
+          <div class="tb-btn" data-act="clear" title="清空"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 6h18"/><path d="M8 6V4h8v2"/></svg></div>
+          <div class="tb-btn" data-act="save" title="保存">${ICONS.download}</div>
+        </div>
+        <div class="pnt-body"><canvas></canvas></div>
+      </div>
+    `);
+    win.body.appendChild(c);
+    const canvas = c.querySelector('canvas'), ctx = canvas.getContext('2d');
+    let tool = 'pen', color = '#000', size = 3, drawing = false;
+    const resize = () => {
+      const body = c.querySelector('.pnt-body');
+      const r = body.getBoundingClientRect();
+      const img = ctx.getImageData ? (canvas.width ? canvas.toDataURL() : null) : null;
+      canvas.width = r.width; canvas.height = r.height;
+      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+      if (img) { const i = new Image(); i.onload = () => ctx.drawImage(i, 0, 0); i.src = img; }
+    };
+    setTimeout(resize, 50);
+    window.addEventListener('resize', resize);
+    
+    c.querySelectorAll('.pnt-tool').forEach(t => t.onclick = () => {
+      c.querySelectorAll('.pnt-tool').forEach(x => x.classList.remove('active'));
+      t.classList.add('active'); tool = t.dataset.tool;
+    });
+    c.querySelectorAll('.pnt-color').forEach(co => co.onclick = () => {
+      c.querySelectorAll('.pnt-color').forEach(x => x.classList.remove('active'));
+      co.classList.add('active'); color = co.dataset.c;
+    });
+    c.querySelector('.pnt-size').oninput = (e) => size = +e.target.value;
+    c.querySelector('[data-act=clear]').onclick = () => { ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height); };
+    c.querySelector('[data-act=save]').onclick = async () => {
+      const name = await Dialog.prompt('保存文件名', `paint-${Date.now()}.png`);
+      if (!name) return;
+      canvas.toBlob(async (b) => {
+        const buf = await b.arrayBuffer();
+        await VFS.writeFile('/Pictures/' + name, buf);
+        Toast.show('已保存到 /Pictures/', 'success');
+        FE.refreshAll();
+      });
+    };
+    
+    const getPos = (e) => {
+      const r = canvas.getBoundingClientRect();
+      const t = e.touches ? e.touches[0] : e;
+      return { x: t.clientX - r.left, y: t.clientY - r.top };
+    };
+    const draw = (e) => {
+      if (!drawing) return;
+      const p = getPos(e);
+      ctx.lineTo(p.x, p.y);
+      ctx.strokeStyle = tool === 'eraser' ? '#fff' : color;
+      ctx.lineWidth = size; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      ctx.stroke();
+    };
+    canvas.addEventListener('mousedown', (e) => { drawing = true; ctx.beginPath(); const p = getPos(e); ctx.moveTo(p.x, p.y); });
+    canvas.addEventListener('mousemove', draw);
+    window.addEventListener('mouseup', () => drawing = false);
+    canvas.addEventListener('touchstart', (e) => { e.preventDefault(); drawing = true; ctx.beginPath(); const p = getPos(e); ctx.moveTo(p.x, p.y); }, { passive: false });
+    canvas.addEventListener('touchmove', (e) => { e.preventDefault(); draw(e); }, { passive: false });
+    canvas.addEventListener('touchend', () => drawing = false);
+  }
+});
+
+// ---------- Settings ----------
+Apps.register('settings', {
+  name: '设置', icon: ICONS.settings, desc: '系统设置',
+  launch() {
+    const win = WM.create({ title: '设置', icon: ICONS.settings, width: 780, height: 560, app: 'settings' });
+    const c = el(`
+      <div class="stg">
+        <div class="stg-side">
+          <div class="side-item active" data-sec="storage">${ICONS.mount}<span>存储</span></div>
+          <div class="side-item" data-sec="wallpaper">${ICONS.image}<span>壁纸</span></div>
+          <div class="side-item" data-sec="mounts">${ICONS.folder}<span>挂载</span></div>
+          <div class="side-item" data-sec="about"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg><span>关于</span></div>
+        </div>
+        <div class="stg-content" id="stg-content"></div>
+      </div>
+    `);
+    win.body.appendChild(c);
+    
+    const wallpapers = [
+      { name: 'Nebula', css: 'radial-gradient(ellipse at 20% 10%, rgba(130,170,255,.15), transparent 50%), radial-gradient(ellipse at 80% 90%, rgba(199,146,234,.14), transparent 55%), linear-gradient(135deg,#0a0b14 0%, #151726 50%, #0a0b14 100%)' },
+      { name: 'Sunset', css: 'linear-gradient(135deg, #1a1b26 0%, #3d1e4d 50%, #6a2d5c 100%)' },
+      { name: 'Forest', css: 'linear-gradient(135deg, #0e1a15 0%, #1a2e28 50%, #0e1a15 100%)' },
+      { name: 'Ocean', css: 'linear-gradient(135deg, #0a1428 0%, #1a2e5a 50%, #0a1428 100%)' },
+      { name: 'Monochrome', css: 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%)' },
+      { name: 'Aurora', css: 'linear-gradient(135deg, #0a1520 0%, #1e3a4d 30%, #2d5a4d 60%, #1a2e3d 100%)' },
+    ];
+    
+    const render = async (sec) => {
+      const content = c.querySelector('#stg-content');
+      if (sec === 'storage') {
+        const q = await VFS.getStorageEstimate();
+        const usedPct = q.quota > 0 ? (q.used / q.quota * 100) : 0;
+        
+        // Try to estimate breakdown by walking OPFS
+        let breakdown = [];
+        try {
+          breakdown = await estimateDirSize('/');
+        } catch {}
+        
+        content.innerHTML = `
+          <div class="stg-section">
+            <h2 class="stg-h">存储空间</h2>
+            <div class="storage-bar"><div class="storage-used" style="width:${Math.max(1, usedPct)}%"></div></div>
+            <div class="stg-row"><span class="stg-label">已使用</span><span class="stg-val">${fmtSize(q.used)} / ${fmtSize(q.quota)} (${usedPct.toFixed(1)}%)</span></div>
+            <div class="stg-card">
+              <div class="stg-sub">目录占用估算</div>
+              ${breakdown.length === 0 ? '<div style="color:var(--text-mute);font-size:12px">暂无数据</div>' :
+                breakdown.map(b => `
+                  <div class="stg-row">
+                    <span class="stg-label">${b.path}</span>
+                    <span class="stg-val">${fmtSize(b.size)} · ${b.files} 文件</span>
+                  </div>
+                `).join('')}
+            </div>
+            <button class="stg-btn danger" id="reset-btn" style="margin-top:12px">重置文件系统</button>
+          </div>
+        `;
+        content.querySelector('#reset-btn').onclick = async () => {
+          if (await Dialog.confirm('重置', '这将删除所有文件、设置和挂载信息。确定继续？')) {
+            await VFS.reset();
+            Toast.show('已重置', 'success');
+            setTimeout(() => location.reload(), 500);
+          }
+        };
+      } else if (sec === 'wallpaper') {
+        const current = localStorage.getItem('webos-wallpaper') || wallpapers[0].name;
+        content.innerHTML = `
+          <div class="stg-section">
+            <h2 class="stg-h">壁纸</h2>
+            <div class="stg-sub">内置壁纸</div>
+            <div class="wp-grid">
+              ${wallpapers.map(w => `
+                <div class="wp-item ${w.name === current ? 'active' : ''}" data-wp="${w.name}" style="background:${w.css}">
+                  <div style="position:absolute;bottom:6px;left:8px;font-size:11px;color:rgba(255,255,255,.8);text-shadow:0 1px 2px rgba(0,0,0,.6)">${w.name}</div>
+                </div>
+              `).join('')}
+              <div class="wp-item upload" data-upload>
+                <div style="text-align:center">
+                  ${ICONS.upload}<br>
+                  上传自定义
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+        content.querySelectorAll('[data-wp]').forEach(w => {
+          w.onclick = () => {
+            const name = w.dataset.wp;
+            const wp = wallpapers.find(x => x.name === name);
+            if (wp) { applyWallpaper(wp.css); localStorage.setItem('webos-wallpaper', name); render('wallpaper'); }
+          };
+        });
+        content.querySelector('[data-upload]').onclick = () => {
+          const inp = el('<input type="file" accept="image/*" style="display:none">');
+          inp.onchange = async () => {
+            const f = inp.files[0]; if (!f) return;
+            const buf = await f.arrayBuffer();
+            await VFS.writeFile('/Pictures/wallpaper-' + Date.now() + '.' + getExt(f.name), buf);
+            const url = URL.createObjectURL(new Blob([buf]));
+            applyWallpaper(`url(${url}) center/cover no-repeat`);
+            localStorage.setItem('webos-wallpaper-custom', url);
+            Toast.show('壁纸已应用', 'success');
+            inp.remove();
+          };
+          document.body.appendChild(inp); inp.click();
+        };
+      } else if (sec === 'mounts') {
+        const mounts = Array.from(VFS.mounts.entries());
+        content.innerHTML = `
+          <div class="stg-section">
+            <h2 class="stg-h">本地文件夹挂载</h2>
+            <p style="color:var(--text-dim);font-size:12.5px;margin-bottom:16px;line-height:1.6">
+              通过 File System Access API 将本地文件夹挂载到虚拟文件系统的 <code style="background:var(--bg-0);padding:2px 6px;border-radius:4px;font-family:var(--font-display)">/mnt/</code> 路径下。挂载后可直接在文件管理器中操作本地文件。
+            </p>
+            <button class="stg-btn" id="mount-btn" style="margin-bottom:16px">选择文件夹挂载</button>
+            <div class="stg-sub">已挂载 (${mounts.length})</div>
+            ${mounts.length === 0 ? '<div style="color:var(--text-mute);font-size:12px;padding:12px">暂无挂载</div>' :
+              mounts.map(([p, m]) => `
+                <div class="stg-card">
+                  <div class="stg-row">
+                    <span class="stg-label" style="color:var(--success)">${m.name}</span>
+                    <button class="stg-btn" data-unmount="${p}">卸载</button>
+                  </div>
+                  <div class="stg-val">${p}</div>
+                </div>
+              `).join('')
+            }
+            <div class="stg-card" style="margin-top:16px;border-color:var(--accent)">
+              <div style="color:var(--text-dim);font-size:12px;line-height:1.6">
+                <strong style="color:var(--accent)">提示:</strong> 挂载权限在页面刷新后需要重新授权。系统会在启动时提示重新挂载。
+              </div>
+            </div>
+          </div>
+        `;
+        content.querySelector('#mount-btn').onclick = mountFolder;
+        content.querySelectorAll('[data-unmount]').forEach(b => {
+          b.onclick = async () => {
+            const p = b.dataset.unmount;
+            if (await Dialog.confirm('卸载', '确定卸载此文件夹？')) {
+              await VFS.unmount(p);
+              Toast.show('已卸载', 'success');
+              render('mounts');
+              FE.refreshAll();
+            }
+          };
+        });
+      } else if (sec === 'about') {
+        content.innerHTML = `
+          <div class="stg-section">
+            <h2 class="stg-h">关于 WebOS</h2>
+            <div class="stg-card">
+              <div class="stg-row"><span class="stg-label">版本</span><span class="stg-val">1.0.0</span></div>
+              <div class="stg-row"><span class="stg-label">内核</span><span class="stg-val">OPFS + File System Access API</span></div>
+              <div class="stg-row"><span class="stg-label">浏览器</span><span class="stg-val">${navigator.userAgent.split(' ').slice(-2).join(' ')}</span></div>
+              <div class="stg-row"><span class="stg-label">平台</span><span class="stg-val">${navigator.platform}</span></div>
+              <div class="stg-row"><span class="stg-label">持久化</span><span class="stg-val">${navigator.storage.persisted ? '已启用' : '未持久化'}</span></div>
+            </div>
+            <p style="color:var(--text-dim);font-size:12px;line-height:1.7;margin-top:12px">
+              一个基于浏览器原生 OPFS 和 File System Access API 构建的零依赖桌面环境。所有数据存储在浏览器沙盒中，完全离线可用。
+            </p>
+          </div>
+        `;
+      }
+    };
+    
+    c.querySelectorAll('.side-item[data-sec]').forEach(s => {
+      s.onclick = () => {
+        c.querySelectorAll('.side-item').forEach(x => x.classList.remove('active'));
+        s.classList.add('active');
+        render(s.dataset.sec);
+      };
+    });
+    
+    render('storage');
+  }
+});
+
+// Helper: estimate directory sizes
+async function estimateDirSize(path, depth = 0) {
+  if (depth > 3) return [];
+  const result = [];
+  try {
+    const entries = await VFS.readdir(path);
+    let size = 0, files = 0;
+    for (const e of entries) {
+      if (e.type === 'file') { size += e.size || 0; files++; }
+      else if (e.type === 'directory' && !e.mount) {
+        const sub = await estimateDirSize(path === '/' ? '/' + e.name : path + '/' + e.name, depth + 1);
+        for (const s of sub) { size += s.size; files += s.files; }
+      }
+    }
+    if (files > 0) result.push({ path, size, files });
+  } catch {}
+  return result;
+}
+
+// Mount folder
+async function mountFolder() {
+  if (!('showDirectoryPicker' in window)) {
+    Toast.show('此浏览器不支持 File System Access API', 'error');
+    return;
+  }
+  try {
+    const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
+    const path = await VFS.mountLocal(handle);
+    Toast.show(`已挂载: ${handle.name}`, 'success');
+    FE.refreshAll();
+  } catch (e) {
+    if (e.name !== 'AbortError') Toast.show('挂载失败: ' + e.message, 'error');
+  }
+}
+
+// ============================================================
+// Desktop Icons
+// ============================================================
+const Desktop = {
+  icons: [],
+  
+  async init() {
+    // Load positions from localStorage
+    this.positions = JSON.parse(localStorage.getItem('webos-dicons') || '{}');
+    this.layer = document.getElementById('desktop-icons-layer');
+    this.layer.innerHTML = '';
+    
+    // Default apps
+    const apps = [
+      { id: 'explorer', name: '文件资源管理器', icon: ICONS.explorer, color: 'var(--accent-3)' },
+      { id: 'notepad', name: '记事本', icon: ICONS.notepad, color: 'var(--accent)' },
+      { id: 'browser', name: '浏览器', icon: ICONS.browser, color: 'var(--accent-3)' },
+      { id: 'paint', name: '画板', icon: ICONS.paint, color: 'var(--accent-2)' },
+      { id: 'calc', name: '计算器', icon: ICONS.calc, color: 'var(--warn)' },
+      { id: 'table', name: '表格', icon: ICONS.table, color: 'var(--success)' },
+      { id: 'settings', name: '设置', icon: ICONS.settings, color: 'var(--text-dim)' },
+    ];
+    
+    // Desktop shortcuts (from /Desktop)
+    let files = [];
+    try { files = await VFS.readdir('/Desktop'); } catch {}
+    
+    // Render apps
+    apps.forEach((a, i) => this._createIcon(a.id, a.name, a.icon, a.color, 'app', i));
+    
+    // Render desktop files
+    files.forEach((f, i) => {
+      const path = '/Desktop/' + f.name;
+      const iconHtml = f.type === 'directory' ? ICONS.folder : getIconForFile(f.name);
+      const color = f.type === 'directory' ? 'var(--accent-3)' : 'var(--text-dim)';
+      this._createIcon(path, f.name, iconHtml, color, 'file', apps.length + i);
+    });
+  },
+  
+  _createIcon(id, name, icon, color, type, index) {
+    const GRID = 90;
+    const pos = this.positions[id] || { x: 16, y: 16 + index * GRID };
+    const ic = el(`
+      <div class="d-icon" data-id="${id}" data-type="${type}" style="left:${pos.x}px;top:${pos.y}px">
+        <div class="ico" style="color:${color}">${icon}</div>
+        <div class="lbl">${name}</div>
+      </div>
+    `);
+    this.layer.appendChild(ic);
+    this.icons.push({ el: ic, id, type, name });
+    
+    // Drag
+    let drag = null, moved = false;
+    const onDown = (e) => {
+      if (e.button === 2) return;
+      const t = e.touches ? e.touches[0] : e;
+      drag = { sx: t.clientX, sy: t.clientY, x: pos.x, y: pos.y };
+      moved = false;
+    };
+    const onMove = (e) => {
+      if (!drag) return;
+      const t = e.touches ? e.touches[0] : e;
+      const dx = t.clientX - drag.sx, dy = t.clientY - drag.sy;
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+        if (!moved) { ic.classList.add('dragging'); moved = true; }
+        ic.style.left = (drag.x + dx) + 'px';
+        ic.style.top = (drag.y + dy) + 'px';
+      }
+    };
+    const onUp = () => {
+      if (drag && moved) {
+        ic.classList.remove('dragging');
+        pos.x = ic.offsetLeft; pos.y = ic.offsetTop;
+        this.positions[id] = { x: pos.x, y: pos.y };
+        localStorage.setItem('webos-dicons', JSON.stringify(this.positions));
+      }
+      drag = null;
+    };
+    ic.addEventListener('mousedown', onDown);
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+    ic.addEventListener('touchstart', onDown, { passive: true });
+    document.addEventListener('touchmove', onMove, { passive: true });
+    document.addEventListener('touchend', onUp);
+    
+    // Click / double-click
+    ic.addEventListener('click', (e) => {
+      if (moved) return;
+      this.icons.forEach(i => i.el.classList.remove('selected'));
+      ic.classList.add('selected');
+    });
+    ic.addEventListener('dblclick', (e) => {
+      if (moved) return;
+      if (type === 'app') Apps.launch(id);
+      else openFile(id);
+    });
+    ic.addEventListener('contextmenu', (e) => {
+      e.preventDefault(); e.stopPropagation();
+      const items = [];
+      if (type === 'app') {
+        items.push({ label: '打开', icon: ICONS.folderOpen, action: () => Apps.launch(id) });
+      } else {
+        items.push({ label: '打开', icon: ICONS.file, action: () => openFile(id) });
+        items.push({ label: '删除', icon: ICONS.trash, action: async () => {
+          if (await Dialog.confirm('删除', `删除 ${name}？`)) {
+            await VFS.unlink(id);
+            Toast.show('已删除', 'success');
+            this.init();
+          }
+        }});
+      }
+      ContextMenu.show(e.clientX, e.clientY, items);
+    });
+  },
+  
+  refresh() { this.init(); }
+};
+
+// ============================================================
+// Start Menu
+// ============================================================
+const StartMenu = {
+  init() {
+    const menu = document.getElementById('start-menu');
+    const appsList = document.getElementById('sm-apps');
+    const search = document.getElementById('sm-search');
+    
+    const render = (filter = '') => {
+      appsList.innerHTML = '';
+      Apps.registry.forEach((app, id) => {
+        if (filter && !app.name.toLowerCase().includes(filter.toLowerCase()) && 
+            !(app.desc && app.desc.toLowerCase().includes(filter.toLowerCase()))) return;
+        const item = el(`
+          <div class="sm-app">
+            <div style="color:var(--accent)">${app.icon}</div>
+            <div class="sm-app-info">
+              <div class="sm-app-name">${app.name}</div>
+              <div class="sm-app-desc">${app.desc || ''}</div>
+            </div>
+          </div>
+        `);
+        item.onclick = () => {
+          Apps.launch(id);
+          menu.classList.remove('active');
+          search.value = '';
+        };
+        appsList.appendChild(item);
+      });
+    };
+    
+    render();
+    search.addEventListener('input', (e) => render(e.target.value));
+    
+    document.getElementById('start-btn').onclick = (e) => {
+      e.stopPropagation();
+      menu.classList.toggle('active');
+      if (menu.classList.contains('active')) { search.focus(); search.select(); }
+    };
+    
+    document.addEventListener('click', (e) => {
+      if (!menu.contains(e.target) && !e.target.closest('#start-btn')) {
+        menu.classList.remove('active');
+      }
+    });
+    
+    document.getElementById('sm-mount').onclick = () => { menu.classList.remove('active'); mountFolder(); };
+    document.getElementById('sm-power').onclick = async () => {
+      if (await Dialog.confirm('重新加载', '刷新页面？')) location.reload();
+    };
+  }
+};
+
+// ============================================================
+// Desktop Context Menu
+// ============================================================
+function setupDesktopCtx() {
+  const desktop = document.getElementById('desktop');
+  desktop.addEventListener('contextmenu', (e) => {
+    if (e.target.closest('.d-icon') || e.target.closest('.win')) return;
+    e.preventDefault();
+    ContextMenu.show(e.clientX, e.clientY, [
+      { label: '刷新', icon: ICONS.refresh, shortcut: 'F5', action: () => Desktop.refresh() },
+      'sep',
+      { label: '新建文件夹到桌面', icon: ICONS.folder, action: async () => {
+        const name = await Dialog.prompt('文件夹名', '新文件夹');
+        if (name) { await VFS.mkdir('/Desktop/' + name); Desktop.refresh(); }
+      }},
+      { label: '新建文件到桌面', icon: ICONS.newFile, action: async () => {
+        const name = await Dialog.prompt('文件名', '新文件.txt');
+        if (name) { await VFS.writeFile('/Desktop/' + name, ''); Desktop.refresh(); }
+      }},
+      'sep',
+      { label: '上传文件到桌面', icon: ICONS.upload, action: () => {
+        const inp = el('<input type="file" multiple style="display:none">');
+        inp.onchange = async () => {
+          for (const f of inp.files) {
+            await VFS.writeFile('/Desktop/' + f.name, await f.arrayBuffer());
+          }
+          Toast.show('已上传', 'success');
+          Desktop.refresh();
+          inp.remove();
+        };
+        document.body.appendChild(inp); inp.click();
+      }},
+      'sep',
+      { label: '挂载本地文件夹', icon: ICONS.mount, action: mountFolder },
+      { label: '壁纸设置', icon: ICONS.image, action: () => Apps.launch('settings', { sec: 'wallpaper' }) },
+      'sep',
+      { label: '全屏', icon: ICONS.fullscreen, action: () => {
+        if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+        else document.exitFullscreen();
+      }},
+    ]);
+  });
+  
+  // Desktop drop
+  desktop.addEventListener('dragover', (e) => {
+    if (e.dataTransfer.types.includes('Files')) {
+      e.preventDefault();
+      desktop.classList.add('drop-hover');
+    }
+  });
+  desktop.addEventListener('dragleave', (e) => {
+    if (e.target === desktop || !desktop.contains(e.relatedTarget)) desktop.classList.remove('drop-hover');
+  });
+  desktop.addEventListener('drop', async (e) => {
+    desktop.classList.remove('drop-hover');
+    if (e.dataTransfer.files.length > 0) {
+      e.preventDefault();
+      for (const f of e.dataTransfer.files) {
+        await VFS.writeFile('/Desktop/' + f.name, await f.arrayBuffer());
+      }
+      Toast.show(`已上传 ${e.dataTransfer.files.length} 个文件`, 'success');
+      Desktop.refresh();
+    }
+  });
+  
+  // Desktop click deselect
+  desktop.addEventListener('click', (e) => {
+    if (e.target === desktop || e.target.id === 'desktop-icons-layer') {
+      document.querySelectorAll('.d-icon.selected').forEach(i => i.classList.remove('selected'));
+    }
+  });
+}
+
+// ============================================================
+// Selection Box (Desktop)
+// ============================================================
+function setupSelectionBox() {
+  const desktop = document.getElementById('desktop');
+  let box = null, start = null;
+  desktop.addEventListener('mousedown', (e) => {
+    if (e.target !== desktop && e.target.id !== 'desktop-icons-layer') return;
+    start = { x: e.clientX, y: e.clientY };
+    box = el('<div class="sel-box"></div>');
+    document.body.appendChild(box);
+  });
+  document.addEventListener('mousemove', (e) => {
+    if (!box || !start) return;
+    const x = Math.min(start.x, e.clientX), y = Math.min(start.y, e.clientY);
+    const w = Math.abs(e.clientX - start.x), h = Math.abs(e.clientY - start.y);
+    box.style.left = x + 'px'; box.style.top = y + 'px';
+    box.style.width = w + 'px'; box.style.height = h + 'px';
+    // Select icons in box
+    const br = box.getBoundingClientRect();
+    document.querySelectorAll('.d-icon').forEach(ic => {
+      const ir = ic.getBoundingClientRect();
+      const overlap = !(ir.right < br.left || ir.left > br.right || ir.bottom < br.top || ir.top > br.bottom);
+      ic.classList.toggle('selected', overlap);
+    });
+  });
+  document.addEventListener('mouseup', () => {
+    if (box) { box.remove(); box = null; start = null; }
+  });
+}
+
+// ============================================================
+// Keyboard
+// ============================================================
+function setupKeys() {
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'F5') { e.preventDefault(); Desktop.refresh(); }
+  });
+}
+
+// ============================================================
+// Clock
+// ============================================================
+function updateClock() {
+  const c = document.getElementById('clock');
+  const n = new Date();
+  c.innerHTML = `
+    <div style="font-weight:600">${n.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}</div>
+    <div style="font-size:10px;opacity:.7">${n.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' })}</div>
+  `;
+}
+
+// ============================================================
+// Wallpaper
+// ============================================================
+function applyWallpaper(css) {
+  const d = document.getElementById('desktop');
+  if (css.startsWith('url(') || css.startsWith('linear') || css.startsWith('radial')) {
+    d.style.background = css;
+  } else {
+    d.style.background = css;
+  }
+  d.style.backgroundSize = 'cover';
+  d.style.backgroundPosition = 'center';
+}
+
+async function loadWallpaper() {
+  const saved = localStorage.getItem('webos-wallpaper');
+  const custom = localStorage.getItem('webos-wallpaper-custom');
+  if (custom) {
+    document.getElementById('desktop').style.background = `url(${custom}) center/cover no-repeat`;
+  }
+  // Default is already set in CSS
+}
+
+// ============================================================
+// Re-mount prompt
+// ============================================================
+async function promptRemount() {
+  const saved = VFS.getSavedMounts();
+  if (saved.length > 0 && 'showDirectoryPicker' in window) {
+    const names = saved.map(s => s.name).join(', ');
+    if (await Dialog.confirm('重新挂载', `检测到之前的挂载: ${names}\n\n是否重新授权？(需要逐个选择文件夹)`)) {
+      for (const s of saved) {
+        try {
+          const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
+          await VFS.mountLocal(handle);
+        } catch (e) {
+          if (e.name !== 'AbortError') break;
+        }
+      }
+      Toast.show('挂载完成', 'success');
+      FE.refreshAll();
+    }
+  }
+}
+
+// ============================================================
+// Global drag-drop to window
+// ============================================================
+window.addEventListener('dragover', (e) => e.preventDefault());
+window.addEventListener('drop', (e) => e.preventDefault());
+
+// ============================================================
+// Init
+// ============================================================
+async function boot() {
+  try {
+    // Request persistence
+    if (navigator.storage && navigator.storage.persist) {
+      try { await navigator.storage.persist(); } catch {}
+    }
+    await VFS.init();
+    await loadWallpaper();
+    await Desktop.init();
+    StartMenu.init();
+    setupDesktopCtx();
+    setupSelectionBox();
+    setupKeys();
+    updateClock();
+    setInterval(updateClock, 1000);
+    setTimeout(() => promptRemount(), 800);
+    console.log('WebOS booted');
+  } catch (e) {
+    console.error(e);
+    document.body.innerHTML = `
+      <div style="padding:40px;color:#fff;font-family:monospace">
+        <h2>WebOS 启动失败</h2>
+        <p style="color:#ff7777">${e.message}</p>
+        <p style="color:#888;margin-top:12px">请确保浏览器支持 OPFS (需要 Chrome/Edge 102+ 或 Firefox 111+)</p>
+        <button onclick="location.reload()" style="margin-top:20px;padding:8px 16px;background:#82aaff;color:#000;border:none;border-radius:4px;cursor:pointer">重新加载</button>
+      </div>
+    `;
+  }
+}
+
+boot();
+</script>
+</body>
+</html>

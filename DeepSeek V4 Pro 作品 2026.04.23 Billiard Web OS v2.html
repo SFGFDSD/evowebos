@@ -1,0 +1,1898 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>高山台球 · 网页操作系统</title>
+    <style>
+        :root {
+            --felt-green: #0d5e3a;
+            --felt-dark: #083d26;
+            --felt-light: #1a7a4e;
+            --wood-dark: #3e2216;
+            --wood-mid: #6b3a22;
+            --wood-light: #8b5a3c;
+            --wood-grain1: #5c3018;
+            --wood-grain2: #7a4428;
+            --brass: #b8935a;
+            --brass-light: #d4b87a;
+            --cream: #f5e6d3;
+            --ivory: #faf3e6;
+            --shadow-deep: rgba(0, 0, 0, 0.55);
+            --shadow-soft: rgba(0, 0, 0, 0.25);
+            --text-dark: #1a0e08;
+            --text-light: #f0e4d0;
+            --knob-red: #8b1a1a;
+            --knob-amber: #a0651a;
+            --knob-green: #1a6b3a;
+            --knob-red-glow: #d43535;
+            --knob-amber-glow: #d49535;
+            --knob-green-glow: #35b855;
+            --taskbar-height: 48px;
+            --taskbar-side-width: 52px;
+            --titlebar-height: 38px;
+            --window-border: 5px;
+            --font-main: 'Segoe UI', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            --font-display: 'Georgia', 'Noto Serif SC', 'STSong', serif;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: var(--font-main);
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            cursor: default;
+            background: #000;
+        }
+
+        /* ============ 桌面 ============ */
+        #desktop {
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(ellipse at 50% 30%, #1e8a5a 0%, #0d5e3a 40%, #073520 70%, #041e10 100%),
+                repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(255, 255, 255, 0.008) 3px, rgba(255, 255, 255, 0.008) 4px),
+                repeating-linear-gradient(90deg, transparent, transparent 3px, rgba(255, 255, 255, 0.006) 3px, rgba(255, 255, 255, 0.006) 4px);
+            background-color: #0d5e3a;
+            z-index: 0;
+        }
+        #desktop::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(circle at 18% 22%, rgba(255, 220, 150, 0.06) 0%, transparent 18%),
+                radial-gradient(circle at 82% 22%, rgba(255, 220, 150, 0.06) 0%, transparent 18%),
+                radial-gradient(circle at 18% 78%, rgba(255, 220, 150, 0.05) 0%, transparent 18%),
+                radial-gradient(circle at 82% 78%, rgba(255, 220, 150, 0.05) 0%, transparent 18%),
+                radial-gradient(circle at 50% 50%, rgba(255, 240, 200, 0.03) 0%, transparent 40%);
+            pointer-events: none;
+            z-index: 0;
+        }
+        #desktop::after {
+            content: '';
+            position: absolute;
+            inset: 12px;
+            border: 3px solid rgba(139, 90, 60, 0.35);
+            border-radius: 6px;
+            pointer-events: none;
+            z-index: 0;
+            box-shadow: inset 0 0 120px rgba(0, 0, 0, 0.4), 0 0 0 8px rgba(62, 34, 22, 0.3);
+        }
+
+        /* 桌面图标区域 */
+        #desktop-icons {
+            position: absolute;
+            inset: 24px 24px 24px 24px;
+            z-index: 1;
+            display: flex;
+            flex-wrap: wrap;
+            flex-direction: column;
+            gap: 8px;
+            padding: 12px;
+            align-content: flex-start;
+            align-items: flex-start;
+            pointer-events: none;
+        }
+        .desktop-icon {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            padding: 10px 14px;
+            border-radius: 10px;
+            cursor: pointer;
+            pointer-events: auto;
+            transition: all 0.2s ease;
+            width: 90px;
+            text-align: center;
+            background: transparent;
+            border: 2px solid transparent;
+        }
+        .desktop-icon:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.25);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+        }
+        .desktop-icon:active {
+            transform: scale(0.94);
+            transition: all 0.08s ease;
+        }
+        .desktop-icon svg {
+            width: 44px;
+            height: 44px;
+            filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.45));
+            flex-shrink: 0;
+        }
+        .desktop-icon .icon-label {
+            color: #f0e4d0;
+            font-size: 11.5px;
+            font-weight: 500;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+            letter-spacing: 0.3px;
+            line-height: 1.3;
+            word-break: break-all;
+        }
+
+        /* ============ 窗口管理器 ============ */
+        #windows-layer {
+            position: absolute;
+            inset: 0;
+            z-index: 10;
+            pointer-events: none;
+        }
+        .window {
+            position: absolute;
+            min-width: 280px;
+            min-height: 200px;
+            background: #faf3e6;
+            border-radius: 10px;
+            pointer-events: auto;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 12px 48px rgba(0, 0, 0, 0.55), 0 0 0 var(--window-border) var(--wood-dark);
+            overflow: hidden;
+            transition: box-shadow 0.15s ease;
+            animation: windowOpen 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        @keyframes windowOpen {
+            from {
+                opacity: 0;
+                transform: scale(0.88) translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+        .window.focused {
+            box-shadow: 0 18px 56px rgba(0, 0, 0, 0.65), 0 0 0 var(--window-border) var(--brass), 0 0 30px rgba(184, 147, 90, 0.25);
+            z-index: 100;
+        }
+        .window.maximized {
+            border-radius: 0;
+            animation: none;
+        }
+
+        /* 标题栏 - 木纹 */
+        .window-titlebar {
+            display: flex;
+            align-items: center;
+            height: var(--titlebar-height);
+            background: linear-gradient(180deg, #7a4428 0%, #5c3018 40%, #4a2512 60%, #5c3018 100%);
+            background-color: #5c3018;
+            padding: 0 10px;
+            gap: 8px;
+            flex-shrink: 0;
+            cursor: grab;
+            position: relative;
+            border-bottom: 2px solid #3e1a0c;
+            z-index: 2;
+        }
+        .window-titlebar:active {
+            cursor: grabbing;
+        }
+        .window-titlebar::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: repeating-linear-gradient(90deg,
+                    transparent,
+                    transparent 18px,
+                    rgba(255, 255, 255, 0.015) 18px,
+                    rgba(255, 255, 255, 0.015) 19px,
+                    transparent 19px,
+                    transparent 37px,
+                    rgba(0, 0, 0, 0.03) 37px,
+                    rgba(0, 0, 0, 0.03) 38px);
+            pointer-events: none;
+            z-index: 0;
+        }
+        .window-title-text {
+            flex: 1;
+            color: #f0e4d0;
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            position: relative;
+            z-index: 1;
+            font-family: var(--font-display);
+        }
+        .window-title-icon {
+            width: 18px;
+            height: 18px;
+            flex-shrink: 0;
+            position: relative;
+            z-index: 1;
+            opacity: 0.9;
+        }
+
+        /* 旋钮按钮组 */
+        .knob-group {
+            display: flex;
+            gap: 6px;
+            flex-shrink: 0;
+            position: relative;
+            z-index: 1;
+            align-items: center;
+            padding: 0 2px;
+        }
+        .knob-btn {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            cursor: pointer;
+            position: relative;
+            border: none;
+            background: transparent;
+            padding: 0;
+            transition: transform 0.1s ease;
+            flex-shrink: 0;
+            outline: none;
+        }
+        .knob-btn:hover {
+            transform: scale(1.15);
+            filter: brightness(1.2);
+        }
+        .knob-btn:active {
+            transform: scale(0.9) rotate(25deg);
+            transition: transform 0.06s ease;
+        }
+        .knob-btn svg {
+            width: 100%;
+            height: 100%;
+            display: block;
+            filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.5));
+        }
+        .knob-minimize:hover svg {
+            filter: drop-shadow(0 0 8px var(--knob-amber-glow));
+        }
+        .knob-maximize:hover svg {
+            filter: drop-shadow(0 0 8px var(--knob-green-glow));
+        }
+        .knob-close:hover svg {
+            filter: drop-shadow(0 0 8px var(--knob-red-glow));
+        }
+
+        /* 窗口内容 */
+        .window-content {
+            flex: 1;
+            overflow: auto;
+            background: #fdf8f2;
+            position: relative;
+            z-index: 0;
+            border-top: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        .window-content::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        .window-content::-webkit-scrollbar-track {
+            background: #e8d8c4;
+            border-radius: 4px;
+        }
+        .window-content::-webkit-scrollbar-thumb {
+            background: var(--wood-mid);
+            border-radius: 4px;
+            border: 1px solid var(--wood-dark);
+        }
+
+        /* 调整大小手柄 */
+        .resize-handle {
+            position: absolute;
+            z-index: 5;
+            pointer-events: auto;
+        }
+        .resize-n {
+            top: -4px;
+            left: 12px;
+            right: 12px;
+            height: 8px;
+            cursor: n-resize;
+        }
+        .resize-s {
+            bottom: -4px;
+            left: 12px;
+            right: 12px;
+            height: 8px;
+            cursor: s-resize;
+        }
+        .resize-e {
+            right: -4px;
+            top: 12px;
+            bottom: 12px;
+            width: 8px;
+            cursor: e-resize;
+        }
+        .resize-w {
+            left: -4px;
+            top: 12px;
+            bottom: 12px;
+            width: 8px;
+            cursor: w-resize;
+        }
+        .resize-ne {
+            top: -4px;
+            right: -4px;
+            width: 14px;
+            height: 14px;
+            cursor: ne-resize;
+        }
+        .resize-nw {
+            top: -4px;
+            left: -4px;
+            width: 14px;
+            height: 14px;
+            cursor: nw-resize;
+        }
+        .resize-se {
+            bottom: -4px;
+            right: -4px;
+            width: 14px;
+            height: 14px;
+            cursor: se-resize;
+        }
+        .resize-sw {
+            bottom: -4px;
+            left: -4px;
+            width: 14px;
+            height: 14px;
+            cursor: sw-resize;
+        }
+
+        /* ============ 任务栏 ============ */
+        #taskbar {
+            position: absolute;
+            z-index: 200;
+            background: linear-gradient(180deg, #7a4428 0%, #4a2512 30%, #3e1a0c 60%, #5c3018 100%);
+            background-color: #4a2512;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 -3px 16px rgba(0, 0, 0, 0.6);
+            border-top: 3px solid #8b5a3c;
+            transition: all 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        #taskbar::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: repeating-linear-gradient(90deg,
+                    transparent,
+                    transparent 22px,
+                    rgba(255, 255, 255, 0.02) 22px,
+                    rgba(255, 255, 255, 0.02) 23px,
+                    transparent 23px,
+                    transparent 44px,
+                    rgba(0, 0, 0, 0.04) 44px,
+                    rgba(0, 0, 0, 0.04) 45px);
+            pointer-events: none;
+        }
+        #taskbar.bottom {
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: var(--taskbar-height);
+            flex-direction: row;
+            padding: 0 10px;
+            border-top: 3px solid #8b5a3c;
+            border-bottom: none;
+        }
+        #taskbar.left {
+            top: 0;
+            left: 0;
+            bottom: 0;
+            width: var(--taskbar-side-width);
+            flex-direction: column;
+            padding: 10px 0;
+            border-right: 3px solid #8b5a3c;
+            border-top: none;
+            box-shadow: 3px 0 16px rgba(0, 0, 0, 0.6);
+        }
+        #taskbar.right {
+            top: 0;
+            right: 0;
+            bottom: 0;
+            width: var(--taskbar-side-width);
+            flex-direction: column;
+            padding: 10px 0;
+            border-left: 3px solid #8b5a3c;
+            border-top: none;
+            box-shadow: -3px 0 16px rgba(0, 0, 0, 0.6);
+        }
+
+        /* 任务栏按钮 */
+        .taskbar-btn {
+            height: 34px;
+            min-width: 34px;
+            border-radius: 8px;
+            cursor: pointer;
+            background: rgba(255, 255, 255, 0.06);
+            border: 2px solid rgba(255, 255, 255, 0.15);
+            color: #f0e4d0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 10px;
+            gap: 6px;
+            font-size: 11.5px;
+            font-weight: 500;
+            transition: all 0.18s ease;
+            white-space: nowrap;
+            position: relative;
+            z-index: 1;
+            letter-spacing: 0.3px;
+            flex-shrink: 0;
+        }
+        .taskbar-btn:hover {
+            background: rgba(255, 255, 255, 0.14);
+            border-color: rgba(255, 255, 255, 0.35);
+            box-shadow: 0 0 12px rgba(184, 147, 90, 0.3);
+        }
+        .taskbar-btn.active {
+            background: rgba(184, 147, 90, 0.3);
+            border-color: var(--brass);
+            box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.3), 0 0 14px rgba(184, 147, 90, 0.4);
+        }
+        .taskbar-btn svg {
+            width: 16px;
+            height: 16px;
+            flex-shrink: 0;
+            opacity: 0.85;
+        }
+        #taskbar.left .taskbar-btn,
+        #taskbar.right .taskbar-btn {
+            width: 38px;
+            height: 38px;
+            padding: 0;
+            min-width: unset;
+            writing-mode: horizontal-tb;
+            font-size: 10px;
+            border-radius: 8px;
+        }
+
+        /* 任务栏位置切换按钮 */
+        .taskbar-pos-btn {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            flex-shrink: 0;
+            position: relative;
+            z-index: 1;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-left: auto;
+        }
+        #taskbar.left .taskbar-pos-btn,
+        #taskbar.right .taskbar-pos-btn {
+            margin-left: 0;
+            margin-top: auto;
+        }
+        .taskbar-pos-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: var(--brass-light);
+            box-shadow: 0 0 10px rgba(184, 147, 90, 0.4);
+        }
+        .taskbar-pos-btn svg {
+            width: 16px;
+            height: 16px;
+            opacity: 0.8;
+            transition: transform 0.3s ease;
+        }
+
+        /* 系统托盘 */
+        .taskbar-tray {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+            position: relative;
+            z-index: 1;
+            color: #f0e4d0;
+            font-size: 11px;
+            padding: 0 8px;
+        }
+        #taskbar.left .taskbar-tray,
+        #taskbar.right .taskbar-tray {
+            flex-direction: column;
+            gap: 6px;
+            padding: 8px 0;
+        }
+
+        /* ============ 文件管理器 ============ */
+        .file-manager {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            background: #fdf8f2;
+        }
+        .fm-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            background: linear-gradient(180deg, #f5e6d3 0%, #e8d5bc 100%);
+            border-bottom: 2px solid #c9a87c;
+            flex-shrink: 0;
+            flex-wrap: wrap;
+        }
+        .fm-toolbar button {
+            padding: 6px 12px;
+            border-radius: 6px;
+            border: 2px solid #b8935a;
+            background: linear-gradient(180deg, #faf3e6 0%, #e8d5bc 100%);
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            color: #3e1a0c;
+            transition: all 0.15s ease;
+            font-family: var(--font-main);
+            letter-spacing: 0.3px;
+            white-space: nowrap;
+        }
+        .fm-toolbar button:hover {
+            background: linear-gradient(180deg, #fff 0%, #f0e0c8 100%);
+            border-color: #d4b87a;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+        .fm-toolbar button:active {
+            transform: scale(0.95);
+            background: #dcc8a8;
+        }
+        .fm-toolbar button.danger {
+            border-color: #8b3a3a;
+            background: linear-gradient(180deg, #faf0f0 0%, #e8c8c8 100%);
+            color: #5a1a1a;
+        }
+        .fm-toolbar button.danger:hover {
+            border-color: #c44;
+            background: #fdd;
+        }
+        .fm-path-bar {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            background: #f0e4d0;
+            border-bottom: 1px solid #d4b87a;
+            font-size: 12px;
+            color: #3e1a0c;
+            flex-shrink: 0;
+            font-family: var(--font-display);
+            letter-spacing: 0.4px;
+        }
+        .fm-path-segment {
+            cursor: pointer;
+            color: #6b3a22;
+            font-weight: 500;
+            padding: 2px 6px;
+            border-radius: 4px;
+            transition: all 0.15s;
+        }
+        .fm-path-segment:hover {
+            background: rgba(139, 90, 60, 0.2);
+            color: #3e1a0c;
+        }
+        .fm-path-sep {
+            color: #b8935a;
+            font-weight: bold;
+        }
+        .fm-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            gap: 8px;
+            align-content: start;
+        }
+        .fm-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 10px 6px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.18s ease;
+            border: 2px solid transparent;
+            gap: 6px;
+            text-align: center;
+            background: rgba(255, 255, 255, 0.3);
+        }
+        .fm-item:hover {
+            background: rgba(184, 147, 90, 0.18);
+            border-color: rgba(184, 147, 90, 0.5);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            transform: translateY(-2px);
+        }
+        .fm-item.selected {
+            background: rgba(184, 147, 90, 0.3);
+            border-color: var(--brass);
+            box-shadow: 0 0 0 3px rgba(184, 147, 90, 0.2);
+        }
+        .fm-item svg {
+            width: 40px;
+            height: 40px;
+            flex-shrink: 0;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+        }
+        .fm-item-name {
+            font-size: 11px;
+            color: #3e1a0c;
+            font-weight: 500;
+            word-break: break-all;
+            line-height: 1.3;
+            max-width: 110px;
+            letter-spacing: 0.2px;
+        }
+        .fm-item-meta {
+            font-size: 9px;
+            color: #8b6b4a;
+        }
+        .fm-empty {
+            grid-column: 1/-1;
+            text-align: center;
+            padding: 40px;
+            color: #8b6b4a;
+            font-size: 14px;
+            font-style: italic;
+            letter-spacing: 0.5px;
+        }
+        /* 重命名输入框 */
+        .fm-rename-input {
+            width: 100px;
+            padding: 4px 8px;
+            border: 2px solid var(--brass);
+            border-radius: 6px;
+            font-size: 11px;
+            text-align: center;
+            background: #fff;
+            color: #3e1a0c;
+            font-family: var(--font-main);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(184, 147, 90, 0.2);
+        }
+
+        /* ============ 文本编辑器 ============ */
+        .text-editor {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+        .text-editor-toolbar {
+            display: flex;
+            gap: 6px;
+            padding: 6px 10px;
+            background: #f0e4d0;
+            border-bottom: 1px solid #c9a87c;
+            flex-shrink: 0;
+        }
+        .text-editor-toolbar button {
+            padding: 5px 10px;
+            border-radius: 5px;
+            border: 2px solid #b8935a;
+            background: #faf3e6;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 600;
+            color: #3e1a0c;
+            transition: all 0.15s;
+            font-family: var(--font-main);
+        }
+        .text-editor-toolbar button:hover {
+            background: #fff;
+            border-color: #d4b87a;
+        }
+        .text-editor textarea {
+            flex: 1;
+            width: 100%;
+            border: none;
+            padding: 14px;
+            font-size: 13px;
+            font-family: 'Consolas', 'SF Mono', 'Noto Sans Mono', 'Courier New', monospace;
+            resize: none;
+            background: #fefcf8;
+            color: #2a1a0a;
+            line-height: 1.6;
+            outline: none;
+            tab-size: 4;
+        }
+
+        /* ============ 关于窗口 ============ */
+        .about-content {
+            padding: 24px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+            background: linear-gradient(180deg, #fdf8f2 0%, #f5e6d3 100%);
+            height: 100%;
+            justify-content: center;
+        }
+        .about-content h2 {
+            font-family: var(--font-display);
+            color: #3e1a0c;
+            font-size: 22px;
+            letter-spacing: 1px;
+        }
+        .about-content p {
+            color: #6b3a22;
+            font-size: 13px;
+            line-height: 1.6;
+            max-width: 320px;
+        }
+        .about-badge {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 40% 35%, #1e8a5a 0%, #0d5e3a 60%, #063018 100%);
+            border: 4px solid var(--brass);
+            box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4), inset 0 0 20px rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .about-badge svg {
+            width: 36px;
+            height: 36px;
+            opacity: 0.9;
+        }
+
+        /* ============ 右键菜单 ============ */
+        .context-menu {
+            position: fixed;
+            z-index: 500;
+            background: #faf3e6;
+            border: 3px solid var(--wood-dark);
+            border-radius: 8px;
+            padding: 4px 0;
+            min-width: 180px;
+            box-shadow: 0 8px 28px rgba(0, 0, 0, 0.55);
+            display: none;
+            overflow: hidden;
+        }
+        .context-menu .ctx-item {
+            padding: 9px 16px;
+            cursor: pointer;
+            font-size: 12.5px;
+            color: #3e1a0c;
+            transition: all 0.12s;
+            letter-spacing: 0.3px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .context-menu .ctx-item:hover {
+            background: #e8d5bc;
+            color: #1a0a04;
+        }
+        .context-menu .ctx-sep {
+            height: 1px;
+            background: #c9a87c;
+            margin: 3px 8px;
+        }
+
+        /* ============ 提示/通知 ============ */
+        .toast {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-120px);
+            z-index: 600;
+            background: #3e1a0c;
+            color: #f0e4d0;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+            letter-spacing: 0.4px;
+            border: 2px solid var(--brass);
+            box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
+            transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+            pointer-events: none;
+        }
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* ============ 响应式微调 ============ */
+        @media (max-width: 600px) {
+            .window {
+                min-width: 200px;
+                min-height: 140px;
+                border-radius: 6px;
+            }
+            .window-titlebar {
+                height: 30px;
+                padding: 0 6px;
+                gap: 4px;
+            }
+            .knob-btn {
+                width: 20px;
+                height: 20px;
+            }
+            .window-title-text {
+                font-size: 11px;
+            }
+            .fm-list {
+                grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+                gap: 4px;
+            }
+            .fm-item svg {
+                width: 30px;
+                height: 30px;
+            }
+            .fm-item-name {
+                font-size: 10px;
+                max-width: 80px;
+            }
+            #taskbar.bottom {
+                height: 38px;
+                padding: 0 6px;
+                gap: 3px;
+            }
+            .taskbar-btn {
+                height: 26px;
+                min-width: 26px;
+                font-size: 10px;
+                padding: 0 6px;
+                border-radius: 6px;
+            }
+            .desktop-icon {
+                width: 64px;
+                padding: 6px 8px;
+                gap: 3px;
+            }
+            .desktop-icon svg {
+                width: 32px;
+                height: 32px;
+            }
+            .desktop-icon .icon-label {
+                font-size: 9.5px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ==================== 桌面 ==================== -->
+    <div id="desktop">
+        <div id="desktop-icons">
+            <!-- 文件管理器图标 -->
+            <div class="desktop-icon" data-action="open-file-manager" title="文件管理器">
+                <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <linearGradient id="rackGrad" x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0%" stop-color="#8b5a3c"/>
+                            <stop offset="50%" stop-color="#6b3a22"/>
+                            <stop offset="100%" stop-color="#4a2512"/>
+                        </linearGradient>
+                        <filter id="woodShadow"><feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#000" flood-opacity="0.5"/></filter>
+                    </defs>
+                    <polygon points="24,4 42,36 24,44 6,36" fill="url(#rackGrad)" stroke="#b8935a" stroke-width="2.5" filter="url(#woodShadow)"/>
+                    <circle cx="24" cy="24" r="8" fill="#0d5e3a" stroke="#d4b87a" stroke-width="2"/>
+                    <circle cx="24" cy="24" r="3" fill="#f5e6d3"/>
+                    <line x1="18" y1="32" x2="24" y2="24" stroke="#d4b87a" stroke-width="2" stroke-linecap="round"/>
+                    <line x1="30" y1="32" x2="24" y2="24" stroke="#d4b87a" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                <span class="icon-label">文件管理器</span>
+            </div>
+            <!-- 关于系统图标 -->
+            <div class="desktop-icon" data-action="open-about" title="关于系统">
+                <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="24" cy="24" r="20" fill="#faf3e6" stroke="#b8935a" stroke-width="3"/>
+                    <circle cx="24" cy="24" r="14" fill="#0d5e3a" stroke="#8b5a3c" stroke-width="2"/>
+                    <circle cx="24" cy="24" r="5" fill="#f5e6d3"/>
+                    <text x="24" y="28" text-anchor="middle" fill="#3e1a0c" font-size="8" font-weight="bold" font-family="Georgia,serif">8</text>
+                </svg>
+                <span class="icon-label">关于系统</span>
+            </div>
+            <!-- 新建文档图标 -->
+            <div class="desktop-icon" data-action="new-document" title="新建文档">
+                <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="8" y="6" width="32" height="38" rx="4" fill="#faf3e6" stroke="#8b5a3c" stroke-width="2.5"/>
+                    <rect x="14" y="14" width="20" height="3" rx="1.5" fill="#0d5e3a"/>
+                    <rect x="14" y="21" width="16" height="3" rx="1.5" fill="#0d5e3a" opacity="0.7"/>
+                    <rect x="14" y="28" width="18" height="3" rx="1.5" fill="#0d5e3a" opacity="0.5"/>
+                    <circle cx="36" cy="8" r="8" fill="#d4b87a" stroke="#8b5a3c" stroke-width="2"/>
+                    <line x1="36" y1="4" x2="36" y2="12" stroke="#3e1a0c" stroke-width="2.5" stroke-linecap="round"/>
+                    <line x1="32" y1="8" x2="40" y2="8" stroke="#3e1a0c" stroke-width="2.5" stroke-linecap="round"/>
+                </svg>
+                <span class="icon-label">新建文档</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== 窗口层 ==================== -->
+    <div id="windows-layer"></div>
+
+    <!-- ==================== 任务栏 ==================== -->
+    <div id="taskbar" class="bottom">
+        <button class="taskbar-btn" id="btn-fm" title="文件管理器">
+            <svg viewBox="0 0 24 24" width="16" height="16"><polygon points="12,2 22,18 12,23 2,18" fill="#f0e4d0" stroke="#d4b87a" stroke-width="1.5"/><circle cx="12" cy="13" r="4" fill="#0d5e3a" stroke="#f0e4d0" stroke-width="1"/></svg>
+            文件
+        </button>
+        <button class="taskbar-btn" id="btn-about" title="关于系统">
+            <svg viewBox="0 0 24 24" width="16" height="16"><circle cx="12" cy="12" r="9" fill="none" stroke="#f0e4d0" stroke-width="2"/><circle cx="12" cy="12" r="3" fill="#f0e4d0"/></svg>
+            关于
+        </button>
+        <div class="taskbar-tray">
+            <span id="clock-display" style="font-family:var(--font-display);letter-spacing:0.5px;">--:--</span>
+        </div>
+        <button class="taskbar-pos-btn" id="btn-pos-toggle" title="切换任务栏位置">
+            <svg viewBox="0 0 24 24" width="16" height="16">
+                <rect x="4" y="16" width="16" height="4" rx="2" fill="#f0e4d0" opacity="0.9"/>
+                <rect x="4" y="10" width="16" height="4" rx="2" fill="#f0e4d0" opacity="0.5"/>
+                <rect x="4" y="4" width="16" height="4" rx="2" fill="#f0e4d0" opacity="0.3"/>
+            </svg>
+        </button>
+    </div>
+
+    <!-- ==================== 右键菜单 ==================== -->
+    <div class="context-menu" id="context-menu">
+        <div class="ctx-item" data-ctx="new-file">📄 新建文件</div>
+        <div class="ctx-item" data-ctx="new-folder">📁 新建文件夹</div>
+        <div class="ctx-sep"></div>
+        <div class="ctx-item" data-ctx="refresh">🔄 刷新</div>
+    </div>
+
+    <!-- ==================== Toast ==================== -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+        (function() {
+            // ==================== OPFS 文件系统 ====================
+            class OPFSFileSystem {
+                constructor() {
+                    this.root = null;
+                    this.ready = false;
+                    this.initPromise = this.init();
+                }
+                async init() {
+                    try {
+                        this.root = await navigator.storage.getDirectory();
+                        this.ready = true;
+                        console.log('[OPFS] 文件系统已就绪');
+                        await this.ensureDefaults();
+                    } catch (e) {
+                        console.error('[OPFS] 初始化失败:', e);
+                        this.ready = false;
+                    }
+                }
+                async ensureDefaults() {
+                    try {
+                        await this.getHandle('/Documents', true);
+                        await this.getHandle('/Pictures', true);
+                        await this.getHandle('/Notes', true);
+                        const readme = await this.getHandle('/README.txt', false);
+                        if (!readme) {
+                            await this.writeFile('/README.txt',
+                                '欢迎使用高山台球操作系统！\n\n这是一个基于OPFS的健壮文件系统。\n您可以创建、编辑、重命名和删除文件与文件夹。\n\n祝您使用愉快！');
+                        }
+                    } catch (e) { /* 忽略 */ }
+                }
+                async getHandle(path, createAsDir = false) {
+                    if (!this.ready) await this.initPromise;
+                    const parts = path.split('/').filter(p => p);
+                    let current = this.root;
+                    for (let i = 0; i < parts.length; i++) {
+                        const name = parts[i];
+                        const isLast = i === parts.length - 1;
+                        try {
+                            if (isLast && !createAsDir) {
+                                try { return await current.getFileHandle(name); } catch {
+                                    try { return await current.getDirectoryHandle(name); } catch { return null; }
+                                }
+                            }
+                            if (isLast && createAsDir) {
+                                try { return await current.getDirectoryHandle(name, { create: true }); } catch { return null; }
+                            }
+                            try {
+                                current = await current.getDirectoryHandle(name);
+                            } catch {
+                                if (createAsDir) {
+                                    current = await current.getDirectoryHandle(name, { create: true });
+                                } else {
+                                    return null;
+                                }
+                            }
+                        } catch (e) {
+                            return null;
+                        }
+                    }
+                    return current;
+                }
+                async listDir(path) {
+                    const handle = await this.getHandle(path);
+                    if (!handle || handle.kind !== 'directory') return [];
+                    const entries = [];
+                    for await (const [name, h] of handle.entries()) {
+                        entries.push({
+                            name,
+                            kind: h.kind,
+                            path: path === '/' ? '/' + name : path + '/' + name,
+                            handle: h
+                        });
+                    }
+                    entries.sort((a, b) => {
+                        if (a.kind !== b.kind) return a.kind === 'directory' ? -1 : 1;
+                        return a.name.localeCompare(b.name);
+                    });
+                    return entries;
+                }
+                async readFile(path) {
+                    const handle = await this.getHandle(path);
+                    if (!handle || handle.kind !== 'file') return null;
+                    const file = await handle.getFile();
+                    return await file.text();
+                }
+                async writeFile(path, content) {
+                    const parts = path.split('/').filter(p => p);
+                    const fileName = parts.pop();
+                    const dirPath = '/' + parts.join('/');
+                    const dirHandle = await this.getHandle(dirPath || '/', true);
+                    if (!dirHandle || dirHandle.kind !== 'directory') throw new Error('目录不存在');
+                    const fileHandle = await dirHandle.getFileHandle(fileName, { create: true });
+                    const writable = await fileHandle.createWritable();
+                    await writable.write(content);
+                    await writable.close();
+                    return true;
+                }
+                async createDir(path) {
+                    const parts = path.split('/').filter(p => p);
+                    const dirName = parts.pop();
+                    const parentPath = '/' + parts.join('/');
+                    const parent = await this.getHandle(parentPath || '/', true);
+                    if (!parent || parent.kind !== 'directory') throw new Error('父目录不存在');
+                    await parent.getDirectoryHandle(dirName, { create: true });
+                    return true;
+                }
+                async deleteEntry(path) {
+                    const parts = path.split('/').filter(p => p);
+                    const name = parts.pop();
+                    const parentPath = '/' + parts.join('/');
+                    const parent = await this.getHandle(parentPath || '/');
+                    if (!parent || parent.kind !== 'directory') throw new Error('无法删除');
+                    await parent.removeEntry(name, { recursive: true });
+                    return true;
+                }
+                async renameEntry(oldPath, newName) {
+                    const parts = oldPath.split('/').filter(p => p);
+                    const oldName = parts.pop();
+                    const parentPath = '/' + parts.join('/');
+                    const parent = await this.getHandle(parentPath || '/');
+                    if (!parent || parent.kind !== 'directory') throw new Error('无法重命名');
+                    const entry = await this.getHandle(oldPath);
+                    if (!entry) throw new Error('条目不存在');
+                    const isDir = entry.kind === 'directory';
+                    // 使用复制+删除策略
+                    if (isDir) {
+                        await this.copyDirRecursive(oldPath, parentPath + '/' + newName);
+                        await parent.removeEntry(oldName, { recursive: true });
+                    } else {
+                        const content = await this.readFile(oldPath);
+                        await this.writeFile(parentPath + '/' + newName, content || '');
+                        await parent.removeEntry(oldName);
+                    }
+                    return true;
+                }
+                async copyDirRecursive(srcPath, destPath) {
+                    await this.createDir(destPath);
+                    const entries = await this.listDir(srcPath);
+                    for (const e of entries) {
+                        const childSrc = srcPath + '/' + e.name;
+                        const childDest = destPath + '/' + e.name;
+                        if (e.kind === 'directory') {
+                            await this.copyDirRecursive(childSrc, childDest);
+                        } else {
+                            const content = await this.readFile(childSrc);
+                            await this.writeFile(childDest, content || '');
+                        }
+                    }
+                }
+                async exists(path) {
+                    return !!(await this.getHandle(path));
+                }
+            }
+
+            const fs = new OPFSFileSystem();
+
+            // ==================== 窗口管理器 ====================
+            const windowsLayer = document.getElementById('windows-layer');
+            const taskbar = document.getElementById('taskbar');
+            let windowZIndex = 100;
+            let openWindows = {}; // {windowId: {element, title, iconSvg, minimized}}
+            let windowIdCounter = 0;
+            let activeWindowId = null;
+            let taskbarPosition = 'bottom'; // 'bottom' | 'left' | 'right'
+
+            function createWindow(title, iconSvgHtml, contentHtml, options = {}) {
+                const id = 'win-' + (++windowIdCounter);
+                const width = options.width || 620;
+                const height = options.height || 440;
+                const left = options.left || (60 + windowIdCounter * 30);
+                const top = options.top || (50 + windowIdCounter * 25);
+                const maximized = options.maximized || false;
+
+                const win = document.createElement('div');
+                win.className = 'window focused';
+                win.id = id;
+                win.style.cssText = `
+                    left:${left}px;top:${top}px;
+                    width:${width}px;height:${height}px;
+                    z-index:${++windowZIndex};
+                `;
+                if (maximized) {
+                    applyMaximize(win);
+                }
+
+                win.innerHTML = `
+                    <div class="window-titlebar" data-win-id="${id}">
+                        <span class="window-title-icon">${iconSvgHtml}</span>
+                        <span class="window-title-text">${escapeHtml(title)}</span>
+                        <div class="knob-group">
+                            <button class="knob-btn knob-minimize" data-action="minimize" title="最小化">
+                                <svg viewBox="0 0 26 26">${KNOB_SVG_AMBER}</svg>
+                            </button>
+                            <button class="knob-btn knob-maximize" data-action="maximize" title="最大化">
+                                <svg viewBox="0 0 26 26">${KNOB_SVG_GREEN}</svg>
+                            </button>
+                            <button class="knob-btn knob-close" data-action="close" title="关闭">
+                                <svg viewBox="0 0 26 26">${KNOB_SVG_RED}</svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="window-content">${contentHtml}</div>
+                    <div class="resize-handle resize-n" data-resize="n"></div>
+                    <div class="resize-handle resize-s" data-resize="s"></div>
+                    <div class="resize-handle resize-e" data-resize="e"></div>
+                    <div class="resize-handle resize-w" data-resize="w"></div>
+                    <div class="resize-handle resize-ne" data-resize="ne"></div>
+                    <div class="resize-handle resize-nw" data-resize="nw"></div>
+                    <div class="resize-handle resize-se" data-resize="se"></div>
+                    <div class="resize-handle resize-sw" data-resize="sw"></div>
+                `;
+
+                windowsLayer.appendChild(win);
+                openWindows[id] = { element: win, title, iconSvg: iconSvgHtml, minimized: false,
+                    maximized: maximized, origBounds: { left, top, width, height } };
+                if (activeWindowId && openWindows[activeWindowId]) {
+                    openWindows[activeWindowId].element.classList.remove('focused');
+                }
+                activeWindowId = id;
+                updateTaskbarButtons();
+
+                // 事件绑定
+                bindWindowEvents(win, id);
+                // 聚焦
+                win.addEventListener('mousedown', () => focusWindow(id));
+                // 内容区域点击也聚焦
+                const contentEl = win.querySelector('.window-content');
+                if (contentEl) contentEl.addEventListener('mousedown', () => focusWindow(id));
+
+                // 关闭时清理
+                const closeBtn = win.querySelector('.knob-close');
+                if (closeBtn) closeBtn.addEventListener('click', (e) => { e.stopPropagation();
+                    closeWindow(id); });
+
+                return id;
+            }
+
+            function bindWindowEvents(win, id) {
+                const titlebar = win.querySelector('.window-titlebar');
+                // 拖动
+                let dragging = false,
+                    dragOX, dragOY, startLeft, startTop;
+                titlebar.addEventListener('mousedown', (e) => {
+                    if (e.target.closest('.knob-btn')) return;
+                    if (openWindows[id] && openWindows[id].maximized) return;
+                    dragging = true;
+                    dragOX = e.clientX;
+                    dragOY = e.clientY;
+                    startLeft = win.offsetLeft;
+                    startTop = win.offsetTop;
+                    win.style.transition = 'none';
+                    e.preventDefault();
+                });
+                document.addEventListener('mousemove', (e) => {
+                    if (!dragging) return;
+                    const dx = e.clientX - dragOX;
+                    const dy = e.clientY - dragOY;
+                    win.style.left = Math.max(-100, startLeft + dx) + 'px';
+                    win.style.top = Math.max(-20, startTop + dy) + 'px';
+                });
+                document.addEventListener('mouseup', () => {
+                    if (dragging) {
+                        dragging = false;
+                        win.style.transition = '';
+                        if (openWindows[id]) {
+                            openWindows[id].origBounds.left = win.offsetLeft;
+                            openWindows[id].origBounds.top = win.offsetTop;
+                        }
+                    }
+                });
+
+                // 调整大小
+                const resizeHandles = win.querySelectorAll('.resize-handle');
+                resizeHandles.forEach(handle => {
+                    handle.addEventListener('mousedown', (e) => {
+                        if (openWindows[id] && openWindows[id].maximized) return;
+                        e.stopPropagation();
+                        e.preventDefault();
+                        const dir = handle.dataset.resize;
+                        const startX = e.clientX;
+                        const startY = e.clientY;
+                        const startW = win.offsetWidth;
+                        const startH = win.offsetHeight;
+                        const startL = win.offsetLeft;
+                        const startT = win.offsetTop;
+                        const minW = 280,
+                            minH = 200;
+
+                        function onMove(em) {
+                            const dx = em.clientX - startX;
+                            const dy = em.clientY - startY;
+                            let nw = startW,
+                                nh = startH,
+                                nl = startL,
+                                nt = startT;
+                            if (dir.includes('e')) nw = Math.max(minW, startW + dx);
+                            if (dir.includes('w')) { nw = Math.max(minW, startW - dx);
+                                nl = startL + (startW - nw); }
+                            if (dir.includes('s')) nh = Math.max(minH, startH + dy);
+                            if (dir.includes('n')) { nh = Math.max(minH, startH - dy);
+                                nt = startT + (startH - nh); }
+                            win.style.width = nw + 'px';
+                            win.style.height = nh + 'px';
+                            win.style.left = nl + 'px';
+                            win.style.top = nt + 'px';
+                        }
+
+                        function onUp() {
+                            document.removeEventListener('mousemove', onMove);
+                            document.removeEventListener('mouseup', onUp);
+                            if (openWindows[id]) {
+                                openWindows[id].origBounds.width = win.offsetWidth;
+                                openWindows[id].origBounds.height = win.offsetHeight;
+                                openWindows[id].origBounds.left = win.offsetLeft;
+                                openWindows[id].origBounds.top = win.offsetTop;
+                            }
+                        }
+                        document.addEventListener('mousemove', onMove);
+                        document.addEventListener('mouseup', onUp);
+                    });
+                });
+
+                // 最小化/最大化按钮
+                const minBtn = win.querySelector('.knob-minimize');
+                const maxBtn = win.querySelector('.knob-maximize');
+                if (minBtn) minBtn.addEventListener('click', (e) => { e.stopPropagation();
+                    minimizeWindow(id); });
+                if (maxBtn) maxBtn.addEventListener('click', (e) => { e.stopPropagation();
+                    toggleMaximize(id); });
+
+                // 双击标题栏最大化
+                titlebar.addEventListener('dblclick', (e) => {
+                    if (!e.target.closest('.knob-btn')) toggleMaximize(id);
+                });
+            }
+
+            function focusWindow(id) {
+                if (activeWindowId === id) return;
+                if (activeWindowId && openWindows[activeWindowId]) {
+                    openWindows[activeWindowId].element.classList.remove('focused');
+                }
+                activeWindowId = id;
+                if (openWindows[id]) {
+                    openWindows[id].element.classList.add('focused');
+                    openWindows[id].element.style.zIndex = ++windowZIndex;
+                    openWindows[id].minimized = false;
+                    openWindows[id].element.style.display = 'flex';
+                    updateTaskbarButtons();
+                }
+            }
+
+            function minimizeWindow(id) {
+                if (!openWindows[id]) return;
+                openWindows[id].minimized = true;
+                openWindows[id].element.style.display = 'none';
+                if (activeWindowId === id) {
+                    activeWindowId = null;
+                    // 聚焦下一个可见窗口
+                    for (const [oid, ow] of Object.entries(openWindows)) {
+                        if (!ow.minimized && oid !== id) {
+                            activeWindowId = oid;
+                            ow.element.classList.add('focused');
+                            ow.element.style.zIndex = ++windowZIndex;
+                            break;
+                        }
+                    }
+                }
+                updateTaskbarButtons();
+            }
+
+            function restoreWindow(id) {
+                if (!openWindows[id]) return;
+                openWindows[id].minimized = false;
+                openWindows[id].element.style.display = 'flex';
+                focusWindow(id);
+            }
+
+            function toggleMaximize(id) {
+                if (!openWindows[id]) return;
+                const win = openWindows[id];
+                if (win.maximized) {
+                    // 还原
+                    win.element.style.left = win.origBounds.left + 'px';
+                    win.element.style.top = win.origBounds.top + 'px';
+                    win.element.style.width = win.origBounds.width + 'px';
+                    win.element.style.height = win.origBounds.height + 'px';
+                    win.element.classList.remove('maximized');
+                    win.element.style.borderRadius = '10px';
+                    win.maximized = false;
+                } else {
+                    // 保存原始边界
+                    win.origBounds = {
+                        left: win.element.offsetLeft,
+                        top: win.element.offsetTop,
+                        width: win.element.offsetWidth,
+                        height: win.element.offsetHeight
+                    };
+                    applyMaximize(win.element);
+                    win.maximized = true;
+                }
+            }
+
+            function applyMaximize(winEl) {
+                const taskbarRect = taskbar.getBoundingClientRect();
+                const desktopRect = document.getElementById('desktop').getBoundingClientRect();
+                let left = desktopRect.left;
+                let top = desktopRect.top;
+                let width = desktopRect.width;
+                let height = desktopRect.height;
+                if (taskbarPosition === 'bottom') {
+                    height -= taskbarRect.height;
+                } else if (taskbarPosition === 'left') {
+                    left += taskbarRect.width;
+                    width -= taskbarRect.width;
+                } else if (taskbarPosition === 'right') {
+                    width -= taskbarRect.width;
+                }
+                winEl.style.left = left + 'px';
+                winEl.style.top = top + 'px';
+                winEl.style.width = width + 'px';
+                winEl.style.height = height + 'px';
+                winEl.classList.add('maximized');
+                winEl.style.borderRadius = '0';
+            }
+
+            function closeWindow(id) {
+                if (!openWindows[id]) return;
+                const win = openWindows[id];
+                win.element.style.transition = 'all 0.2s cubic-bezier(0.5,0,0.75,0)';
+                win.element.style.opacity = '0';
+                win.element.style.transform = 'scale(0.85)';
+                setTimeout(() => {
+                    if (win.element.parentNode) win.element.parentNode.removeChild(win.element);
+                    delete openWindows[id];
+                    if (activeWindowId === id) {
+                        activeWindowId = null;
+                        for (const [oid, ow] of Object.entries(openWindows)) {
+                            if (!ow.minimized) {
+                                activeWindowId = oid;
+                                ow.element.classList.add('focused');
+                                ow.element.style.zIndex = ++windowZIndex;
+                                break;
+                            }
+                        }
+                    }
+                    updateTaskbarButtons();
+                }, 200);
+            }
+
+            function updateTaskbarButtons() {
+                // 更新任务栏上的窗口按钮状态
+                const existingBtns = taskbar.querySelectorAll('.taskbar-window-btn');
+                existingBtns.forEach(b => b.remove());
+
+                const btnContainer = taskbar.querySelector('.taskbar-tray');
+                for (const [id, ow] of Object.entries(openWindows)) {
+                    const btn = document.createElement('button');
+                    btn.className = 'taskbar-btn taskbar-window-btn';
+                    if (id === activeWindowId && !ow.minimized) btn.classList.add('active');
+                    btn.innerHTML = `${ow.iconSvg} <span>${escapeHtml(ow.title.substring(0,12))}</span>`;
+                    btn.title = ow.title;
+                    btn.addEventListener('click', () => {
+                        if (ow.minimized || id !== activeWindowId) {
+                            restoreWindow(id);
+                        } else {
+                            minimizeWindow(id);
+                        }
+                    });
+                    taskbar.insertBefore(btn, btnContainer);
+                }
+                // 更新任务栏固定按钮状态
+                const btnFm = document.getElementById('btn-fm');
+                const btnAbout = document.getElementById('btn-about');
+                if (btnFm) btnFm.classList.toggle('active', !!Object.values(openWindows).find(w => w.title
+                    .includes('文件管理器') && !w.minimized));
+                if (btnAbout) btnAbout.classList.toggle('active', !!Object.values(openWindows).find(w => w.title
+                    .includes('关于') && !w.minimized));
+            }
+
+            // ==================== 旋钮SVG ====================
+            const KNOB_SVG_RED = `
+                <circle cx="13" cy="13" r="11.5" fill="#3a3a3a" stroke="#1a1a1a" stroke-width="1.5"/>
+                <circle cx="13" cy="13" r="9.5" fill="none" stroke="#555" stroke-width="0.8" stroke-dasharray="2.5 1.8"/>
+                <circle cx="13" cy="13" r="8" fill="#6b3a3a" stroke="#3a1a1a" stroke-width="1.2"/>
+                <circle cx="13" cy="13" r="5" fill="#8b1a1a" stroke="#5a0a0a" stroke-width="0.8"/>
+                <circle cx="13" cy="13" r="2.2" fill="#d43535"/>
+                <circle cx="13" cy="9.5" r="1" fill="rgba(255,255,255,0.35)"/>
+                <line x1="13" y1="8" x2="13" y2="11" stroke="#ff8888" stroke-width="0.6" stroke-linecap="round" opacity="0.7"/>`;
+            const KNOB_SVG_AMBER = `
+                <circle cx="13" cy="13" r="11.5" fill="#3a3a3a" stroke="#1a1a1a" stroke-width="1.5"/>
+                <circle cx="13" cy="13" r="9.5" fill="none" stroke="#555" stroke-width="0.8" stroke-dasharray="2.5 1.8"/>
+                <circle cx="13" cy="13" r="8" fill="#6b4a2a" stroke="#3a2a1a" stroke-width="1.2"/>
+                <circle cx="13" cy="13" r="5" fill="#a0651a" stroke="#6b3a0a" stroke-width="0.8"/>
+                <circle cx="13" cy="13" r="2.2" fill="#d49535"/>
+                <circle cx="13" cy="9.5" r="1" fill="rgba(255,255,255,0.35)"/>
+                <line x1="13" y1="8" x2="13" y2="11" stroke="#ffe0a0" stroke-width="0.6" stroke-linecap="round" opacity="0.7"/>`;
+            const KNOB_SVG_GREEN = `
+                <circle cx="13" cy="13" r="11.5" fill="#3a3a3a" stroke="#1a1a1a" stroke-width="1.5"/>
+                <circle cx="13" cy="13" r="9.5" fill="none" stroke="#555" stroke-width="0.8" stroke-dasharray="2.5 1.8"/>
+                <circle cx="13" cy="13" r="8" fill="#2a5a3a" stroke="#1a3a2a" stroke-width="1.2"/>
+                <circle cx="13" cy="13" r="5" fill="#1a6b3a" stroke="#0a4a2a" stroke-width="0.8"/>
+                <circle cx="13" cy="13" r="2.2" fill="#35b855"/>
+                <circle cx="13" cy="9.5" r="1" fill="rgba(255,255,255,0.35)"/>
+                <line x1="13" y1="8" x2="13" y2="11" stroke="#a0ffc0" stroke-width="0.6" stroke-linecap="round" opacity="0.7"/>`;
+
+            // ==================== 文件管理器图标SVG ====================
+            const ICON_FOLDER = `<svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+                <polygon points="20,2 38,32 20,38 2,32" fill="#6b3a22" stroke="#b8935a" stroke-width="2.5"/>
+                <circle cx="20" cy="20" r="7" fill="#0d5e3a" stroke="#d4b87a" stroke-width="1.8"/>
+                <circle cx="20" cy="20" r="2.5" fill="#f5e6d3"/></svg>`;
+            const ICON_FILE = `<svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+                <rect x="6" y="4" width="28" height="34" rx="4" fill="#faf3e6" stroke="#8b5a3c" stroke-width="2.2"/>
+                <rect x="12" y="12" width="16" height="2.5" rx="1.2" fill="#0d5e3a"/>
+                <rect x="12" y="18" width="12" height="2.5" rx="1.2" fill="#0d5e3a" opacity="0.65"/>
+                <rect x="12" y="24" width="14" height="2.5" rx="1.2" fill="#0d5e3a" opacity="0.4"/></svg>`;
+            const ICON_FILE_ACTIVE = `<svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+                <rect x="6" y="4" width="28" height="34" rx="4" fill="#fffef8" stroke="#b8935a" stroke-width="2.5"/>
+                <rect x="12" y="12" width="16" height="2.5" rx="1.2" fill="#0d5e3a"/>
+                <rect x="12" y="18" width="12" height="2.5" rx="1.2" fill="#0d5e3a" opacity="0.65"/>
+                <rect x="12" y="24" width="14" height="2.5" rx="1.2" fill="#0d5e3a" opacity="0.4"/>
+                <circle cx="32" cy="6" r="7" fill="#d4b87a" stroke="#8b5a3c" stroke-width="1.5"/>
+                <text x="32" y="9" text-anchor="middle" fill="#3e1a0c" font-size="8" font-weight="bold" font-family="Georgia,serif">!</text></svg>`;
+
+            function escapeHtml(s) { const d = document.createElement('div');
+                d.textContent = s; return d.innerHTML; }
+
+            function showToast(msg) {
+                const toast = document.getElementById('toast');
+                toast.textContent = msg;
+                toast.classList.add('show');
+                clearTimeout(toast._timeout);
+                toast._timeout = setTimeout(() => toast.classList.remove('show'), 2200);
+            }
+
+            // ==================== 文件管理器窗口 ====================
+            function openFileManager(initialPath = '/') {
+                const fmId = 'fm-' + (++windowIdCounter);
+                const contentHtml = `
+                    <div class="file-manager" id="${fmId}-container">
+                        <div class="fm-toolbar">
+                            <button data-fm-action="new-file">+ 新建文件</button>
+                            <button data-fm-action="new-folder">+ 新建文件夹</button>
+                            <button data-fm-action="rename" disabled class="fm-rename-btn">重命名</button>
+                            <button data-fm-action="delete" disabled class="danger fm-delete-btn">删除</button>
+                            <button data-fm-action="refresh">刷新</button>
+                        </div>
+                        <div class="fm-path-bar" id="${fmId}-pathbar">
+                            <span class="fm-path-segment" data-path="/">根目录</span>
+                        </div>
+                        <div class="fm-list" id="${fmId}-list"></div>
+                    </div>`;
+                const winId = createWindow('文件管理器', ICON_FOLDER, contentHtml, { width: 680, height: 500, left: 80,
+                    top: 50 });
+                // 初始化文件管理器逻辑
+                setTimeout(() => initFileManagerLogic(fmId, winId, initialPath), 100);
+                return winId;
+            }
+
+            function initFileManagerLogic(fmId, winId, initialPath) {
+                const container = document.getElementById(fmId + '-container');
+                const listEl = document.getElementById(fmId + '-list');
+                const pathBar = document.getElementById(fmId + '-pathbar');
+                const renameBtn = container.querySelector('.fm-rename-btn');
+                const deleteBtn = container.querySelector('.fm-delete-btn');
+                let currentPath = initialPath;
+                let selectedItem = null;
+                let selectedPath = null;
+
+                async function refresh() {
+                    listEl.innerHTML = '<div class="fm-empty">加载中…</div>';
+                    try {
+                        const entries = await fs.listDir(currentPath);
+                        updatePathBar();
+                        if (entries.length === 0) {
+                            listEl.innerHTML = '<div class="fm-empty">此目录为空</div>';
+                        } else {
+                            listEl.innerHTML = '';
+                            entries.forEach(entry => {
+                                const item = document.createElement('div');
+                                item.className = 'fm-item';
+                                item.dataset.path = entry.path;
+                                item.dataset.kind = entry.kind;
+                                item.dataset.name = entry.name;
+                                item.innerHTML = `
+                                    ${entry.kind === 'directory' ? ICON_FOLDER : ICON_FILE}
+                                    <span class="fm-item-name">${escapeHtml(entry.name)}</span>
+                                    <span class="fm-item-meta">${entry.kind === 'directory' ? '文件夹' : '文件'}</span>`;
+                                item.addEventListener('click', (e) => {
+                                    e.stopPropagation();
+                                    selectItem(item, entry);
+                                });
+                                item.addEventListener('dblclick', (e) => {
+                                    e.stopPropagation();
+                                    if (entry.kind === 'directory') {
+                                        navigateTo(entry.path);
+                                    } else {
+                                        openTextEditor(entry.path);
+                                    }
+                                });
+                                listEl.appendChild(item);
+                            });
+                        }
+                        selectedItem = null;
+                        selectedPath = null;
+                        updateToolbarButtons();
+                    } catch (e) {
+                        listEl.innerHTML = '<div class="fm-empty">读取目录失败</div>';
+                        console.error(e);
+                    }
+                }
+
+                function selectItem(itemEl, entry) {
+                    listEl.querySelectorAll('.fm-item').forEach(el => el.classList.remove('selected'));
+                    itemEl.classList.add('selected');
+                    selectedItem = itemEl;
+                    selectedPath = entry.path;
+                    updateToolbarButtons();
+                }
+
+                function updateToolbarButtons() {
+                    renameBtn.disabled = !selectedItem;
+                    deleteBtn.disabled = !selectedItem;
+                }
+
+                function updatePathBar() {
+                    const parts = currentPath.split('/').filter(p => p);
+                    let html = '<span class="fm-path-segment" data-path="/">根目录</span>';
+                    let cumPath = '';
+                    parts.forEach(part => {
+                        cumPath += '/' + part;
+                        html +=
+                            ` <span class="fm-path-sep">/</span> <span class="fm-path-segment" data-path="${cumPath}">${escapeHtml(part)}</span>`;
+                    });
+                    pathBar.innerHTML = html;
+                    pathBar.querySelectorAll('.fm-path-segment').forEach(seg => {
+                        seg.addEventListener('click', () => navigateTo(seg.dataset.path));
+                    });
+                }
+
+                async function navigateTo(path) {
+                    currentPath = path;
+                    selectedItem = null;
+                    selectedPath = null;
+                    await refresh();
+                }
+
+                // 工具栏按钮
+                container.querySelector('[data-fm-action="new-file"]').addEventListener('click', async () => {
+                    const name = prompt('请输入新文件名：', '新建文档.txt');
+                    if (!name || !name.trim()) return;
+                    try {
+                        const newPath = currentPath === '/' ? '/' + name.trim() : currentPath + '/' + name
+                            .trim();
+                        await fs.writeFile(newPath, '');
+                        showToast('文件已创建：' + name.trim());
+                        await refresh();
+                    } catch (e) { showToast('创建失败'); }
+                });
+                container.querySelector('[data-fm-action="new-folder"]').addEventListener('click', async () => {
+                    const name = prompt('请输入新文件夹名：', '新建文件夹');
+                    if (!name || !name.trim()) return;
+                    try {
+                        const newPath = currentPath === '/' ? '/' + name.trim() : currentPath + '/' + name
+                            .trim();
+                        await fs.createDir(newPath);
+                        showToast('文件夹已创建：' + name.trim());
+                        await refresh();
+                    } catch (e) { showToast('创建失败'); }
+                });
+                renameBtn.addEventListener('click', async () => {
+                    if (!selectedItem || !selectedPath) return;
+                    const oldName = selectedItem.dataset.name;
+                    const newName = prompt('重命名为：', oldName);
+                    if (!newName || !newName.trim() || newName.trim() === oldName) return;
+                    try {
+                        await fs.renameEntry(selectedPath, newName.trim());
+                        showToast('已重命名');
+                        await refresh();
+                    } catch (e) { showToast('重命名失败'); }
+                });
+                deleteBtn.addEventListener('click', async () => {
+                    if (!selectedItem || !selectedPath) return;
+                    if (!confirm('确定删除 "' + selectedItem.dataset.name + '" 吗？此操作不可恢复。')) return;
+                    try {
+                        await fs.deleteEntry(selectedPath);
+                        showToast('已删除');
+                        await refresh();
+                    } catch (e) { showToast('删除失败'); }
+                });
+                container.querySelector('[data-fm-action="refresh"]').addEventListener('click', () => refresh());
+
+                // 初始加载
+                refresh();
+            }
+
+            // ==================== 文本编辑器 ====================
+            function openTextEditor(filePath) {
+                const edId = 'editor-' + (++windowIdCounter);
+                const fileName = filePath.split('/').pop();
+                const contentHtml = `
+                    <div class="text-editor" id="${edId}-container">
+                        <div class="text-editor-toolbar">
+                            <button data-ed-action="save">保存</button>
+                            <button data-ed-action="save-close">保存并关闭</button>
+                            <span style="flex:1;text-align:right;font-size:11px;color:#8b6b4a;padding-right:4px;" id="${edId}-status">就绪</span>
+                        </div>
+                        <textarea id="${edId}-textarea" placeholder="输入文本内容…"></textarea>
+                    </div>`;
+                const winId = createWindow('编辑: ' + fileName, ICON_FILE_ACTIVE, contentHtml, { width: 600, height: 420,
+                    left: 110, top: 70 });
+                const container = document.getElementById(edId + '-container');
+                const textarea = document.getElementById(edId + '-textarea');
+                const statusEl = document.getElementById(edId + '-status');
+
+                // 加载文件内容
+                (async () => {
+                    try {
+                        const content = await fs.readFile(filePath);
+                        textarea.value = content || '';
+                        statusEl.textContent = '已加载';
+                    } catch (e) {
+                        textarea.value = '';
+                        statusEl.textContent = '新文件';
+                    }
+                })();
+
+                async function saveFile() {
+                    try {
+                        await fs.writeFile(filePath, textarea.value);
+                        statusEl.textContent = '已保存 ' + new Date().toLocaleTimeString();
+                        showToast('文件已保存');
+                    } catch (e) {
+                        statusEl.textContent = '保存失败';
+                        showToast('保存失败');
+                    }
+                }
+                container.querySelector('[data-ed-action="save"]').addEventListener('click', saveFile);
+                container.querySelector('[data-ed-action="save-close"]').addEventListener('click', async () => {
+                    await saveFile();
+                    closeWindow(winId);
+                });
+                // Ctrl+S 快捷键
+                textarea.addEventListener('keydown', (e) => {
+                    if (e.ctrlKey && e.key === 's') {
+                        e.preventDefault();
+                        saveFile();
+                    }
+                });
+            }
+
+            // ==================== 关于窗口 ====================
+            function openAbout() {
+                const contentHtml = `
+                    <div class="about-content">
+                        <div class="about-badge">
+                            <svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" fill="none" stroke="#f5e6d3" stroke-width="2.5"/><circle cx="20" cy="20" r="5" fill="#f5e6d3"/><text x="20" y="24" text-anchor="middle" fill="#0d5e3a" font-size="9" font-weight="bold" font-family="Georgia,serif">8</text></svg>
+                        </div>
+                        <h2>高山台球操作系统</h2>
+                        <p>采用OPFS作为存储后端，提供健壮稳定的文件系统。<br>设计美学源自高山台球室——木质、毛毡绿、黄铜配件。</p>
+                        <p style="font-size:11px;color:#8b6b4a;">窗口旋钮灵感来自飞机操作台滚轮<br>任务栏可在底部/左侧/右侧切换</p>
+                        <p style="font-size:10px;color:#b8935a;">版本 1.0 · 无终端 · 纯网页</p>
+                    </div>`;
+                createWindow('关于系统', ICON_FOLDER, contentHtml, { width: 420, height: 380, left: 160, top: 80 });
+            }
+
+            // ==================== 新建文档（桌面快捷方式） ====================
+            function newDocumentFromDesktop() {
+                const name = prompt('请输入文档名称：', '新文档.txt');
+                if (!name || !name.trim()) return;
+                const filePath = '/' + name.trim();
+                (async () => {
+                    try {
+                        await fs.writeFile(filePath, '');
+                        showToast('文档已创建：' + name.trim());
+                        openTextEditor(filePath);
+                    } catch (e) { showToast('创建失败'); }
+                })();
+            }
+
+            // ==================== 桌面图标事件 ====================
+            document.querySelectorAll('.desktop-icon').forEach(icon => {
+                icon.addEventListener('click', () => {
+                    const action = icon.dataset.action;
+                    if (action === 'open-file-manager') openFileManager('/');
+                    else if (action === 'open-about') openAbout();
+                    else if (action === 'new-document') newDocumentFromDesktop();
+                });
+                icon.addEventListener('dblclick', () => {
+                    const action = icon.dataset.action;
+                    if (action === 'open-file-manager') openFileManager('/');
+                    else if (action === 'open-about') openAbout();
+                    else if (action === 'new-document') newDocumentFromDesktop();
+                });
+            });
+
+            // ==================== 任务栏固定按钮 ====================
+            document.getElementById('btn-fm').addEventListener('click', () => {
+                const existing = Object.entries(openWindows).find(([, w]) => w.title.includes('文件管理器'));
+                if (existing && !openWindows[existing[0]].minimized) {
+                    focusWindow(existing[0]);
+                } else if (existing && openWindows[existing[0]].minimized) {
+                    restoreWindow(existing[0]);
+                } else {
+                    openFileManager('/');
+                }
+            });
+            document.getElementById('btn-about').addEventListener('click', () => {
+                const existing = Object.entries(openWindows).find(([, w]) => w.title.includes('关于系统'));
+                if (existing && !openWindows[existing[0]].minimized) {
+                    focusWindow(existing[0]);
+                } else if (existing && openWindows[existing[0]].minimized) {
+                    restoreWindow(existing[0]);
+                } else {
+                    openAbout();
+                }
+            });
+
+            // ==================== 任务栏位置切换 ====================
+            const btnPosToggle = document.getElementById('btn-pos-toggle');
+            const positions = ['bottom', 'left', 'right'];
+            let posIndex = 0;
+            btnPosToggle.addEventListener('click', () => {
+                posIndex = (posIndex + 1) % positions.length;
+                taskbarPosition = positions[posIndex];
+                taskbar.className = taskbarPosition;
+                // 更新最大化窗口
+                for (const [id, ow] of Object.entries(openWindows)) {
+                    if (ow.maximized) {
+                        applyMaximize(ow.element);
+                    }
+                }
+                showToast('任务栏位置：' + (taskbarPosition === 'bottom' ? '底部' : taskbarPosition === 'left' ?
+                    '左侧' : '右侧'));
+            });
+
+            // ==================== 右键菜单（桌面） ====================
+            const contextMenu = document.getElementById('context-menu');
+            document.getElementById('desktop').addEventListener('contextmenu', (e) => {
+                if (e.target.closest('.desktop-icon') || e.target.closest('.window') || e.target.closest(
+                        '#taskbar')) return;
+                e.preventDefault();
+                contextMenu.style.display = 'block';
+                contextMenu.style.left = e.clientX + 'px';
+                contextMenu.style.top = e.clientY + 'px';
+                // 调整位置防止溢出
+                const rect = contextMenu.getBoundingClientRect();
+                if (rect.right > window.innerWidth) contextMenu.style.left = (e.clientX - rect.width) + 'px';
+                if (rect.bottom > window.innerHeight) contextMenu.style.top = (e.clientY - rect.height) + 'px';
+            });
+            document.addEventListener('click', () => { contextMenu.style.display = 'none'; });
+            contextMenu.querySelector('[data-ctx="new-file"]').addEventListener('click', () => {
+                contextMenu.style.display = 'none';
+                newDocumentFromDesktop();
+            });
+            contextMenu.querySelector('[data-ctx="new-folder"]').addEventListener('click', async () => {
+                contextMenu.style.display = 'none';
+                const name = prompt('请输入新文件夹名：', '新建文件夹');
+                if (!name || !name.trim()) return;
+                try {
+                    await fs.createDir('/' + name.trim());
+                    showToast('文件夹已创建：' + name.trim());
+                } catch (e) { showToast('创建失败'); }
+            });
+            contextMenu.querySelector('[data-ctx="refresh"]').addEventListener('click', () => {
+                contextMenu.style.display = 'none';
+                showToast('桌面已刷新');
+            });
+
+            // ==================== 桌面双击打开文件管理器 ====================
+            document.getElementById('desktop').addEventListener('dblclick', (e) => {
+                if (e.target.closest('.desktop-icon') || e.target.closest('.window') || e.target.closest(
+                        '#taskbar') || e.target.closest('.context-menu')) return;
+                openFileManager('/');
+            });
+
+            // ==================== 时钟 ====================
+            function updateClock() {
+                const now = new Date();
+                document.getElementById('clock-display').textContent =
+                    now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+            }
+            setInterval(updateClock, 15000);
+            updateClock();
+
+            // ==================== 键盘快捷键 ====================
+            document.addEventListener('keydown', (e) => {
+                if (e.ctrlKey && e.key === 'n' && !e.shiftKey && !e.altKey && !e.metaKey) {
+                    // Ctrl+N 在活动窗口是文件管理器时新建文件
+                    const activeWin = activeWindowId && openWindows[activeWindowId];
+                    if (activeWin && activeWin.title.includes('文件管理器')) {
+                        e.preventDefault();
+                        const fmContainer = activeWin.element.querySelector('.file-manager');
+                        if (fmContainer) {
+                            const newFileBtn = fmContainer.querySelector('[data-fm-action="new-file"]');
+                            if (newFileBtn) newFileBtn.click();
+                        }
+                    }
+                }
+            });
+
+            // ==================== 启动：默认打开文件管理器 ====================
+            setTimeout(() => {
+                openFileManager('/');
+            }, 400);
+
+            console.log('🎱 高山台球操作系统已就绪');
+            console.log('   - OPFS文件系统：' + (fs.ready ? '✅' : '⚠️ 初始化中'));
+            console.log('   - 窗口旋钮：飞机操作台滚轮风格');
+            console.log('   - 任务栏：可切换底部/左侧/右侧');
+            console.log('   - 美学：高山台球 · 木纹 · 毛毡绿 · 黄铜');
+        })();
+    </script>
+</body>
+</html>

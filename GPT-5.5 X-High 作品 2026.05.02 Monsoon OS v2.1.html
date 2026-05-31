@@ -1,0 +1,2255 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#03110f">
+  <title>Monsoon OS - OPFS Web Desktop</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Azeret+Mono:wght@300;400;500;700&family=Fraunces:opsz,wght,SOFT,WONK@9..144,500..900,35,1&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --deep: #03110f;
+      --deep-2: #061b18;
+      --panel: rgba(4, 18, 17, .78);
+      --panel-strong: rgba(2, 12, 12, .92);
+      --line: rgba(205, 238, 222, .22);
+      --line-strong: rgba(207, 255, 235, .42);
+      --text: #eaf4e8;
+      --muted: #9fb8ad;
+      --sea: #0a5b5b;
+      --sea-2: #0a3435;
+      --mist: #dce8dd;
+      --accent: #afffe8;
+      --accent-2: #d6b26d;
+      --danger: #ff765f;
+      --shadow: 0 28px 80px rgba(0, 0, 0, .42);
+      --font-ui: "Azeret Mono", "Trebuchet MS", sans-serif;
+      --font-display: "Fraunces", Georgia, serif;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; overflow: hidden; }
+    body {
+      margin: 0;
+      color: var(--text);
+      background: #020807;
+      font-family: var(--font-ui);
+      letter-spacing: -.02em;
+      user-select: none;
+      -webkit-font-smoothing: antialiased;
+      touch-action: none;
+    }
+
+    button, input, textarea { font: inherit; }
+    button { -webkit-tap-highlight-color: transparent; }
+    textarea, input { user-select: text; }
+
+    #os {
+      position: fixed;
+      inset: 0;
+      overflow: hidden;
+      background: var(--deep);
+    }
+
+    #wallpaper {
+      position: absolute;
+      inset: 0;
+      background-size: cover;
+      background-position: center;
+      transition: filter .7s ease, background-image .7s ease, opacity .7s ease;
+    }
+
+    #wallpaper.wall-storm {
+      background:
+        radial-gradient(circle at 18% 28%, rgba(232, 242, 231, .68) 0 7%, rgba(232, 242, 231, .18) 19%, transparent 34%),
+        linear-gradient(180deg, rgba(1, 14, 15, .15) 0 24%, rgba(1, 14, 15, .58) 45%, rgba(4, 85, 82, .64) 66%, rgba(1, 11, 12, .94) 100%),
+        radial-gradient(circle at 80% 20%, rgba(0, 0, 0, .85), transparent 37%),
+        linear-gradient(110deg, #12484d 0%, #627a75 31%, #0b2426 56%, #01100f 100%);
+    }
+
+    #wallpaper.wall-lagoon {
+      background:
+        radial-gradient(circle at 28% 22%, rgba(242, 245, 223, .82), rgba(242, 245, 223, .12) 23%, transparent 38%),
+        linear-gradient(180deg, rgba(0, 42, 45, .1) 0 38%, rgba(9, 119, 110, .58) 60%, rgba(0, 25, 25, .9) 100%),
+        linear-gradient(135deg, #0d4d4c, #174941 33%, #081414 66%, #020705);
+    }
+
+    #wallpaper.wall-ember {
+      background:
+        radial-gradient(circle at 22% 32%, rgba(255, 218, 154, .55), transparent 24%),
+        linear-gradient(180deg, rgba(15, 14, 12, .08) 0 32%, rgba(71, 38, 24, .7) 72%, rgba(9, 8, 7, .95) 100%),
+        linear-gradient(120deg, #172523, #614733 44%, #0b0b09 100%);
+    }
+
+    #wallpaper.wall-ink {
+      background:
+        radial-gradient(circle at 16% 30%, rgba(193, 217, 204, .5), transparent 22%),
+        radial-gradient(circle at 72% 12%, rgba(60, 116, 111, .45), transparent 38%),
+        linear-gradient(180deg, #081d1d 0%, #071111 52%, #020505 100%);
+    }
+
+    .atmosphere {
+      pointer-events: none;
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      mix-blend-mode: screen;
+    }
+
+    .atmosphere::before,
+    .atmosphere::after {
+      content: "";
+      position: absolute;
+      left: -15vw;
+      right: -15vw;
+      height: 32vh;
+      background: linear-gradient(90deg, transparent, rgba(230, 242, 229, .22), transparent);
+      filter: blur(18px);
+      opacity: .42;
+      animation: mistDrift 22s linear infinite;
+    }
+
+    .atmosphere::before { top: 22vh; }
+    .atmosphere::after { top: 36vh; animation-duration: 30s; animation-direction: reverse; opacity: .24; }
+
+    #palmSilhouette {
+      position: absolute;
+      right: -3vw;
+      top: -4vh;
+      width: min(46vw, 560px);
+      height: min(100vh, 850px);
+      opacity: .78;
+      pointer-events: none;
+      filter: drop-shadow(-18px 0 20px rgba(0, 0, 0, .38));
+    }
+
+    #desktop {
+      position: absolute;
+      inset: 0 0 70px 0;
+      padding: 18px;
+      overflow: hidden;
+      outline: none;
+    }
+
+    .desktop-icon {
+      position: absolute;
+      width: 82px;
+      min-height: 88px;
+      display: grid;
+      place-items: center;
+      gap: 5px;
+      padding: 8px 5px;
+      border: 1px solid transparent;
+      border-radius: 18px;
+      color: var(--text);
+      text-align: center;
+      cursor: default;
+      animation: iconArrive .62s cubic-bezier(.2, .8, .2, 1) both;
+      transition: background .18s ease, border-color .18s ease, transform .18s ease;
+    }
+
+    .desktop-icon:hover,
+    .desktop-icon.selected {
+      background: rgba(194, 242, 226, .12);
+      border-color: rgba(194, 242, 226, .34);
+      transform: translateY(-1px);
+    }
+
+    .desktop-icon svg { width: 38px; height: 38px; color: var(--accent); }
+    .desktop-icon .icon-label {
+      width: 100%;
+      padding: 2px 4px;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, .9);
+      font-size: 11px;
+      line-height: 1.25;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      word-break: break-word;
+    }
+
+    #windows { position: absolute; inset: 0; pointer-events: none; }
+
+    .window-frame {
+      position: absolute;
+      min-width: 320px;
+      min-height: 220px;
+      background: linear-gradient(180deg, rgba(7, 30, 28, .9), rgba(2, 12, 12, .88));
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      box-shadow: var(--shadow), inset 0 1px 0 rgba(255, 255, 255, .08);
+      backdrop-filter: blur(22px) saturate(1.25);
+      overflow: hidden;
+      pointer-events: auto;
+      transform-origin: 50% 70%;
+      animation: windowBloom .26s cubic-bezier(.2, .8, .2, 1) both;
+    }
+
+    .window-frame.active { border-color: rgba(175, 255, 232, .48); }
+    .window-frame.minimizing { animation: windowSink .2s ease both; }
+
+    .titlebar {
+      height: 44px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 12px 0 14px;
+      border-bottom: 1px solid rgba(214, 255, 235, .13);
+      background: linear-gradient(180deg, rgba(255, 255, 255, .06), rgba(255, 255, 255, .015));
+      cursor: grab;
+    }
+
+    .titlebar:active { cursor: grabbing; }
+    .titlebar .win-icon { width: 22px; height: 22px; color: var(--accent); flex: 0 0 auto; }
+    .titlebar .win-title {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      font-size: 12px;
+      letter-spacing: .02em;
+    }
+
+    .window-actions { display: flex; gap: 7px; }
+    .window-action {
+      width: 26px;
+      height: 26px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      border: 1px solid rgba(255, 255, 255, .12);
+      background: rgba(255, 255, 255, .05);
+      color: var(--text);
+      transition: transform .15s ease, background .15s ease, color .15s ease;
+    }
+
+    .window-action:hover { transform: translateY(-1px); background: rgba(175, 255, 232, .14); color: var(--accent); }
+    .window-action.close:hover { background: rgba(255, 118, 95, .16); color: var(--danger); }
+    .window-action svg { width: 13px; height: 13px; }
+
+    .window-content {
+      height: calc(100% - 44px);
+      overflow: hidden;
+    }
+
+    .resize-handle { position: absolute; z-index: 5; }
+    .resize-n, .resize-s { left: 14px; right: 14px; height: 8px; cursor: ns-resize; }
+    .resize-n { top: 0; } .resize-s { bottom: 0; }
+    .resize-e, .resize-w { top: 14px; bottom: 14px; width: 8px; cursor: ew-resize; }
+    .resize-e { right: 0; } .resize-w { left: 0; }
+    .resize-ne, .resize-nw, .resize-se, .resize-sw { width: 16px; height: 16px; }
+    .resize-ne { top: 0; right: 0; cursor: nesw-resize; }
+    .resize-nw { top: 0; left: 0; cursor: nwse-resize; }
+    .resize-se { right: 0; bottom: 0; cursor: nwse-resize; }
+    .resize-sw { left: 0; bottom: 0; cursor: nesw-resize; }
+
+    #taskbar {
+      position: absolute;
+      left: 14px;
+      right: 14px;
+      bottom: 12px;
+      height: 54px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 7px;
+      border: 1px solid rgba(212, 255, 237, .2);
+      border-radius: 24px;
+      background: rgba(2, 13, 13, .72);
+      backdrop-filter: blur(24px) saturate(1.4);
+      box-shadow: 0 18px 46px rgba(0, 0, 0, .45), inset 0 1px 0 rgba(255, 255, 255, .08);
+      z-index: 10000;
+      animation: dockRise .7s cubic-bezier(.2, .85, .18, 1) .25s both;
+    }
+
+    .start-button,
+    .task-button,
+    .dock-clock {
+      height: 40px;
+      border: 1px solid rgba(212, 255, 237, .16);
+      background: rgba(255, 255, 255, .05);
+      color: var(--text);
+      border-radius: 16px;
+    }
+
+    .start-button {
+      min-width: 122px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      padding: 0 13px;
+      color: var(--accent);
+      font-weight: 700;
+      letter-spacing: .02em;
+    }
+
+    .start-button svg { width: 21px; height: 21px; }
+    .task-scroll { flex: 1; display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; }
+    .task-scroll::-webkit-scrollbar { display: none; }
+    .task-button {
+      min-width: 132px;
+      max-width: 210px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 11px;
+      font-size: 11px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      transition: transform .18s ease, border-color .18s ease, background .18s ease;
+    }
+
+    .task-button:hover,
+    .task-button.active { transform: translateY(-2px); border-color: rgba(175, 255, 232, .48); background: rgba(175, 255, 232, .12); }
+    .task-button.minimized { opacity: .66; }
+    .task-button svg { width: 18px; height: 18px; color: var(--accent); flex: 0 0 auto; }
+    .dock-clock { min-width: 92px; display: grid; place-items: center; font-size: 11px; color: var(--muted); }
+
+    #startMenu {
+      position: absolute;
+      left: 18px;
+      bottom: 76px;
+      width: min(410px, calc(100vw - 36px));
+      max-height: min(650px, calc(100vh - 100px));
+      padding: 18px;
+      border: 1px solid rgba(212, 255, 237, .22);
+      border-radius: 28px;
+      background: rgba(2, 13, 13, .86);
+      backdrop-filter: blur(30px) saturate(1.5);
+      box-shadow: var(--shadow);
+      z-index: 12000;
+      display: none;
+      animation: menuBloom .2s ease both;
+    }
+
+    #startMenu.open { display: block; }
+    .brand-word {
+      font-family: var(--font-display);
+      font-size: 42px;
+      line-height: .9;
+      letter-spacing: -.055em;
+      color: var(--mist);
+    }
+
+    .start-subtitle { color: var(--muted); font-size: 11px; margin: 8px 0 15px; }
+    .launcher-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .launcher-item {
+      min-height: 76px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      border: 1px solid transparent;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, .045);
+      color: var(--text);
+      text-align: left;
+      transition: transform .18s ease, border-color .18s ease, background .18s ease;
+    }
+
+    .launcher-item:hover { transform: translateY(-2px); border-color: rgba(175, 255, 232, .3); background: rgba(175, 255, 232, .1); }
+    .launcher-item svg { width: 30px; height: 30px; color: var(--accent); flex: 0 0 auto; }
+    .launcher-item strong { display: block; font-size: 12px; }
+    .launcher-item span { display: block; margin-top: 3px; color: var(--muted); font-size: 10px; }
+
+    #contextMenu {
+      position: absolute;
+      min-width: 210px;
+      padding: 7px;
+      border: 1px solid rgba(212, 255, 237, .2);
+      border-radius: 18px;
+      background: rgba(2, 12, 12, .92);
+      backdrop-filter: blur(26px) saturate(1.4);
+      box-shadow: 0 18px 54px rgba(0, 0, 0, .48);
+      z-index: 15000;
+      display: none;
+    }
+
+    #contextMenu.open { display: block; animation: menuBloom .14s ease both; }
+    .context-item {
+      width: 100%;
+      min-height: 34px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      color: var(--text);
+      border: 0;
+      border-radius: 12px;
+      background: transparent;
+      text-align: left;
+      font-size: 11px;
+    }
+
+    .context-item:hover { background: rgba(175, 255, 232, .11); color: var(--accent); }
+    .context-item[disabled] { opacity: .45; pointer-events: none; }
+    .context-item svg { width: 16px; height: 16px; flex: 0 0 auto; }
+    .context-sep { height: 1px; margin: 6px; background: rgba(255, 255, 255, .11); }
+
+    #selectionBox,
+    .selection-box {
+      position: absolute;
+      border: 1px solid rgba(175, 255, 232, .82);
+      background: rgba(175, 255, 232, .13);
+      box-shadow: 0 0 24px rgba(175, 255, 232, .1);
+      pointer-events: none;
+      z-index: 9000;
+      display: none;
+    }
+
+    #dropVeil {
+      position: absolute;
+      inset: 0;
+      display: none;
+      place-items: center;
+      z-index: 11000;
+      pointer-events: none;
+      background: rgba(4, 18, 17, .44);
+      backdrop-filter: blur(8px);
+      font-family: var(--font-display);
+      font-size: clamp(28px, 7vw, 76px);
+      color: var(--mist);
+      letter-spacing: -.06em;
+    }
+
+    #dropVeil.show { display: grid; }
+
+    #toasts {
+      position: absolute;
+      right: 18px;
+      bottom: 84px;
+      display: grid;
+      gap: 8px;
+      z-index: 16000;
+      pointer-events: none;
+    }
+
+    .toast {
+      max-width: min(360px, calc(100vw - 36px));
+      padding: 12px 14px;
+      border: 1px solid rgba(175, 255, 232, .22);
+      border-radius: 16px;
+      background: rgba(2, 12, 12, .9);
+      backdrop-filter: blur(20px);
+      box-shadow: 0 14px 34px rgba(0, 0, 0, .38);
+      font-size: 11px;
+      color: var(--text);
+      animation: toastIn .24s ease both;
+    }
+
+    .toast.danger { border-color: rgba(255, 118, 95, .45); color: #ffd4ce; }
+
+    .app-shell { height: 100%; display: flex; flex-direction: column; min-height: 0; }
+    .toolbar {
+      min-height: 48px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 10px;
+      border-bottom: 1px solid rgba(214, 255, 235, .12);
+      background: rgba(255, 255, 255, .025);
+      flex-wrap: wrap;
+    }
+
+    .tool-button,
+    .field {
+      height: 32px;
+      border: 1px solid rgba(212, 255, 237, .14);
+      border-radius: 12px;
+      background: rgba(0, 0, 0, .16);
+      color: var(--text);
+    }
+
+    .tool-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      padding: 0 10px;
+      font-size: 11px;
+      white-space: nowrap;
+    }
+
+    .tool-button:hover { border-color: rgba(175, 255, 232, .42); background: rgba(175, 255, 232, .09); color: var(--accent); }
+    .tool-button svg { width: 15px; height: 15px; }
+    .field { padding: 0 10px; outline: none; min-width: 0; }
+    .field:focus { border-color: rgba(175, 255, 232, .58); box-shadow: 0 0 0 3px rgba(175, 255, 232, .08); }
+
+    .explorer-main { flex: 1; min-height: 0; display: grid; grid-template-columns: 150px 1fr; }
+    .explorer-side {
+      padding: 10px;
+      border-right: 1px solid rgba(214, 255, 235, .1);
+      overflow: auto;
+    }
+    .side-button {
+      width: 100%;
+      min-height: 36px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 9px;
+      color: var(--muted);
+      border: 0;
+      border-radius: 12px;
+      background: transparent;
+      text-align: left;
+      font-size: 11px;
+    }
+    .side-button:hover, .side-button.active { color: var(--accent); background: rgba(175, 255, 232, .09); }
+    .side-button svg { width: 16px; height: 16px; }
+    .file-stage { position: relative; min-height: 0; overflow: auto; padding: 14px; }
+    .file-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(116px, 1fr)); gap: 10px; }
+    .file-item {
+      min-height: 112px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px;
+      border: 1px solid transparent;
+      border-radius: 18px;
+      color: var(--text);
+      background: rgba(255, 255, 255, .025);
+      transition: background .16s ease, border-color .16s ease, transform .16s ease;
+    }
+    .file-item:hover, .file-item.selected { background: rgba(175, 255, 232, .1); border-color: rgba(175, 255, 232, .32); transform: translateY(-1px); }
+    .file-item svg { width: 34px; height: 34px; color: var(--accent); }
+    .file-name { width: 100%; font-size: 11px; text-align: center; line-height: 1.25; word-break: break-word; }
+    .file-meta { color: var(--muted); font-size: 9px; }
+    .empty-state { height: 100%; display: grid; place-items: center; color: var(--muted); text-align: center; font-size: 12px; }
+
+    .editor-area {
+      flex: 1;
+      width: 100%;
+      resize: none;
+      border: 0;
+      outline: none;
+      padding: 18px;
+      background: rgba(0, 0, 0, .12);
+      color: #edf8eb;
+      font-family: var(--font-ui);
+      font-size: 13px;
+      line-height: 1.7;
+    }
+
+    .browser-frame { flex: 1; width: 100%; border: 0; background: #f4f4ef; }
+    .media-stage { flex: 1; min-height: 0; display: grid; place-items: center; padding: 16px; background: radial-gradient(circle at 50% 45%, rgba(175, 255, 232, .1), rgba(0, 0, 0, .2) 48%, rgba(0, 0, 0, .38)); }
+    .media-stage img, .media-stage video { max-width: 100%; max-height: 100%; border-radius: 14px; box-shadow: 0 20px 60px rgba(0, 0, 0, .38); }
+    .media-stage audio { width: min(560px, 92%); }
+
+    .calc-shell { height: 100%; display: grid; grid-template-rows: minmax(90px, .8fr) 2.8fr; padding: 16px; gap: 12px; }
+    .calc-display {
+      display: flex;
+      align-items: end;
+      justify-content: flex-end;
+      padding: 18px;
+      border-radius: 20px;
+      border: 1px solid rgba(212, 255, 237, .14);
+      background: rgba(0, 0, 0, .2);
+      font-family: var(--font-display);
+      font-size: clamp(28px, 6vw, 54px);
+      letter-spacing: -.06em;
+      overflow: hidden;
+    }
+    .calc-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    .calc-key {
+      border: 1px solid rgba(212, 255, 237, .14);
+      border-radius: 16px;
+      background: rgba(255, 255, 255, .055);
+      color: var(--text);
+      font-size: 16px;
+    }
+    .calc-key:hover { background: rgba(175, 255, 232, .11); color: var(--accent); }
+    .calc-key.accent { color: var(--deep); background: var(--accent); border-color: transparent; }
+    .calc-key.warn { color: #ffd5ce; }
+
+    .settings-scroll { flex: 1; overflow: auto; padding: 18px; }
+    .settings-section { margin-bottom: 22px; }
+    .section-title { font-family: var(--font-display); font-size: 26px; letter-spacing: -.05em; margin-bottom: 8px; }
+    .section-copy { color: var(--muted); font-size: 11px; line-height: 1.7; max-width: 70ch; }
+    .wallpaper-choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-top: 12px; }
+    .wall-choice {
+      height: 88px;
+      border-radius: 18px;
+      border: 1px solid rgba(212, 255, 237, .16);
+      overflow: hidden;
+      color: var(--text);
+      display: flex;
+      align-items: end;
+      padding: 10px;
+      font-size: 11px;
+      box-shadow: inset 0 -42px 42px rgba(0, 0, 0, .34);
+    }
+    .wall-choice.active { outline: 2px solid var(--accent); }
+    .support-grid { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 12px; }
+    .support-chip { border: 1px solid rgba(212, 255, 237, .14); border-radius: 999px; padding: 7px 9px; color: var(--muted); font-size: 10px; }
+
+    #boot {
+      position: fixed;
+      inset: 0;
+      z-index: 30000;
+      display: grid;
+      place-items: center;
+      background:
+        radial-gradient(circle at 24% 32%, rgba(218, 231, 219, .28), transparent 28%),
+        linear-gradient(135deg, #082e31, #03110f 56%, #010404);
+      color: var(--mist);
+      transition: opacity .5s ease, visibility .5s ease;
+    }
+    #boot.done { opacity: 0; visibility: hidden; }
+    .boot-card { text-align: center; animation: bootPulse 1.4s ease infinite alternate; }
+    .boot-title { font-family: var(--font-display); font-size: clamp(46px, 9vw, 112px); line-height: .8; letter-spacing: -.07em; }
+    .boot-sub { margin-top: 18px; color: var(--muted); font-size: 11px; letter-spacing: .18em; text-transform: uppercase; }
+
+    @keyframes mistDrift { from { transform: translateX(-12vw); } to { transform: translateX(12vw); } }
+    @keyframes iconArrive { from { opacity: 0; transform: translateY(12px) scale(.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
+    @keyframes windowBloom { from { opacity: 0; transform: translateY(18px) scale(.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
+    @keyframes windowSink { to { opacity: 0; transform: translateY(22px) scale(.94); } }
+    @keyframes dockRise { from { opacity: 0; transform: translateY(28px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes menuBloom { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+    @keyframes toastIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes bootPulse { from { filter: drop-shadow(0 0 0 rgba(175, 255, 232, 0)); } to { filter: drop-shadow(0 0 26px rgba(175, 255, 232, .18)); } }
+
+    @media (max-width: 760px) {
+      body { touch-action: manipulation; }
+      #desktop { inset: 0 0 78px 0; padding: 10px; }
+      #palmSilhouette { width: 75vw; opacity: .45; }
+      .desktop-icon { width: 74px; min-height: 80px; border-radius: 16px; }
+      .desktop-icon svg { width: 33px; height: 33px; }
+      .window-frame {
+        left: 0 !important;
+        top: 0 !important;
+        width: 100vw !important;
+        height: calc(100svh - 78px) !important;
+        min-width: 0;
+        min-height: 0;
+        border-radius: 0 0 22px 22px;
+      }
+      .resize-handle { display: none; }
+      .titlebar { height: 48px; }
+      .window-content { height: calc(100% - 48px); }
+      #taskbar { left: 8px; right: 8px; bottom: 8px; height: 62px; border-radius: 24px; }
+      .start-button { min-width: 50px; padding: 0 12px; }
+      .start-button span { display: none; }
+      .dock-clock { display: none; }
+      .task-button { min-width: 50px; max-width: 54px; justify-content: center; padding: 0; }
+      .task-button span { display: none; }
+      #startMenu { left: 8px; right: 8px; bottom: 78px; width: auto; }
+      .launcher-list { grid-template-columns: 1fr; }
+      .explorer-main { grid-template-columns: 1fr; }
+      .explorer-side { display: none; }
+      .toolbar { overflow-x: auto; flex-wrap: nowrap; }
+      .toolbar .field { min-width: 190px; }
+      .file-grid { grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); }
+      .file-item { min-height: 100px; }
+      #toasts { left: 10px; right: 10px; bottom: 82px; }
+      .toast { max-width: none; }
+    }
+  </style>
+</head>
+<body>
+  <div id="boot">
+    <div class="boot-card">
+      <div class="boot-title">Monsoon OS</div>
+      <div class="boot-sub">OPFS persistent desktop</div>
+    </div>
+  </div>
+
+  <main id="os" aria-label="Monsoon OS 桌面">
+    <div id="wallpaper" class="wall-storm"></div>
+    <div class="atmosphere"></div>
+    <svg id="palmSilhouette" viewBox="0 0 420 760" aria-hidden="true">
+      <g fill="#010505">
+        <path d="M312 100c-11 72-9 170-3 270 7 112 20 230 13 370h57c-18-166-25-279-19-391 5-93 18-178 35-249-19-11-46-12-83 0Z"/>
+        <path d="M342 110C278 88 198 94 98 126c88-3 166 7 232 30l12-46Z"/>
+        <path d="M349 116C295 51 230 19 151 14c70 39 123 83 171 137l27-35Z"/>
+        <path d="M356 124C348 66 369 22 419 0c-14 70-24 118-32 170l-31-46Z"/>
+        <path d="M333 127C269 146 215 184 171 244c70-25 130-51 181-83l-19-34Z"/>
+        <path d="M371 129c22-44 41-62 49-64-4 78-21 137-50 178l1-114Z"/>
+        <path d="M332 103C278 70 228 55 181 59c50 21 96 48 139 81l12-37Z"/>
+      </g>
+    </svg>
+    <section id="desktop" tabindex="0" aria-label="桌面"></section>
+    <div id="selectionBox"></div>
+    <div id="windows"></div>
+    <div id="dropVeil">Drop into the tide</div>
+    <nav id="taskbar" aria-label="任务栏">
+      <button id="startButton" class="start-button" type="button" aria-label="打开开始菜单"></button>
+      <div id="taskScroll" class="task-scroll" aria-label="打开的窗口"></div>
+      <div id="clock" class="dock-clock"></div>
+    </nav>
+    <section id="startMenu" aria-label="开始菜单"></section>
+    <section id="contextMenu" aria-label="上下文菜单"></section>
+    <div id="toasts" aria-live="polite"></div>
+    <input id="fileImport" type="file" multiple hidden>
+    <input id="wallpaperInput" type="file" accept="image/*" hidden>
+  </main>
+
+  <script>
+    (() => {
+      'use strict';
+
+      const $ = (selector, root = document) => root.querySelector(selector);
+      const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
+      const desktop = $('#desktop');
+      const windowsLayer = $('#windows');
+      const taskScroll = $('#taskScroll');
+      const startMenu = $('#startMenu');
+      const contextMenu = $('#contextMenu');
+      const selectionBox = $('#selectionBox');
+      const dropVeil = $('#dropVeil');
+      const boot = $('#boot');
+      const wallpaperEl = $('#wallpaper');
+      const importInput = $('#fileImport');
+      const wallpaperInput = $('#wallpaperInput');
+
+      const DEFAULT_CONFIG = {
+        wallpaper: 'storm',
+        wallpaperPath: '',
+        desktopPositions: {}
+      };
+
+      const state = {
+        config: structuredClone(DEFAULT_CONFIG),
+        z: 40,
+        windows: new Map(),
+        activeWindow: null,
+        selectedDesktop: new Set(),
+        clipboard: { op: 'copy', paths: [] },
+        desktopItems: [],
+        customWallpaperURL: '',
+        importTarget: '/',
+        importCallback: null,
+        dragDepth: 0
+      };
+
+      const appShortcuts = [
+        { id: 'app:explorer', type: 'app', appId: 'explorer', title: 'Tide Files', detail: 'OPFS 文件资源管理器', icon: 'folder' },
+        { id: 'app:editor', type: 'app', appId: 'editor', title: 'Salt Editor', detail: '文本与代码', icon: 'text' },
+        { id: 'app:browser', type: 'app', appId: 'browser', title: 'Reef Browser', detail: 'iframe 网页浏览器', icon: 'browser' },
+        { id: 'app:media', type: 'app', appId: 'media', title: 'Lowtide Media', detail: '音视频与图片', icon: 'media' },
+        { id: 'app:calculator', type: 'app', appId: 'calculator', title: 'Abacus', detail: '计算器', icon: 'calculator' },
+        { id: 'app:settings', type: 'app', appId: 'settings', title: 'Monsoon Settings', detail: '壁纸与存储', icon: 'settings' }
+      ];
+
+      const textExtensions = new Set('txt md markdown js mjs cjs ts tsx jsx css scss less html htm json jsonc xml svg csv log yml yaml toml ini env sh bash zsh py rb php java c h cpp hpp cs go rs swift kt sql vue svelte astro lock gitignore'.split(' '));
+      const imageExtensions = new Set('png jpg jpeg gif webp avif bmp svg ico'.split(' '));
+      const audioExtensions = new Set('mp3 wav ogg oga m4a aac flac webm'.split(' '));
+      const videoExtensions = new Set('mp4 webm ogv ogg mov m4v'.split(' '));
+      const archiveExtensions = new Set('zip tar gz tgz'.split(' '));
+
+      const mimeMap = {
+        txt: 'text/plain; charset=utf-8', md: 'text/markdown; charset=utf-8', markdown: 'text/markdown; charset=utf-8',
+        js: 'text/javascript; charset=utf-8', mjs: 'text/javascript; charset=utf-8', cjs: 'text/javascript; charset=utf-8',
+        ts: 'text/typescript; charset=utf-8', css: 'text/css; charset=utf-8', html: 'text/html; charset=utf-8', htm: 'text/html; charset=utf-8',
+        json: 'application/json; charset=utf-8', xml: 'application/xml; charset=utf-8', svg: 'image/svg+xml', csv: 'text/csv; charset=utf-8',
+        png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp', avif: 'image/avif', bmp: 'image/bmp', ico: 'image/x-icon',
+        mp3: 'audio/mpeg', wav: 'audio/wav', ogg: 'audio/ogg', oga: 'audio/ogg', m4a: 'audio/mp4', aac: 'audio/aac', flac: 'audio/flac',
+        mp4: 'video/mp4', webm: 'video/webm', ogv: 'video/ogg', mov: 'video/quicktime', m4v: 'video/x-m4v',
+        pdf: 'application/pdf', zip: 'application/zip', tar: 'application/x-tar', gz: 'application/gzip', tgz: 'application/gzip'
+      };
+
+      const iconPaths = {
+        logo: '<path d="M5 13C10 4 18 2 27 6c7 3 11 9 13 17-11-8-22-8-35-10Z"/><path d="M7 21c13-6 24-4 35 7-8 10-19 14-31 9-7-3-10-8-4-16Z" opacity=".6"/>',
+        folder: '<path d="M5 14a4 4 0 0 1 4-4h9l4 5h17a4 4 0 0 1 4 4v17a5 5 0 0 1-5 5H10a5 5 0 0 1-5-5V14Z"/><path d="M5 20h38" opacity=".45"/>',
+        file: '<path d="M13 5h16l8 8v27a3 3 0 0 1-3 3H13a3 3 0 0 1-3-3V8a3 3 0 0 1 3-3Z"/><path d="M29 5v9h8" opacity=".5"/>',
+        text: '<path d="M12 5h24a3 3 0 0 1 3 3v32a3 3 0 0 1-3 3H12a3 3 0 0 1-3-3V8a3 3 0 0 1 3-3Z"/><path d="M16 15h16M16 23h18M16 31h12"/>',
+        browser: '<circle cx="24" cy="24" r="19"/><path d="M5 24h38M24 5c6 6 8 12 8 19s-2 13-8 19M24 5c-6 6-8 12-8 19s2 13 8 19"/>',
+        media: '<path d="M8 13a5 5 0 0 1 5-5h22a5 5 0 0 1 5 5v22a5 5 0 0 1-5 5H13a5 5 0 0 1-5-5V13Z"/><path d="m20 17 13 7-13 7V17Z"/>',
+        calculator: '<rect x="10" y="5" width="28" height="38" rx="5"/><path d="M16 12h16M16 22h.1M24 22h.1M32 22h.1M16 30h.1M24 30h.1M32 30h.1M16 38h.1M24 38h.1M32 38h.1"/>',
+        settings: '<path d="M24 16a8 8 0 1 0 0 16 8 8 0 0 0 0-16Z"/><path d="M39 25.5v-3l-5-1.3c-.4-1.3-.9-2.5-1.6-3.6l2.6-4.4-2.1-2.1-4.4 2.6c-1.1-.7-2.3-1.2-3.6-1.6L23.5 7h-3L19 12.1c-1.3.4-2.5.9-3.6 1.6L11 11.1 8.9 13.2l2.6 4.4c-.7 1.1-1.2 2.3-1.6 3.6L5 22.5v3l4.9 1.3c.4 1.3.9 2.5 1.6 3.6L8.9 35l2.1 2.1 4.4-2.6c1.1.7 2.3 1.2 3.6 1.6l1.5 4.9h3l1.4-4.9c1.3-.4 2.5-.9 3.6-1.6l4.4 2.6L35 35l-2.6-4.6c.7-1.1 1.2-2.3 1.6-3.6l5-1.3Z"/>',
+        image: '<rect x="7" y="9" width="34" height="30" rx="4"/><path d="m12 34 9-10 7 7 4-5 9 8M17 18h.1"/>',
+        audio: '<path d="M14 31H9a4 4 0 0 1-4-4v-6a4 4 0 0 1 4-4h5L29 7v34L14 31Z"/><path d="M35 16c3 5 3 11 0 16M40 12c5 8 5 16 0 24"/>',
+        video: '<rect x="6" y="12" width="28" height="24" rx="4"/><path d="m34 21 9-6v18l-9-6V21Z"/>',
+        zip: '<path d="M13 5h16l8 8v27a3 3 0 0 1-3 3H13a3 3 0 0 1-3-3V8a3 3 0 0 1 3-3Z"/><path d="M20 7v5h4v5h-4v5h4v5h-4v5M29 5v9h8"/>',
+        plus: '<path d="M24 8v32M8 24h32"/>',
+        trash: '<path d="M9 13h30M19 13V8h10v5M14 13l2 28h16l2-28M21 20v14M27 20v14"/>',
+        upload: '<path d="M24 34V8M14 18 24 8l10 10M8 34v5h32v-5"/>',
+        download: '<path d="M24 8v26M14 24l10 10 10-10M8 39h32"/>',
+        copy: '<path d="M17 13h20v28H17z"/><path d="M11 35H7V7h20v4"/>',
+        paste: '<path d="M15 12h18v29H15z"/><path d="M18 12c0-4 12-4 12 0"/>',
+        rename: '<path d="M9 34h30M13 29l20-20 6 6-20 20-8 2 2-8Z"/>',
+        refresh: '<path d="M38 19A15 15 0 1 0 34 34"/><path d="M38 9v10H28M10 29v10h10"/>',
+        fullscreen: '<path d="M8 19V8h11M40 19V8H29M8 29v11h11M40 29v11H29"/>',
+        close: '<path d="M13 13 35 35M35 13 13 35"/>',
+        min: '<path d="M12 24h24"/>',
+        max: '<path d="M13 13h22v22H13z"/>',
+        back: '<path d="M29 12 17 24l12 12"/>',
+        forward: '<path d="M19 12 31 24 19 36"/>',
+        up: '<path d="m12 28 12-12 12 12"/>',
+        check: '<path d="m8 25 10 10L40 13"/>',
+        info: '<circle cx="24" cy="24" r="18"/><path d="M24 21v12M24 15h.1"/>'
+      };
+
+      function svg(name, cls = '') {
+        const body = iconPaths[name] || iconPaths.file;
+        return `<svg class="${cls}" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`;
+      }
+
+      function normalizePath(path = '/') {
+        let value = String(path || '/').replaceAll('\\', '/').trim();
+        if (!value.startsWith('/')) value = '/' + value;
+        const parts = [];
+        for (const part of value.split('/')) {
+          if (!part || part === '.') continue;
+          if (part === '..') parts.pop();
+          else parts.push(part);
+        }
+        return '/' + parts.join('/');
+      }
+
+      function joinPath(parent, name) {
+        return normalizePath(`${parent}/${name}`);
+      }
+
+      function splitPath(path) {
+        const clean = normalizePath(path);
+        const parts = clean.split('/').filter(Boolean);
+        const name = parts.pop() || '';
+        return { dir: '/' + parts.join('/'), name };
+      }
+
+      function extOf(name) {
+        const lower = String(name).toLowerCase();
+        if (lower.endsWith('.tar.gz')) return 'tgz';
+        const i = lower.lastIndexOf('.');
+        return i === -1 ? '' : lower.slice(i + 1);
+      }
+
+      function baseName(path) {
+        return splitPath(path).name;
+      }
+
+      function withoutArchiveExt(name) {
+        return name.replace(/\.tar\.gz$/i, '').replace(/\.(zip|tar|gz|tgz)$/i, '');
+      }
+
+      function getMime(name) {
+        return mimeMap[extOf(name)] || 'application/octet-stream';
+      }
+
+      function isTextFile(name) {
+        return textExtensions.has(extOf(name));
+      }
+
+      function isArchiveFile(name) {
+        const lower = name.toLowerCase();
+        return lower.endsWith('.tar.gz') || archiveExtensions.has(extOf(name));
+      }
+
+      function isMediaFile(name) {
+        const ext = extOf(name);
+        return imageExtensions.has(ext) || audioExtensions.has(ext) || videoExtensions.has(ext);
+      }
+
+      function formatBytes(bytes = 0) {
+        if (!bytes) return '0 B';
+        const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+        let value = bytes;
+        let unit = 0;
+        while (value >= 1024 && unit < units.length - 1) {
+          value /= 1024;
+          unit += 1;
+        }
+        return `${value.toFixed(value >= 10 || unit === 0 ? 0 : 1)} ${units[unit]}`;
+      }
+
+      function stamp() {
+        return new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      }
+
+      const fs = {
+        root: null,
+        async init() {
+          if (!navigator.storage || !navigator.storage.getDirectory) {
+            throw new Error('当前浏览器不支持 OPFS。请使用 Chromium、Edge、Safari 16.4+ 或 Firefox Nightly，并在 https 或 localhost 中打开。');
+          }
+          this.root = await navigator.storage.getDirectory();
+          if (navigator.storage.persist) await navigator.storage.persist().catch(() => false);
+          await this.mkdir('/System');
+          await this.mkdir('/Desktop');
+          await this.mkdir('/Documents');
+          await this.mkdir('/Media');
+          await this.mkdir('/Downloads');
+          if (!(await this.exists('/System/.initialized'))) {
+            await this.writeFile('/Documents/Monsoon Manual.md', '# Monsoon OS\n\n这是一个完全运行在浏览器中的单文件 Web OS。\n\n- 文件存储在 OPFS，不依赖后端。\n- 文件管理器、编辑器、媒体播放器都通过 window.fs 读写。\n- 可以导入本地文件、拖入文件、导出文件、解压 zip/tar/gz/tgz。\n\n刷新页面后，创建的文件仍会留在这个 Origin 的私有文件系统中。\n');
+            await this.writeFile('/Desktop/Read Me.txt', 'Monsoon OS 使用 OPFS 保存数据。\n\n把本地文件拖到桌面或 Tide Files 中即可导入。\n从文件图标或资源管理器项目拖出，支持浏览器的 DownloadURL 导出；也可以使用 Export 按钮。\n');
+            await this.writeFile('/Desktop/Storm Note.md', '海面变暗，窗口像雨季灯塔一样浮起。\n\n这个桌面图标来自真实的 /Desktop 目录。');
+            await this.writeFile('/Documents/demo.html', '<!DOCTYPE html>\n<html><body style="font-family:serif;background:#eef7ef;color:#06201d"><h1>VFS HTML</h1><p>这个页面来自 OPFS，并由 Reef Browser 以 Blob URL 打开。</p></body></html>');
+            await this.writeFile('/System/config.json', JSON.stringify(DEFAULT_CONFIG, null, 2));
+            await this.writeFile('/System/.initialized', '1');
+          }
+        },
+        _parts(path) {
+          return normalizePath(path).split('/').filter(Boolean);
+        },
+        async getDir(path = '/', create = false) {
+          const parts = this._parts(path);
+          let dir = this.root;
+          for (const part of parts) dir = await dir.getDirectoryHandle(part, { create });
+          return dir;
+        },
+        async getFileHandle(path, create = false) {
+          const { dir, name } = splitPath(path);
+          if (!name) throw new Error('文件名不能为空');
+          const parent = await this.getDir(dir, create);
+          return parent.getFileHandle(name, { create });
+        },
+        async getEntry(path) {
+          const clean = normalizePath(path);
+          if (clean === '/') return { kind: 'directory', handle: this.root };
+          const { dir, name } = splitPath(clean);
+          const parent = await this.getDir(dir, false);
+          try { return { kind: 'directory', handle: await parent.getDirectoryHandle(name) }; }
+          catch (_) { return { kind: 'file', handle: await parent.getFileHandle(name) }; }
+        },
+        async exists(path) {
+          try { await this.getEntry(path); return true; }
+          catch (_) { return false; }
+        },
+        async stat(path) {
+          const clean = normalizePath(path);
+          const entry = await this.getEntry(clean);
+          if (entry.kind === 'directory') return { path: clean, name: baseName(clean) || '/', kind: 'directory', size: 0, modified: 0 };
+          const file = await entry.handle.getFile();
+          return { path: clean, name: file.name, kind: 'file', size: file.size, modified: file.lastModified, type: file.type || getMime(file.name) };
+        },
+        async list(path = '/') {
+          const clean = normalizePath(path);
+          const dir = await this.getDir(clean, false);
+          const entries = [];
+          for await (const [name, handle] of dir.entries()) {
+            if (handle.kind === 'directory') entries.push({ name, path: joinPath(clean, name), kind: 'directory', size: 0, modified: 0 });
+            else {
+              const file = await handle.getFile();
+              entries.push({ name, path: joinPath(clean, name), kind: 'file', size: file.size, modified: file.lastModified, type: file.type || getMime(name) });
+            }
+          }
+          entries.sort((a, b) => (a.kind === b.kind ? a.name.localeCompare(b.name, 'zh-Hans-CN') : a.kind === 'directory' ? -1 : 1));
+          return entries;
+        },
+        async mkdir(path) {
+          await this.getDir(path, true);
+        },
+        async writeFile(path, data, options = {}) {
+          const clean = normalizePath(path);
+          const { dir, name } = splitPath(clean);
+          if (!name) throw new Error('不能覆盖根目录');
+          await this.mkdir(dir);
+          const handle = await this.getFileHandle(clean, true);
+          const writable = await handle.createWritable();
+          let payload = data;
+          if (typeof data === 'string') payload = new Blob([data], { type: options.type || getMime(name) });
+          await writable.write(payload);
+          await writable.close();
+          return clean;
+        },
+        async readFile(path, mode = 'text') {
+          const handle = await this.getFileHandle(path, false);
+          const file = await handle.getFile();
+          if (mode === 'file') return file;
+          if (mode === 'blob') return new Blob([file], { type: file.type || getMime(file.name) });
+          if (mode === 'arrayBuffer') return file.arrayBuffer();
+          return file.text();
+        },
+        async remove(path) {
+          const clean = normalizePath(path);
+          if (clean === '/') throw new Error('不能删除根目录');
+          const { dir, name } = splitPath(clean);
+          const parent = await this.getDir(dir, false);
+          await parent.removeEntry(name, { recursive: true });
+        },
+        async copy(src, dest) {
+          const from = normalizePath(src);
+          const to = normalizePath(dest);
+          const info = await this.stat(from);
+          if (info.kind === 'directory') {
+            await this.mkdir(to);
+            const children = await this.list(from);
+            for (const child of children) await this.copy(child.path, joinPath(to, child.name));
+          } else {
+            const blob = await this.readFile(from, 'blob');
+            await this.writeFile(to, blob, { type: blob.type || getMime(to) });
+          }
+          return to;
+        },
+        async move(src, dest) {
+          await this.copy(src, dest);
+          await this.remove(src);
+          return normalizePath(dest);
+        },
+        async rename(path, newName) {
+          const safe = sanitizeName(newName);
+          const { dir } = splitPath(path);
+          const dest = joinPath(dir, safe);
+          if (await this.exists(dest)) throw new Error('目标名称已存在');
+          return this.move(path, dest);
+        },
+        async uniquePath(parent, desiredName) {
+          const safe = sanitizeName(desiredName || 'Untitled');
+          let candidate = joinPath(parent, safe);
+          if (!(await this.exists(candidate))) return candidate;
+          const dot = safe.lastIndexOf('.');
+          const stem = dot > 0 ? safe.slice(0, dot) : safe;
+          const ext = dot > 0 ? safe.slice(dot) : '';
+          for (let i = 2; i < 10000; i += 1) {
+            candidate = joinPath(parent, `${stem} ${i}${ext}`);
+            if (!(await this.exists(candidate))) return candidate;
+          }
+          throw new Error('无法生成唯一文件名');
+        },
+        async objectURL(path) {
+          const blob = await this.readFile(path, 'blob');
+          return URL.createObjectURL(blob);
+        },
+        async readJSON(path, fallback) {
+          try { return JSON.parse(await this.readFile(path, 'text')); }
+          catch (_) { return structuredClone(fallback); }
+        },
+        async writeJSON(path, value) {
+          return this.writeFile(path, JSON.stringify(value, null, 2), { type: 'application/json; charset=utf-8' });
+        },
+        async clear() {
+          for await (const [name] of this.root.entries()) await this.root.removeEntry(name, { recursive: true });
+        }
+      };
+      window.fs = fs;
+
+      function sanitizeName(name) {
+        return String(name || 'Untitled').replace(/[\\/:*?"<>|]/g, '-').replace(/^\.+$/, 'Untitled').trim() || 'Untitled';
+      }
+
+      async function loadConfig() {
+        state.config = { ...DEFAULT_CONFIG, ...(await fs.readJSON('/System/config.json', DEFAULT_CONFIG)) };
+      }
+
+      async function saveConfig() {
+        await fs.writeJSON('/System/config.json', state.config);
+      }
+
+      async function applyWallpaper() {
+        wallpaperEl.className = '';
+        wallpaperEl.style.backgroundImage = '';
+        if (state.customWallpaperURL) {
+          URL.revokeObjectURL(state.customWallpaperURL);
+          state.customWallpaperURL = '';
+        }
+        if (state.config.wallpaper === 'custom' && state.config.wallpaperPath) {
+          try {
+            state.customWallpaperURL = await fs.objectURL(state.config.wallpaperPath);
+            wallpaperEl.style.backgroundImage = `linear-gradient(180deg, rgba(0,0,0,.08), rgba(0,0,0,.34)), url(${state.customWallpaperURL})`;
+            return;
+          } catch (error) {
+            toast(`自定义壁纸丢失，已回到 storm：${error.message}`, 'danger');
+          }
+        }
+        wallpaperEl.classList.add(`wall-${state.config.wallpaper || 'storm'}`);
+      }
+
+      function toast(message, type = '') {
+        const el = document.createElement('div');
+        el.className = `toast ${type}`;
+        el.textContent = message;
+        $('#toasts').append(el);
+        setTimeout(() => el.remove(), 4200);
+      }
+
+      function closeMenus() {
+        startMenu.classList.remove('open');
+        contextMenu.classList.remove('open');
+      }
+
+      function showContext(items, x, y) {
+        contextMenu.innerHTML = items.map(item => item === 'sep'
+          ? '<div class="context-sep"></div>'
+          : `<button class="context-item" type="button" data-id="${item.id}" ${item.disabled ? 'disabled' : ''}>${svg(item.icon || 'file')}<span>${item.label}</span></button>`).join('');
+        contextMenu.classList.add('open');
+        const rect = contextMenu.getBoundingClientRect();
+        contextMenu.style.left = `${Math.min(x, innerWidth - rect.width - 8)}px`;
+        contextMenu.style.top = `${Math.min(y, innerHeight - rect.height - 8)}px`;
+        contextMenu.onclick = async event => {
+          const button = event.target.closest('.context-item');
+          if (!button) return;
+          const item = items.find(entry => entry && entry.id === button.dataset.id);
+          closeMenus();
+          if (item && item.action) await runSafe(item.action);
+        };
+      }
+
+      async function runSafe(fn) {
+        try { await fn(); }
+        catch (error) { console.error(error); toast(error.message || String(error), 'danger'); }
+      }
+
+      const APPS = {
+        explorer: { title: 'Tide Files', icon: 'folder', width: 900, height: 610, launch: params => openExplorer(params) },
+        editor: { title: 'Salt Editor', icon: 'text', width: 760, height: 560, launch: params => openEditor(params) },
+        browser: { title: 'Reef Browser', icon: 'browser', width: 860, height: 600, launch: params => openBrowser(params) },
+        media: { title: 'Lowtide Media', icon: 'media', width: 760, height: 560, launch: params => openMedia(params) },
+        calculator: { title: 'Abacus', icon: 'calculator', width: 360, height: 520, launch: params => openCalculator(params) },
+        settings: { title: 'Monsoon Settings', icon: 'settings', width: 760, height: 560, launch: params => openSettings(params) }
+      };
+
+      function launchApp(appId, params = {}) {
+        const app = APPS[appId];
+        if (app) app.launch(params);
+      }
+
+      function createWindow(options, build) {
+        const app = APPS[options.appId] || {};
+        const id = `win-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        const size = getInitialWindowRect(options.width || app.width || 720, options.height || app.height || 520);
+        const el = document.createElement('section');
+        el.className = 'window-frame';
+        el.dataset.id = id;
+        el.style.left = `${size.x}px`;
+        el.style.top = `${size.y}px`;
+        el.style.width = `${size.w}px`;
+        el.style.height = `${size.h}px`;
+        el.style.zIndex = ++state.z;
+        el.innerHTML = `
+          <div class="titlebar">
+            ${svg(options.icon || app.icon || 'file', 'win-icon')}
+            <div class="win-title">${escapeHTML(options.title || app.title || 'Window')}</div>
+            <div class="window-actions">
+              <button class="window-action" type="button" data-act="min" aria-label="最小化">${svg('min')}</button>
+              <button class="window-action" type="button" data-act="max" aria-label="最大化">${svg('max')}</button>
+              <button class="window-action close" type="button" data-act="close" aria-label="关闭">${svg('close')}</button>
+            </div>
+          </div>
+          <div class="window-content"></div>
+          <div class="resize-handle resize-n" data-dir="n"></div><div class="resize-handle resize-s" data-dir="s"></div>
+          <div class="resize-handle resize-e" data-dir="e"></div><div class="resize-handle resize-w" data-dir="w"></div>
+          <div class="resize-handle resize-ne" data-dir="ne"></div><div class="resize-handle resize-nw" data-dir="nw"></div>
+          <div class="resize-handle resize-se" data-dir="se"></div><div class="resize-handle resize-sw" data-dir="sw"></div>
+        `;
+        windowsLayer.append(el);
+        const api = {
+          id,
+          el,
+          content: $('.window-content', el),
+          appId: options.appId,
+          title: options.title || app.title || 'Window',
+          icon: options.icon || app.icon || 'file',
+          minimized: false,
+          maximized: false,
+          previousRect: null,
+          setTitle(title) {
+            api.title = title;
+            $('.win-title', el).textContent = title;
+            renderTasks();
+          },
+          close() { closeWindow(id); },
+          minimize() { minimizeWindow(id); },
+          toggleMaximize() { toggleMaximize(id); }
+        };
+        state.windows.set(id, api);
+        bindWindowEvents(api);
+        build(api.content, api);
+        focusWindow(id);
+        renderTasks();
+        return api;
+      }
+
+      function getInitialWindowRect(width, height) {
+        if (innerWidth <= 760) return { x: 0, y: 0, w: innerWidth, h: innerHeight - 78 };
+        const offset = (state.windows.size % 5) * 26;
+        const w = Math.min(width, innerWidth - 80);
+        const h = Math.min(height, innerHeight - 120);
+        return { x: Math.max(28, (innerWidth - w) / 2 + offset), y: Math.max(24, (innerHeight - h) / 2 - 34 + offset), w, h };
+      }
+
+      function bindWindowEvents(api) {
+        const el = api.el;
+        el.addEventListener('pointerdown', () => focusWindow(api.id));
+        $('.window-actions', el).addEventListener('click', event => {
+          const button = event.target.closest('[data-act]');
+          if (!button) return;
+          event.stopPropagation();
+          if (button.dataset.act === 'min') api.minimize();
+          if (button.dataset.act === 'max') api.toggleMaximize();
+          if (button.dataset.act === 'close') api.close();
+        });
+        $('.titlebar', el).addEventListener('pointerdown', event => startWindowDrag(event, api));
+        $$('.resize-handle', el).forEach(handle => handle.addEventListener('pointerdown', event => startResize(event, api, handle.dataset.dir)));
+      }
+
+      function focusWindow(id) {
+        const api = state.windows.get(id);
+        if (!api) return;
+        state.activeWindow = id;
+        api.el.style.zIndex = ++state.z;
+        $$('.window-frame').forEach(win => win.classList.toggle('active', win.dataset.id === id));
+        renderTasks();
+      }
+
+      function closeWindow(id) {
+        const api = state.windows.get(id);
+        if (!api) return;
+        api.el.remove();
+        state.windows.delete(id);
+        if (state.activeWindow === id) state.activeWindow = null;
+        renderTasks();
+      }
+
+      function minimizeWindow(id) {
+        const api = state.windows.get(id);
+        if (!api) return;
+        api.minimized = true;
+        api.el.classList.add('minimizing');
+        setTimeout(() => { if (api.minimized) api.el.style.display = 'none'; api.el.classList.remove('minimizing'); renderTasks(); }, 190);
+      }
+
+      function restoreWindow(id) {
+        const api = state.windows.get(id);
+        if (!api) return;
+        api.minimized = false;
+        api.el.style.display = '';
+        focusWindow(id);
+      }
+
+      function toggleMaximize(id) {
+        const api = state.windows.get(id);
+        if (!api || innerWidth <= 760) return;
+        const el = api.el;
+        if (!api.maximized) {
+          api.previousRect = { left: el.style.left, top: el.style.top, width: el.style.width, height: el.style.height };
+          el.style.left = '10px';
+          el.style.top = '10px';
+          el.style.width = `${innerWidth - 20}px`;
+          el.style.height = `${innerHeight - 92}px`;
+          api.maximized = true;
+        } else {
+          Object.assign(el.style, api.previousRect);
+          api.maximized = false;
+        }
+      }
+
+      function startWindowDrag(event, api) {
+        if (event.button !== 0 || event.target.closest('.window-actions') || api.maximized || innerWidth <= 760) return;
+        event.preventDefault();
+        focusWindow(api.id);
+        const el = api.el;
+        const rect = el.getBoundingClientRect();
+        const startX = event.clientX;
+        const startY = event.clientY;
+        const onMove = move => {
+          const x = Math.min(Math.max(0, rect.left + move.clientX - startX), innerWidth - 120);
+          const y = Math.min(Math.max(0, rect.top + move.clientY - startY), innerHeight - 98);
+          el.style.left = `${x}px`;
+          el.style.top = `${y}px`;
+        };
+        const cleanup = () => {
+          window.removeEventListener('pointermove', onMove);
+          window.removeEventListener('pointerup', cleanup);
+        };
+        window.addEventListener('pointermove', onMove);
+        window.addEventListener('pointerup', cleanup, { once: true });
+      }
+
+      function startResize(event, api, dir) {
+        if (event.button !== 0 || api.maximized || innerWidth <= 760) return;
+        event.preventDefault();
+        focusWindow(api.id);
+        const el = api.el;
+        const rect = el.getBoundingClientRect();
+        const startX = event.clientX;
+        const startY = event.clientY;
+        const minW = 320;
+        const minH = 220;
+        const onMove = move => {
+          let left = rect.left;
+          let top = rect.top;
+          let width = rect.width;
+          let height = rect.height;
+          const dx = move.clientX - startX;
+          const dy = move.clientY - startY;
+          if (dir.includes('e')) width = Math.max(minW, rect.width + dx);
+          if (dir.includes('s')) height = Math.max(minH, rect.height + dy);
+          if (dir.includes('w')) {
+            width = Math.max(minW, rect.width - dx);
+            left = rect.right - width;
+          }
+          if (dir.includes('n')) {
+            height = Math.max(minH, rect.height - dy);
+            top = rect.bottom - height;
+          }
+          el.style.left = `${Math.max(0, left)}px`;
+          el.style.top = `${Math.max(0, top)}px`;
+          el.style.width = `${Math.min(width, innerWidth - Math.max(0, left))}px`;
+          el.style.height = `${Math.min(height, innerHeight - 72 - Math.max(0, top))}px`;
+        };
+        const cleanup = () => {
+          window.removeEventListener('pointermove', onMove);
+          window.removeEventListener('pointerup', cleanup);
+        };
+        window.addEventListener('pointermove', onMove);
+        window.addEventListener('pointerup', cleanup, { once: true });
+      }
+
+      function renderTasks() {
+        taskScroll.innerHTML = [...state.windows.values()].map(win => `
+          <button class="task-button ${state.activeWindow === win.id ? 'active' : ''} ${win.minimized ? 'minimized' : ''}" type="button" data-id="${win.id}" title="${escapeHTML(win.title)}">
+            ${svg(win.icon)}<span>${escapeHTML(win.title)}</span>
+          </button>`).join('');
+      }
+
+      taskScroll.addEventListener('click', event => {
+        const button = event.target.closest('.task-button');
+        if (!button) return;
+        const win = state.windows.get(button.dataset.id);
+        if (!win) return;
+        if (win.minimized || state.activeWindow !== win.id) restoreWindow(win.id);
+        else minimizeWindow(win.id);
+      });
+
+      $('#startButton').innerHTML = `${svg('logo')}<span>Monsoon</span>`;
+      $('#startButton').addEventListener('click', event => {
+        event.stopPropagation();
+        contextMenu.classList.remove('open');
+        startMenu.classList.toggle('open');
+      });
+
+      function renderStartMenu() {
+        startMenu.innerHTML = `
+          <div class="brand-word">Monsoon OS</div>
+          <div class="start-subtitle">OPFS powered single-file desktop</div>
+          <div class="launcher-list">
+            ${appShortcuts.map(app => `<button class="launcher-item" type="button" data-app="${app.appId}">${svg(app.icon)}<span><strong>${app.title}</strong><span>${app.detail}</span></span></button>`).join('')}
+          </div>`;
+      }
+
+      startMenu.addEventListener('click', event => {
+        const button = event.target.closest('[data-app]');
+        if (!button) return;
+        closeMenus();
+        launchApp(button.dataset.app);
+      });
+
+      async function renderDesktop() {
+        const files = await fs.list('/Desktop').catch(() => []);
+        state.desktopItems = [
+          ...appShortcuts,
+          ...files.map(file => ({ id: `file:${file.path}`, type: 'vfs', title: file.name, path: file.path, kind: file.kind, icon: iconForEntry(file) }))
+        ];
+        desktop.innerHTML = '';
+        const cols = Math.max(1, Math.floor((innerWidth - 20) / 92));
+        state.desktopItems.forEach((item, index) => {
+          const saved = state.config.desktopPositions[item.id];
+          const x = saved ? saved.x : 16 + Math.floor(index / Math.max(1, Math.floor((innerHeight - 135) / 94))) * 92;
+          const y = saved ? saved.y : 16 + (index % Math.max(1, Math.floor((innerHeight - 135) / 94))) * 94;
+          const el = document.createElement('button');
+          el.type = 'button';
+          el.className = 'desktop-icon';
+          el.dataset.id = item.id;
+          el.style.left = `${Math.min(x, Math.max(20, innerWidth - 100))}px`;
+          el.style.top = `${Math.min(y, Math.max(20, innerHeight - 170))}px`;
+          el.style.animationDelay = `${Math.min(index * 35, 420)}ms`;
+          el.draggable = true;
+          el.innerHTML = `${svg(item.icon)}<span class="icon-label">${escapeHTML(item.title)}</span>`;
+          el.addEventListener('click', event => {
+            event.stopPropagation();
+            if (event.ctrlKey || event.metaKey || event.shiftKey) {
+              toggleDesktopSelection(item.id);
+              return;
+            }
+            clearDesktopSelection();
+            selectDesktop(item.id);
+            openDesktopItem(item);
+          });
+          el.addEventListener('contextmenu', event => {
+            event.preventDefault();
+            event.stopPropagation();
+            clearDesktopSelection();
+            selectDesktop(item.id);
+            showDesktopItemMenu(item, event.clientX, event.clientY);
+          });
+          el.addEventListener('dragstart', event => startDesktopDrag(event, item));
+          el.addEventListener('dragend', event => finishDesktopDrag(event, item));
+          desktop.append(el);
+          if (item.type === 'vfs' && item.kind === 'file') prepareDownloadData(el, item.path);
+        });
+      }
+
+      function iconForEntry(entry) {
+        if (entry.kind === 'directory') return 'folder';
+        const ext = extOf(entry.name);
+        if (imageExtensions.has(ext)) return 'image';
+        if (audioExtensions.has(ext)) return 'audio';
+        if (videoExtensions.has(ext)) return 'video';
+        if (isArchiveFile(entry.name)) return 'zip';
+        if (isTextFile(entry.name)) return 'text';
+        if (ext === 'html' || ext === 'htm' || ext === 'pdf') return 'browser';
+        return 'file';
+      }
+
+      function selectDesktop(id) {
+        state.selectedDesktop.add(id);
+        const el = desktop.querySelector(`[data-id="${CSS.escape(id)}"]`);
+        if (el) el.classList.add('selected');
+      }
+
+      function toggleDesktopSelection(id) {
+        if (state.selectedDesktop.has(id)) {
+          state.selectedDesktop.delete(id);
+          const el = desktop.querySelector(`[data-id="${CSS.escape(id)}"]`);
+          if (el) el.classList.remove('selected');
+        } else selectDesktop(id);
+      }
+
+      function clearDesktopSelection() {
+        state.selectedDesktop.clear();
+        $$('.desktop-icon', desktop).forEach(el => el.classList.remove('selected'));
+      }
+
+      function openDesktopItem(item) {
+        if (item.type === 'app') launchApp(item.appId);
+        else openVfsPath(item.path);
+      }
+
+      async function showDesktopItemMenu(item, x, y) {
+        const isFile = item.type === 'vfs' && item.kind === 'file';
+        const isDir = item.type === 'vfs' && item.kind === 'directory';
+        showContext([
+          { id: 'open', label: '打开', icon: item.icon, action: () => openDesktopItem(item) },
+          isFile ? { id: 'export', label: '导出到本地', icon: 'download', action: () => exportPaths([item.path]) } : null,
+          isFile && isArchiveFile(item.title) ? { id: 'extract', label: '解压到文件夹', icon: 'zip', action: () => extractArchiveToFolder(item.path) } : null,
+          item.type === 'vfs' ? 'sep' : null,
+          item.type === 'vfs' ? { id: 'copy', label: '复制', icon: 'copy', action: () => { state.clipboard = { op: 'copy', paths: [item.path] }; toast('已复制到剪贴板'); } } : null,
+          item.type === 'vfs' ? { id: 'rename', label: '重命名', icon: 'rename', action: async () => { await renamePath(item.path); await renderDesktop(); } } : null,
+          item.type === 'vfs' ? { id: 'delete', label: '删除', icon: 'trash', action: async () => { await deletePaths([item.path]); await renderDesktop(); } } : null,
+          isDir ? { id: 'open-explorer', label: '在 Tide Files 中打开', icon: 'folder', action: () => launchApp('explorer', { path: item.path }) } : null
+        ].filter(Boolean), x, y);
+      }
+
+      function startDesktopDrag(event, item) {
+        event.dataTransfer.effectAllowed = 'copyMove';
+        event.dataTransfer.setData('text/x-desktop-id', item.id);
+        if (item.type === 'vfs') event.dataTransfer.setData('text/x-vfs-path', item.path);
+        if (item.type === 'vfs' && item.kind === 'file') setDownloadTransfer(event, event.currentTarget, item.path);
+      }
+
+      async function finishDesktopDrag(event, item) {
+        const rect = desktop.getBoundingClientRect();
+        if (event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom) {
+          state.config.desktopPositions[item.id] = {
+            x: Math.max(4, Math.min(event.clientX - rect.left - 41, rect.width - 86)),
+            y: Math.max(4, Math.min(event.clientY - rect.top - 40, rect.height - 92))
+          };
+          await saveConfig();
+          await renderDesktop();
+        }
+      }
+
+      async function prepareDownloadData(el, path) {
+        try {
+          const url = await fs.objectURL(path);
+          el.dataset.downloadUrl = url;
+          el.dataset.downloadName = baseName(path);
+          el.dataset.downloadMime = getMime(path);
+        } catch (_) {}
+      }
+
+      function setDownloadTransfer(event, el, path) {
+        if (!el.dataset.downloadUrl) return;
+        const mime = el.dataset.downloadMime || getMime(path);
+        const name = el.dataset.downloadName || baseName(path);
+        event.dataTransfer.setData('DownloadURL', `${mime}:${name}:${el.dataset.downloadUrl}`);
+        event.dataTransfer.setData('text/uri-list', el.dataset.downloadUrl);
+      }
+
+      desktop.addEventListener('pointerdown', event => {
+        if (event.button !== 0 || event.target.closest('.desktop-icon')) return;
+        closeMenus();
+        startSelection(event, desktop, selectionBox, '.desktop-icon', ids => {
+          clearDesktopSelection();
+          ids.forEach(selectDesktop);
+        });
+      });
+
+      desktop.addEventListener('contextmenu', event => {
+        if (event.target.closest('.desktop-icon')) return;
+        event.preventDefault();
+        showDesktopMenu(event.clientX, event.clientY);
+      });
+
+      desktop.addEventListener('dragover', event => {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'copy';
+      });
+
+      desktop.addEventListener('drop', event => runSafe(async () => {
+        event.preventDefault();
+        dropVeil.classList.remove('show');
+        if (event.dataTransfer.files && event.dataTransfer.files.length) {
+          await importFileList(event.dataTransfer.files, '/Desktop');
+          await renderDesktop();
+          return;
+        }
+        const vfsPaths = event.dataTransfer.getData('text/x-vfs-path').split('\n').filter(Boolean);
+        if (vfsPaths.length) {
+          await copyPathsTo(vfsPaths, '/Desktop');
+          await renderDesktop();
+        }
+      }));
+
+      document.addEventListener('dragenter', event => {
+        if (event.dataTransfer && Array.from(event.dataTransfer.types).includes('Files')) {
+          state.dragDepth += 1;
+          dropVeil.classList.add('show');
+        }
+      });
+      document.addEventListener('dragleave', () => {
+        state.dragDepth = Math.max(0, state.dragDepth - 1);
+        if (!state.dragDepth) dropVeil.classList.remove('show');
+      });
+      document.addEventListener('drop', () => { state.dragDepth = 0; dropVeil.classList.remove('show'); });
+
+      function showDesktopMenu(x, y) {
+        showContext([
+          { id: 'refresh', label: '刷新桌面', icon: 'refresh', action: renderDesktop },
+          { id: 'folder', label: '新建文件夹', icon: 'folder', action: async () => { await fs.mkdir(await fs.uniquePath('/Desktop', 'New Folder')); await renderDesktop(); } },
+          { id: 'file', label: '新建文本文件', icon: 'text', action: async () => { await fs.writeFile(await fs.uniquePath('/Desktop', 'New Note.txt'), ''); await renderDesktop(); } },
+          { id: 'paste', label: '粘贴到桌面', icon: 'paste', disabled: !state.clipboard.paths.length, action: async () => { await pastePaths('/Desktop'); await renderDesktop(); } },
+          'sep',
+          { id: 'import', label: '导入本地文件', icon: 'upload', action: () => pickLocalFiles('/Desktop', renderDesktop) },
+          { id: 'wallpaper', label: '上传并设为壁纸', icon: 'image', action: () => wallpaperInput.click() },
+          { id: 'fullscreen', label: '切换全屏', icon: 'fullscreen', action: toggleFullscreen },
+          { id: 'settings', label: '打开设置', icon: 'settings', action: () => launchApp('settings') }
+        ], x, y);
+      }
+
+      function startSelection(event, root, boxEl, itemSelector, onSelect) {
+        event.preventDefault();
+        const host = boxEl.offsetParent || document.body;
+        const hostRect = host.getBoundingClientRect();
+        const startX = event.clientX;
+        const startY = event.clientY;
+        boxEl.style.display = 'block';
+        const update = move => {
+          const x1 = Math.min(startX, move.clientX);
+          const y1 = Math.min(startY, move.clientY);
+          const x2 = Math.max(startX, move.clientX);
+          const y2 = Math.max(startY, move.clientY);
+          Object.assign(boxEl.style, {
+            left: `${x1 - hostRect.left + host.scrollLeft}px`,
+            top: `${y1 - hostRect.top + host.scrollTop}px`,
+            width: `${x2 - x1}px`,
+            height: `${y2 - y1}px`
+          });
+          const selected = [];
+          $$(itemSelector, root).forEach(item => {
+            const rect = item.getBoundingClientRect();
+            const hit = !(rect.right < x1 || rect.left > x2 || rect.bottom < y1 || rect.top > y2);
+            item.classList.toggle('selected', hit);
+            if (hit) selected.push(item.dataset.id || item.dataset.path);
+          });
+          onSelect(selected.filter(Boolean));
+        };
+        const cleanup = () => {
+          boxEl.style.display = 'none';
+          window.removeEventListener('pointermove', update);
+          window.removeEventListener('pointerup', cleanup);
+        };
+        window.addEventListener('pointermove', update);
+        window.addEventListener('pointerup', cleanup, { once: true });
+        update(event);
+      }
+
+      async function openVfsPath(path) {
+        await runSafe(async () => {
+          const info = await fs.stat(path);
+          if (info.kind === 'directory') {
+            launchApp('explorer', { path });
+            return;
+          }
+          const ext = extOf(info.name);
+          if (isArchiveFile(info.name)) {
+            if (confirm('这是可解压文件。是否解压到同名文件夹？')) await extractArchiveToFolder(path);
+            else openFileInfo(path);
+          } else if (isTextFile(info.name)) launchApp('editor', { path });
+          else if (isMediaFile(info.name)) launchApp('media', { path });
+          else if (ext === 'html' || ext === 'htm' || ext === 'pdf') launchApp('browser', { url: `vfs://${path}` });
+          else openFileInfo(path);
+        });
+      }
+
+      function openFileInfo(path) {
+        createWindow({ appId: 'info', title: baseName(path), icon: 'info', width: 420, height: 280 }, content => {
+          content.innerHTML = `<div class="app-shell"><div class="settings-scroll"><div class="section-title">${escapeHTML(baseName(path))}</div><p class="section-copy">这个文件格式可保存在 OPFS 中。若浏览器无法原生预览，请导出到本地应用打开。</p><div style="display:flex;gap:8px;margin-top:18px;flex-wrap:wrap"><button class="tool-button" data-act="export">${svg('download')}导出</button><button class="tool-button" data-act="editor">${svg('text')}以文本打开</button></div></div></div>`;
+          content.addEventListener('click', event => {
+            const act = event.target.closest('[data-act]')?.dataset.act;
+            if (act === 'export') exportPaths([path]);
+            if (act === 'editor') launchApp('editor', { path });
+          });
+        });
+      }
+
+      function openExplorer(params = {}) {
+        const initialPath = normalizePath(params.path || '/');
+        createWindow({ appId: 'explorer', title: `Tide Files - ${initialPath}`, icon: 'folder', width: 940, height: 620 }, (content, api) => {
+          const local = { path: initialPath, selected: new Set(), entries: [] };
+          content.innerHTML = `
+            <div class="app-shell explorer-app">
+              <div class="toolbar">
+                <button class="tool-button" data-act="back" title="上一级">${svg('up')}</button>
+                <input class="field path-field" value="${escapeHTML(local.path)}" aria-label="路径">
+                <button class="tool-button" data-act="go">${svg('check')}前往</button>
+                <button class="tool-button" data-act="new-folder">${svg('folder')}新文件夹</button>
+                <button class="tool-button" data-act="new-file">${svg('text')}新文本</button>
+                <button class="tool-button" data-act="import">${svg('upload')}导入</button>
+                <button class="tool-button" data-act="export">${svg('download')}导出</button>
+                <button class="tool-button" data-act="paste">${svg('paste')}粘贴</button>
+                <button class="tool-button" data-act="rename">${svg('rename')}重命名</button>
+                <button class="tool-button" data-act="delete">${svg('trash')}删除</button>
+              </div>
+              <div class="explorer-main">
+                <aside class="explorer-side"></aside>
+                <div class="file-stage"><div class="selection-box"></div><div class="file-grid"></div></div>
+              </div>
+            </div>`;
+          const pathField = $('.path-field', content);
+          const side = $('.explorer-side', content);
+          const grid = $('.file-grid', content);
+          const stage = $('.file-stage', content);
+          const box = $('.selection-box', content);
+
+          side.innerHTML = ['/', '/Desktop', '/Documents', '/Media', '/Downloads', '/System'].map(path => `<button class="side-button" data-path="${path}" type="button">${svg(path === '/' ? 'logo' : 'folder')}<span>${path}</span></button>`).join('');
+
+          const refresh = async () => {
+            local.path = normalizePath(local.path);
+            pathField.value = local.path;
+            api.setTitle(`Tide Files - ${local.path}`);
+            local.entries = await fs.list(local.path);
+            local.selected.clear();
+            $$('.side-button', side).forEach(btn => btn.classList.toggle('active', btn.dataset.path === local.path));
+            if (!local.entries.length) {
+              grid.innerHTML = '<div class="empty-state">这个潮池还是空的。拖入本地文件或点击导入。</div>';
+              return;
+            }
+            grid.innerHTML = local.entries.map(entry => `
+              <button class="file-item" type="button" draggable="true" data-path="${entry.path}" data-kind="${entry.kind}">
+                ${svg(iconForEntry(entry))}
+                <span class="file-name">${escapeHTML(entry.name)}</span>
+                <span class="file-meta">${entry.kind === 'directory' ? 'folder' : formatBytes(entry.size)}</span>
+              </button>`).join('');
+            $$('.file-item', grid).forEach(item => {
+              const entry = local.entries.find(e => e.path === item.dataset.path);
+              if (entry?.kind === 'file') prepareDownloadData(item, entry.path);
+            });
+          };
+
+          const selectOnly = path => {
+            local.selected.clear();
+            local.selected.add(path);
+            renderSelected();
+          };
+          const renderSelected = () => {
+            $$('.file-item', grid).forEach(item => item.classList.toggle('selected', local.selected.has(item.dataset.path)));
+          };
+          const selectedPaths = () => [...local.selected];
+
+          content.addEventListener('click', event => runSafe(async () => {
+            const sideBtn = event.target.closest('.side-button');
+            if (sideBtn) { local.path = sideBtn.dataset.path; await refresh(); return; }
+            const item = event.target.closest('.file-item');
+            const action = event.target.closest('[data-act]')?.dataset.act;
+            if (item) {
+              if (event.ctrlKey || event.metaKey || event.shiftKey) {
+                if (local.selected.has(item.dataset.path)) local.selected.delete(item.dataset.path);
+                else local.selected.add(item.dataset.path);
+                renderSelected();
+              } else selectOnly(item.dataset.path);
+              return;
+            }
+            if (!action) return;
+            if (action === 'back') { local.path = normalizePath(local.path + '/..'); await refresh(); }
+            if (action === 'go') { local.path = pathField.value; await refresh(); }
+            if (action === 'new-folder') { await fs.mkdir(await fs.uniquePath(local.path, 'New Folder')); await refresh(); }
+            if (action === 'new-file') { await fs.writeFile(await fs.uniquePath(local.path, 'New Note.txt'), ''); await refresh(); }
+            if (action === 'import') pickLocalFiles(local.path, refresh);
+            if (action === 'export') await exportPaths(selectedPaths());
+            if (action === 'paste') { await pastePaths(local.path); await refresh(); await renderDesktop(); }
+            if (action === 'rename') { if (local.selected.size === 1) { await renamePath(selectedPaths()[0]); await refresh(); await renderDesktop(); } }
+            if (action === 'delete') { await deletePaths(selectedPaths()); await refresh(); await renderDesktop(); }
+          }));
+
+          grid.addEventListener('dblclick', event => {
+            const item = event.target.closest('.file-item');
+            if (item) openVfsPath(item.dataset.path);
+          });
+
+          grid.addEventListener('contextmenu', event => {
+            const item = event.target.closest('.file-item');
+            if (!item) return;
+            event.preventDefault();
+            if (!local.selected.has(item.dataset.path)) selectOnly(item.dataset.path);
+            const paths = selectedPaths();
+            const first = local.entries.find(e => e.path === item.dataset.path);
+            showContext([
+              { id: 'open', label: '打开', icon: iconForEntry(first), action: () => openVfsPath(item.dataset.path) },
+              { id: 'copy', label: '复制', icon: 'copy', action: () => { state.clipboard = { op: 'copy', paths }; toast(`已复制 ${paths.length} 项`); } },
+              { id: 'cut', label: '剪切', icon: 'rename', action: () => { state.clipboard = { op: 'cut', paths }; toast(`已剪切 ${paths.length} 项`); } },
+              { id: 'export', label: '导出', icon: 'download', action: () => exportPaths(paths) },
+              first && first.kind === 'file' && isArchiveFile(first.name) ? { id: 'extract', label: '解压', icon: 'zip', action: async () => { await extractArchiveToFolder(first.path); await refresh(); } } : null,
+              'sep',
+              { id: 'rename', label: '重命名', icon: 'rename', disabled: paths.length !== 1, action: async () => { await renamePath(paths[0]); await refresh(); await renderDesktop(); } },
+              { id: 'delete', label: '删除', icon: 'trash', action: async () => { await deletePaths(paths); await refresh(); await renderDesktop(); } }
+            ].filter(Boolean), event.clientX, event.clientY);
+          });
+
+          grid.addEventListener('dragstart', event => {
+            const item = event.target.closest('.file-item');
+            if (!item) return;
+            if (!local.selected.has(item.dataset.path)) selectOnly(item.dataset.path);
+            event.dataTransfer.effectAllowed = 'copyMove';
+            event.dataTransfer.setData('text/x-vfs-path', selectedPaths().join('\n'));
+            const entry = local.entries.find(e => e.path === item.dataset.path);
+            if (entry?.kind === 'file') setDownloadTransfer(event, item, entry.path);
+          });
+
+          stage.addEventListener('pointerdown', event => {
+            if (event.button !== 0 || event.target.closest('.file-item')) return;
+            startSelection(event, stage, box, '.file-item', ids => {
+              local.selected = new Set(ids);
+              renderSelected();
+            });
+          });
+
+          stage.addEventListener('dragover', event => { event.preventDefault(); event.dataTransfer.dropEffect = 'copy'; });
+          stage.addEventListener('drop', event => runSafe(async () => {
+            event.preventDefault();
+            if (event.dataTransfer.files && event.dataTransfer.files.length) await importFileList(event.dataTransfer.files, local.path);
+            else {
+              const vfs = event.dataTransfer.getData('text/x-vfs-path');
+              if (vfs) await copyPathsTo(vfs.split('\n').filter(Boolean), local.path);
+            }
+            await refresh();
+            await renderDesktop();
+          }));
+
+          pathField.addEventListener('keydown', event => { if (event.key === 'Enter') runSafe(async () => { local.path = pathField.value; await refresh(); }); });
+          refresh();
+        });
+      }
+
+      function openEditor(params = {}) {
+        createWindow({ appId: 'editor', title: params.path ? `Salt Editor - ${baseName(params.path)}` : 'Salt Editor', icon: 'text', width: 780, height: 560 }, (content, api) => {
+          const local = { path: params.path || '' };
+          content.innerHTML = `
+            <div class="app-shell">
+              <div class="toolbar">
+                <input class="field editor-path" placeholder="/Documents/file.txt" value="${escapeHTML(local.path)}">
+                <button class="tool-button" data-act="open">${svg('folder')}打开</button>
+                <button class="tool-button" data-act="save">${svg('check')}保存</button>
+                <button class="tool-button" data-act="save-as">${svg('rename')}另存为</button>
+              </div>
+              <textarea class="editor-area" spellcheck="false" placeholder="潮湿空气中的文字...输入后保存到 OPFS"></textarea>
+            </div>`;
+          const pathField = $('.editor-path', content);
+          const area = $('.editor-area', content);
+          const load = async path => {
+            local.path = normalizePath(path);
+            area.value = await fs.readFile(local.path, 'text');
+            pathField.value = local.path;
+            api.setTitle(`Salt Editor - ${baseName(local.path)}`);
+          };
+          const save = async path => {
+            local.path = normalizePath(path || local.path || prompt('保存到 VFS 路径', '/Documents/New Note.txt') || '');
+            if (!local.path || local.path === '/') return;
+            await fs.writeFile(local.path, area.value, { type: getMime(local.path) });
+            pathField.value = local.path;
+            api.setTitle(`Salt Editor - ${baseName(local.path)}`);
+            await renderDesktop();
+            toast('已保存到 OPFS');
+          };
+          content.addEventListener('click', event => runSafe(async () => {
+            const act = event.target.closest('[data-act]')?.dataset.act;
+            if (act === 'open') await load(pathField.value || prompt('打开 VFS 路径', '/Documents/Monsoon Manual.md'));
+            if (act === 'save') await save(pathField.value);
+            if (act === 'save-as') await save(prompt('另存为 VFS 路径', local.path || '/Documents/New Note.txt'));
+          }));
+          if (local.path) runSafe(() => load(local.path));
+        });
+      }
+
+      function openBrowser(params = {}) {
+        createWindow({ appId: 'browser', title: 'Reef Browser', icon: 'browser', width: 880, height: 620 }, (content, api) => {
+          const local = { history: [], index: -1, objectURL: '' };
+          content.innerHTML = `
+            <div class="app-shell">
+              <div class="toolbar">
+                <button class="tool-button" data-act="back">${svg('back')}</button>
+                <button class="tool-button" data-act="forward">${svg('forward')}</button>
+                <input class="field url-field" placeholder="https://example.com 或 vfs:///Documents/demo.html" value="${escapeHTML(params.url || '')}">
+                <button class="tool-button" data-act="go">${svg('check')}前往</button>
+              </div>
+              <iframe class="browser-frame" sandbox="allow-scripts allow-forms allow-same-origin allow-popups"></iframe>
+            </div>`;
+          const field = $('.url-field', content);
+          const frame = $('.browser-frame', content);
+          const showHome = () => {
+            frame.srcdoc = '<!DOCTYPE html><html><body style="margin:0;background:#eef7ef;color:#061b18;font-family:Georgia,serif;display:grid;place-items:center;min-height:100vh"><main style="max-width:680px;padding:42px"><h1 style="font-size:64px;line-height:.85;margin:0">Reef Browser</h1><p style="font-size:18px;line-height:1.7">输入 https 地址，或输入 vfs:///Documents/demo.html 打开 OPFS 中的文件。</p></main></body></html>';
+          };
+          const go = async (raw, push = true) => {
+            let url = String(raw || '').trim();
+            if (!url) { showHome(); return; }
+            if (url.startsWith('vfs://')) url = url.slice(6);
+            if (url.startsWith('/')) {
+              if (local.objectURL) URL.revokeObjectURL(local.objectURL);
+              local.objectURL = await fs.objectURL(url);
+              frame.removeAttribute('srcdoc');
+              frame.src = local.objectURL;
+              field.value = `vfs://${normalizePath(url)}`;
+              api.setTitle(`Reef Browser - ${baseName(url)}`);
+            } else {
+              if (!/^(https?:|data:|blob:|about:)/i.test(url)) url = `https://${url}`;
+              frame.removeAttribute('srcdoc');
+              frame.src = url;
+              field.value = url;
+              api.setTitle(`Reef Browser - ${url.replace(/^https?:\/\//, '').slice(0, 38)}`);
+            }
+            if (push) {
+              local.history = local.history.slice(0, local.index + 1);
+              local.history.push(field.value);
+              local.index = local.history.length - 1;
+            }
+          };
+          content.addEventListener('click', event => runSafe(async () => {
+            const act = event.target.closest('[data-act]')?.dataset.act;
+            if (act === 'go') await go(field.value);
+            if (act === 'back' && local.index > 0) await go(local.history[--local.index], false);
+            if (act === 'forward' && local.index < local.history.length - 1) await go(local.history[++local.index], false);
+          }));
+          field.addEventListener('keydown', event => { if (event.key === 'Enter') runSafe(() => go(field.value)); });
+          if (params.url) runSafe(() => go(params.url)); else showHome();
+        });
+      }
+
+      function openMedia(params = {}) {
+        createWindow({ appId: 'media', title: params.path ? `Lowtide Media - ${baseName(params.path)}` : 'Lowtide Media', icon: 'media', width: 780, height: 560 }, (content, api) => {
+          const local = { path: params.path || '', objectURL: '' };
+          content.innerHTML = `
+            <div class="app-shell">
+              <div class="toolbar">
+                <input class="field media-path" placeholder="/Media/song.mp3" value="${escapeHTML(local.path)}">
+                <button class="tool-button" data-act="open">${svg('folder')}打开</button>
+                <button class="tool-button" data-act="export">${svg('download')}导出</button>
+              </div>
+              <div class="media-stage"><div class="section-copy">选择 OPFS 中的图片、音频或视频文件。</div></div>
+            </div>`;
+          const field = $('.media-path', content);
+          const stage = $('.media-stage', content);
+          const load = async path => {
+            local.path = normalizePath(path);
+            if (local.objectURL) URL.revokeObjectURL(local.objectURL);
+            local.objectURL = await fs.objectURL(local.path);
+            const ext = extOf(local.path);
+            if (imageExtensions.has(ext)) stage.innerHTML = `<img src="${local.objectURL}" alt="${escapeHTML(baseName(local.path))}">`;
+            else if (audioExtensions.has(ext)) stage.innerHTML = `<audio src="${local.objectURL}" controls autoplay></audio>`;
+            else stage.innerHTML = `<video src="${local.objectURL}" controls autoplay></video>`;
+            field.value = local.path;
+            api.setTitle(`Lowtide Media - ${baseName(local.path)}`);
+          };
+          content.addEventListener('click', event => runSafe(async () => {
+            const act = event.target.closest('[data-act]')?.dataset.act;
+            if (act === 'open') await load(field.value || prompt('打开媒体路径', '/Media/file.mp4'));
+            if (act === 'export' && local.path) await exportPaths([local.path]);
+          }));
+          field.addEventListener('keydown', event => { if (event.key === 'Enter') runSafe(() => load(field.value)); });
+          if (local.path) runSafe(() => load(local.path));
+        });
+      }
+
+      function openCalculator() {
+        createWindow({ appId: 'calculator', title: 'Abacus', icon: 'calculator', width: 360, height: 520 }, content => {
+          const keys = ['C', '(', ')', '/', '7', '8', '9', '*', '4', '5', '6', '-', '1', '2', '3', '+', '0', '.', 'DEL', '='];
+          content.innerHTML = `<div class="calc-shell"><div class="calc-display">0</div><div class="calc-grid">${keys.map(key => `<button class="calc-key ${key === '=' ? 'accent' : key === 'C' ? 'warn' : ''}" data-key="${key}" type="button">${key}</button>`).join('')}</div></div>`;
+          const display = $('.calc-display', content);
+          let expr = '';
+          const paint = () => { display.textContent = expr || '0'; };
+          content.addEventListener('click', event => {
+            const key = event.target.closest('[data-key]')?.dataset.key;
+            if (!key) return;
+            if (key === 'C') expr = '';
+            else if (key === 'DEL') expr = expr.slice(0, -1);
+            else if (key === '=') {
+              try {
+                if (!/^[0-9+\-*/().\s%]+$/.test(expr)) throw new Error('bad');
+                expr = String(Function(`"use strict"; return (${expr})`)());
+              } catch (_) { expr = 'Error'; setTimeout(() => { expr = ''; paint(); }, 900); }
+            } else {
+              if (expr === 'Error') expr = '';
+              expr += key;
+            }
+            paint();
+          });
+        });
+      }
+
+      function openSettings() {
+        createWindow({ appId: 'settings', title: 'Monsoon Settings', icon: 'settings', width: 780, height: 580 }, (content) => {
+          content.innerHTML = `
+            <div class="app-shell">
+              <div class="settings-scroll">
+                <section class="settings-section">
+                  <div class="section-title">Wallpaper Tide</div>
+                  <p class="section-copy">内置壁纸以暴雨海面、雾、棕榈剪影为基调。也可以上传本地图片，文件会写入 /System 并持久化。</p>
+                  <div class="wallpaper-choices">
+                    ${['storm', 'lagoon', 'ember', 'ink'].map(name => `<button class="wall-choice wall-${name} ${state.config.wallpaper === name ? 'active' : ''}" data-wall="${name}" type="button">${name}</button>`).join('')}
+                  </div>
+                  <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap"><button class="tool-button" data-act="upload-wall">${svg('upload')}上传壁纸</button></div>
+                </section>
+                <section class="settings-section">
+                  <div class="section-title">Storage</div>
+                  <p class="section-copy storage-copy">正在读取浏览器存储配额...</p>
+                  <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap"><button class="tool-button" data-act="persist">${svg('check')}请求持久化</button><button class="tool-button" data-act="reset">${svg('trash')}一键重置 OPFS</button></div>
+                </section>
+                <section class="settings-section">
+                  <div class="section-title">Native Formats</div>
+                  <p class="section-copy">所有格式都可以作为二进制 Blob 存储在 OPFS。浏览器可原生预览或处理的格式如下；zip/tar/gz/tgz 由本文件内置的无依赖解析器解压。</p>
+                  <div class="support-grid">${['txt/code', 'html/svg/pdf', 'png/jpg/gif/webp/avif/bmp/ico', 'mp3/wav/ogg/m4a/aac/flac', 'mp4/webm/ogv/mov/m4v', 'zip/tar/gz/tgz', 'any Blob import/export'].map(item => `<span class="support-chip">${item}</span>`).join('')}</div>
+                </section>
+              </div>
+            </div>`;
+          const updateEstimate = async () => {
+            const estimate = await navigator.storage.estimate?.();
+            const persisted = await navigator.storage.persisted?.();
+            $('.storage-copy', content).textContent = estimate ? `已用 ${formatBytes(estimate.usage)} / 配额 ${formatBytes(estimate.quota)}。持久化授权：${persisted ? '已启用' : '未确认'}。` : '当前浏览器未暴露 estimate API。';
+          };
+          content.addEventListener('click', event => runSafe(async () => {
+            const wall = event.target.closest('[data-wall]')?.dataset.wall;
+            const act = event.target.closest('[data-act]')?.dataset.act;
+            if (wall) {
+              state.config.wallpaper = wall;
+              state.config.wallpaperPath = '';
+              await saveConfig();
+              await applyWallpaper();
+              $$('.wall-choice', content).forEach(btn => btn.classList.toggle('active', btn.dataset.wall === wall));
+            }
+            if (act === 'upload-wall') wallpaperInput.click();
+            if (act === 'persist') { const ok = await navigator.storage.persist?.(); toast(ok ? '浏览器已授予持久化存储' : '浏览器未授予持久化存储'); await updateEstimate(); }
+            if (act === 'reset' && confirm('确定清空 OPFS 并重置 Monsoon OS？此操作不可撤销。')) {
+              await fs.clear();
+              await fs.init();
+              await loadConfig();
+              await applyWallpaper();
+              await renderDesktop();
+              toast('OPFS 已重置');
+              updateEstimate();
+            }
+          }));
+          updateEstimate();
+        });
+      }
+
+      async function pickLocalFiles(dest, callback) {
+        state.importTarget = normalizePath(dest || '/');
+        state.importCallback = callback || null;
+        importInput.value = '';
+        importInput.click();
+      }
+
+      importInput.addEventListener('change', () => runSafe(async () => {
+        if (!importInput.files.length) return;
+        await importFileList(importInput.files, state.importTarget);
+        if (state.importCallback) await state.importCallback();
+        await renderDesktop();
+      }));
+
+      wallpaperInput.addEventListener('change', () => runSafe(async () => {
+        const file = wallpaperInput.files[0];
+        if (!file) return;
+        const path = await fs.uniquePath('/System', `wallpaper-${stamp()}-${file.name}`);
+        await fs.writeFile(path, file, { type: file.type || getMime(file.name) });
+        state.config.wallpaper = 'custom';
+        state.config.wallpaperPath = path;
+        await saveConfig();
+        await applyWallpaper();
+        toast('自定义壁纸已写入 OPFS');
+      }));
+
+      async function importFileList(fileList, dest) {
+        const files = Array.from(fileList);
+        let count = 0;
+        for (const file of files) {
+          const target = await fs.uniquePath(dest, file.name || `Imported-${stamp()}`);
+          await fs.writeFile(target, file, { type: file.type || getMime(file.name) });
+          count += 1;
+        }
+        toast(`已导入 ${count} 个文件到 ${normalizePath(dest)}`);
+      }
+
+      async function copyPathsTo(paths, dest) {
+        for (const path of paths) {
+          const stat = await fs.stat(path);
+          if (normalizePath(path) === normalizePath(dest) || splitPath(path).dir === normalizePath(dest)) continue;
+          const target = await fs.uniquePath(dest, stat.name);
+          await fs.copy(path, target);
+        }
+      }
+
+      async function pastePaths(dest) {
+        if (!state.clipboard.paths.length) return;
+        for (const path of state.clipboard.paths) {
+          const info = await fs.stat(path);
+          const target = await fs.uniquePath(dest, info.name);
+          if (state.clipboard.op === 'cut') await fs.move(path, target);
+          else await fs.copy(path, target);
+        }
+        if (state.clipboard.op === 'cut') state.clipboard = { op: 'copy', paths: [] };
+        toast('粘贴完成');
+      }
+
+      async function renamePath(path) {
+        const current = baseName(path);
+        const next = prompt('输入新名称', current);
+        if (!next || next === current) return;
+        await fs.rename(path, next);
+        toast('已重命名');
+      }
+
+      async function deletePaths(paths) {
+        if (!paths.length) return;
+        if (!confirm(`删除 ${paths.length} 项？`)) return;
+        for (const path of paths) await fs.remove(path);
+        toast('已删除');
+      }
+
+      async function exportPaths(paths) {
+        const clean = paths.filter(Boolean).map(normalizePath);
+        if (!clean.length) { toast('请先选择要导出的文件', 'danger'); return; }
+        if (clean.length === 1) {
+          const info = await fs.stat(clean[0]);
+          if (info.kind === 'file') {
+            const url = await fs.objectURL(clean[0]);
+            downloadURL(url, info.name);
+            setTimeout(() => URL.revokeObjectURL(url), 5000);
+          } else {
+            const blob = await createTar([clean[0]]);
+            const url = URL.createObjectURL(blob);
+            downloadURL(url, `${info.name || 'export'}.tar`);
+            setTimeout(() => URL.revokeObjectURL(url), 5000);
+          }
+        } else {
+          const blob = await createTar(clean);
+          const url = URL.createObjectURL(blob);
+          downloadURL(url, `monsoon-export-${stamp()}.tar`);
+          setTimeout(() => URL.revokeObjectURL(url), 5000);
+        }
+      }
+
+      function downloadURL(url, name) {
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = name;
+        document.body.append(a);
+        a.click();
+        a.remove();
+      }
+
+      async function createTar(paths) {
+        const chunks = [];
+        const addEntry = async (path, rootName = '') => {
+          const info = await fs.stat(path);
+          const name = rootName || info.name || 'root';
+          if (info.kind === 'directory') {
+            chunks.push(tarHeader(name.endsWith('/') ? name : `${name}/`, 0, '5'));
+            const children = await fs.list(path);
+            for (const child of children) await addEntry(child.path, `${name}/${child.name}`);
+          } else {
+            const buffer = new Uint8Array(await fs.readFile(path, 'arrayBuffer'));
+            chunks.push(tarHeader(name, buffer.byteLength, '0'));
+            chunks.push(buffer);
+            const pad = (512 - (buffer.byteLength % 512)) % 512;
+            if (pad) chunks.push(new Uint8Array(pad));
+          }
+        };
+        for (const path of paths) await addEntry(path);
+        chunks.push(new Uint8Array(1024));
+        return new Blob(chunks, { type: 'application/x-tar' });
+      }
+
+      function tarHeader(name, size, type) {
+        const out = new Uint8Array(512);
+        const write = (str, offset, length) => {
+          const bytes = new TextEncoder().encode(str);
+          out.set(bytes.slice(0, length), offset);
+        };
+        const oct = (num, length) => (num.toString(8).padStart(length - 1, '0') + '\0').slice(-length);
+        write(name, 0, 100);
+        write(oct(0o644, 8), 100, 8);
+        write(oct(0, 8), 108, 8);
+        write(oct(0, 8), 116, 8);
+        write(oct(size, 12), 124, 12);
+        write(oct(Math.floor(Date.now() / 1000), 12), 136, 12);
+        for (let i = 148; i < 156; i += 1) out[i] = 32;
+        write(type, 156, 1);
+        write('ustar', 257, 6);
+        write('00', 263, 2);
+        let sum = 0;
+        for (const byte of out) sum += byte;
+        write(oct(sum, 8), 148, 8);
+        return out;
+      }
+
+      async function extractArchiveToFolder(path) {
+        const info = await fs.stat(path);
+        const dest = await fs.uniquePath(splitPath(path).dir, withoutArchiveExt(info.name));
+        await fs.mkdir(dest);
+        const count = await extractArchive(path, dest);
+        toast(`已解压 ${count} 个条目到 ${dest}`);
+        launchApp('explorer', { path: dest });
+        await renderDesktop();
+      }
+
+      async function extractArchive(path, dest) {
+        const lower = baseName(path).toLowerCase();
+        const buffer = await fs.readFile(path, 'arrayBuffer');
+        if (lower.endsWith('.zip')) return unzip(buffer, dest);
+        if (lower.endsWith('.tar')) return untar(buffer, dest);
+        if (lower.endsWith('.tar.gz') || lower.endsWith('.tgz')) return untar(await decompress(buffer, 'gzip'), dest);
+        if (lower.endsWith('.gz')) {
+          const data = await decompress(buffer, 'gzip');
+          const outName = baseName(path).replace(/\.gz$/i, '') || 'decompressed.bin';
+          await fs.writeFile(await fs.uniquePath(dest, outName), data);
+          return 1;
+        }
+        throw new Error('暂不支持此压缩格式');
+      }
+
+      async function decompress(buffer, format) {
+        if (!('DecompressionStream' in window)) throw new Error('当前浏览器不支持 DecompressionStream');
+        const stream = new Blob([buffer]).stream().pipeThrough(new DecompressionStream(format));
+        return new Response(stream).arrayBuffer();
+      }
+
+      async function unzip(buffer, dest) {
+        const view = new DataView(buffer);
+        const bytes = new Uint8Array(buffer);
+        const decoder = new TextDecoder();
+        let eocd = -1;
+        for (let i = bytes.length - 22; i >= Math.max(0, bytes.length - 66000); i -= 1) {
+          if (view.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+        }
+        if (eocd < 0) throw new Error('ZIP 结构无效');
+        const total = view.getUint16(eocd + 10, true);
+        let offset = view.getUint32(eocd + 16, true);
+        let count = 0;
+        for (let i = 0; i < total; i += 1) {
+          if (view.getUint32(offset, true) !== 0x02014b50) throw new Error('ZIP 中央目录损坏');
+          const flags = view.getUint16(offset + 8, true);
+          const method = view.getUint16(offset + 10, true);
+          const compSize = view.getUint32(offset + 20, true);
+          const nameLen = view.getUint16(offset + 28, true);
+          const extraLen = view.getUint16(offset + 30, true);
+          const commentLen = view.getUint16(offset + 32, true);
+          const localOffset = view.getUint32(offset + 42, true);
+          const nameBytes = bytes.slice(offset + 46, offset + 46 + nameLen);
+          const rawName = (flags & 0x800) ? new TextDecoder('utf-8').decode(nameBytes) : decoder.decode(nameBytes);
+          const safeName = safeArchivePath(rawName);
+          offset += 46 + nameLen + extraLen + commentLen;
+          if (!safeName) continue;
+          if (safeName.endsWith('/')) { await fs.mkdir(joinPath(dest, safeName)); count += 1; continue; }
+          const localNameLen = view.getUint16(localOffset + 26, true);
+          const localExtraLen = view.getUint16(localOffset + 28, true);
+          const dataStart = localOffset + 30 + localNameLen + localExtraLen;
+          const compressed = buffer.slice(dataStart, dataStart + compSize);
+          let data;
+          if (method === 0) data = compressed;
+          else if (method === 8) data = await decompress(compressed, 'deflate-raw');
+          else throw new Error(`ZIP 压缩方法 ${method} 暂不支持`);
+          await fs.writeFile(await fs.uniquePath(splitPath(joinPath(dest, safeName)).dir, baseName(safeName)), data);
+          count += 1;
+        }
+        return count;
+      }
+
+      async function untar(buffer, dest) {
+        const bytes = new Uint8Array(buffer);
+        const decoder = new TextDecoder();
+        let offset = 0;
+        let count = 0;
+        while (offset + 512 <= bytes.length) {
+          const block = bytes.slice(offset, offset + 512);
+          if (block.every(byte => byte === 0)) break;
+          const name = readTarString(block, 0, 100);
+          const prefix = readTarString(block, 345, 155);
+          const fullName = safeArchivePath(prefix ? `${prefix}/${name}` : name);
+          const size = parseInt(readTarString(block, 124, 12).trim() || '0', 8);
+          const type = String.fromCharCode(block[156] || 48);
+          offset += 512;
+          if (fullName) {
+            if (type === '5' || fullName.endsWith('/')) await fs.mkdir(joinPath(dest, fullName));
+            else await fs.writeFile(await fs.uniquePath(splitPath(joinPath(dest, fullName)).dir, baseName(fullName)), bytes.slice(offset, offset + size));
+            count += 1;
+          }
+          offset += Math.ceil(size / 512) * 512;
+        }
+        return count;
+
+        function readTarString(block, start, length) {
+          const slice = block.slice(start, start + length);
+          const end = slice.indexOf(0);
+          return decoder.decode(end >= 0 ? slice.slice(0, end) : slice).trim();
+        }
+      }
+
+      function safeArchivePath(name) {
+        return normalizePath('/' + String(name).replaceAll('\\', '/')).slice(1);
+      }
+
+      function toggleFullscreen() {
+        if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
+        else document.exitFullscreen?.();
+      }
+
+      function escapeHTML(value) {
+        const span = document.createElement('span');
+        span.textContent = String(value);
+        return span.innerHTML;
+      }
+
+      function tickClock() {
+        $('#clock').textContent = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+      }
+
+      document.addEventListener('click', event => {
+        if (!event.target.closest('#startMenu') && !event.target.closest('#startButton') && !event.target.closest('#contextMenu')) closeMenus();
+      });
+      document.addEventListener('keydown', event => {
+        if (event.key === 'Escape') closeMenus();
+        if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'o') { event.preventDefault(); launchApp('explorer'); }
+      });
+      window.addEventListener('resize', () => runSafe(renderDesktop));
+
+      async function bootOS() {
+        try {
+          await fs.init();
+          await loadConfig();
+          await applyWallpaper();
+          renderStartMenu();
+          await renderDesktop();
+          tickClock();
+          setInterval(tickClock, 15000);
+          setTimeout(() => boot.classList.add('done'), 500);
+        } catch (error) {
+          console.error(error);
+          boot.innerHTML = `<div class="boot-card"><div class="boot-title">OPFS Required</div><div class="boot-sub" style="max-width:640px;line-height:1.8;letter-spacing:0;text-transform:none">${escapeHTML(error.message)}</div></div>`;
+        }
+      }
+
+      bootOS();
+    })();
+  </script>
+</body>
+</html>

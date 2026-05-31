@@ -1,0 +1,3389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>StormOS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Martian+Mono:wght@300;400;500;600;700&family=Syne:wght@400;500;600;700;800&family=Syne+Mono&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-deep: #040d0e;
+  --bg-mid: #071418;
+  --bg-surface: #0d1f24;
+  --bg-elevated: #122830;
+  --bg-hover: #1a3540;
+  --teal-dark: #0a3d4a;
+  --teal-mid: #0e5c70;
+  --teal-bright: #14849e;
+  --teal-glow: #1ab8d8;
+  --teal-accent: #2dd4f0;
+  --storm-grey: #3a5a62;
+  --mist: #7ab8c4;
+  --foam: #b8dde6;
+  --white: #e8f4f7;
+  --text-dim: #4a7a86;
+  --text-mid: #7ab8c4;
+  --text-bright: #c8eaf0;
+  --danger: #c0392b;
+  --danger-glow: #e74c3c;
+  --success: #1abc9c;
+  --warning: #f39c12;
+  --border: rgba(20, 132, 158, 0.2);
+  --border-bright: rgba(45, 212, 240, 0.4);
+  --glass: rgba(13, 31, 36, 0.85);
+  --glass-light: rgba(18, 40, 48, 0.7);
+  --shadow: 0 8px 32px rgba(0,0,0,0.6), 0 0 0 1px rgba(20,132,158,0.15);
+  --shadow-glow: 0 0 30px rgba(26, 184, 216, 0.15);
+  --font-ui: 'Syne', sans-serif;
+  --font-mono: 'Martian Mono', monospace;
+  --font-display: 'Syne', sans-serif;
+  --radius: 8px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --taskbar-h: 52px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: 100%; height: 100%;
+  overflow: hidden;
+  font-family: var(--font-ui);
+  background: var(--bg-deep);
+  color: var(--text-bright);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ─── DESKTOP ─── */
+#desktop {
+  position: fixed; inset: 0;
+  overflow: hidden;
+}
+
+/* ─── NOTIFICATION BADGE ─── */
+.taskbar-app-btn .badge {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--teal-accent);
+  flex-shrink: 0;
+}
+
+/* ─── FILE EXPLORER MULTI SELECT ─── */
+.fe-selection-box {
+  position: absolute;
+  border: 1px solid var(--teal-accent);
+  background: rgba(45,212,240,0.06);
+  pointer-events: none;
+  z-index: 50;
+  display: none;
+}
+.fe-content { position: relative; }
+
+/* ─── IMAGE VIEWER ─── */
+.img-viewer-wrap {
+  height: 100%;
+  display: flex; flex-direction: column;
+  background: #000;
+}
+.img-viewer-bar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 12px;
+  background: rgba(7,20,24,0.8);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.img-viewer-info { font-family: var(--font-mono); font-size: 11px; color: var(--text-dim); }
+.img-viewer-body {
+  flex: 1;
+  overflow: auto;
+  display: flex; align-items: center; justify-content: center;
+  padding: 16px;
+}
+.img-viewer-body img {
+  max-width: 100%; max-height: 100%;
+  object-fit: contain;
+  border-radius: 4px;
+  transition: transform 0.2s;
+}
+
+/* ─── SMOOTH WINDOW TRANSITIONS ─── */
+.window .win-body {
+  transition: opacity 0.1s;
+}
+.window.minimized .win-body { opacity: 0; }
+
+/* ─── TASKBAR CLOCK HOVER ─── */
+#clock:hover { color: var(--text-bright); }
+
+/* ─── SETTINGS COLOR SWATCH ─── */
+.color-row { display: flex; gap: 8px; align-items: center; }
+.color-swatch {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: border-color 0.15s;
+}
+.color-swatch:hover, .color-swatch.active { border-color: var(--teal-accent); }
+
+/* ─── WELCOME WIDGET ─── */
+#welcome-widget {
+  position: absolute;
+  top: 16px; right: 16px;
+  padding: 16px 20px;
+  background: var(--glass);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  max-width: 240px;
+  z-index: 5;
+  animation: fadeIn 1s ease 2s both;
+  pointer-events: none;
+}
+#welcome-widget h4 {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--teal-accent);
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+}
+#welcome-widget p {
+  font-size: 11px;
+  color: var(--text-dim);
+  line-height: 1.6;
+}
+
+/* ─── BREADCRUMB ─── */
+.breadcrumb {
+  display: flex; align-items: center; gap: 4px;
+  flex: 1; min-width: 0; overflow: hidden;
+}
+.breadcrumb-seg {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  cursor: pointer;
+  white-space: nowrap;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: color 0.1s;
+}
+.breadcrumb-seg:last-child { color: var(--teal-accent); cursor: default; }
+.breadcrumb-seg:not(:last-child):hover { color: var(--text-bright); }
+.breadcrumb-sep { color: var(--text-dim); font-size: 10px; flex-shrink: 0; }
+
+
+#wallpaper {
+  position: absolute; inset: 0;
+  background: 
+    radial-gradient(ellipse 80% 60% at 70% 90%, rgba(14,92,112,0.4) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 80% at 20% 20%, rgba(4,20,25,0.9) 0%, transparent 70%),
+    radial-gradient(ellipse 100% 50% at 50% 0%, rgba(7,20,24,0.95) 0%, transparent 50%),
+    linear-gradient(180deg, #071418 0%, #0a2a34 35%, #0d3d4a 55%, #0a5a6a 75%, #08707f 90%, #0a8090 100%);
+  transition: background 0.5s ease;
+  z-index: 0;
+}
+
+#wallpaper.wp-custom {
+  background-size: cover !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+}
+
+/* Rain effect */
+#rain-canvas {
+  position: absolute; inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.25;
+}
+
+/* Palm silhouette */
+#palm-svg {
+  position: absolute;
+  bottom: var(--taskbar-h);
+  right: 0;
+  width: min(340px, 40vw);
+  z-index: 2;
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+#desktop-icons-area {
+  position: absolute;
+  inset: 0 0 var(--taskbar-h) 0;
+  z-index: 10;
+  pointer-events: none;
+}
+#desktop-icons-area > * { pointer-events: all; }
+
+/* ─── DESKTOP ICONS ─── */
+.desktop-icon {
+  position: absolute;
+  width: 80px;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 8px 4px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background 0.15s;
+  text-align: center;
+}
+.desktop-icon:hover { background: rgba(45,212,240,0.08); }
+.desktop-icon.selected { background: rgba(45,212,240,0.15); outline: 1px solid rgba(45,212,240,0.4); }
+.desktop-icon svg { width: 44px; height: 44px; filter: drop-shadow(0 2px 8px rgba(26,184,216,0.4)); }
+.desktop-icon span {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--white);
+  text-shadow: 0 1px 4px rgba(0,0,0,0.9), 0 0 8px rgba(0,0,0,0.8);
+  line-height: 1.3;
+  word-break: break-word;
+  max-width: 76px;
+}
+
+/* Selection box */
+#selection-box {
+  position: absolute;
+  border: 1px solid var(--teal-accent);
+  background: rgba(45,212,240,0.08);
+  pointer-events: none;
+  z-index: 9;
+  display: none;
+}
+
+/* ─── TASKBAR ─── */
+#taskbar {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  height: var(--taskbar-h);
+  background: rgba(7, 20, 24, 0.92);
+  backdrop-filter: blur(24px) saturate(180%);
+  border-top: 1px solid var(--border);
+  display: flex; align-items: center;
+  padding: 0 12px;
+  gap: 8px;
+  z-index: 9000;
+}
+
+#start-btn {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 14px;
+  background: linear-gradient(135deg, var(--teal-dark), var(--teal-mid));
+  border: 1px solid var(--border-bright);
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--teal-accent);
+  letter-spacing: 1.5px;
+  white-space: nowrap;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+#start-btn:hover {
+  background: linear-gradient(135deg, var(--teal-mid), var(--teal-bright));
+  box-shadow: 0 0 16px rgba(45,212,240,0.3);
+}
+#start-btn svg { width: 18px; height: 18px; }
+
+#taskbar-apps {
+  display: flex; align-items: center; gap: 4px;
+  flex: 1;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+#taskbar-apps::-webkit-scrollbar { display: none; }
+
+.taskbar-app-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 10px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-mid);
+  white-space: nowrap;
+  max-width: 140px;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.taskbar-app-btn svg { width: 14px; height: 14px; flex-shrink: 0; }
+.taskbar-app-btn:hover { background: var(--bg-hover); color: var(--text-bright); }
+.taskbar-app-btn.active {
+  background: var(--teal-dark);
+  border-color: var(--teal-bright);
+  color: var(--teal-accent);
+}
+.taskbar-app-btn span { overflow: hidden; text-overflow: ellipsis; }
+
+#taskbar-tray {
+  display: flex; align-items: center; gap: 10px;
+  flex-shrink: 0;
+  padding-left: 8px;
+  border-left: 1px solid var(--border);
+}
+#clock {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-mid);
+  white-space: nowrap;
+  cursor: default;
+}
+
+/* ─── START MENU ─── */
+#start-menu {
+  position: fixed;
+  bottom: calc(var(--taskbar-h) + 8px);
+  left: 12px;
+  width: 320px;
+  background: var(--glass);
+  backdrop-filter: blur(32px) saturate(200%);
+  border: 1px solid var(--border-bright);
+  border-radius: var(--radius-xl);
+  padding: 20px;
+  z-index: 8900;
+  display: none;
+  box-shadow: var(--shadow), var(--shadow-glow);
+  animation: menuSlide 0.2s cubic-bezier(0.34,1.56,0.64,1);
+}
+@keyframes menuSlide {
+  from { opacity: 0; transform: translateY(12px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+#start-menu.open { display: block; }
+
+#start-menu-header {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--teal-accent);
+  letter-spacing: 2px;
+  margin-bottom: 16px;
+  text-shadow: 0 0 20px rgba(45,212,240,0.5);
+}
+
+.start-menu-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.start-app-item {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 12px 8px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: center;
+}
+.start-app-item:hover {
+  background: var(--bg-hover);
+  border-color: var(--teal-bright);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(26,184,216,0.2);
+}
+.start-app-item svg { width: 28px; height: 28px; }
+.start-app-item span { font-size: 10px; font-weight: 600; color: var(--text-mid); letter-spacing: 0.5px; }
+
+/* ─── CONTEXT MENU ─── */
+#context-menu {
+  position: fixed;
+  background: var(--glass);
+  backdrop-filter: blur(24px);
+  border: 1px solid var(--border-bright);
+  border-radius: var(--radius-lg);
+  padding: 6px;
+  z-index: 9999;
+  min-width: 180px;
+  display: none;
+  box-shadow: var(--shadow);
+  animation: ctxIn 0.12s ease;
+}
+@keyframes ctxIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+#context-menu.open { display: block; }
+
+.ctx-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-bright);
+  transition: background 0.1s;
+}
+.ctx-item:hover { background: var(--bg-hover); color: var(--teal-accent); }
+.ctx-item svg { width: 14px; height: 14px; color: var(--text-dim); }
+.ctx-item:hover svg { color: var(--teal-bright); }
+.ctx-separator { height: 1px; background: var(--border); margin: 4px 0; }
+.ctx-item.danger { color: var(--danger-glow); }
+.ctx-item.danger svg { color: var(--danger-glow); }
+.ctx-item.danger:hover { background: rgba(231,76,60,0.1); }
+
+/* ─── WINDOWS ─── */
+.window {
+  position: fixed;
+  background: var(--glass);
+  backdrop-filter: blur(32px) saturate(180%);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+  transition: box-shadow 0.2s;
+  min-width: 300px;
+  min-height: 200px;
+}
+.window.focused {
+  border-color: rgba(45,212,240,0.3);
+  box-shadow: var(--shadow), 0 0 40px rgba(26,184,216,0.1);
+}
+.window.minimized { display: none; }
+.window.maximized {
+  left: 0 !important; top: 0 !important;
+  width: 100vw !important;
+  height: calc(100vh - var(--taskbar-h)) !important;
+  border-radius: 0;
+}
+
+.win-titlebar {
+  display: flex; align-items: center;
+  padding: 10px 14px;
+  background: rgba(7,20,24,0.6);
+  border-bottom: 1px solid var(--border);
+  cursor: move;
+  flex-shrink: 0;
+  gap: 10px;
+}
+.win-title-icon { width: 16px; height: 16px; flex-shrink: 0; }
+.win-title-text {
+  flex: 1;
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-mid);
+  letter-spacing: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.win-controls { display: flex; gap: 6px; flex-shrink: 0; }
+.win-btn {
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+  background: var(--bg-elevated);
+}
+.win-btn svg { width: 10px; height: 10px; }
+.win-btn.close { background: rgba(192,57,43,0.3); }
+.win-btn.close:hover { background: var(--danger-glow); box-shadow: 0 0 8px rgba(231,76,60,0.5); }
+.win-btn.minimize { background: rgba(243,156,18,0.2); }
+.win-btn.minimize:hover { background: var(--warning); }
+.win-btn.maximize { background: rgba(26,188,156,0.2); }
+.win-btn.maximize:hover { background: var(--success); }
+.win-btn svg path, .win-btn svg line, .win-btn svg rect { stroke: rgba(255,255,255,0.7); }
+
+.win-body {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Resize handles */
+.resize-handle {
+  position: absolute;
+  z-index: 10;
+}
+.rh-n  { top: 0; left: 8px; right: 8px; height: 4px; cursor: n-resize; }
+.rh-s  { bottom: 0; left: 8px; right: 8px; height: 4px; cursor: s-resize; }
+.rh-w  { left: 0; top: 8px; bottom: 8px; width: 4px; cursor: w-resize; }
+.rh-e  { right: 0; top: 8px; bottom: 8px; width: 4px; cursor: e-resize; }
+.rh-nw { top: 0; left: 0; width: 12px; height: 12px; cursor: nw-resize; }
+.rh-ne { top: 0; right: 0; width: 12px; height: 12px; cursor: ne-resize; }
+.rh-sw { bottom: 0; left: 0; width: 12px; height: 12px; cursor: sw-resize; }
+.rh-se { bottom: 0; right: 0; width: 12px; height: 12px; cursor: se-resize; }
+
+/* ─── FILE EXPLORER ─── */
+#app-files-content {
+  display: flex; height: 100%;
+  font-family: var(--font-ui);
+}
+.fe-sidebar {
+  width: 160px;
+  background: rgba(4,13,14,0.6);
+  border-right: 1px solid var(--border);
+  padding: 12px 8px;
+  display: flex; flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+.fe-sidebar-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-mid);
+  transition: all 0.1s;
+}
+.fe-sidebar-item:hover { background: var(--bg-hover); color: var(--text-bright); }
+.fe-sidebar-item.active { background: var(--teal-dark); color: var(--teal-accent); }
+.fe-sidebar-item svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+.fe-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+.fe-toolbar {
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(7,20,24,0.4);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+.fe-path {
+  flex: 1;
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-mid);
+  min-width: 0;
+  cursor: default;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fe-btn {
+  display: flex; align-items: center; justify-content: center;
+  padding: 5px 10px; gap: 5px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-mid);
+  white-space: nowrap;
+  transition: all 0.1s;
+}
+.fe-btn svg { width: 12px; height: 12px; }
+.fe-btn:hover { background: var(--bg-hover); color: var(--teal-accent); border-color: var(--teal-bright); }
+.fe-btn.primary { background: var(--teal-dark); border-color: var(--teal-bright); color: var(--teal-accent); }
+.fe-btn.primary:hover { background: var(--teal-mid); }
+
+.fe-content {
+  flex: 1;
+  overflow: auto;
+  padding: 12px;
+  position: relative;
+}
+
+.fe-drop-zone {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(45,212,240,0.06);
+  border: 2px dashed var(--teal-accent);
+  border-radius: var(--radius);
+  z-index: 100;
+  display: none;
+  pointer-events: none;
+}
+.fe-drop-zone span { font-size: 14px; font-weight: 600; color: var(--teal-accent); }
+.fe-drop-zone.active { display: flex; }
+
+.fe-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  gap: 8px;
+}
+.fe-grid.list-mode {
+  display: flex; flex-direction: column; gap: 2px;
+}
+
+.fe-item {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 10px 6px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  text-align: center;
+  border: 1px solid transparent;
+  transition: all 0.12s;
+  position: relative;
+}
+.fe-item:hover { background: rgba(45,212,240,0.07); border-color: var(--border); }
+.fe-item.selected { background: rgba(45,212,240,0.12); border-color: rgba(45,212,240,0.4); }
+.fe-item svg { width: 38px; height: 38px; }
+.fe-item-name {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-bright);
+  word-break: break-all;
+  line-height: 1.3;
+  max-width: 86px;
+}
+
+.fe-item.list-mode {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  text-align: left;
+}
+.fe-item.list-mode svg { width: 20px; height: 20px; flex-shrink: 0; }
+.fe-item.list-mode .fe-item-name { max-width: none; flex: 1; }
+.fe-item-meta { font-size: 10px; color: var(--text-dim); white-space: nowrap; }
+
+.fe-status {
+  display: flex; align-items: center; gap: 12px;
+  padding: 6px 12px;
+  border-top: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-dim);
+  flex-shrink: 0;
+  background: rgba(4,13,14,0.4);
+}
+
+/* ─── TEXT EDITOR ─── */
+#app-editor-content {
+  display: flex; flex-direction: column; height: 100%;
+}
+.editor-toolbar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(7,20,24,0.5);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+.editor-filename {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--teal-accent);
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.editor-area {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+.editor-gutter {
+  padding: 12px 8px 12px 12px;
+  background: rgba(4,13,14,0.5);
+  border-right: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text-dim);
+  text-align: right;
+  min-width: 48px;
+  overflow: hidden;
+  user-select: none;
+  flex-shrink: 0;
+}
+.editor-textarea {
+  flex: 1;
+  padding: 12px;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text-bright);
+  resize: none;
+  white-space: pre;
+  overflow: auto;
+  tab-size: 2;
+}
+.editor-statusbar {
+  display: flex; align-items: center; gap: 16px;
+  padding: 4px 12px;
+  border-top: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-dim);
+  background: rgba(4,13,14,0.5);
+  flex-shrink: 0;
+}
+
+/* ─── BROWSER ─── */
+#app-browser-content {
+  display: flex; flex-direction: column; height: 100%;
+}
+.browser-bar {
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(7,20,24,0.5);
+  flex-shrink: 0;
+}
+.browser-nav-btn {
+  width: 28px; height: 28px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.1s;
+  color: var(--text-mid);
+}
+.browser-nav-btn:hover { background: var(--bg-hover); color: var(--teal-accent); }
+.browser-nav-btn svg { width: 12px; height: 12px; }
+.browser-url {
+  flex: 1;
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 5px 12px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-bright);
+  outline: none;
+}
+.browser-url:focus { border-color: var(--teal-bright); }
+.browser-iframe {
+  flex: 1;
+  border: none;
+  background: white;
+}
+
+/* ─── MEDIA PLAYER ─── */
+#app-media-content {
+  display: flex; flex-direction: column; height: 100%;
+  background: var(--bg-deep);
+  align-items: center;
+}
+.media-display {
+  flex: 1;
+  display: flex; align-items: center; justify-content: center;
+  width: 100%;
+  background: #000;
+  position: relative;
+}
+.media-display video, .media-display audio {
+  max-width: 100%; max-height: 100%;
+}
+.media-placeholder {
+  display: flex; flex-direction: column; align-items: center; gap: 16px;
+  color: var(--text-dim);
+}
+.media-placeholder svg { width: 64px; height: 64px; opacity: 0.4; }
+.media-placeholder p { font-size: 13px; font-weight: 500; }
+.media-controls {
+  width: 100%;
+  padding: 16px;
+  background: rgba(7,20,24,0.9);
+  border-top: 1px solid var(--border);
+  display: flex; flex-direction: column; gap: 12px;
+}
+.media-info { font-size: 12px; font-weight: 600; color: var(--text-bright); text-align: center; }
+.media-buttons { display: flex; align-items: center; justify-content: center; gap: 12px; }
+.media-btn {
+  width: 36px; height: 36px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+}
+.media-btn:hover { background: var(--teal-dark); border-color: var(--teal-bright); }
+.media-btn svg { width: 16px; height: 16px; }
+.media-btn.play-btn { width: 44px; height: 44px; background: var(--teal-dark); border-color: var(--teal-bright); }
+.media-volume { display: flex; align-items: center; gap: 8px; }
+.media-volume svg { width: 14px; height: 14px; color: var(--text-dim); }
+.media-seek, .media-vol-slider {
+  -webkit-appearance: none;
+  background: var(--bg-elevated);
+  border-radius: 4px;
+  height: 4px;
+  cursor: pointer;
+  border: none;
+}
+.media-seek { flex: 1; }
+.media-vol-slider { width: 80px; }
+.media-seek::-webkit-slider-thumb, .media-vol-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  background: var(--teal-accent);
+  cursor: pointer;
+}
+.media-open-btn {
+  margin: auto;
+  padding: 8px 20px;
+  background: var(--teal-dark);
+  border: 1px solid var(--teal-bright);
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--teal-accent);
+  transition: all 0.15s;
+}
+.media-open-btn:hover { background: var(--teal-mid); }
+
+/* ─── CALCULATOR ─── */
+#app-calc-content {
+  display: flex; flex-direction: column; height: 100%;
+  padding: 20px;
+  gap: 12px;
+  background: linear-gradient(160deg, var(--bg-mid), var(--bg-deep));
+}
+.calc-display {
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px 20px;
+  text-align: right;
+  flex-shrink: 0;
+}
+.calc-expr {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  min-height: 16px;
+  word-break: break-all;
+}
+.calc-result {
+  font-family: var(--font-mono);
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--teal-accent);
+  word-break: break-all;
+  line-height: 1.2;
+}
+.calc-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  flex: 1;
+}
+.calc-btn {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-bright);
+  transition: all 0.1s;
+  display: flex; align-items: center; justify-content: center;
+  min-height: 48px;
+}
+.calc-btn:hover { background: var(--bg-hover); color: var(--teal-accent); }
+.calc-btn:active { transform: scale(0.94); }
+.calc-btn.op { color: var(--teal-bright); border-color: rgba(20,132,158,0.3); }
+.calc-btn.eq {
+  background: linear-gradient(135deg, var(--teal-dark), var(--teal-mid));
+  border-color: var(--teal-bright);
+  color: var(--teal-accent);
+  grid-row: span 2;
+}
+.calc-btn.eq:hover { background: linear-gradient(135deg, var(--teal-mid), var(--teal-bright)); }
+.calc-btn.clear { color: var(--danger-glow); }
+.calc-btn.span2 { grid-column: span 2; }
+
+/* ─── SETTINGS ─── */
+#app-settings-content {
+  overflow-y: auto; height: 100%;
+  padding: 24px;
+  display: flex; flex-direction: column; gap: 24px;
+}
+.settings-section { display: flex; flex-direction: column; gap: 12px; }
+.settings-title {
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-dim);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.settings-item {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.settings-item-info { display: flex; flex-direction: column; gap: 3px; }
+.settings-item-label { font-size: 13px; font-weight: 600; color: var(--text-bright); }
+.settings-item-desc { font-size: 11px; color: var(--text-dim); }
+.settings-btn {
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  color: var(--text-mid);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: var(--font-ui);
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+.settings-btn:hover { background: var(--bg-hover); color: var(--teal-accent); border-color: var(--teal-bright); }
+.settings-btn.danger { color: var(--danger-glow); border-color: rgba(231,76,60,0.3); }
+.settings-btn.danger:hover { background: rgba(231,76,60,0.1); border-color: var(--danger-glow); }
+
+.wp-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.wp-thumb {
+  aspect-ratio: 16/9;
+  border-radius: var(--radius);
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: all 0.15s;
+  overflow: hidden;
+  position: relative;
+}
+.wp-thumb:hover { border-color: var(--teal-bright); transform: scale(1.02); }
+.wp-thumb.active { border-color: var(--teal-accent); box-shadow: 0 0 12px rgba(45,212,240,0.4); }
+.wp-thumb-inner { width: 100%; height: 100%; }
+
+/* ─── DIALOGS ─── */
+.dialog-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(4px);
+  z-index: 19000;
+  display: flex; align-items: center; justify-content: center;
+  animation: fadeIn 0.15s ease;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.dialog {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-bright);
+  border-radius: var(--radius-xl);
+  padding: 28px;
+  min-width: 300px;
+  max-width: 90vw;
+  box-shadow: var(--shadow), var(--shadow-glow);
+  animation: dialogIn 0.2s cubic-bezier(0.34,1.56,0.64,1);
+}
+@keyframes dialogIn {
+  from { opacity: 0; transform: scale(0.92); }
+  to { opacity: 1; transform: scale(1); }
+}
+.dialog h3 {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-bright);
+  margin-bottom: 12px;
+}
+.dialog p { font-size: 13px; color: var(--text-mid); margin-bottom: 20px; line-height: 1.6; }
+.dialog-input {
+  width: 100%;
+  background: var(--bg-deep);
+  border: 1px solid var(--border-bright);
+  border-radius: var(--radius);
+  padding: 8px 12px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-bright);
+  outline: none;
+  margin-bottom: 16px;
+}
+.dialog-input:focus { border-color: var(--teal-accent); }
+.dialog-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.dialog-btn {
+  padding: 8px 20px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text-mid);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--font-ui);
+  transition: all 0.15s;
+}
+.dialog-btn:hover { background: var(--bg-hover); }
+.dialog-btn.primary {
+  background: var(--teal-dark);
+  border-color: var(--teal-bright);
+  color: var(--teal-accent);
+}
+.dialog-btn.primary:hover { background: var(--teal-mid); }
+.dialog-btn.danger {
+  background: rgba(192,57,43,0.2);
+  border-color: var(--danger-glow);
+  color: var(--danger-glow);
+}
+.dialog-btn.danger:hover { background: rgba(231,76,60,0.3); }
+
+/* ─── TOAST ─── */
+#toast-container {
+  position: fixed;
+  top: 16px; right: 16px;
+  z-index: 20000;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.toast {
+  background: var(--glass);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--border-bright);
+  border-radius: var(--radius-lg);
+  padding: 10px 16px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-bright);
+  animation: toastIn 0.25s cubic-bezier(0.34,1.56,0.64,1);
+  display: flex; align-items: center; gap: 10px;
+  min-width: 200px;
+  max-width: 320px;
+}
+.toast svg { width: 16px; height: 16px; flex-shrink: 0; }
+.toast.success { border-color: rgba(26,188,156,0.5); }
+.toast.success svg { color: var(--success); }
+.toast.error { border-color: rgba(231,76,60,0.5); }
+.toast.error svg { color: var(--danger-glow); }
+.toast.info { border-color: var(--border-bright); }
+.toast.info svg { color: var(--teal-accent); }
+@keyframes toastIn {
+  from { opacity: 0; transform: translateX(20px) scale(0.95); }
+  to { opacity: 1; transform: translateX(0) scale(1); }
+}
+@keyframes toastOut {
+  from { opacity: 1; transform: translateX(0); }
+  to { opacity: 0; transform: translateX(20px); }
+}
+
+/* ─── LOADING SCREEN ─── */
+#loading-screen {
+  position: fixed; inset: 0;
+  background: var(--bg-deep);
+  z-index: 99999;
+  display: flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: 24px;
+}
+.loading-logo {
+  font-family: var(--font-display);
+  font-size: 48px;
+  font-weight: 800;
+  letter-spacing: 6px;
+  color: var(--teal-accent);
+  text-shadow: 0 0 40px rgba(45,212,240,0.6);
+  animation: pulse 2s ease infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+.loading-bar-wrap {
+  width: 200px;
+  height: 2px;
+  background: var(--bg-elevated);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.loading-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--teal-dark), var(--teal-accent));
+  border-radius: 2px;
+  animation: loadBar 1.8s ease forwards;
+}
+@keyframes loadBar {
+  from { width: 0; }
+  to { width: 100%; }
+}
+.loading-sub {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  letter-spacing: 2px;
+}
+
+/* ─── SCROLLBARS ─── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--teal-dark); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--teal-mid); }
+
+/* ─── MOBILE ─── */
+@media (max-width: 640px) {
+  :root { --taskbar-h: 60px; }
+  #taskbar { padding: 0 8px; gap: 4px; }
+  #start-btn span { display: none; }
+  #start-menu { width: calc(100vw - 24px); left: 12px; }
+  .start-menu-grid { grid-template-columns: repeat(4, 1fr); }
+  .window {
+    left: 0 !important; top: 0 !important;
+    width: 100vw !important;
+    height: calc(100vh - var(--taskbar-h)) !important;
+    border-radius: 0 !important;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0 !important;
+  }
+  #palm-svg { display: none; }
+  .fe-sidebar { width: 120px; }
+  .calc-btn { font-size: 14px; min-height: 40px; }
+}
+
+/* ─── ANIMATIONS ─── */
+@keyframes windowOpen {
+  from { opacity: 0; transform: scale(0.95) translateY(8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+.window { animation: windowOpen 0.2s cubic-bezier(0.34,1.56,0.64,1); }
+
+/* ─── PROGRESS BAR ─── */
+.progress-wrap {
+  width: 100%; height: 6px;
+  background: var(--bg-elevated);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--teal-dark), var(--teal-accent));
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+/* ─── RENAME INLINE ─── */
+.fe-item-name input {
+  background: var(--bg-deep);
+  border: 1px solid var(--teal-bright);
+  border-radius: 4px;
+  padding: 1px 4px;
+  font-size: 11px;
+  font-family: var(--font-ui);
+  color: var(--text-bright);
+  width: 100%;
+  outline: none;
+  text-align: center;
+}
+
+/* clipboard hint */
+.fe-cut { opacity: 0.5; }
+</style>
+</head>
+<body>
+
+<!-- LOADING SCREEN -->
+<div id="loading-screen">
+  <div class="loading-logo">STORM<span style="color:var(--mist);font-weight:300">OS</span></div>
+  <div class="loading-bar-wrap"><div class="loading-bar"></div></div>
+  <div class="loading-sub">INITIALIZING FILE SYSTEM...</div>
+</div>
+
+<!-- DESKTOP -->
+<div id="desktop">
+  <div id="wallpaper"></div>
+  <canvas id="rain-canvas"></canvas>
+  
+  <!-- Welcome widget -->
+  <div id="welcome-widget">
+    <h4>STORMОС</h4>
+    <p>Right-click desktop for options. Drag files to import. Double-click to open.</p>
+  </div>
+
+  <!-- Palm tree SVG -->
+  <svg id="palm-svg" viewBox="0 0 300 500" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M180 500 L175 320 Q172 290 168 270 Q162 240 155 210 Q150 185 148 160 Q145 130 150 100" stroke="#0a1e22" stroke-width="18" stroke-linecap="round" fill="none"/>
+    <path d="M150 100 Q120 60 60 30 Q40 20 10 10" stroke="#0a2a2e" stroke-width="4" stroke-linecap="round" fill="none"/>
+    <path d="M60 30 Q75 40 90 55 Q110 75 130 95" stroke="#0a2a2e" stroke-width="3" fill="none"/>
+    <path d="M150 100 Q190 65 240 45 Q265 35 290 30" stroke="#0a2a2e" stroke-width="4" stroke-linecap="round" fill="none"/>
+    <path d="M240 45 Q225 58 210 72 Q185 90 162 105" stroke="#0a2a2e" stroke-width="3" fill="none"/>
+    <path d="M150 100 Q140 50 155 0" stroke="#0a2a2e" stroke-width="4" stroke-linecap="round" fill="none"/>
+    <path d="M148 160 Q100 130 50 140 Q30 145 5 155" stroke="#0a2a2e" stroke-width="4" stroke-linecap="round" fill="none"/>
+    <path d="M50 140 Q75 150 100 162" stroke="#0a2a2e" stroke-width="3" fill="none"/>
+    <path d="M148 160 Q195 130 240 145 Q260 152 280 165" stroke="#0a2a2e" stroke-width="4" stroke-linecap="round" fill="none"/>
+    <ellipse cx="130" cy="85" rx="28" ry="20" fill="#07191f" transform="rotate(-20 130 85)"/>
+    <ellipse cx="185" cy="75" rx="28" ry="18" fill="#07191f" transform="rotate(15 185 75)"/>
+    <ellipse cx="155" cy="55" rx="22" ry="16" fill="#07191f"/>
+    <ellipse cx="90" cy="105" rx="24" ry="16" fill="#071a20" transform="rotate(10 90 105)"/>
+    <ellipse cx="215" cy="110" rx="24" ry="16" fill="#071a20" transform="rotate(-10 215 110)"/>
+  </svg>
+  
+  <!-- Desktop icons area -->
+  <div id="desktop-icons-area"></div>
+  <div id="selection-box"></div>
+</div>
+
+<!-- TASKBAR -->
+<div id="taskbar">
+  <button id="start-btn" onclick="toggleStartMenu()">
+    <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5">
+      <rect x="1" y="1" width="7" height="7" rx="1.5"/>
+      <rect x="10" y="1" width="7" height="7" rx="1.5"/>
+      <rect x="1" y="10" width="7" height="7" rx="1.5"/>
+      <rect x="10" y="10" width="7" height="7" rx="1.5"/>
+    </svg>
+    <span>STORM</span>
+  </button>
+  <div id="taskbar-apps"></div>
+  <div id="taskbar-tray">
+    <div id="clock">--:--</div>
+  </div>
+</div>
+
+<!-- START MENU -->
+<div id="start-menu">
+  <div id="start-menu-header">STORM<span style="font-weight:400;color:var(--mist)">OS</span></div>
+  <div class="start-menu-grid" id="start-menu-grid"></div>
+</div>
+
+<!-- CONTEXT MENU -->
+<div id="context-menu"></div>
+
+<!-- TOAST CONTAINER -->
+<div id="toast-container"></div>
+
+<script>
+'use strict';
+
+/* ═══════════════════════════════════════════════════════
+   SVG ICON LIBRARY
+═══════════════════════════════════════════════════════ */
+const Icons = {
+  folder: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" fill="rgba(14,92,112,0.3)" stroke="#14849e"/></svg>`,
+  folderOpen: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" fill="rgba(20,132,158,0.4)" stroke="#2dd4f0"/></svg>`,
+  file: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" fill="rgba(13,31,36,0.5)" stroke="#4a7a86"/><polyline points="14 2 14 8 20 8" stroke="#4a7a86"/></svg>`,
+  fileText: `<svg viewBox="0 0 24 24" fill="none" stroke="#7ab8c4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" fill="rgba(13,40,50,0.5)"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>`,
+  fileCode: `<svg viewBox="0 0 24 24" fill="none" stroke="#2dd4f0" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" fill="rgba(10,61,74,0.4)"/><polyline points="14 2 14 8 20 8"/><polyline points="10 13 8 15 10 17"/><polyline points="14 13 16 15 14 17"/></svg>`,
+  fileImage: `<svg viewBox="0 0 24 24" fill="none" stroke="#1abc9c" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" fill="rgba(26,188,156,0.15)"/><polyline points="14 2 14 8 20 8"/><circle cx="10" cy="14" r="2"/><path d="M20 17l-5-5-3 3-2-2-4 4"/></svg>`,
+  fileVideo: `<svg viewBox="0 0 24 24" fill="none" stroke="#e67e22" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" fill="rgba(230,126,34,0.15)"/><polyline points="14 2 14 8 20 8"/><polygon points="10 12 15 15 10 18 10 12"/></svg>`,
+  fileAudio: `<svg viewBox="0 0 24 24" fill="none" stroke="#9b59b6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" fill="rgba(155,89,182,0.15)"/><polyline points="14 2 14 8 20 8"/><path d="M9 18V12l8-2v6"/><circle cx="9" cy="18" r="1"/><circle cx="17" cy="16" r="1"/></svg>`,
+  fileZip: `<svg viewBox="0 0 24 24" fill="none" stroke="#f39c12" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" fill="rgba(243,156,18,0.15)"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="10" x2="12" y2="10.01"/><line x1="12" y1="13" x2="12" y2="13.01"/><line x1="12" y1="16" x2="12" y2="19"/></svg>`,
+  filePdf: `<svg viewBox="0 0 24 24" fill="none" stroke="#e74c3c" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" fill="rgba(231,76,60,0.15)"/><polyline points="14 2 14 8 20 8"/><path d="M8 15h1.5a1.5 1.5 0 000-3H8v5m5-5h2m-2 2.5h1.5"/></svg>`,
+  explorer: `<svg viewBox="0 0 24 24" fill="none" stroke="#14849e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" fill="rgba(14,92,112,0.3)"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>`,
+  editor: `<svg viewBox="0 0 24 24" fill="none" stroke="#2dd4f0" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9" fill="none"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" fill="rgba(45,212,240,0.15)"/></svg>`,
+  browser: `<svg viewBox="0 0 24 24" fill="none" stroke="#1ab8d8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" fill="rgba(26,184,216,0.15)"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>`,
+  media: `<svg viewBox="0 0 24 24" fill="none" stroke="#e67e22" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3" fill="rgba(230,126,34,0.2)"/></svg>`,
+  calc: `<svg viewBox="0 0 24 24" fill="none" stroke="#1abc9c" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2" fill="rgba(26,188,156,0.15)"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="8" y2="10" stroke-width="2.5"/><line x1="12" y1="10" x2="12" y2="10" stroke-width="2.5"/><line x1="16" y1="10" x2="16" y2="10" stroke-width="2.5"/><line x1="8" y1="14" x2="8" y2="14" stroke-width="2.5"/><line x1="12" y1="14" x2="12" y2="14" stroke-width="2.5"/><line x1="16" y1="14" x2="16" y2="14" stroke-width="2.5"/><line x1="8" y1="18" x2="8" y2="18" stroke-width="2.5"/><line x1="12" y1="18" x2="12" y2="18" stroke-width="2.5"/><line x1="16" y1="18" x2="16" y2="18" stroke-width="2.5"/></svg>`,
+  settings: `<svg viewBox="0 0 24 24" fill="none" stroke="#7ab8c4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3" fill="rgba(122,184,196,0.2)"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" fill="rgba(122,184,196,0.1)"/></svg>`,
+  close: `<svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="2" y1="2" x2="8" y2="8"/><line x1="8" y1="2" x2="2" y2="8"/></svg>`,
+  minimize: `<svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="2" y1="5" x2="8" y2="5"/></svg>`,
+  maximize: `<svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="6" height="6" rx="0.5"/></svg>`,
+  restore: `<svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="3" width="6" height="6" rx="0.5"/><path d="M3 3V1h6v6H7"/></svg>`,
+  back: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="15 18 9 12 15 6"/></svg>`,
+  forward: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="9 18 15 12 9 6"/></svg>`,
+  refresh: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>`,
+  up: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="18 15 12 9 6 15"/></svg>`,
+  home: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>`,
+  plus: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`,
+  trash: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>`,
+  copy: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>`,
+  cut: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></svg>`,
+  paste: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>`,
+  rename: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`,
+  download: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`,
+  upload: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>`,
+  grid: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>`,
+  list: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>`,
+  info: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`,
+  check: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>`,
+  warn: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
+  volume: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 010 14.14M15.54 8.46a5 5 0 010 7.07"/></svg>`,
+  play: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="5 3 19 12 5 21 5 3" fill="rgba(255,255,255,0.1)"/></svg>`,
+  pause: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>`,
+  skipBack: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/></svg>`,
+  skipFwd: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>`,
+  newFolder: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>`,
+  zip: `<svg viewBox="0 0 24 24" fill="none" stroke="#f39c12" stroke-width="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" fill="rgba(243,156,18,0.1)"/><polyline points="14 2 14 8 20 8"/><path d="M10 12h4l-4 4h4"/></svg>`,
+  star: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`,
+  doc: `<svg viewBox="0 0 24 24" fill="none" stroke="#7ab8c4" stroke-width="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" fill="rgba(122,184,196,0.15)"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>`,
+};
+
+/* ═══════════════════════════════════════════════════════
+   VIRTUAL FILE SYSTEM — OPFS BACKEND
+═══════════════════════════════════════════════════════ */
+const fs = (() => {
+  let root = null;
+
+  async function init() {
+    root = await navigator.storage.getDirectory();
+    // Create default directories
+    for (const dir of ['Documents', 'Pictures', 'Music', 'Videos', 'Downloads']) {
+      try { await root.getDirectoryHandle(dir, { create: true }); } catch {}
+    }
+  }
+
+  async function _resolve(pathStr, create = false) {
+    const parts = pathStr.split('/').filter(Boolean);
+    let handle = root;
+    for (let i = 0; i < parts.length - 1; i++) {
+      handle = await handle.getDirectoryHandle(parts[i], { create });
+    }
+    return { parent: handle, name: parts[parts.length - 1] || '', parts };
+  }
+
+  async function _resolveDir(pathStr, create = false) {
+    const parts = pathStr.split('/').filter(Boolean);
+    let handle = root;
+    for (const p of parts) {
+      handle = await handle.getDirectoryHandle(p, { create });
+    }
+    return handle;
+  }
+
+  async function readdir(pathStr) {
+    const dir = pathStr === '/' ? root : await _resolveDir(pathStr);
+    const entries = [];
+    for await (const [name, handle] of dir.entries()) {
+      const isDir = handle.kind === 'directory';
+      let size = 0;
+      let modified = null;
+      if (!isDir) {
+        try {
+          const f = await handle.getFile();
+          size = f.size;
+          modified = f.lastModified;
+        } catch {}
+      }
+      entries.push({ name, isDir, size, modified, handle });
+    }
+    entries.sort((a, b) => {
+      if (a.isDir !== b.isDir) return a.isDir ? -1 : 1;
+      return a.name.localeCompare(b.name);
+    });
+    return entries;
+  }
+
+  async function readFile(pathStr) {
+    const { parent, name } = await _resolve(pathStr);
+    const fh = await parent.getFileHandle(name);
+    return await fh.getFile();
+  }
+
+  async function readText(pathStr) {
+    const file = await readFile(pathStr);
+    return await file.text();
+  }
+
+  async function readArrayBuffer(pathStr) {
+    const file = await readFile(pathStr);
+    return await file.arrayBuffer();
+  }
+
+  async function writeFile(pathStr, data) {
+    const { parent, name } = await _resolve(pathStr, true);
+    const fh = await parent.getFileHandle(name, { create: true });
+    const w = await fh.createWritable();
+    await w.write(data);
+    await w.close();
+  }
+
+  async function writeText(pathStr, text) {
+    return writeFile(pathStr, new Blob([text], { type: 'text/plain' }));
+  }
+
+  async function mkdir(pathStr) {
+    return _resolveDir(pathStr, true);
+  }
+
+  async function remove(pathStr) {
+    const { parent, name } = await _resolve(pathStr);
+    try {
+      const dh = await parent.getDirectoryHandle(name);
+      await dh.remove({ recursive: true });
+    } catch {
+      await parent.removeEntry(name, { recursive: true });
+    }
+  }
+
+  async function exists(pathStr) {
+    try {
+      const { parent, name } = await _resolve(pathStr);
+      try { await parent.getFileHandle(name); return 'file'; } catch {}
+      try { await parent.getDirectoryHandle(name); return 'dir'; } catch {}
+      return false;
+    } catch { return false; }
+  }
+
+  async function copy(srcPath, destPath) {
+    const srcType = await exists(srcPath);
+    if (!srcType) throw new Error('Source not found');
+    if (srcType === 'dir') {
+      await mkdir(destPath);
+      const entries = await readdir(srcPath);
+      for (const e of entries) {
+        await copy(`${srcPath}/${e.name}`, `${destPath}/${e.name}`);
+      }
+    } else {
+      const data = await readArrayBuffer(srcPath);
+      await writeFile(destPath, data);
+    }
+  }
+
+  async function move(srcPath, destPath) {
+    await copy(srcPath, destPath);
+    await remove(srcPath);
+  }
+
+  async function rename(pathStr, newName) {
+    const parts = pathStr.split('/');
+    parts[parts.length - 1] = newName;
+    const newPath = parts.join('/');
+    await move(pathStr, newPath);
+    return newPath;
+  }
+
+  async function importFile(file, destDir) {
+    const destPath = `${destDir}/${file.name}`;
+    const buf = await file.arrayBuffer();
+    await writeFile(destPath, buf);
+    return destPath;
+  }
+
+  async function clearAll() {
+    for await (const [name, handle] of root.entries()) {
+      await root.removeEntry(name, { recursive: true });
+    }
+    for (const dir of ['Documents', 'Pictures', 'Music', 'Videos', 'Downloads']) {
+      await root.getDirectoryHandle(dir, { create: true });
+    }
+  }
+
+  // Recursive dir walk
+  async function walk(pathStr, result = []) {
+    const entries = await readdir(pathStr);
+    for (const e of entries) {
+      const full = pathStr === '/' ? `/${e.name}` : `${pathStr}/${e.name}`;
+      result.push({ path: full, ...e });
+      if (e.isDir) await walk(full, result);
+    }
+    return result;
+  }
+
+  return { init, readdir, readFile, readText, readArrayBuffer, writeFile, writeText, mkdir, remove, exists, copy, move, rename, importFile, clearAll, walk };
+})();
+
+/* ═══════════════════════════════════════════════════════
+   RAIN ANIMATION
+═══════════════════════════════════════════════════════ */
+function initRain() {
+  const canvas = document.getElementById('rain-canvas');
+  const ctx = canvas.getContext('2d');
+  let drops = [];
+  
+  function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    drops = Array.from({ length: 120 }, () => ({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      len: Math.random() * 20 + 10,
+      speed: Math.random() * 4 + 3,
+      opacity: Math.random() * 0.5 + 0.1,
+      width: Math.random() * 0.8 + 0.3,
+    }));
+  }
+  
+  function animate() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drops.forEach(d => {
+      ctx.beginPath();
+      ctx.moveTo(d.x, d.y);
+      ctx.lineTo(d.x - d.len * 0.15, d.y + d.len);
+      ctx.strokeStyle = `rgba(180, 220, 230, ${d.opacity})`;
+      ctx.lineWidth = d.width;
+      ctx.stroke();
+      d.y += d.speed;
+      d.x -= d.speed * 0.15;
+      if (d.y > canvas.height) {
+        d.y = -d.len;
+        d.x = Math.random() * canvas.width;
+      }
+    });
+    requestAnimationFrame(animate);
+  }
+  
+  resize();
+  window.addEventListener('resize', resize);
+  animate();
+}
+
+/* ═══════════════════════════════════════════════════════
+   CLOCK
+═══════════════════════════════════════════════════════ */
+function updateClock() {
+  const el = document.getElementById('clock');
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2, '0');
+  const m = String(now.getMinutes()).padStart(2, '0');
+  const s = String(now.getSeconds()).padStart(2, '0');
+  const d = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  el.textContent = `${d}  ${h}:${m}:${s}`;
+}
+
+/* ═══════════════════════════════════════════════════════
+   TOAST
+═══════════════════════════════════════════════════════ */
+function toast(msg, type = 'info', duration = 3000) {
+  const container = document.getElementById('toast-container');
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  const icons = { info: Icons.info, success: Icons.check, error: Icons.warn };
+  el.innerHTML = `${icons[type] || Icons.info}<span>${msg}</span>`;
+  container.appendChild(el);
+  setTimeout(() => {
+    el.style.animation = 'toastOut 0.3s ease forwards';
+    setTimeout(() => el.remove(), 300);
+  }, duration);
+}
+
+/* ═══════════════════════════════════════════════════════
+   DIALOG SYSTEM
+═══════════════════════════════════════════════════════ */
+function showDialog({ title, body, input = null, actions = [] }) {
+  return new Promise(resolve => {
+    const overlay = document.createElement('div');
+    overlay.className = 'dialog-overlay';
+    let inputHtml = input ? `<input class="dialog-input" type="text" value="${input.value || ''}" placeholder="${input.placeholder || ''}">` : '';
+    let actionsHtml = actions.map((a, i) =>
+      `<button class="dialog-btn ${a.cls || ''}" data-idx="${i}">${a.label}</button>`
+    ).join('');
+    overlay.innerHTML = `<div class="dialog"><h3>${title}</h3><p>${body}</p>${inputHtml}<div class="dialog-actions">${actionsHtml}</div></div>`;
+    document.body.appendChild(overlay);
+    const inputEl = overlay.querySelector('.dialog-input');
+    if (inputEl) { inputEl.focus(); inputEl.select(); }
+    overlay.querySelectorAll('.dialog-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx = parseInt(btn.dataset.idx);
+        const val = inputEl ? inputEl.value : null;
+        overlay.remove();
+        resolve({ action: actions[idx].key, value: val });
+      });
+    });
+    overlay.addEventListener('click', e => { if (e.target === overlay) { overlay.remove(); resolve({ action: 'cancel' }); } });
+    if (inputEl) {
+      inputEl.addEventListener('keydown', e => {
+        if (e.key === 'Enter') { overlay.querySelector('[data-idx="0"]')?.click(); }
+        if (e.key === 'Escape') { overlay.remove(); resolve({ action: 'cancel' }); }
+      });
+    }
+  });
+}
+
+/* ═══════════════════════════════════════════════════════
+   WINDOW MANAGER
+═══════════════════════════════════════════════════════ */
+const WM = (() => {
+  let windows = new Map();
+  let zCounter = 100;
+  let focused = null;
+  
+  function create({ id, title, icon, width = 700, height = 480, minW = 280, minH = 180, content, onClose, appId }) {
+    if (windows.has(id)) { focus(id); return; }
+    
+    const isMobile = window.innerWidth <= 640;
+    const w = isMobile ? window.innerWidth : Math.min(width, window.innerWidth - 40);
+    const h = isMobile ? window.innerHeight - 60 : Math.min(height, window.innerHeight - 80);
+    const x = isMobile ? 0 : Math.max(20, Math.floor((window.innerWidth - w) / 2) + (windows.size % 5) * 24);
+    const y = isMobile ? 0 : Math.max(10, Math.floor((window.innerHeight - h) / 3) + (windows.size % 4) * 24);
+    
+    const el = document.createElement('div');
+    el.className = 'window';
+    el.dataset.id = id;
+    el.style.cssText = `left:${x}px;top:${y}px;width:${w}px;height:${h}px;z-index:${++zCounter}`;
+    
+    el.innerHTML = `
+      <div class="win-titlebar" data-drag="${id}">
+        <div class="win-title-icon">${icon}</div>
+        <div class="win-title-text">${title}</div>
+        <div class="win-controls">
+          <button class="win-btn minimize" title="Minimize">${Icons.minimize}</button>
+          <button class="win-btn maximize" title="Maximize">${Icons.maximize}</button>
+          <button class="win-btn close" title="Close">${Icons.close}</button>
+        </div>
+      </div>
+      <div class="win-body">${content}</div>
+      <div class="resize-handle rh-n"></div>
+      <div class="resize-handle rh-s"></div>
+      <div class="resize-handle rh-w"></div>
+      <div class="resize-handle rh-e"></div>
+      <div class="resize-handle rh-nw"></div>
+      <div class="resize-handle rh-ne"></div>
+      <div class="resize-handle rh-sw"></div>
+      <div class="resize-handle rh-se"></div>
+    `;
+    
+    document.getElementById('desktop').appendChild(el);
+    
+    const state = { id, title, icon, el, minimized: false, maximized: false, prevRect: null, appId, onClose, minW, minH };
+    windows.set(id, state);
+    
+    // Controls
+    el.querySelector('.win-btn.close').addEventListener('click', () => close(id));
+    el.querySelector('.win-btn.minimize').addEventListener('click', () => minimize(id));
+    el.querySelector('.win-btn.maximize').addEventListener('click', () => toggleMaximize(id));
+    el.querySelector('.win-titlebar').addEventListener('dblclick', () => toggleMaximize(id));
+    
+    // Focus on click
+    el.addEventListener('mousedown', () => focus(id), true);
+    el.addEventListener('touchstart', () => focus(id), { passive: true });
+    
+    setupDrag(el, id);
+    setupResize(el, id);
+    
+    focus(id);
+    addTaskbarBtn(id);
+    return id;
+  }
+  
+  function focus(id) {
+    if (focused === id) return;
+    windows.forEach((w, wid) => { w.el.classList.remove('focused'); });
+    const win = windows.get(id);
+    if (!win) return;
+    win.el.style.zIndex = ++zCounter;
+    win.el.classList.add('focused');
+    if (win.minimized) restore(id);
+    focused = id;
+    updateTaskbar();
+  }
+  
+  function minimize(id) {
+    const win = windows.get(id);
+    if (!win) return;
+    win.minimized = true;
+    win.el.classList.add('minimized');
+    focused = null;
+    updateTaskbar();
+  }
+  
+  function restore(id) {
+    const win = windows.get(id);
+    if (!win) return;
+    win.minimized = false;
+    win.el.classList.remove('minimized');
+    focus(id);
+    updateTaskbar();
+  }
+  
+  function toggleMaximize(id) {
+    const win = windows.get(id);
+    if (!win) return;
+    if (win.maximized) {
+      win.el.style.cssText = `left:${win.prevRect.x}px;top:${win.prevRect.y}px;width:${win.prevRect.w}px;height:${win.prevRect.h}px;z-index:${++zCounter}`;
+      win.el.classList.remove('maximized');
+      win.maximized = false;
+      win.el.querySelector('.win-btn.maximize').innerHTML = Icons.maximize;
+    } else {
+      win.prevRect = { x: parseInt(win.el.style.left), y: parseInt(win.el.style.top), w: win.el.offsetWidth, h: win.el.offsetHeight };
+      win.el.classList.add('maximized');
+      win.el.style.zIndex = ++zCounter;
+      win.maximized = true;
+      win.el.querySelector('.win-btn.maximize').innerHTML = Icons.restore;
+    }
+  }
+  
+  function close(id) {
+    const win = windows.get(id);
+    if (!win) return;
+    if (win.onClose) win.onClose();
+    win.el.remove();
+    windows.delete(id);
+    focused = null;
+    removeTaskbarBtn(id);
+    updateTaskbar();
+  }
+  
+  function addTaskbarBtn(id) {
+    const win = windows.get(id);
+    if (!win) return;
+    const bar = document.getElementById('taskbar-apps');
+    const btn = document.createElement('button');
+    btn.className = 'taskbar-app-btn';
+    btn.dataset.wid = id;
+    btn.innerHTML = `${win.icon}<span>${win.title}</span>`;
+    btn.addEventListener('click', () => {
+      const w = windows.get(id);
+      if (!w) return;
+      if (w.minimized) restore(id);
+      else if (focused === id) minimize(id);
+      else focus(id);
+    });
+    bar.appendChild(btn);
+  }
+  
+  function removeTaskbarBtn(id) {
+    const btn = document.querySelector(`.taskbar-app-btn[data-wid="${id}"]`);
+    if (btn) btn.remove();
+  }
+  
+  function updateTaskbar() {
+    document.querySelectorAll('.taskbar-app-btn').forEach(btn => {
+      const win = windows.get(btn.dataset.wid);
+      btn.classList.toggle('active', win && !win.minimized && focused === btn.dataset.wid);
+    });
+  }
+  
+  function setupDrag(el, id) {
+    const titlebar = el.querySelector('[data-drag]');
+    let startX, startY, startL, startT, dragging = false;
+    
+    const onStart = (x, y) => {
+      const win = windows.get(id);
+      if (!win || win.maximized) return;
+      dragging = true;
+      startX = x; startY = y;
+      startL = parseInt(el.style.left) || 0;
+      startT = parseInt(el.style.top) || 0;
+      document.body.style.cursor = 'move';
+    };
+    const onMove = (x, y) => {
+      if (!dragging) return;
+      const dx = x - startX, dy = y - startY;
+      const newL = Math.max(-el.offsetWidth + 60, startL + dx);
+      const newT = Math.max(0, Math.min(window.innerHeight - 60, startT + dy));
+      el.style.left = newL + 'px';
+      el.style.top = newT + 'px';
+    };
+    const onEnd = () => { dragging = false; document.body.style.cursor = ''; };
+    
+    titlebar.addEventListener('mousedown', e => { if (e.button !== 0) return; e.preventDefault(); onStart(e.clientX, e.clientY); });
+    titlebar.addEventListener('touchstart', e => { const t = e.touches[0]; onStart(t.clientX, t.clientY); }, { passive: true });
+    document.addEventListener('mousemove', e => onMove(e.clientX, e.clientY));
+    document.addEventListener('touchmove', e => { const t = e.touches[0]; onMove(t.clientX, t.clientY); }, { passive: true });
+    document.addEventListener('mouseup', onEnd);
+    document.addEventListener('touchend', onEnd);
+  }
+  
+  function setupResize(el, id) {
+    el.querySelectorAll('.resize-handle').forEach(handle => {
+      let startX, startY, startW, startH, startL, startT, resizing = false;
+      const dirs = handle.className.match(/rh-(\w+)/)[1];
+      
+      const onStart = (x, y) => {
+        const win = windows.get(id);
+        if (!win || win.maximized) return;
+        resizing = true;
+        startX = x; startY = y;
+        startW = el.offsetWidth; startH = el.offsetHeight;
+        startL = parseInt(el.style.left) || 0;
+        startT = parseInt(el.style.top) || 0;
+        document.body.style.userSelect = 'none';
+      };
+      
+      const onMove = (x, y) => {
+        if (!resizing) return;
+        const win = windows.get(id);
+        if (!win) return;
+        const dx = x - startX, dy = y - startY;
+        let newW = startW, newH = startH, newL = startL, newT = startT;
+        if (dirs.includes('e')) newW = Math.max(win.minW, startW + dx);
+        if (dirs.includes('s')) newH = Math.max(win.minH, startH + dy);
+        if (dirs.includes('w')) { newW = Math.max(win.minW, startW - dx); newL = startL + (startW - newW); }
+        if (dirs.includes('n')) { newH = Math.max(win.minH, startH - dy); newT = startT + (startH - newH); }
+        el.style.left = newL + 'px'; el.style.top = newT + 'px';
+        el.style.width = newW + 'px'; el.style.height = newH + 'px';
+      };
+      
+      const onEnd = () => { resizing = false; document.body.style.userSelect = ''; };
+      
+      handle.addEventListener('mousedown', e => { e.preventDefault(); e.stopPropagation(); onStart(e.clientX, e.clientY); });
+      handle.addEventListener('touchstart', e => { const t = e.touches[0]; onStart(t.clientX, t.clientY); e.stopPropagation(); }, { passive: true });
+      document.addEventListener('mousemove', e => onMove(e.clientX, e.clientY));
+      document.addEventListener('touchmove', e => { const t = e.touches[0]; onMove(t.clientX, t.clientY); }, { passive: true });
+      document.addEventListener('mouseup', onEnd);
+      document.addEventListener('touchend', onEnd);
+    });
+  }
+  
+  function setTitle(id, title) {
+    const win = windows.get(id);
+    if (!win) return;
+    win.title = title;
+    win.el.querySelector('.win-title-text').textContent = title;
+    const btn = document.querySelector(`.taskbar-app-btn[data-wid="${id}"] span`);
+    if (btn) btn.textContent = title;
+  }
+  
+  return { create, focus, minimize, restore, close, toggleMaximize, setTitle, windows };
+})();
+
+/* ═══════════════════════════════════════════════════════
+   FILE TYPE HELPERS
+═══════════════════════════════════════════════════════ */
+const EXT_MAP = {
+  // Text/Code
+  txt: 'text', md: 'text', json: 'code', js: 'code', ts: 'code', html: 'code',
+  css: 'code', py: 'code', sh: 'code', yaml: 'code', yml: 'code', xml: 'code',
+  csv: 'text', log: 'text', ini: 'text', cfg: 'text', conf: 'text', toml: 'code',
+  rs: 'code', go: 'code', c: 'code', cpp: 'code', h: 'code', java: 'code',
+  php: 'code', rb: 'code', swift: 'code', kt: 'code', sql: 'code',
+  // Images
+  jpg: 'image', jpeg: 'image', png: 'image', gif: 'image', webp: 'image',
+  svg: 'image', bmp: 'image', ico: 'image', tiff: 'image', avif: 'image',
+  // Video
+  mp4: 'video', webm: 'video', ogg: 'video', mkv: 'video', mov: 'video',
+  avi: 'video', m4v: 'video',
+  // Audio
+  mp3: 'audio', wav: 'audio', flac: 'audio', aac: 'audio', m4a: 'audio',
+  opus: 'audio', weba: 'audio',
+  // Archive
+  zip: 'zip', tar: 'zip', gz: 'zip', bz2: 'zip', xz: 'zip', '7z': 'zip',
+  // Docs
+  pdf: 'pdf', doc: 'doc', docx: 'doc', xls: 'doc', xlsx: 'doc', ppt: 'doc',
+};
+
+function getFileType(name) {
+  const ext = name.split('.').pop().toLowerCase();
+  return EXT_MAP[ext] || 'file';
+}
+
+function getFileIcon(name, isDir = false) {
+  if (isDir) return Icons.folder;
+  const type = getFileType(name);
+  const map = {
+    text: Icons.fileText, code: Icons.fileCode, image: Icons.fileImage,
+    video: Icons.fileVideo, audio: Icons.fileAudio, zip: Icons.fileZip,
+    pdf: Icons.filePdf, doc: Icons.doc,
+  };
+  return map[type] || Icons.file;
+}
+
+function formatSize(bytes) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  return `${(bytes / 1024 / 1024 / 1024).toFixed(1)} GB`;
+}
+
+function formatDate(ts) {
+  if (!ts) return '';
+  return new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+/* ═══════════════════════════════════════════════════════
+   CONTEXT MENU SYSTEM
+═══════════════════════════════════════════════════════ */
+const ContextMenu = (() => {
+  const el = document.getElementById('context-menu');
+  let cleanup = null;
+  
+  function show(x, y, items) {
+    el.innerHTML = '';
+    items.forEach(item => {
+      if (item.separator) {
+        const sep = document.createElement('div');
+        sep.className = 'ctx-separator';
+        el.appendChild(sep);
+      } else {
+        const btn = document.createElement('div');
+        btn.className = `ctx-item${item.danger ? ' danger' : ''}`;
+        btn.innerHTML = `${item.icon || ''}<span>${item.label}</span>`;
+        if (item.action) btn.addEventListener('click', () => { hide(); item.action(); });
+        else btn.style.opacity = '0.4';
+        el.appendChild(btn);
+      }
+    });
+    
+    el.classList.add('open');
+    const rect = el.getBoundingClientRect();
+    const safeX = Math.min(x, window.innerWidth - rect.width - 8);
+    const safeY = Math.min(y, window.innerHeight - rect.height - 8);
+    el.style.left = safeX + 'px';
+    el.style.top = safeY + 'px';
+    
+    setTimeout(() => {
+      cleanup = (e) => { if (!el.contains(e.target)) hide(); };
+      document.addEventListener('mousedown', cleanup);
+      document.addEventListener('touchstart', cleanup, { passive: true });
+    }, 10);
+  }
+  
+  function hide() {
+    el.classList.remove('open');
+    if (cleanup) {
+      document.removeEventListener('mousedown', cleanup);
+      document.removeEventListener('touchstart', cleanup);
+      cleanup = null;
+    }
+  }
+  
+  return { show, hide };
+})();
+
+/* ═══════════════════════════════════════════════════════
+   DESKTOP ICONS
+═══════════════════════════════════════════════════════ */
+const Desktop = (() => {
+  const area = document.getElementById('desktop-icons-area');
+  const selBox = document.getElementById('selection-box');
+  let icons = [];
+  let positions = {};
+  let selected = new Set();
+  let selStart = null;
+  
+  const DESKTOP_APPS = [
+    { id: 'files', label: 'Files', icon: Icons.explorer, app: 'files' },
+    { id: 'editor', label: 'Editor', icon: Icons.editor, app: 'editor' },
+    { id: 'browser', label: 'Browser', icon: Icons.browser, app: 'browser' },
+    { id: 'media', label: 'Media', icon: Icons.media, app: 'media' },
+    { id: 'calc', label: 'Calculator', icon: Icons.calc, app: 'calc' },
+    { id: 'settings', label: 'Settings', icon: Icons.settings, app: 'settings' },
+  ];
+  
+  function load() {
+    try { positions = JSON.parse(localStorage.getItem('stormOS_iconPos') || '{}'); } catch {}
+    area.innerHTML = '';
+    icons = [];
+    
+    DESKTOP_APPS.forEach((app, i) => {
+      const col = 0, row = i;
+      const defaultX = 16 + col * 96;
+      const defaultY = 16 + row * 100;
+      const pos = positions[app.id] || { x: defaultX, y: defaultY };
+      
+      const el = document.createElement('div');
+      el.className = 'desktop-icon';
+      el.dataset.id = app.id;
+      el.dataset.app = app.app;
+      el.innerHTML = `${app.icon}<span>${app.label}</span>`;
+      el.style.left = pos.x + 'px';
+      el.style.top = pos.y + 'px';
+      
+      setupIconDrag(el, app.id);
+      
+      let clickTimer = null, clickCount = 0;
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        clickCount++;
+        if (clickCount === 1) {
+          clickTimer = setTimeout(() => {
+            clickCount = 0;
+            selectIcon(app.id, e.ctrlKey || e.metaKey || e.shiftKey);
+          }, 250);
+        } else {
+          clearTimeout(clickTimer);
+          clickCount = 0;
+          clearSelection();
+          launchApp(app.app);
+        }
+      });
+      
+      el.addEventListener('contextmenu', e => {
+        e.preventDefault();
+        selectIcon(app.id, false);
+        ContextMenu.show(e.clientX, e.clientY, [
+          { label: 'Open', icon: Icons.folderOpen, action: () => launchApp(app.app) },
+        ]);
+      });
+      
+      area.appendChild(el);
+      icons.push({ ...app, el, pos });
+    });
+  }
+  
+  function setupIconDrag(el, id) {
+    let startX, startY, origX, origY, moved = false;
+    const onStart = (x, y) => {
+      startX = x; startY = y;
+      origX = parseInt(el.style.left) || 0;
+      origY = parseInt(el.style.top) || 0;
+      moved = false;
+    };
+    const onMove = (x, y) => {
+      if (Math.abs(x - startX) < 4 && Math.abs(y - startY) < 4) return;
+      moved = true;
+      el.style.left = Math.max(0, origX + (x - startX)) + 'px';
+      el.style.top = Math.max(0, origY + (y - startY)) + 'px';
+    };
+    const onEnd = () => {
+      if (moved) {
+        positions[id] = { x: parseInt(el.style.left), y: parseInt(el.style.top) };
+        localStorage.setItem('stormOS_iconPos', JSON.stringify(positions));
+      }
+    };
+    el.addEventListener('mousedown', e => { if (e.button !== 0) return; e.stopPropagation(); onStart(e.clientX, e.clientY); });
+    document.addEventListener('mousemove', e => { if (e.buttons === 1) onMove(e.clientX, e.clientY); });
+    document.addEventListener('mouseup', () => onEnd());
+  }
+  
+  function selectIcon(id, multi) {
+    if (!multi) clearSelection();
+    selected.add(id);
+    document.querySelector(`.desktop-icon[data-id="${id}"]`)?.classList.add('selected');
+  }
+  
+  function clearSelection() {
+    selected.clear();
+    document.querySelectorAll('.desktop-icon.selected').forEach(el => el.classList.remove('selected'));
+  }
+  
+  // Selection box
+  area.addEventListener('mousedown', e => {
+    if (e.target !== area) return;
+    clearSelection();
+    selStart = { x: e.clientX, y: e.clientY };
+    selBox.style.display = 'block';
+    selBox.style.left = e.clientX + 'px';
+    selBox.style.top = e.clientY + 'px';
+    selBox.style.width = '0'; selBox.style.height = '0';
+  });
+  
+  document.addEventListener('mousemove', e => {
+    if (!selStart) return;
+    const x = Math.min(e.clientX, selStart.x);
+    const y = Math.min(e.clientY, selStart.y);
+    const w = Math.abs(e.clientX - selStart.x);
+    const h = Math.abs(e.clientY - selStart.y);
+    selBox.style.left = x + 'px'; selBox.style.top = y + 'px';
+    selBox.style.width = w + 'px'; selBox.style.height = h + 'px';
+    
+    const sr = { left: x, top: y, right: x + w, bottom: y + h };
+    document.querySelectorAll('.desktop-icon').forEach(icon => {
+      const ir = icon.getBoundingClientRect();
+      const overlap = ir.left < sr.right && ir.right > sr.left && ir.top < sr.bottom && ir.bottom > sr.top;
+      if (overlap) { icon.classList.add('selected'); selected.add(icon.dataset.id); }
+      else { icon.classList.remove('selected'); selected.delete(icon.dataset.id); }
+    });
+  });
+  
+  document.addEventListener('mouseup', () => {
+    selStart = null;
+    selBox.style.display = 'none';
+  });
+  
+  return { load, clearSelection };
+})();
+
+/* ═══════════════════════════════════════════════════════
+   START MENU
+═══════════════════════════════════════════════════════ */
+const APPS_LIST = [
+  { id: 'files', label: 'Files', icon: Icons.explorer },
+  { id: 'editor', label: 'Editor', icon: Icons.editor },
+  { id: 'browser', label: 'Browser', icon: Icons.browser },
+  { id: 'media', label: 'Media', icon: Icons.media },
+  { id: 'calc', label: 'Calc', icon: Icons.calc },
+  { id: 'settings', label: 'Settings', icon: Icons.settings },
+];
+
+function buildStartMenu() {
+  const grid = document.getElementById('start-menu-grid');
+  grid.innerHTML = '';
+  APPS_LIST.forEach(app => {
+    const el = document.createElement('div');
+    el.className = 'start-app-item';
+    el.innerHTML = `${app.icon}<span>${app.label}</span>`;
+    el.addEventListener('click', () => { toggleStartMenu(false); launchApp(app.id); });
+    grid.appendChild(el);
+  });
+}
+
+function toggleStartMenu(force) {
+  const menu = document.getElementById('start-menu');
+  const isOpen = menu.classList.contains('open');
+  const shouldOpen = force !== undefined ? force : !isOpen;
+  menu.classList.toggle('open', shouldOpen);
+}
+
+document.addEventListener('mousedown', e => {
+  const menu = document.getElementById('start-menu');
+  const btn = document.getElementById('start-btn');
+  if (!menu.contains(e.target) && !btn.contains(e.target)) toggleStartMenu(false);
+});
+
+/* ═══════════════════════════════════════════════════════
+   WALLPAPER SYSTEM
+═══════════════════════════════════════════════════════ */
+const WALLPAPERS = [
+  {
+    id: 'storm', label: 'Storm',
+    style: `background: radial-gradient(ellipse 80% 60% at 70% 90%, rgba(14,92,112,0.4) 0%, transparent 60%), radial-gradient(ellipse 60% 80% at 20% 20%, rgba(4,20,25,0.9) 0%, transparent 70%), linear-gradient(180deg, #071418 0%, #0a2a34 35%, #0d3d4a 55%, #0a5a6a 75%, #08707f 90%, #0a8090 100%);`
+  },
+  {
+    id: 'abyss', label: 'Abyss',
+    style: `background: radial-gradient(circle at 30% 70%, #0a1628 0%, #040810 100%);`
+  },
+  {
+    id: 'coral', label: 'Coral Reef',
+    style: `background: linear-gradient(160deg, #031520 0%, #062030 30%, #093040 60%, #0a4050 80%, #0d5060 100%);`
+  },
+  {
+    id: 'midnight', label: 'Midnight',
+    style: `background: radial-gradient(ellipse at top, #0d1b2a 0%, #020509 100%);`
+  },
+  {
+    id: 'aurora', label: 'Aurora',
+    style: `background: linear-gradient(170deg, #050d10 0%, #071a1f 40%, #0a2d35 70%, #082535 100%);`
+  },
+];
+
+async function applyWallpaper(wpId) {
+  const wallpaperEl = document.getElementById('wallpaper');
+  if (wpId === 'custom') {
+    try {
+      const data = await fs.readArrayBuffer('/system/wallpaper');
+      const blob = new Blob([data]);
+      const url = URL.createObjectURL(blob);
+      wallpaperEl.className = 'wp-custom';
+      wallpaperEl.style.backgroundImage = `url(${url})`;
+      wallpaperEl.style.backgroundSize = 'cover';
+      wallpaperEl.style.backgroundPosition = 'center';
+    } catch {}
+    return;
+  }
+  const wp = WALLPAPERS.find(w => w.id === wpId) || WALLPAPERS[0];
+  wallpaperEl.className = '';
+  wallpaperEl.style.cssText = wp.style;
+  localStorage.setItem('stormOS_wallpaper', wpId);
+}
+
+function loadWallpaper() {
+  const saved = localStorage.getItem('stormOS_wallpaper') || 'storm';
+  applyWallpaper(saved);
+}
+
+/* ═══════════════════════════════════════════════════════
+   DESKTOP CONTEXT MENU
+═══════════════════════════════════════════════════════ */
+document.getElementById('desktop').addEventListener('contextmenu', e => {
+  if (e.target.closest('.window') || e.target.closest('.desktop-icon')) return;
+  e.preventDefault();
+  ContextMenu.show(e.clientX, e.clientY, [
+    { label: 'New Folder', icon: Icons.newFolder, action: () => createDesktopFolder() },
+    { label: 'New Text File', icon: Icons.fileText, action: () => createDesktopFile() },
+    { separator: true },
+    { label: 'Open File Explorer', icon: Icons.explorer, action: () => launchApp('files') },
+    { label: 'Open Terminal', icon: Icons.fileCode, action: () => launchApp('editor') },
+    { separator: true },
+    { label: 'Refresh Desktop', icon: Icons.refresh, action: () => Desktop.load() },
+    { label: 'Settings', icon: Icons.settings, action: () => launchApp('settings') },
+  ]);
+});
+
+async function createDesktopFolder() {
+  const res = await showDialog({
+    title: 'New Folder', body: 'Enter folder name:',
+    input: { value: 'New Folder', placeholder: 'Folder name' },
+    actions: [{ label: 'Create', key: 'ok', cls: 'primary' }, { label: 'Cancel', key: 'cancel' }]
+  });
+  if (res.action !== 'ok' || !res.value?.trim()) return;
+  try {
+    await fs.mkdir(`/${res.value.trim()}`);
+    toast('Folder created', 'success');
+  } catch (e) { toast('Error: ' + e.message, 'error'); }
+}
+
+async function createDesktopFile() {
+  const res = await showDialog({
+    title: 'New File', body: 'Enter file name:',
+    input: { value: 'untitled.txt', placeholder: 'File name' },
+    actions: [{ label: 'Create', key: 'ok', cls: 'primary' }, { label: 'Cancel', key: 'cancel' }]
+  });
+  if (res.action !== 'ok' || !res.value?.trim()) return;
+  try {
+    await fs.writeText(`/${res.value.trim()}`, '');
+    toast('File created', 'success');
+  } catch (e) { toast('Error: ' + e.message, 'error'); }
+}
+
+/* ═══════════════════════════════════════════════════════
+   ZIP DECOMPRESSION (Native DecompressionStream)
+═══════════════════════════════════════════════════════ */
+// Minimal ZIP parser using native APIs
+class ZipParser {
+  constructor(buffer) { this.buf = new DataView(buffer); this.bytes = new Uint8Array(buffer); }
+  
+  readUint16(off) { return this.buf.getUint16(off, true); }
+  readUint32(off) { return this.buf.getUint32(off, true); }
+  readString(off, len) { return new TextDecoder().decode(this.bytes.slice(off, off + len)); }
+  
+  async parse() {
+    const entries = [];
+    let pos = 0;
+    while (pos < this.bytes.length - 4) {
+      const sig = this.readUint32(pos);
+      if (sig !== 0x04034b50) { pos++; continue; }
+      const compression = this.readUint16(pos + 8);
+      const compSize = this.readUint32(pos + 18);
+      const uncompSize = this.readUint32(pos + 22);
+      const nameLen = this.readUint16(pos + 26);
+      const extraLen = this.readUint16(pos + 28);
+      const name = this.readString(pos + 30, nameLen);
+      const dataStart = pos + 30 + nameLen + extraLen;
+      const compData = this.bytes.slice(dataStart, dataStart + compSize);
+      
+      let data;
+      if (compression === 0) {
+        data = compData;
+      } else if (compression === 8) {
+        try {
+          const ds = new DecompressionStream('deflate-raw');
+          const writer = ds.writable.getWriter();
+          const reader = ds.readable.getReader();
+          writer.write(compData);
+          writer.close();
+          const chunks = [];
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            chunks.push(value);
+          }
+          const total = chunks.reduce((s, c) => s + c.length, 0);
+          data = new Uint8Array(total);
+          let off = 0;
+          for (const c of chunks) { data.set(c, off); off += c.length; }
+        } catch { data = compData; }
+      } else {
+        data = compData;
+      }
+      
+      if (!name.endsWith('/')) entries.push({ name, data });
+      pos = dataStart + compSize;
+    }
+    return entries;
+  }
+}
+
+async function extractZip(zipPath, destDir) {
+  const buf = await fs.readArrayBuffer(zipPath);
+  const parser = new ZipParser(buf);
+  const entries = await parser.parse();
+  let count = 0;
+  for (const entry of entries) {
+    const dest = `${destDir}/${entry.name}`;
+    const parts = dest.split('/');
+    if (parts.length > 2) {
+      await fs.mkdir(parts.slice(0, -1).join('/'));
+    }
+    await fs.writeFile(dest, entry.data);
+    count++;
+  }
+  return count;
+}
+
+/* ═══════════════════════════════════════════════════════
+   APP: FILE EXPLORER
+═══════════════════════════════════════════════════════ */
+const FileExplorer = (() => {
+  let instances = {};
+  
+  function create(startPath = '/') {
+    const id = 'files_' + Date.now();
+    const content = `<div id="${id}-wrap" style="height:100%;display:flex;flex-direction:column;">
+      <div id="app-files-content" style="flex:1;overflow:hidden;display:flex;">
+        <div class="fe-sidebar" id="${id}-sidebar"></div>
+        <div class="fe-main">
+          <div class="fe-toolbar" id="${id}-toolbar"></div>
+          <div class="fe-content" id="${id}-content" tabindex="-1">
+            <div class="fe-drop-zone" id="${id}-dropzone"><span>Drop files here to import</span></div>
+            <div class="fe-grid" id="${id}-grid"></div>
+            <div class="fe-selection-box" id="${id}-selbox"></div>
+          </div>
+          <div class="fe-status" id="${id}-status"></div>
+        </div>
+      </div>
+    </div>`;
+    
+    WM.create({
+      id, title: 'File Explorer', icon: Icons.explorer,
+      width: 800, height: 520, content, appId: 'files',
+    });
+    
+    const state = {
+      path: startPath, selected: new Set(), clipboard: null,
+      clipOp: null, viewMode: 'grid', history: [startPath], histIdx: 0,
+    };
+    instances[id] = state;
+    
+    setTimeout(() => initFE(id, state), 0);
+    return id;
+  }
+  
+  function initFE(id, state) {
+    buildSidebar(id, state);
+    buildToolbar(id, state);
+    setupDrop(id, state);
+    navigate(id, state, state.path);
+  }
+  
+  function buildSidebar(id, state) {
+    const el = document.getElementById(`${id}-sidebar`);
+    const places = [
+      { label: 'Root', path: '/', icon: Icons.home },
+      { label: 'Documents', path: '/Documents', icon: Icons.fileText },
+      { label: 'Pictures', path: '/Pictures', icon: Icons.fileImage },
+      { label: 'Music', path: '/Music', icon: Icons.fileAudio },
+      { label: 'Videos', path: '/Videos', icon: Icons.fileVideo },
+      { label: 'Downloads', path: '/Downloads', icon: Icons.download },
+    ];
+    el.innerHTML = places.map(p =>
+      `<div class="fe-sidebar-item" data-path="${p.path}">${p.icon}<span>${p.label}</span></div>`
+    ).join('');
+    el.querySelectorAll('.fe-sidebar-item').forEach(btn => {
+      btn.addEventListener('click', () => navigate(id, state, btn.dataset.path));
+    });
+  }
+  
+  function buildBreadcrumb(id, state) {
+    const pathEl = document.getElementById(`${id}-path`);
+    if (!pathEl) return;
+    const parts = state.path === '/' ? [''] : state.path.split('/');
+    let html = '';
+    parts.forEach((seg, i) => {
+      const fullPath = parts.slice(0, i + 1).join('/') || '/';
+      const label = seg || 'Root';
+      if (i > 0) html += `<span class="breadcrumb-sep">›</span>`;
+      html += `<span class="breadcrumb-seg" data-path="${fullPath}">${label}</span>`;
+    });
+    pathEl.innerHTML = `<div class="breadcrumb">${html}</div>`;
+    pathEl.querySelectorAll('.breadcrumb-seg').forEach(seg => {
+      if (!seg.classList.contains('last')) {
+        seg.addEventListener('click', () => navigate(id, state, seg.dataset.path));
+      }
+    });
+  }
+
+  function buildToolbar(id, state) {
+    const el = document.getElementById(`${id}-toolbar`);
+    el.innerHTML = `
+      <button class="fe-btn" id="${id}-btn-back" title="Back">${Icons.back}</button>
+      <button class="fe-btn" id="${id}-btn-fwd" title="Forward">${Icons.forward}</button>
+      <button class="fe-btn" id="${id}-btn-up" title="Up">${Icons.up}</button>
+      <div class="fe-path" id="${id}-path" style="flex:1;min-width:0;background:var(--bg-deep);border:1px solid var(--border);border-radius:6px;padding:4px 10px;cursor:default;"></div>
+      <button class="fe-btn primary" id="${id}-btn-upload" title="Import files">${Icons.upload}<span>Import</span></button>
+      <button class="fe-btn" id="${id}-btn-newfolder" title="New folder">${Icons.newFolder}</button>
+      <button class="fe-btn" id="${id}-btn-view" title="Toggle view">${Icons.grid}</button>
+    `;
+    
+    document.getElementById(`${id}-btn-back`).addEventListener('click', () => {
+      if (state.histIdx > 0) { state.histIdx--; navigate(id, state, state.history[state.histIdx], false); }
+    });
+    document.getElementById(`${id}-btn-fwd`).addEventListener('click', () => {
+      if (state.histIdx < state.history.length - 1) { state.histIdx++; navigate(id, state, state.history[state.histIdx], false); }
+    });
+    document.getElementById(`${id}-btn-up`).addEventListener('click', () => {
+      const parent = state.path === '/' ? '/' : state.path.split('/').slice(0, -1).join('/') || '/';
+      navigate(id, state, parent);
+    });
+    document.getElementById(`${id}-btn-newfolder`).addEventListener('click', () => newFolder(id, state));
+    document.getElementById(`${id}-btn-view`).addEventListener('click', () => {
+      state.viewMode = state.viewMode === 'grid' ? 'list' : 'grid';
+      document.getElementById(`${id}-btn-view`).innerHTML = state.viewMode === 'grid' ? Icons.grid : Icons.list;
+      renderGrid(id, state, state.lastEntries || []);
+    });
+    
+    // Upload (import)
+    document.getElementById(`${id}-btn-upload`).addEventListener('click', () => {
+      const inp = document.createElement('input');
+      inp.type = 'file'; inp.multiple = true;
+      inp.addEventListener('change', async () => {
+        for (const file of inp.files) {
+          try { await fs.importFile(file, state.path); } catch {}
+        }
+        toast(`Imported ${inp.files.length} file(s)`, 'success');
+        await refresh(id, state);
+      });
+      inp.click();
+    });
+  }
+  
+  function setupDrop(id, state) {
+    const content = document.getElementById(`${id}-content`);
+    const dropzone = document.getElementById(`${id}-dropzone`);
+    const selBox = document.getElementById(`${id}-selbox`);
+    let selStart = null, selActive = false;
+    
+    content.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('active'); });
+    content.addEventListener('dragleave', e => { if (!content.contains(e.relatedTarget)) dropzone.classList.remove('active'); });
+    content.addEventListener('drop', async e => {
+      e.preventDefault();
+      dropzone.classList.remove('active');
+      const files = [...e.dataTransfer.files];
+      if (files.length === 0) return;
+      for (const file of files) {
+        try { await fs.importFile(file, state.path); } catch (err) { toast('Import error: ' + err.message, 'error'); }
+      }
+      toast(`Imported ${files.length} file(s)`, 'success');
+      await refresh(id, state);
+    });
+    
+    // Rubber-band selection
+    content.addEventListener('mousedown', e => {
+      if (e.target.closest('.fe-item') || e.target.closest('.fe-drop-zone')) return;
+      if (e.button !== 0) return;
+      state.selected.clear();
+      renderSelected(id, state);
+      const cr = content.getBoundingClientRect();
+      selStart = { x: e.clientX - cr.left + content.scrollLeft, y: e.clientY - cr.top + content.scrollTop };
+      selActive = true;
+      selBox.style.display = 'block';
+      selBox.style.left = selStart.x + 'px'; selBox.style.top = selStart.y + 'px';
+      selBox.style.width = '0'; selBox.style.height = '0';
+    });
+    
+    document.addEventListener('mousemove', e => {
+      if (!selActive || !selStart) return;
+      const cr = content.getBoundingClientRect();
+      const curX = e.clientX - cr.left + content.scrollLeft;
+      const curY = e.clientY - cr.top + content.scrollTop;
+      const x = Math.min(curX, selStart.x), y = Math.min(curY, selStart.y);
+      const w = Math.abs(curX - selStart.x), h = Math.abs(curY - selStart.y);
+      selBox.style.left = x + 'px'; selBox.style.top = y + 'px';
+      selBox.style.width = w + 'px'; selBox.style.height = h + 'px';
+      
+      // Check overlaps
+      const sr = { left: x + cr.left - content.scrollLeft, top: y + cr.top - content.scrollTop, right: x + w + cr.left - content.scrollLeft, bottom: y + h + cr.top - content.scrollTop };
+      state.selected.clear();
+      document.querySelectorAll(`#${id}-grid .fe-item`).forEach(item => {
+        const ir = item.getBoundingClientRect();
+        if (ir.left < sr.right && ir.right > sr.left && ir.top < sr.bottom && ir.bottom > sr.top) {
+          state.selected.add(item.dataset.name);
+        }
+      });
+      renderSelected(id, state);
+      refresh(id, state);
+    });
+    
+    document.addEventListener('mouseup', () => {
+      if (selActive) { selActive = false; selBox.style.display = 'none'; }
+    });
+    
+    // Keyboard shortcuts
+    content.addEventListener('keydown', async e => {
+      if (e.ctrlKey && e.key === 'a') {
+        e.preventDefault();
+        state.lastEntries?.forEach(en => state.selected.add(en.name));
+        renderSelected(id, state);
+        refresh(id, state);
+      }
+      if (e.key === 'Delete' && state.selected.size > 0) {
+        const names = [...state.selected];
+        const res = await showDialog({
+          title: 'Delete', body: `Delete ${names.length} item(s)?`,
+          actions: [{ label: 'Delete', key: 'ok', cls: 'danger' }, { label: 'Cancel', key: 'cancel' }]
+        });
+        if (res.action !== 'ok') return;
+        for (const name of names) {
+          try { await fs.remove(`${state.path === '/' ? '' : state.path}/${name}`); } catch {}
+        }
+        state.selected.clear();
+        toast('Deleted', 'success');
+        await refresh(id, state);
+      }
+      if (e.ctrlKey && e.key === 'c') {
+        state.clipboard = [...state.selected]; state.clipOp = 'copy';
+        toast(`Copied ${state.clipboard.length} item(s)`, 'info');
+      }
+      if (e.ctrlKey && e.key === 'x') {
+        state.clipboard = [...state.selected]; state.clipOp = 'cut';
+        toast(`Cut ${state.clipboard.length} item(s)`, 'info');
+      }
+      if (e.ctrlKey && e.key === 'v' && state.clipboard) await pasteItems(id, state);
+    });
+  }
+  
+  async function navigate(id, state, path, addHistory = true) {
+    state.path = path;
+    state.selected.clear();
+    if (addHistory) {
+      state.history = state.history.slice(0, state.histIdx + 1);
+      state.history.push(path);
+      state.histIdx = state.history.length - 1;
+    }
+    buildBreadcrumb(id, state);
+    
+    // Update sidebar
+    document.querySelectorAll(`#${id}-sidebar .fe-sidebar-item`).forEach(el => {
+      el.classList.toggle('active', el.dataset.path === path);
+    });
+    
+    await refresh(id, state);
+  }
+  
+  async function refresh(id, state) {
+    try {
+      const entries = await fs.readdir(state.path);
+      state.lastEntries = entries;
+      renderGrid(id, state, entries);
+      buildBreadcrumb(id, state);
+      const status = document.getElementById(`${id}-status`);
+      if (status) {
+        const folders = entries.filter(e => e.isDir).length;
+        const files = entries.filter(e => !e.isDir).length;
+        const selCount = state.selected.size;
+        status.innerHTML = `<span>${folders} folder${folders !== 1 ? 's' : ''}, ${files} file${files !== 1 ? 's' : ''}</span>${selCount ? `<span style="color:var(--teal-accent)">${selCount} selected</span>` : ''}<span style="margin-left:auto;">${state.path}</span>`;
+      }
+    } catch (e) {
+      toast('Error reading directory: ' + e.message, 'error');
+    }
+  }
+  
+  function renderGrid(id, state, entries) {
+    const grid = document.getElementById(`${id}-grid`);
+    if (!grid) return;
+    const isList = state.viewMode === 'list';
+    grid.className = isList ? 'fe-grid list-mode' : 'fe-grid';
+    
+    // Selection box for file explorer
+    let selStart = null;
+    
+    grid.innerHTML = '';
+    if (entries.length === 0) {
+      grid.innerHTML = `<div style="grid-column:1/-1;padding:40px;text-align:center;color:var(--text-dim);font-size:13px;">Empty folder</div>`;
+      return;
+    }
+    
+    entries.forEach(entry => {
+      const el = document.createElement('div');
+      el.className = `fe-item${isList ? ' list-mode' : ''}`;
+      el.dataset.name = entry.name;
+      el.dataset.isdir = entry.isDir;
+      
+      const icon = getFileIcon(entry.name, entry.isDir);
+      const meta = entry.isDir ? '' : `<span class="fe-item-meta">${formatSize(entry.size)}</span>`;
+      const dateMeta = isList ? `<span class="fe-item-meta">${formatDate(entry.modified)}</span>` : '';
+      
+      el.innerHTML = `${icon}<div class="fe-item-name">${entry.name}</div>${meta}${dateMeta}`;
+      
+      // Make draggable for export
+      el.draggable = true;
+      el.addEventListener('dragstart', async e => {
+        const fullPath = `${state.path === '/' ? '' : state.path}/${entry.name}`;
+        if (!entry.isDir) {
+          try {
+            const file = await fs.readFile(fullPath);
+            e.dataTransfer.setData('text/plain', fullPath);
+            e.dataTransfer.items.add(file);
+          } catch {}
+        }
+      });
+      
+      let clickTimer = null, clickCount = 0;
+      el.addEventListener('click', e => {
+        e.stopPropagation();
+        clickCount++;
+        if (clickCount === 1) {
+          clickTimer = setTimeout(() => {
+            clickCount = 0;
+            if (!e.ctrlKey && !e.metaKey && !e.shiftKey) state.selected.clear();
+            state.selected.add(entry.name);
+            renderSelected(id, state);
+            refresh(id, state);
+          }, 220);
+        } else {
+          clearTimeout(clickTimer); clickCount = 0;
+          openEntry(id, state, entry);
+        }
+      });
+      
+      el.addEventListener('contextmenu', e => {
+        e.preventDefault();
+        if (!state.selected.has(entry.name)) {
+          state.selected.clear(); state.selected.add(entry.name); renderSelected(id, state);
+        }
+        showItemMenu(e.clientX, e.clientY, id, state, entry);
+      });
+      
+      grid.appendChild(el);
+    });
+    
+    // Click on empty area deselects
+    grid.addEventListener('mousedown', e => {
+      if (e.target === grid) { state.selected.clear(); renderSelected(id, state); }
+    });
+    
+    renderSelected(id, state);
+  }
+  
+  function renderSelected(id, state) {
+    const grid = document.getElementById(`${id}-grid`);
+    if (!grid) return;
+    grid.querySelectorAll('.fe-item').forEach(el => {
+      el.classList.toggle('selected', state.selected.has(el.dataset.name));
+    });
+  }
+  
+  async function openEntry(id, state, entry) {
+    const fullPath = `${state.path === '/' ? '' : state.path}/${entry.name}`;
+    if (entry.isDir) {
+      navigate(id, state, fullPath);
+    } else {
+      const type = getFileType(entry.name);
+      if (type === 'text' || type === 'code') {
+        TextEditor.open(fullPath);
+      } else if (type === 'image') {
+        openImageViewer(fullPath);
+      } else if (type === 'video' || type === 'audio') {
+        MediaPlayer.open(fullPath);
+      } else if (type === 'zip') {
+        promptExtract(fullPath, state.path, id, state);
+      } else {
+        // Generic open: prompt download
+        promptDownload(fullPath, entry.name);
+      }
+    }
+  }
+  
+  async function promptExtract(zipPath, destDir, id, state) {
+    const res = await showDialog({
+      title: 'Extract Archive',
+      body: `Extract "${zipPath.split('/').pop()}" to current folder?`,
+      actions: [{ label: 'Extract', key: 'ok', cls: 'primary' }, { label: 'Cancel', key: 'cancel' }]
+    });
+    if (res.action !== 'ok') return;
+    toast('Extracting...', 'info');
+    try {
+      const count = await extractZip(zipPath, destDir);
+      toast(`Extracted ${count} files`, 'success');
+      await refresh(id, state);
+    } catch (e) { toast('Extract failed: ' + e.message, 'error'); }
+  }
+  
+  async function promptDownload(filePath, name) {
+    try {
+      const buf = await fs.readArrayBuffer(filePath);
+      const blob = new Blob([buf]);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = name;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) { toast('Download failed: ' + e.message, 'error'); }
+  }
+  
+  function showItemMenu(x, y, id, state, entry) {
+    const fullPath = `${state.path === '/' ? '' : state.path}/${entry.name}`;
+    const items = [];
+    const type = getFileType(entry.name);
+    
+    if (!entry.isDir) {
+      if (type === 'text' || type === 'code') items.push({ label: 'Edit', icon: Icons.editor, action: () => TextEditor.open(fullPath) });
+      if (type === 'image') items.push({ label: 'View Image', icon: Icons.fileImage, action: () => openImageViewer(fullPath) });
+      if (type === 'video' || type === 'audio') items.push({ label: 'Play', icon: Icons.media, action: () => MediaPlayer.open(fullPath) });
+      if (type === 'zip') items.push({ label: 'Extract Here', icon: Icons.zip, action: () => promptExtract(fullPath, state.path, id, state) });
+      items.push({ label: 'Download', icon: Icons.download, action: () => promptDownload(fullPath, entry.name) });
+    } else {
+      items.push({ label: 'Open', icon: Icons.folderOpen, action: () => navigate(id, state, fullPath) });
+    }
+    
+    items.push({ separator: true });
+    
+    if (state.selected.size > 1) {
+      items.push({ label: `Copy ${state.selected.size} items`, icon: Icons.copy, action: () => { state.clipboard = [...state.selected]; state.clipOp = 'copy'; toast('Copied', 'info'); } });
+      items.push({ label: `Cut ${state.selected.size} items`, icon: Icons.cut, action: () => { state.clipboard = [...state.selected]; state.clipOp = 'cut'; toast('Cut', 'info'); } });
+    } else {
+      items.push({ label: 'Copy', icon: Icons.copy, action: () => { state.clipboard = [entry.name]; state.clipOp = 'copy'; toast('Copied', 'info'); } });
+      items.push({ label: 'Cut', icon: Icons.cut, action: () => { state.clipboard = [entry.name]; state.clipOp = 'cut'; toast('Cut', 'info'); } });
+    }
+    
+    if (state.clipboard) {
+      items.push({ label: 'Paste', icon: Icons.paste, action: () => pasteItems(id, state) });
+    }
+    
+    items.push({ label: 'Rename', icon: Icons.rename, action: () => renameItem(id, state, entry) });
+    items.push({ separator: true });
+    items.push({ label: 'Delete', icon: Icons.trash, danger: true, action: () => deleteItem(id, state, entry) });
+    
+    ContextMenu.show(x, y, items);
+  }
+  
+  async function pasteItems(id, state) {
+    if (!state.clipboard) return;
+    for (const name of state.clipboard) {
+      const srcPath = `${state.path === '/' ? '' : state.path}/${name}`;
+      const destPath = `${state.path === '/' ? '' : state.path}/${name}`;
+      try {
+        if (state.clipOp === 'copy') await fs.copy(srcPath, destPath + '_copy');
+        else await fs.move(srcPath, destPath);
+      } catch (e) { toast('Paste error: ' + e.message, 'error'); }
+    }
+    if (state.clipOp === 'cut') state.clipboard = null;
+    toast('Pasted', 'success');
+    await refresh(id, state);
+  }
+  
+  async function renameItem(id, state, entry) {
+    const fullPath = `${state.path === '/' ? '' : state.path}/${entry.name}`;
+    const res = await showDialog({
+      title: 'Rename', body: 'Enter new name:',
+      input: { value: entry.name, placeholder: 'New name' },
+      actions: [{ label: 'Rename', key: 'ok', cls: 'primary' }, { label: 'Cancel', key: 'cancel' }]
+    });
+    if (res.action !== 'ok' || !res.value?.trim()) return;
+    try {
+      await fs.rename(fullPath, res.value.trim());
+      toast('Renamed', 'success');
+      await refresh(id, state);
+    } catch (e) { toast('Rename failed: ' + e.message, 'error'); }
+  }
+  
+  async function deleteItem(id, state, entry) {
+    const fullPath = `${state.path === '/' ? '' : state.path}/${entry.name}`;
+    const res = await showDialog({
+      title: 'Delete', body: `Delete "${entry.name}"? This cannot be undone.`,
+      actions: [{ label: 'Delete', key: 'ok', cls: 'danger' }, { label: 'Cancel', key: 'cancel' }]
+    });
+    if (res.action !== 'ok') return;
+    try {
+      await fs.remove(fullPath);
+      toast('Deleted', 'success');
+      await refresh(id, state);
+    } catch (e) { toast('Delete failed: ' + e.message, 'error'); }
+  }
+  
+  async function newFolder(id, state) {
+    const res = await showDialog({
+      title: 'New Folder', body: 'Folder name:',
+      input: { value: 'New Folder', placeholder: 'Name' },
+      actions: [{ label: 'Create', key: 'ok', cls: 'primary' }, { label: 'Cancel', key: 'cancel' }]
+    });
+    if (res.action !== 'ok' || !res.value?.trim()) return;
+    try {
+      await fs.mkdir(`${state.path === '/' ? '' : state.path}/${res.value.trim()}`);
+      toast('Folder created', 'success');
+      await refresh(id, state);
+    } catch (e) { toast('Error: ' + e.message, 'error'); }
+  }
+  
+  async function openImageViewer(filePath) {
+    try {
+      const buf = await fs.readArrayBuffer(filePath);
+      const blob = new Blob([buf]);
+      const url = URL.createObjectURL(blob);
+      const name = filePath.split('/').pop();
+      const id = 'img_' + Date.now();
+      WM.create({
+        id, title: name, icon: Icons.fileImage,
+        width: 700, height: 500,
+        content: `<div style="height:100%;display:flex;align-items:center;justify-content:center;background:#000;overflow:hidden;">
+          <img src="${url}" style="max-width:100%;max-height:100%;object-fit:contain;" draggable="true">
+        </div>`,
+        onClose: () => URL.revokeObjectURL(url),
+      });
+    } catch (e) { toast('Cannot open image: ' + e.message, 'error'); }
+  }
+  
+  return { create, navigate };
+})();
+
+/* ═══════════════════════════════════════════════════════
+   APP: TEXT EDITOR
+═══════════════════════════════════════════════════════ */
+const TextEditor = (() => {
+  function open(filePath = null) {
+    const id = 'editor_' + Date.now();
+    const content = `<div id="${id}-wrap" style="height:100%;display:flex;flex-direction:column;">
+      <div class="editor-toolbar">
+        <button class="fe-btn primary" id="${id}-save">${Icons.check} Save</button>
+        <button class="fe-btn" id="${id}-open">${Icons.upload} Open</button>
+        <button class="fe-btn" id="${id}-saveas">${Icons.download} Save As</button>
+        <div class="editor-filename" id="${id}-filename">Untitled</div>
+      </div>
+      <div class="editor-area">
+        <div class="editor-gutter" id="${id}-gutter">1</div>
+        <textarea class="editor-textarea" id="${id}-ta" spellcheck="false" autocomplete="off" autocorrect="off"></textarea>
+      </div>
+      <div class="editor-statusbar">
+        <span id="${id}-cursor">Ln 1, Col 1</span>
+        <span id="${id}-words">0 words</span>
+        <span id="${id}-enc">UTF-8</span>
+      </div>
+    </div>`;
+    
+    WM.create({ id, title: 'Editor', icon: Icons.editor, width: 720, height: 520, content, appId: 'editor' });
+    
+    let currentPath = filePath;
+    let modified = false;
+    
+    setTimeout(async () => {
+      const ta = document.getElementById(`${id}-ta`);
+      const gutter = document.getElementById(`${id}-gutter`);
+      const fn = document.getElementById(`${id}-filename`);
+      const cursor = document.getElementById(`${id}-cursor`);
+      const words = document.getElementById(`${id}-words`);
+      
+      function updateGutter() {
+        const lines = ta.value.split('\n').length;
+        gutter.innerHTML = Array.from({ length: lines }, (_, i) => i + 1).join('<br>');
+      }
+      
+      function updateStatus() {
+        const text = ta.value;
+        const lines = text.substring(0, ta.selectionStart).split('\n');
+        const ln = lines.length, col = lines[lines.length - 1].length + 1;
+        cursor.textContent = `Ln ${ln}, Col ${col}`;
+        words.textContent = `${text.trim() ? text.trim().split(/\s+/).length : 0} words`;
+        gutter.scrollTop = ta.scrollTop;
+      }
+      
+      ta.addEventListener('input', () => {
+        updateGutter(); updateStatus();
+        modified = true;
+        WM.setTitle(id, (currentPath ? currentPath.split('/').pop() : 'Untitled') + ' •');
+      });
+      ta.addEventListener('keydown', e => {
+        if (e.ctrlKey && e.key === 's') { e.preventDefault(); save(); }
+        if (e.key === 'Tab') { e.preventDefault(); const s = ta.selectionStart; ta.value = ta.value.substring(0, s) + '  ' + ta.value.substring(ta.selectionEnd); ta.selectionStart = ta.selectionEnd = s + 2; updateGutter(); }
+      });
+      ta.addEventListener('scroll', () => { gutter.scrollTop = ta.scrollTop; });
+      ta.addEventListener('keyup', updateStatus);
+      ta.addEventListener('click', updateStatus);
+      
+      async function save() {
+        if (!currentPath) return saveAs();
+        try {
+          await fs.writeText(currentPath, ta.value);
+          modified = false;
+          WM.setTitle(id, currentPath.split('/').pop());
+          toast('Saved', 'success');
+        } catch (e) { toast('Save failed: ' + e.message, 'error'); }
+      }
+      
+      async function saveAs() {
+        const res = await showDialog({
+          title: 'Save As', body: 'File path:',
+          input: { value: currentPath || '/untitled.txt', placeholder: '/path/to/file.txt' },
+          actions: [{ label: 'Save', key: 'ok', cls: 'primary' }, { label: 'Cancel', key: 'cancel' }]
+        });
+        if (res.action !== 'ok' || !res.value?.trim()) return;
+        currentPath = res.value.trim();
+        await save();
+        fn.textContent = currentPath;
+      }
+      
+      document.getElementById(`${id}-save`).addEventListener('click', save);
+      document.getElementById(`${id}-saveas`).addEventListener('click', saveAs);
+      document.getElementById(`${id}-open`).addEventListener('click', () => {
+        const inp = document.createElement('input');
+        inp.type = 'file';
+        inp.accept = '.txt,.md,.json,.js,.ts,.html,.css,.py,.sh,.yaml,.yml,.xml,.csv,.log,.ini,.cfg,.conf,.toml,.rs,.go,.c,.cpp,.h,.java,.php,.rb,.sql,.swift,.kt';
+        inp.addEventListener('change', async () => {
+          if (!inp.files[0]) return;
+          const text = await inp.files[0].text();
+          ta.value = text; updateGutter(); updateStatus();
+          currentPath = null; fn.textContent = inp.files[0].name;
+          WM.setTitle(id, inp.files[0].name);
+        });
+        inp.click();
+      });
+      
+      if (filePath) {
+        try {
+          const text = await fs.readText(filePath);
+          ta.value = text;
+          fn.textContent = filePath;
+          WM.setTitle(id, filePath.split('/').pop());
+          updateGutter(); updateStatus();
+        } catch (e) { toast('Cannot open file: ' + e.message, 'error'); }
+      }
+      
+      updateGutter();
+    }, 50);
+    
+    return id;
+  }
+  
+  return { open };
+})();
+
+/* ═══════════════════════════════════════════════════════
+   APP: WEB BROWSER
+═══════════════════════════════════════════════════════ */
+function launchBrowser(url = 'https://example.com') {
+  const id = 'browser_' + Date.now();
+  const content = `<div id="${id}-wrap" style="height:100%;display:flex;flex-direction:column;">
+    <div class="browser-bar">
+      <button class="browser-nav-btn" id="${id}-back">${Icons.back}</button>
+      <button class="browser-nav-btn" id="${id}-fwd">${Icons.forward}</button>
+      <button class="browser-nav-btn" id="${id}-reload">${Icons.refresh}</button>
+      <input class="browser-url" id="${id}-url" type="text" value="${url}" placeholder="Enter URL...">
+      <button class="browser-nav-btn" id="${id}-go" title="Go">${Icons.forward}</button>
+    </div>
+    <iframe class="browser-iframe" id="${id}-frame" sandbox="allow-scripts allow-same-origin allow-forms allow-popups" src="${url}"></iframe>
+  </div>`;
+  
+  WM.create({ id, title: 'Browser', icon: Icons.browser, width: 900, height: 600, content, appId: 'browser' });
+  
+  setTimeout(() => {
+    const frame = document.getElementById(`${id}-frame`);
+    const urlInput = document.getElementById(`${id}-url`);
+    
+    const navigate = (u) => {
+      let dest = u.trim();
+      if (!dest.startsWith('http://') && !dest.startsWith('https://') && !dest.startsWith('//')) {
+        if (dest.includes('.') && !dest.includes(' ')) dest = 'https://' + dest;
+        else dest = `https://www.google.com/search?q=${encodeURIComponent(dest)}`;
+      }
+      frame.src = dest;
+      urlInput.value = dest;
+      WM.setTitle(id, dest.replace(/^https?:\/\//, '').split('/')[0]);
+    };
+    
+    document.getElementById(`${id}-back`).addEventListener('click', () => frame.contentWindow?.history.back());
+    document.getElementById(`${id}-fwd`).addEventListener('click', () => frame.contentWindow?.history.forward());
+    document.getElementById(`${id}-reload`).addEventListener('click', () => { frame.src = frame.src; });
+    document.getElementById(`${id}-go`).addEventListener('click', () => navigate(urlInput.value));
+    urlInput.addEventListener('keydown', e => { if (e.key === 'Enter') navigate(urlInput.value); });
+  }, 50);
+}
+
+/* ═══════════════════════════════════════════════════════
+   APP: MEDIA PLAYER
+═══════════════════════════════════════════════════════ */
+const MediaPlayer = (() => {
+  function create() {
+    const id = 'media_' + Date.now();
+    const content = `<div id="${id}-wrap" style="height:100%;display:flex;flex-direction:column;background:#000;">
+      <div class="media-display" id="${id}-display">
+        <div class="media-placeholder">
+          ${Icons.media}
+          <p>No media loaded</p>
+          <button class="media-open-btn" id="${id}-browse">Browse Files</button>
+        </div>
+      </div>
+      <div class="media-controls">
+        <div class="media-info" id="${id}-info">—</div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-dim);" id="${id}-time">0:00</span>
+          <input type="range" class="media-seek" id="${id}-seek" min="0" max="100" value="0">
+          <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-dim);" id="${id}-dur">0:00</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div class="media-buttons">
+            <button class="media-btn" id="${id}-prev">${Icons.skipBack}</button>
+            <button class="media-btn play-btn" id="${id}-play">${Icons.play}</button>
+            <button class="media-btn" id="${id}-next">${Icons.skipFwd}</button>
+          </div>
+          <div class="media-volume">
+            ${Icons.volume}
+            <input type="range" class="media-vol-slider" id="${id}-vol" min="0" max="1" step="0.01" value="1">
+          </div>
+        </div>
+      </div>
+    </div>`;
+    
+    WM.create({ id, title: 'Media Player', icon: Icons.media, width: 640, height: 440, content, appId: 'media' });
+    
+    let mediaEl = null;
+    let blobUrl = null;
+    
+    setTimeout(() => {
+      document.getElementById(`${id}-browse`).addEventListener('click', () => browseMedia());
+      document.getElementById(`${id}-play`).addEventListener('click', () => { if (mediaEl) mediaEl.paused ? mediaEl.play() : mediaEl.pause(); });
+      document.getElementById(`${id}-vol`).addEventListener('input', e => { if (mediaEl) mediaEl.volume = e.target.value; });
+      document.getElementById(`${id}-seek`).addEventListener('input', e => { if (mediaEl) mediaEl.currentTime = (e.target.value / 100) * mediaEl.duration; });
+      document.getElementById(`${id}-prev`).addEventListener('click', () => { if (mediaEl) mediaEl.currentTime = Math.max(0, mediaEl.currentTime - 10); });
+      document.getElementById(`${id}-next`).addEventListener('click', () => { if (mediaEl) mediaEl.currentTime = Math.min(mediaEl.duration || 0, mediaEl.currentTime + 10); });
+    }, 50);
+    
+    async function loadMedia(filePath) {
+      try {
+        if (blobUrl) URL.revokeObjectURL(blobUrl);
+        const buf = await fs.readArrayBuffer(filePath);
+        const name = filePath.split('/').pop();
+        const ext = name.split('.').pop().toLowerCase();
+        const type = getFileType(name);
+        const mimeMap = {
+          mp4: 'video/mp4', webm: 'video/webm', ogg: 'video/ogg', mov: 'video/quicktime',
+          mp3: 'audio/mpeg', wav: 'audio/wav', flac: 'audio/flac', aac: 'audio/aac',
+          m4a: 'audio/mp4', opus: 'audio/ogg',
+        };
+        const mime = mimeMap[ext] || (type === 'video' ? 'video/mp4' : 'audio/mpeg');
+        const blob = new Blob([buf], { type: mime });
+        blobUrl = URL.createObjectURL(blob);
+        
+        const display = document.getElementById(`${id}-display`);
+        const isVideo = type === 'video';
+        display.innerHTML = isVideo
+          ? `<video id="${id}-media" src="${blobUrl}" style="max-width:100%;max-height:100%;" playsinline></video>`
+          : `<audio id="${id}-media" src="${blobUrl}" style="display:none;"></audio><div class="media-placeholder">${Icons.fileAudio}<p>${name}</p></div>`;
+        
+        mediaEl = document.getElementById(`${id}-media`);
+        WM.setTitle(id, name);
+        document.getElementById(`${id}-info`).textContent = name;
+        
+        mediaEl.addEventListener('timeupdate', () => {
+          const cur = mediaEl.currentTime, dur = mediaEl.duration || 0;
+          document.getElementById(`${id}-seek`).value = dur ? (cur / dur) * 100 : 0;
+          document.getElementById(`${id}-time`).textContent = fmtTime(cur);
+          document.getElementById(`${id}-dur`).textContent = fmtTime(dur);
+        });
+        mediaEl.addEventListener('play', () => document.getElementById(`${id}-play`).innerHTML = Icons.pause);
+        mediaEl.addEventListener('pause', () => document.getElementById(`${id}-play`).innerHTML = Icons.play);
+        mediaEl.play().catch(() => {});
+      } catch (e) { toast('Media error: ' + e.message, 'error'); }
+    }
+    
+    function browseMedia() {
+      const inp = document.createElement('input');
+      inp.type = 'file';
+      inp.accept = 'video/*,audio/*';
+      inp.addEventListener('change', async () => {
+        if (!inp.files[0]) return;
+        if (blobUrl) URL.revokeObjectURL(blobUrl);
+        const file = inp.files[0];
+        blobUrl = URL.createObjectURL(file);
+        const name = file.name;
+        const type = file.type.startsWith('video') ? 'video' : 'audio';
+        const display = document.getElementById(`${id}-display`);
+        display.innerHTML = type === 'video'
+          ? `<video id="${id}-media" src="${blobUrl}" style="max-width:100%;max-height:100%;" playsinline></video>`
+          : `<audio id="${id}-media" src="${blobUrl}"></audio><div class="media-placeholder">${Icons.fileAudio}<p>${name}</p></div>`;
+        mediaEl = document.getElementById(`${id}-media`);
+        WM.setTitle(id, name);
+        document.getElementById(`${id}-info`).textContent = name;
+        mediaEl.addEventListener('timeupdate', () => {
+          const cur = mediaEl.currentTime, dur = mediaEl.duration || 0;
+          document.getElementById(`${id}-seek`).value = dur ? (cur / dur) * 100 : 0;
+          document.getElementById(`${id}-time`).textContent = fmtTime(cur);
+          document.getElementById(`${id}-dur`).textContent = fmtTime(dur);
+        });
+        mediaEl.addEventListener('play', () => document.getElementById(`${id}-play`).innerHTML = Icons.pause);
+        mediaEl.addEventListener('pause', () => document.getElementById(`${id}-play`).innerHTML = Icons.play);
+        mediaEl.play().catch(() => {});
+      });
+      inp.click();
+    }
+    
+    return { id, loadMedia };
+  }
+  
+  const instances = {};
+  
+  function open(filePath = null) {
+    const inst = create();
+    if (filePath) setTimeout(() => inst.loadMedia(filePath), 200);
+    return inst.id;
+  }
+  
+  return { open };
+})();
+
+function fmtTime(s) {
+  if (isNaN(s) || !isFinite(s)) return '0:00';
+  const m = Math.floor(s / 60), sec = Math.floor(s % 60);
+  return `${m}:${String(sec).padStart(2, '0')}`;
+}
+
+/* ═══════════════════════════════════════════════════════
+   APP: CALCULATOR
+═══════════════════════════════════════════════════════ */
+function launchCalc() {
+  const id = 'calc_' + Date.now();
+  const buttons = [
+    ['C', '±', '%', '÷'],
+    ['7', '8', '9', '×'],
+    ['4', '5', '6', '−'],
+    ['1', '2', '3', '+'],
+    ['0', '.', '='],
+  ];
+  
+  let btnHtml = '';
+  buttons.forEach(row => {
+    row.forEach(b => {
+      const isOp = ['÷', '×', '−', '+'].includes(b);
+      const isClear = b === 'C';
+      const isEq = b === '=';
+      const isZero = b === '0';
+      btnHtml += `<button class="calc-btn${isOp ? ' op' : ''}${isClear ? ' clear' : ''}${isEq ? ' eq' : ''}${isZero ? ' span2' : ''}" data-val="${b}">${b}</button>`;
+    });
+  });
+  
+  const content = `<div id="app-calc-content">
+    <div class="calc-display">
+      <div class="calc-expr" id="${id}-expr"></div>
+      <div class="calc-result" id="${id}-res">0</div>
+    </div>
+    <div class="calc-grid">${btnHtml}</div>
+  </div>`;
+  
+  WM.create({ id, title: 'Calculator', icon: Icons.calc, width: 300, height: 440, minW: 260, minH: 380, content, appId: 'calc' });
+  
+  setTimeout(() => {
+    let expr = '', result = '0', waitNext = false;
+    const resEl = document.getElementById(`${id}-res`);
+    const exprEl = document.getElementById(`${id}-expr`);
+    
+    function updateDisplay() { resEl.textContent = result; exprEl.textContent = expr; }
+    
+    document.getElementById(id)?.querySelectorAll('.calc-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const v = btn.dataset.val;
+        if (v === 'C') { expr = ''; result = '0'; waitNext = false; }
+        else if (v === '=') {
+          try {
+            const evalExpr = expr.replace(/÷/g, '/').replace(/×/g, '*').replace(/−/g, '-');
+            result = String(eval(evalExpr));
+            exprEl.textContent = expr + ' =';
+            expr = result;
+            waitNext = true;
+          } catch { result = 'Error'; }
+        }
+        else if (v === '±') { if (result !== '0') { result = result.startsWith('-') ? result.slice(1) : '-' + result; expr = expr.slice(0, -String(Math.abs(parseFloat(result))).length) + result; } }
+        else if (v === '%') {
+          try { const n = parseFloat(result); result = String(n / 100); expr = result; } catch {}
+        }
+        else if ('÷×−+'.includes(v)) {
+          if (waitNext) { expr = expr.slice(0, -1) + v; } else { expr += result + v; }
+          waitNext = false; result = '0';
+        }
+        else {
+          if (waitNext) { expr = ''; result = '0'; waitNext = false; }
+          if (result === '0' && v !== '.') result = v;
+          else if (v === '.' && result.includes('.')) {}
+          else result += v;
+          if (expr.length === 0 || '÷×−+'.includes(expr.slice(-1))) expr += result;
+          else { const ops = expr.split(/[÷×−+]/); ops[ops.length - 1] = result; expr = expr.replace(/[^÷×−+]+$/, result); }
+        }
+        updateDisplay();
+      });
+    });
+    
+    // Keyboard
+    document.getElementById(id)?.addEventListener('keydown', e => {
+      const keyMap = { '0':'0','1':'1','2':'2','3':'3','4':'4','5':'5','6':'6','7':'7','8':'8','9':'9','.':'.','Enter':'=','=':'=','+':'+','-':'−','*':'×','/':'÷','c':'C','C':'C','Escape':'C','%':'%' };
+      if (keyMap[e.key]) {
+        document.querySelector(`#${id} .calc-btn[data-val="${keyMap[e.key]}"]`)?.click();
+      }
+    });
+  }, 50);
+}
+
+/* ═══════════════════════════════════════════════════════
+   APP: SETTINGS
+═══════════════════════════════════════════════════════ */
+function launchSettings() {
+  const id = 'settings_' + Date.now();
+  
+  const wpThumbs = WALLPAPERS.map(wp => {
+    const active = (localStorage.getItem('stormOS_wallpaper') || 'storm') === wp.id;
+    return `<div class="wp-thumb${active ? ' active' : ''}" data-wpid="${wp.id}" title="${wp.label}">
+      <div class="wp-thumb-inner" style="${wp.style}"></div>
+    </div>`;
+  }).join('') + `<div class="wp-thumb" id="wp-custom-thumb" title="Custom">
+    <div class="wp-thumb-inner" style="background:repeating-linear-gradient(45deg,var(--bg-deep),var(--bg-deep) 4px,var(--bg-elevated) 4px,var(--bg-elevated) 8px);display:flex;align-items:center;justify-content:center;">
+      <span style="font-size:10px;color:var(--text-dim);font-family:var(--font-ui);">Upload</span>
+    </div>
+  </div>`;
+  
+  const content = `<div id="app-settings-content">
+    <div class="settings-section">
+      <div class="settings-title">Wallpaper</div>
+      <div class="wp-grid" id="${id}-wpgrid">${wpThumbs}</div>
+    </div>
+    <div class="settings-section">
+      <div class="settings-title">Rain Effect</div>
+      <div class="settings-item">
+        <div class="settings-item-info"><div class="settings-item-label">Animated Rain</div><div class="settings-item-desc">Decorative rain on desktop</div></div>
+        <button class="settings-btn" id="${id}-rain">${document.getElementById('rain-canvas').style.display !== 'none' ? 'Enabled' : 'Disabled'}</button>
+      </div>
+    </div>
+    <div class="settings-section">
+      <div class="settings-title">Storage</div>
+      <div class="settings-item">
+        <div class="settings-item-info"><div class="settings-item-label">OPFS Storage</div><div class="settings-item-desc">Origin Private File System</div></div>
+        <button class="settings-btn" id="${id}-storage">Check Usage</button>
+      </div>
+    </div>
+    <div class="settings-section">
+      <div class="settings-title">System</div>
+      <div class="settings-item">
+        <div class="settings-item-info"><div class="settings-item-label">Reset File System</div><div class="settings-item-desc">Delete all files and restore defaults</div></div>
+        <button class="settings-btn danger" id="${id}-reset">Reset</button>
+      </div>
+      <div class="settings-item">
+        <div class="settings-item-info"><div class="settings-item-label">StormOS</div><div class="settings-item-desc">Browser-based OS powered by OPFS</div></div>
+        <span style="font-family:var(--font-mono);font-size:11px;color:var(--text-dim);">v1.0</span>
+      </div>
+    </div>
+  </div>`;
+  
+  WM.create({ id, title: 'Settings', icon: Icons.settings, width: 500, height: 560, content, appId: 'settings' });
+  
+  setTimeout(() => {
+    // Wallpaper selection
+    document.getElementById(`${id}-wpgrid`)?.querySelectorAll('.wp-thumb').forEach(thumb => {
+      thumb.addEventListener('click', async () => {
+        const wpId = thumb.dataset.wpid;
+        if (!wpId) {
+          // Custom upload
+          const inp = document.createElement('input');
+          inp.type = 'file'; inp.accept = 'image/*';
+          inp.addEventListener('change', async () => {
+            if (!inp.files[0]) return;
+            const buf = await inp.files[0].arrayBuffer();
+            await fs.mkdir('/system');
+            await fs.writeFile('/system/wallpaper', buf);
+            applyWallpaper('custom');
+            localStorage.setItem('stormOS_wallpaper', 'custom');
+            toast('Wallpaper set!', 'success');
+          });
+          inp.click();
+        } else {
+          document.querySelectorAll('.wp-thumb.active').forEach(el => el.classList.remove('active'));
+          thumb.classList.add('active');
+          applyWallpaper(wpId);
+          toast(`Wallpaper: ${thumb.title}`, 'success');
+        }
+      });
+    });
+    
+    // Rain toggle
+    document.getElementById(`${id}-rain`)?.addEventListener('click', e => {
+      const canvas = document.getElementById('rain-canvas');
+      const isHidden = canvas.style.display === 'none';
+      canvas.style.display = isHidden ? '' : 'none';
+      e.target.textContent = isHidden ? 'Enabled' : 'Disabled';
+    });
+    
+    // Storage check
+    document.getElementById(`${id}-storage`)?.addEventListener('click', async () => {
+      try {
+        const est = await navigator.storage.estimate();
+        const used = formatSize(est.usage || 0);
+        const quota = formatSize(est.quota || 0);
+        toast(`Used: ${used} / ${quota}`, 'info', 5000);
+      } catch { toast('Storage info unavailable', 'error'); }
+    });
+    
+    // Reset
+    document.getElementById(`${id}-reset`)?.addEventListener('click', async () => {
+      const res = await showDialog({
+        title: 'Reset File System',
+        body: 'This will delete ALL files permanently. Are you sure?',
+        actions: [{ label: 'Reset', key: 'ok', cls: 'danger' }, { label: 'Cancel', key: 'cancel' }]
+      });
+      if (res.action !== 'ok') return;
+      await fs.clearAll();
+      localStorage.removeItem('stormOS_wallpaper');
+      localStorage.removeItem('stormOS_iconPos');
+      toast('System reset complete', 'success');
+    });
+  }, 50);
+}
+
+/* ═══════════════════════════════════════════════════════
+   APP LAUNCHER
+═══════════════════════════════════════════════════════ */
+function launchApp(appId, opts = {}) {
+  switch(appId) {
+    case 'files':    FileExplorer.create(opts.path || '/'); break;
+    case 'editor':   TextEditor.open(opts.file || null); break;
+    case 'browser':  launchBrowser(opts.url); break;
+    case 'media':    MediaPlayer.open(opts.file || null); break;
+    case 'calc':     launchCalc(); break;
+    case 'settings': launchSettings(); break;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   DESKTOP DRAG-DROP (from local to VFS)
+═══════════════════════════════════════════════════════ */
+document.getElementById('desktop').addEventListener('dragover', e => {
+  if (e.target.closest('.window')) return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'copy';
+});
+
+document.getElementById('desktop').addEventListener('drop', async e => {
+  if (e.target.closest('.window')) return;
+  e.preventDefault();
+  const files = [...e.dataTransfer.files];
+  if (!files.length) return;
+  for (const f of files) {
+    try { await fs.importFile(f, '/'); } catch (err) { toast('Import error: ' + err.message, 'error'); }
+  }
+  toast(`Imported ${files.length} file(s) to root`, 'success');
+});
+
+/* ═══════════════════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════════════════ */
+async function init() {
+  try {
+    await fs.init();
+  } catch (e) {
+    console.error('OPFS init failed:', e);
+    // Graceful degradation notification
+    setTimeout(() => toast('Storage init failed. Files won\'t persist.', 'error', 6000), 2000);
+  }
+  
+  initRain();
+  loadWallpaper();
+  Desktop.load();
+  buildStartMenu();
+  
+  setInterval(updateClock, 1000);
+  updateClock();
+  
+  // Create welcome file
+  try {
+    const exists = await fs.exists('/welcome.txt');
+    if (!exists) {
+      await fs.writeText('/welcome.txt', `Welcome to StormOS
+
+A browser-based operating system powered by OPFS (Origin Private File System).
+
+FEATURES:
+- Full virtual file system with real persistence
+- Window manager with drag, resize, minimize, maximize
+- File Explorer with import/export
+- Text Editor with line numbers
+- Web Browser simulator
+- Media Player (video & audio)
+- Calculator
+- Settings with wallpaper customization
+
+TIPS:
+- Right-click the desktop for options
+- Drag files from your computer onto the desktop to import
+- Double-click files to open them
+- Use Ctrl+S in the editor to save
+
+Enjoy the storm.`);
+    }
+  } catch {}
+  
+  // Hide loading screen
+  setTimeout(() => {
+    const loading = document.getElementById('loading-screen');
+    loading.style.animation = 'fadeOut 0.5s ease forwards';
+    loading.style.transition = 'opacity 0.5s';
+    loading.style.opacity = '0';
+    loading.style.pointerEvents = 'none';
+    setTimeout(() => loading.remove(), 600);
+  }, 1800);
+}
+
+// Add fadeOut animation
+const style = document.createElement('style');
+style.textContent = `@keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }`;
+document.head.appendChild(style);
+
+// Start
+init();
+</script>
+</body>
+</html>
