@@ -1,0 +1,2165 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>BLOODTHORN OS — 血棘秘典</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Cinzel+Decorative:wght@400;700;900&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IM+Fell+English:ital@0;1&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+<!-- JSZip 解压缩库 -->
+<script src="https://unpkg.com/jszip@3.10.1/dist/jszip.min.js"></script>
+<!-- V86 虚拟机模拟器（版本锁定 0.5.319，严禁替换） -->
+<script src="https://cdn.jsdelivr.net/npm/v86@0.5.319/build/libv86.js" defer></script>
+<!-- CodeMirror 代码编辑器 -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/xml/xml.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/css/css.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/htmlmixed/htmlmixed.min.js" defer></script>
+<style>
+/* ════════════════════ BLOODTHORN · 血棘诅咒主题 ════════════════════ */
+:root{
+  --void:#070409; --abyss:#0c0810; --iron:#151019; --steel:#1e1724; --ash:#2b2133;
+  --vein:#3c2e44; --bone:#d9cdb8; --parch:#a89a82; --dust:#6d6053;
+  --blood:#6e0f1d; --blood2:#9c1626; --ember:#e8394b; --ember2:#ff5c6c;
+  --gold:#8f7340; --gold2:#c9a45c; --gold3:#ecd29a;
+  --dockh:58px;
+  --metal:linear-gradient(180deg,#2a2230 0%,#1a141f 45%,#120d16 55%,#1d1622 100%);
+  --metal-lit:linear-gradient(180deg,#3a2f44 0%,#241c2c 50%,#191220 100%);
+  --gold-line:linear-gradient(90deg,transparent,var(--gold2) 25%,var(--gold3) 50%,var(--gold2) 75%,transparent);
+  --blood-line:linear-gradient(90deg,transparent,var(--blood2) 30%,var(--ember) 50%,var(--blood2) 70%,transparent);
+}
+*{box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent;}
+html,body{height:100%; overflow:hidden; background:var(--void); color:var(--bone);
+  font-family:'Cormorant Garamond',serif; font-size:17px;}
+::selection{background:var(--blood2); color:var(--gold3);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--abyss);}
+::-webkit-scrollbar-thumb{background:linear-gradient(180deg,var(--vein),var(--ash)); border:2px solid var(--abyss); border-radius:6px;}
+::-webkit-scrollbar-thumb:hover{background:var(--blood);}
+button{font-family:inherit; cursor:pointer;}
+input,textarea,select{font-family:inherit;}
+svg{display:block;}
+
+/* ── 桌面 ── */
+#desktop{position:fixed; inset:0 0 var(--dockh) 0; overflow:hidden; z-index:1;
+  background:#0a0710 center/cover no-repeat; transition:background-image .6s ease;}
+#desktop::before{content:''; position:absolute; inset:0; pointer-events:none; z-index:0;
+  background:
+    radial-gradient(ellipse 90% 70% at 50% 110%, rgba(110,15,29,.22), transparent 60%),
+    radial-gradient(ellipse 60% 40% at 50% -10%, rgba(60,46,68,.35), transparent 70%);}
+#desktop::after{content:''; position:absolute; inset:0; pointer-events:none; z-index:0;
+  background:repeating-linear-gradient(0deg,transparent 0 3px,rgba(0,0,0,.045) 3px 4px); opacity:.6;}
+
+/* 桌面图标 */
+.dicon{position:absolute; width:88px; padding:8px 4px 6px; display:flex; flex-direction:column;
+  align-items:center; gap:5px; cursor:default; user-select:none; border-radius:6px; z-index:2;
+  border:1px solid transparent; transition:left .28s cubic-bezier(.22,1,.36,1), top .28s cubic-bezier(.22,1,.36,1),
+  background .15s, border-color .15s, transform .15s; touch-action:none;}
+.dicon:hover{background:rgba(201,164,92,.07); border-color:rgba(201,164,92,.18);}
+.dicon.sel{background:rgba(156,22,38,.22); border-color:rgba(232,57,75,.5);
+  box-shadow:0 0 18px rgba(156,22,38,.35), inset 0 0 12px rgba(156,22,38,.15);}
+.dicon.dragging{opacity:.35; transition:none;}
+.dicon .ic{width:46px; height:46px; color:var(--gold2); filter:drop-shadow(0 3px 5px rgba(0,0,0,.7));}
+.dicon.sel .ic{color:var(--ember);}
+.dicon .lbl{font-family:'Cinzel',serif; font-size:11.5px; font-weight:600; letter-spacing:.03em;
+  text-align:center; color:var(--bone); text-shadow:0 1px 3px #000, 0 0 8px rgba(0,0,0,.9);
+  max-width:84px; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
+  word-break:break-all; line-height:1.25;}
+.dicon.droptarget{background:rgba(201,164,92,.18); border-color:var(--gold2); transform:scale(1.06);}
+
+/* 框选 */
+#marquee{position:fixed; z-index:9400; border:1px solid var(--ember); display:none;
+  background:rgba(156,22,38,.12); box-shadow:inset 0 0 20px rgba(156,22,38,.15); pointer-events:none;}
+
+/* ── 窗口 ── */
+.win{position:absolute; min-width:320px; min-height:200px; display:flex; flex-direction:column;
+  background:linear-gradient(180deg, rgba(30,23,36,.97), rgba(14,10,18,.97));
+  border:1px solid #000; border-radius:8px; overflow:hidden;
+  box-shadow:0 0 0 1px rgba(201,164,92,.22), 0 24px 70px rgba(0,0,0,.85), 0 4px 16px rgba(0,0,0,.6);
+  animation:winIn .26s cubic-bezier(.22,1.2,.36,1);}
+.win.focus{box-shadow:0 0 0 1px rgba(201,164,92,.45), 0 0 26px rgba(110,15,29,.4), 0 28px 80px rgba(0,0,0,.9);}
+@keyframes winIn{from{opacity:0; transform:scale(.92) translateY(18px);} to{opacity:1; transform:none;}}
+.win.closing{animation:winOut .2s ease forwards;}
+@keyframes winOut{to{opacity:0; transform:scale(.94) translateY(10px);}}
+.win.minimized{display:none;}
+.win.maxed{border-radius:0;}
+.tbar{height:40px; flex:none; display:flex; align-items:center; gap:9px; padding:0 6px 0 12px;
+  background:var(--metal); border-bottom:1px solid #000; position:relative; cursor:default; user-select:none; touch-action:none;}
+.tbar::after{content:''; position:absolute; left:0; right:0; bottom:-1px; height:1px; background:var(--gold-line); opacity:.5;}
+.win.focus .tbar{background:var(--metal-lit);}
+.win.focus .tbar::after{background:var(--blood-line); opacity:.9;}
+.tbar .ticon{width:17px;height:17px;color:var(--gold2);flex:none;}
+.tbar .ticon svg{width:100%;height:100%;}
+.tbar .ttl{font-family:'Cinzel',serif; font-size:13px; font-weight:700; letter-spacing:.1em;
+  color:var(--parch); flex:1; overflow:hidden; white-space:nowrap; text-overflow:ellipsis;}
+.win.focus .tbar .ttl{color:var(--gold3);}
+.tbtns{display:flex; gap:5px; flex:none;}
+.tb{width:30px; height:26px; border:1px solid var(--vein); background:linear-gradient(180deg,var(--ash),var(--iron));
+  color:var(--parch); border-radius:4px; display:flex; align-items:center; justify-content:center;
+  transition:all .12s; padding:0;}
+.tb svg{width:11px; height:11px;}
+.tb:hover{border-color:var(--gold2); color:var(--gold3); background:linear-gradient(180deg,var(--vein),var(--ash));}
+.tb.cls:hover{border-color:var(--ember); color:#fff; background:linear-gradient(180deg,var(--blood2),var(--blood));
+  box-shadow:0 0 12px rgba(156,22,38,.6);}
+.wbody{flex:1; overflow:hidden; position:relative; display:flex; flex-direction:column; min-height:0;}
+/* resize handles */
+.rh{position:absolute; z-index:5;}
+.rh-n{top:-3px;left:8px;right:8px;height:7px;cursor:n-resize;}
+.rh-s{bottom:-3px;left:8px;right:8px;height:7px;cursor:s-resize;}
+.rh-e{right:-3px;top:8px;bottom:8px;width:7px;cursor:e-resize;}
+.rh-w{left:-3px;top:8px;bottom:8px;width:7px;cursor:w-resize;}
+.rh-ne{top:-3px;right:-3px;width:13px;height:13px;cursor:ne-resize;}
+.rh-nw{top:-3px;left:-3px;width:13px;height:13px;cursor:nw-resize;}
+.rh-se{bottom:-3px;right:-3px;width:13px;height:13px;cursor:se-resize;}
+.rh-sw{bottom:-3px;left:-3px;width:13px;height:13px;cursor:sw-resize;}
+.win.maxed .rh{display:none;}
+
+/* ── 任务栏 ── */
+#taskbar{position:fixed; left:0; right:0; bottom:0; height:var(--dockh); z-index:9000;
+  display:flex; align-items:center; gap:8px; padding:0 10px;
+  background:linear-gradient(180deg, rgba(30,23,36,.92), rgba(10,7,13,.96));
+  border-top:1px solid rgba(201,164,92,.3); backdrop-filter:blur(14px);}
+#taskbar::before{content:''; position:absolute; top:-1px; left:0; right:0; height:1px; background:var(--gold-line); opacity:.55;}
+#startBtn{height:42px; padding:0 14px; display:flex; align-items:center; gap:9px; border-radius:6px;
+  border:1px solid var(--vein); background:linear-gradient(180deg,var(--ash),var(--iron)); color:var(--gold2);
+  font-family:'Cinzel Decorative',serif; font-weight:700; font-size:14px; letter-spacing:.08em; transition:all .15s;}
+#startBtn svg{width:22px;height:22px;}
+#startBtn:hover, #startBtn.on{border-color:var(--gold2); color:var(--gold3);
+  box-shadow:0 0 16px rgba(156,22,38,.45), inset 0 0 12px rgba(201,164,92,.1);}
+#startBtn .sb-txt{display:inline;}
+#tasks{flex:1; display:flex; gap:6px; overflow-x:auto; scrollbar-width:none; padding:4px 2px;}
+#tasks::-webkit-scrollbar{display:none;}
+.task{height:42px; min-width:46px; max-width:190px; padding:0 12px; display:flex; align-items:center; gap:8px;
+  border-radius:6px; border:1px solid var(--vein); background:linear-gradient(180deg,#241c2c,#15101a);
+  color:var(--parch); font-family:'Cinzel',serif; font-size:12px; font-weight:600; letter-spacing:.05em;
+  position:relative; transition:all .15s; flex:none;}
+.task svg{width:17px;height:17px;flex:none;color:var(--gold2);}
+.task span{overflow:hidden; white-space:nowrap; text-overflow:ellipsis;}
+.task.active{border-color:rgba(232,57,75,.55); color:var(--gold3);
+  background:linear-gradient(180deg,#3a2330,#1c1018); box-shadow:0 0 14px rgba(110,15,29,.4);}
+.task.active::after{content:''; position:absolute; bottom:-1px; left:18%; right:18%; height:2px;
+  background:var(--blood-line); border-radius:2px;}
+.task.minned{opacity:.55;}
+#clock{flex:none; text-align:right; padding:0 8px; font-family:'Cinzel',serif; line-height:1.25; user-select:none;}
+#clock .t{font-size:16px; font-weight:700; color:var(--gold3); letter-spacing:.08em;}
+#clock .d{font-size:10.5px; color:var(--parch); letter-spacing:.12em;}
+
+/* ── 开始菜单 ── */
+#startMenu{position:fixed; left:10px; bottom:calc(var(--dockh) + 10px); width:420px; max-width:calc(100vw - 20px);
+  max-height:min(620px, calc(100vh - var(--dockh) - 24px)); z-index:9100; display:none; flex-direction:column;
+  background:linear-gradient(180deg, rgba(28,21,34,.97), rgba(10,7,13,.98));
+  border:1px solid rgba(201,164,92,.35); border-radius:10px; overflow:hidden;
+  box-shadow:0 -10px 60px rgba(0,0,0,.85), 0 0 30px rgba(110,15,29,.35);}
+#startMenu.open{display:flex; animation:smIn .25s cubic-bezier(.22,1.2,.36,1);}
+@keyframes smIn{from{opacity:0; transform:translateY(22px) scale(.97);} to{opacity:1; transform:none;}}
+.sm-head{padding:18px 20px 12px; text-align:center; position:relative;}
+.sm-head::after{content:''; position:absolute; left:10%; right:10%; bottom:0; height:1px; background:var(--gold-line); opacity:.5;}
+.sm-head .sig{width:42px; height:42px; margin:0 auto 6px; color:var(--ember); filter:drop-shadow(0 0 10px rgba(232,57,75,.5));}
+.sm-head h1{font-family:'Cinzel Decorative',serif; font-size:21px; font-weight:900; letter-spacing:.18em;
+  background:linear-gradient(180deg,var(--gold3),var(--gold)); -webkit-background-clip:text; background-clip:text; color:transparent;}
+.sm-head p{font-family:'IM Fell English',serif; font-style:italic; font-size:13px; color:var(--dust); margin-top:2px;}
+.sm-search{margin:12px 16px 4px; position:relative;}
+.sm-search input{width:100%; height:38px; padding:0 14px 0 38px; border-radius:6px; outline:none;
+  border:1px solid var(--vein); background:rgba(7,4,9,.7); color:var(--bone); font-size:15px;}
+.sm-search input:focus{border-color:var(--gold2); box-shadow:0 0 10px rgba(201,164,92,.2);}
+.sm-search svg{position:absolute; left:12px; top:50%; transform:translateY(-50%); width:16px; height:16px; color:var(--dust);}
+.sm-grid{flex:1; overflow-y:auto; display:grid; grid-template-columns:repeat(3,1fr); gap:8px; padding:14px 16px;}
+.sm-app{display:flex; flex-direction:column; align-items:center; gap:8px; padding:14px 6px 11px;
+  border-radius:8px; border:1px solid transparent; background:transparent; color:var(--bone);
+  transition:all .15s; opacity:0; animation:tileIn .4s cubic-bezier(.22,1,.36,1) forwards;}
+@keyframes tileIn{from{opacity:0; transform:translateY(14px);} to{opacity:1; transform:none;}}
+.sm-app:hover{background:rgba(156,22,38,.16); border-color:rgba(232,57,75,.4); transform:translateY(-2px);
+  box-shadow:0 6px 18px rgba(0,0,0,.5);}
+.sm-app .ic{width:36px; height:36px; color:var(--gold2);}
+.sm-app:hover .ic{color:var(--ember2);}
+.sm-app .nm{font-family:'Cinzel',serif; font-size:12px; font-weight:700; letter-spacing:.05em; text-align:center;}
+.sm-app .ds{font-family:'IM Fell English',serif; font-style:italic; font-size:11px; color:var(--dust); text-align:center;}
+.sm-foot{flex:none; display:flex; gap:8px; padding:10px 16px 12px; border-top:1px solid rgba(60,46,68,.6);}
+.sm-fbtn{flex:1; height:34px; display:flex; align-items:center; justify-content:center; gap:7px;
+  border:1px solid var(--vein); border-radius:5px; background:linear-gradient(180deg,var(--ash),var(--iron));
+  color:var(--parch); font-family:'Cinzel',serif; font-size:11.5px; font-weight:600; letter-spacing:.06em; transition:all .15s;}
+.sm-fbtn svg{width:14px;height:14px;}
+.sm-fbtn:hover{border-color:var(--gold2); color:var(--gold3);}
+
+/* ── 右键菜单 ── */
+#ctxMenu{position:fixed; z-index:9500; min-width:210px; display:none; flex-direction:column; padding:6px;
+  background:linear-gradient(180deg, rgba(30,23,36,.98), rgba(12,8,16,.98));
+  border:1px solid rgba(201,164,92,.4); border-radius:8px;
+  box-shadow:0 16px 50px rgba(0,0,0,.85), 0 0 20px rgba(110,15,29,.3);}
+#ctxMenu.open{display:flex; animation:ctxIn .14s ease-out;}
+@keyframes ctxIn{from{opacity:0; transform:scale(.95);} to{opacity:1; transform:none;}}
+.ctx-it{display:flex; align-items:center; gap:11px; padding:8px 12px; border-radius:5px; border:none;
+  background:none; color:var(--bone); font-family:'Cormorant Garamond',serif; font-size:15.5px; font-weight:600;
+  letter-spacing:.02em; text-align:left; transition:all .1s; width:100%;}
+.ctx-it svg{width:16px; height:16px; color:var(--gold2); flex:none;}
+.ctx-it:hover{background:rgba(156,22,38,.28); color:var(--gold3);}
+.ctx-it.danger{color:var(--ember2);}
+.ctx-it.danger svg{color:var(--ember2);}
+.ctx-it.danger:hover{background:rgba(156,22,38,.4); color:#fff;}
+.ctx-it[disabled]{opacity:.35; pointer-events:none;}
+.ctx-sep{height:1px; margin:5px 10px; background:linear-gradient(90deg,transparent,var(--vein),transparent);}
+
+/* ── 对话框 ── */
+#dlgWrap{position:fixed; inset:0; z-index:9600; display:none; align-items:center; justify-content:center;
+  background:rgba(7,4,9,.65); backdrop-filter:blur(3px);}
+#dlgWrap.open{display:flex; animation:fadeIn .18s ease;}
+@keyframes fadeIn{from{opacity:0;} to{opacity:1;}}
+.dlg{width:min(440px, calc(100vw - 32px)); max-height:80vh; display:flex; flex-direction:column;
+  background:linear-gradient(180deg,#241c2c,#100b15); border:1px solid rgba(201,164,92,.45); border-radius:10px;
+  box-shadow:0 24px 80px rgba(0,0,0,.9), 0 0 30px rgba(110,15,29,.35); overflow:hidden;
+  animation:winIn .22s cubic-bezier(.22,1.2,.36,1);}
+.dlg-t{padding:14px 20px 10px; font-family:'Cinzel',serif; font-size:15px; font-weight:700; letter-spacing:.12em;
+  color:var(--gold3); border-bottom:1px solid rgba(60,46,68,.7); position:relative;}
+.dlg-t::after{content:''; position:absolute; left:0; right:0; bottom:-1px; height:1px; background:var(--blood-line); opacity:.6;}
+.dlg-b{padding:18px 20px; font-size:16px; color:var(--bone); overflow-y:auto;}
+.dlg-b input[type=text]{width:100%; height:40px; margin-top:10px; padding:0 12px; border-radius:6px; outline:none;
+  border:1px solid var(--vein); background:rgba(7,4,9,.8); color:var(--gold3); font-size:16px;}
+.dlg-b input[type=text]:focus{border-color:var(--gold2);}
+.dlg-f{display:flex; gap:10px; justify-content:flex-end; padding:12px 20px 16px;}
+.btn{height:36px; padding:0 18px; border-radius:5px; border:1px solid var(--vein);
+  background:linear-gradient(180deg,var(--ash),var(--iron)); color:var(--parch);
+  font-family:'Cinzel',serif; font-size:12px; font-weight:700; letter-spacing:.08em; transition:all .15s;
+  display:inline-flex; align-items:center; gap:7px; justify-content:center;}
+.btn svg{width:14px;height:14px;}
+.btn:hover{border-color:var(--gold2); color:var(--gold3); box-shadow:0 0 10px rgba(201,164,92,.2);}
+.btn.primary{border-color:var(--blood2); background:linear-gradient(180deg,var(--blood2),var(--blood)); color:#f5e9d8;}
+.btn.primary:hover{box-shadow:0 0 16px rgba(156,22,38,.6); color:#fff;}
+.btn.gold{border-color:var(--gold); background:linear-gradient(180deg,#5a4827,#3a2e18); color:var(--gold3);}
+.btn[disabled]{opacity:.4; pointer-events:none;}
+
+/* ── Toast ── */
+#toasts{position:fixed; right:16px; bottom:calc(var(--dockh) + 14px); z-index:9700; display:flex;
+  flex-direction:column; gap:9px; align-items:flex-end; pointer-events:none;}
+.toast{max-width:min(360px, calc(100vw - 32px)); padding:11px 16px; border-radius:7px; display:flex; gap:10px; align-items:center;
+  background:linear-gradient(180deg,#241c2c,#120d17); border:1px solid rgba(201,164,92,.45); color:var(--bone);
+  font-size:15px; box-shadow:0 10px 32px rgba(0,0,0,.7); animation:toastIn .3s cubic-bezier(.22,1.2,.36,1); pointer-events:auto;}
+.toast svg{width:17px;height:17px;flex:none;color:var(--gold2);}
+.toast.err{border-color:var(--ember); }
+.toast.err svg{color:var(--ember2);}
+.toast.fading{animation:toastOut .35s ease forwards;}
+@keyframes toastIn{from{opacity:0; transform:translateX(40px);} to{opacity:1; transform:none;}}
+@keyframes toastOut{to{opacity:0; transform:translateX(40px);}}
+
+/* ── 通用应用工具栏 ── */
+.atb{flex:none; display:flex; align-items:center; gap:6px; padding:7px 10px; flex-wrap:wrap;
+  background:linear-gradient(180deg,rgba(43,33,51,.6),rgba(21,16,25,.6)); border-bottom:1px solid rgba(60,46,68,.7);}
+.atb .sp{flex:1;}
+.itb{height:31px; min-width:31px; padding:0 9px; display:inline-flex; align-items:center; gap:6px; border-radius:5px;
+  border:1px solid var(--vein); background:linear-gradient(180deg,var(--ash),var(--iron)); color:var(--parch);
+  font-family:'Cinzel',serif; font-size:11px; font-weight:700; letter-spacing:.05em; transition:all .13s;}
+.itb svg{width:14px;height:14px;}
+.itb:hover{border-color:var(--gold2); color:var(--gold3);}
+.itb.on{border-color:var(--ember); color:var(--gold3); background:linear-gradient(180deg,#3a2330,#1c1018);}
+.itb[disabled]{opacity:.35; pointer-events:none;}
+
+/* ── 文件管理器 ── */
+.fx{display:flex; flex:1; min-height:0;}
+.fx-side{width:188px; flex:none; overflow-y:auto; padding:10px 8px; border-right:1px solid rgba(60,46,68,.7);
+  background:rgba(12,8,16,.5);}
+.fx-side h4{font-family:'Cinzel',serif; font-size:10px; font-weight:700; letter-spacing:.2em; color:var(--dust);
+  padding:10px 9px 5px;}
+.fx-si{display:flex; align-items:center; gap:9px; width:100%; padding:7px 9px; border-radius:5px; border:none;
+  background:none; color:var(--bone); font-size:14.5px; font-weight:600; text-align:left; transition:all .1s;}
+.fx-si svg{width:15px;height:15px;color:var(--gold2);flex:none;}
+.fx-si:hover{background:rgba(201,164,92,.1);}
+.fx-si.on{background:rgba(156,22,38,.25); color:var(--gold3);}
+.fx-si span{overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}
+.fx-main{flex:1; display:flex; flex-direction:column; min-width:0;}
+.fx-crumbs{display:flex; align-items:center; gap:2px; flex:1; min-width:120px; overflow-x:auto; scrollbar-width:none;
+  padding:4px 8px; border:1px solid var(--vein); border-radius:5px; background:rgba(7,4,9,.55); height:31px;}
+.fx-crumbs::-webkit-scrollbar{display:none;}
+.crumb{border:none; background:none; color:var(--parch); font-family:'Cinzel',serif; font-size:11.5px; font-weight:600;
+  letter-spacing:.04em; padding:2px 5px; border-radius:4px; white-space:nowrap;}
+.crumb:hover{color:var(--gold3); background:rgba(201,164,92,.12);}
+.crumb.cur{color:var(--gold3);}
+.crumb-sep{color:var(--blood2); font-size:11px;}
+.fx-search{position:relative;}
+.fx-search input{height:31px; width:150px; padding:0 10px 0 30px; border-radius:5px; outline:none;
+  border:1px solid var(--vein); background:rgba(7,4,9,.55); color:var(--bone); font-size:14px;}
+.fx-search input:focus{border-color:var(--gold2); width:190px;}
+.fx-search svg{position:absolute; left:9px; top:50%; transform:translateY(-50%); width:13px; height:13px; color:var(--dust);}
+.fx-cols{flex:none; display:grid; grid-template-columns:minmax(140px,1fr) 150px 110px 90px; gap:0; padding:0 14px;
+  border-bottom:1px solid rgba(60,46,68,.7); background:rgba(21,16,25,.6); user-select:none;}
+.fx-col{padding:7px 8px; font-family:'Cinzel',serif; font-size:10.5px; font-weight:700; letter-spacing:.14em;
+  color:var(--dust); cursor:pointer; display:flex; align-items:center; gap:5px; border:none; background:none; text-align:left;}
+.fx-col:hover{color:var(--gold2);}
+.fx-col.on{color:var(--gold3);}
+.fx-list{flex:1; overflow-y:auto; padding:6px 14px 20px; position:relative;}
+.frow{display:grid; grid-template-columns:minmax(140px,1fr) 150px 110px 90px; align-items:center; border-radius:5px;
+  border:1px solid transparent; cursor:default; user-select:none;}
+.frow:hover{background:rgba(201,164,92,.07);}
+.frow.sel{background:rgba(156,22,38,.24); border-color:rgba(232,57,75,.45);}
+.frow.droptarget{background:rgba(201,164,92,.16); border-color:var(--gold2);}
+.frow .fc{padding:6px 8px; font-size:14.5px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; color:var(--parch);}
+.frow .fc.nm{display:flex; align-items:center; gap:9px; color:var(--bone); font-weight:600;}
+.frow .fc.nm svg{width:17px;height:17px;flex:none;color:var(--gold2);}
+.frow.isdir .fc.nm svg{color:var(--gold3);}
+.fx-status{flex:none; padding:5px 14px; border-top:1px solid rgba(60,46,68,.7); font-family:'Cinzel',serif;
+  font-size:10.5px; letter-spacing:.1em; color:var(--dust); display:flex; gap:18px;}
+.fx-empty{padding:50px 20px; text-align:center; color:var(--dust); font-family:'IM Fell English',serif; font-style:italic; font-size:16px;}
+
+/* ── 编辑器/查看器通用 ── */
+.ed-ta{flex:1; width:100%; resize:none; outline:none; border:none; padding:16px 18px;
+  background:rgba(7,4,9,.5); color:var(--bone); font-family:'Fira Code',monospace; font-size:14px; line-height:1.65;}
+.viewer-img{flex:1; overflow:hidden; display:flex; align-items:center; justify-content:center; position:relative;
+  background:
+    repeating-conic-gradient(rgba(43,33,51,.4) 0 25%, transparent 0 50%) 0 0/24px 24px, var(--abyss); cursor:grab;}
+.viewer-img img{max-width:none; transition:transform .08s linear; user-select:none; -webkit-user-drag:none;
+  box-shadow:0 14px 50px rgba(0,0,0,.8);}
+.player-wrap{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px; padding:24px;
+  background:radial-gradient(ellipse at 50% 120%, rgba(110,15,29,.25), transparent 65%), var(--abyss);}
+audio{width:100%; max-width:480px;}
+video{max-width:100%; max-height:100%; box-shadow:0 14px 50px rgba(0,0,0,.8);}
+
+/* CodeMirror 主题覆写 */
+.CodeMirror{height:100% !important; background:rgba(7,4,9,.55) !important; color:var(--bone) !important;
+  font-family:'Fira Code',monospace !important; font-size:13.5px !important; line-height:1.6 !important;}
+.CodeMirror-gutters{background:rgba(21,16,25,.8) !important; border-right:1px solid var(--vein) !important;}
+.CodeMirror-linenumber{color:var(--dust) !important;}
+.CodeMirror-cursor{border-left:2px solid var(--ember) !important;}
+.CodeMirror-selected{background:rgba(156,22,38,.3) !important;}
+.cm-tag{color:var(--ember2) !important;} .cm-attribute{color:var(--gold2) !important;}
+.cm-string{color:#a8c47e !important;} .cm-keyword{color:#c084d8 !important;}
+.cm-comment{color:var(--dust) !important; font-style:italic;}
+.cm-number{color:#e0a060 !important;} .cm-property{color:#7eb8c4 !important;}
+
+/* ── 表格视图 ── */
+.tbl-wrap{flex:1; overflow:auto;}
+.tbl-wrap table{border-collapse:collapse; min-width:100%;}
+.tbl-wrap th{position:sticky; top:0; background:linear-gradient(180deg,#2b2133,#1a141f); color:var(--gold3);
+  font-family:'Cinzel',serif; font-size:11px; letter-spacing:.08em; padding:8px 12px; border:1px solid var(--vein); text-align:left;}
+.tbl-wrap td{padding:6px 12px; border:1px solid rgba(60,46,68,.5); font-size:14px; color:var(--bone); white-space:nowrap;}
+.tbl-wrap tr:nth-child(even) td{background:rgba(30,23,36,.35);}
+.tbl-wrap tr:hover td{background:rgba(156,22,38,.13);}
+
+/* ── 计算器 ── */
+.calc{flex:1; display:flex; flex-direction:column; padding:14px; gap:12px;
+  background:radial-gradient(ellipse at 50% -20%, rgba(60,46,68,.4), transparent 60%), var(--abyss);}
+.calc-scr{flex:none; padding:14px 16px; border-radius:8px; border:1px solid var(--vein);
+  background:linear-gradient(180deg,#0a0710,#120d17); text-align:right; overflow:hidden;}
+.calc-scr .ex{font-family:'Fira Code',monospace; font-size:13px; color:var(--dust); min-height:18px;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.calc-scr .rs{font-family:'Cinzel',serif; font-size:34px; font-weight:700; color:var(--gold3);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-shadow:0 0 18px rgba(201,164,92,.3);}
+.calc-grid{flex:1; display:grid; grid-template-columns:repeat(4,1fr); gap:8px;}
+.cbtn{border-radius:7px; border:1px solid var(--vein); background:linear-gradient(180deg,var(--ash),var(--iron));
+  color:var(--bone); font-family:'Cinzel',serif; font-size:18px; font-weight:700; transition:all .1s; min-height:44px;}
+.cbtn:hover{border-color:var(--gold2); color:var(--gold3); transform:translateY(-1px);}
+.cbtn:active{transform:translateY(1px);}
+.cbtn.op{color:var(--gold2); background:linear-gradient(180deg,#3a2f44,#241c2c);}
+.cbtn.eq{background:linear-gradient(180deg,var(--blood2),var(--blood)); border-color:var(--blood2); color:#f5e9d8;}
+.cbtn.eq:hover{box-shadow:0 0 18px rgba(156,22,38,.6); color:#fff;}
+
+/* ── 设置 ── */
+.set-wrap{flex:1; display:flex; min-height:0;}
+.set-nav{width:170px; flex:none; padding:12px 8px; border-right:1px solid rgba(60,46,68,.7); background:rgba(12,8,16,.5);}
+.set-body{flex:1; overflow-y:auto; padding:22px 26px;}
+.set-body h2{font-family:'Cinzel',serif; font-size:18px; font-weight:700; letter-spacing:.14em; color:var(--gold3);
+  padding-bottom:10px; margin-bottom:16px; border-bottom:1px solid rgba(60,46,68,.7); position:relative;}
+.set-body h2::after{content:''; position:absolute; left:0; bottom:-1px; width:90px; height:1px; background:var(--blood-line);}
+.meter{height:22px; border-radius:11px; border:1px solid var(--vein); background:#0a0710; overflow:hidden; display:flex;}
+.meter > div{height:100%; transition:width .8s cubic-bezier(.22,1,.36,1);}
+.wall-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:12px;}
+.wall-card{aspect-ratio:16/10; border-radius:8px; border:2px solid var(--vein); cursor:pointer; position:relative;
+  overflow:hidden; transition:all .15s; background-size:cover; background-position:center;}
+.wall-card:hover{transform:translateY(-3px); border-color:var(--gold2); box-shadow:0 8px 24px rgba(0,0,0,.6);}
+.wall-card.on{border-color:var(--ember); box-shadow:0 0 16px rgba(156,22,38,.5);}
+.wall-card span{position:absolute; left:0; right:0; bottom:0; padding:4px 8px; font-family:'Cinzel',serif;
+  font-size:10px; font-weight:700; letter-spacing:.1em; color:var(--gold3); background:rgba(7,4,9,.75);}
+
+/* ── 画板 ── */
+.paint-cv{flex:1; min-height:0; position:relative; overflow:hidden; background:
+  repeating-conic-gradient(rgba(43,33,51,.35) 0 25%, transparent 0 50%) 0 0/22px 22px, #0d0911;}
+.paint-cv canvas{position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); background:#16121c;
+  box-shadow:0 10px 40px rgba(0,0,0,.8); touch-action:none; cursor:crosshair;}
+input[type=color]{width:31px; height:31px; padding:2px; border:1px solid var(--vein); border-radius:5px;
+  background:var(--iron); cursor:pointer;}
+input[type=range]{accent-color:var(--blood2);}
+
+/* ── v86 ── */
+.v86sc{flex:1; overflow:auto; background:#000; display:flex; align-items:flex-start; justify-content:center; padding:6px;}
+.v86sc > div{white-space:pre; font:14px monospace; line-height:14px; color:#ddd;}
+
+/* ── 浏览器 ── */
+.web-frame{flex:1; border:none; background:#fff; width:100%;}
+
+/* ── 启动画面 ── */
+#boot{position:fixed; inset:0; z-index:10000; display:flex; flex-direction:column; align-items:center;
+  justify-content:center; gap:0; background:radial-gradient(ellipse at 50% 130%, #1d0a10, transparent 60%),
+  radial-gradient(ellipse at 50% -30%, #1a1422, transparent 60%), var(--void); transition:opacity .8s ease;}
+#boot.gone{opacity:0; pointer-events:none;}
+#boot .sigil{width:110px; height:110px; color:var(--ember); filter:drop-shadow(0 0 24px rgba(232,57,75,.55));
+  animation:sigilPulse 2.4s ease-in-out infinite;}
+@keyframes sigilPulse{0%,100%{transform:scale(1); filter:drop-shadow(0 0 18px rgba(232,57,75,.4));}
+  50%{transform:scale(1.05); filter:drop-shadow(0 0 34px rgba(232,57,75,.75));}}
+#boot h1{margin-top:22px; font-family:'Cinzel Decorative',serif; font-weight:900; font-size:clamp(26px,6vw,44px);
+  letter-spacing:.3em; padding-left:.3em; background:linear-gradient(180deg,var(--gold3) 20%,var(--gold) 80%);
+  -webkit-background-clip:text; background-clip:text; color:transparent; opacity:0; animation:bootFade .9s ease .3s forwards;}
+#boot p{margin-top:8px; font-family:'IM Fell English',serif; font-style:italic; font-size:15px; color:var(--dust);
+  letter-spacing:.12em; opacity:0; animation:bootFade .9s ease .7s forwards;}
+@keyframes bootFade{to{opacity:1;}}
+#boot .bbar{width:min(300px,70vw); height:3px; margin-top:34px; border-radius:2px; background:rgba(60,46,68,.6);
+  overflow:hidden; opacity:0; animation:bootFade .6s ease 1s forwards;}
+#boot .bbar > div{height:100%; width:0%; background:linear-gradient(90deg,var(--blood2),var(--ember),var(--gold2));
+  transition:width .4s ease; box-shadow:0 0 12px rgba(232,57,75,.7);}
+#boot .bmsg{margin-top:10px; font-family:'Cinzel',serif; font-size:10px; letter-spacing:.25em; color:var(--dust);}
+
+/* 拖拽幽灵（触摸） */
+#touchGhost{position:fixed; z-index:9800; pointer-events:none; display:none; opacity:.85;
+  filter:drop-shadow(0 8px 20px rgba(0,0,0,.8)); transform:translate(-50%,-50%) scale(1.05);}
+
+/* 拖放高亮 */
+.dropglow{outline:2px dashed var(--gold2) !important; outline-offset:-6px; background:rgba(201,164,92,.06) !important;}
+
+/* ── 响应式：手机/平板 ── */
+@media (max-width: 768px){
+  :root{--dockh:66px;}
+  #startBtn .sb-txt{display:none;}
+  #startBtn{padding:0 12px;}
+  .task{min-width:42px; padding:0 10px;}
+  .task span{display:none;}
+  #clock .d{display:none;}
+  #startMenu{left:6px; right:6px; width:auto;}
+  .sm-grid{grid-template-columns:repeat(3,1fr);}
+  .fx-side{position:absolute; left:0; top:0; bottom:0; z-index:20; transform:translateX(-100%);
+    transition:transform .25s ease; background:rgba(12,8,16,.97); width:210px;}
+  .fx-side.open{transform:none; box-shadow:20px 0 50px rgba(0,0,0,.6);}
+  .fx-cols{grid-template-columns:minmax(100px,1fr) 86px;}
+  .fx-col:nth-child(2),.fx-col:nth-child(3){display:none;}
+  .frow{grid-template-columns:minmax(100px,1fr) 86px;}
+  .frow .fc:nth-child(2),.frow .fc:nth-child(3){display:none;}
+  .dicon{width:78px;}
+  .dicon .ic{width:42px;height:42px;}
+  .set-nav{width:62px;}
+  .set-nav .fx-si span{display:none;}
+  .set-body{padding:16px;}
+}
+@media (pointer:coarse){ .rh{display:none;} .tb{width:38px;height:32px;} }
+</style>
+</head>
+<body>
+
+<div id="boot">
+  <svg class="sigil" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M32 4 L38 16 L52 14 L44 26 L58 32 L44 38 L52 50 L38 48 L32 60 L26 48 L12 50 L20 38 L6 32 L20 26 L12 14 L26 16 Z"/>
+    <circle cx="32" cy="32" r="9"/><path d="M32 26 v12 M27 30 l10 5 M37 30 l-10 5"/>
+  </svg>
+  <h1>BLOODTHORN</h1>
+  <p>— a covenant sealed in iron &amp; blood —</p>
+  <div class="bbar"><div id="bootBar"></div></div>
+  <div class="bmsg" id="bootMsg">AWAKENING THE CRYPT…</div>
+</div>
+
+<div id="desktop"></div>
+<div id="marquee"></div>
+<div id="touchGhost"></div>
+
+<div id="taskbar">
+  <button id="startBtn"></button>
+  <div id="tasks"></div>
+  <div id="clock"><div class="t">--:--</div><div class="d">—</div></div>
+</div>
+
+<div id="startMenu"></div>
+<div id="ctxMenu"></div>
+<div id="dlgWrap"></div>
+<div id="toasts"></div>
+
+<input type="file" id="fileImport" multiple style="display:none">
+<input type="file" id="wallImport" accept="image/*" style="display:none">
+
+<script>
+'use strict';
+/* ═══════════════════════════════════════════════════════════════════
+   BLOODTHORN OS — 单文件 Web 操作系统
+   核心：OPFS 虚拟文件系统（IndexedDB / 内存+localStorage 降级链）
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── 路径工具 ── */
+const P = {
+  norm(p){ const seg=String(p||'/').split('/').filter(s=>s&&s!=='.'); const out=[];
+    for(const s of seg){ if(s==='..') out.pop(); else out.push(s); } return '/'+out.join('/'); },
+  join(...a){ return P.norm(a.join('/')); },
+  dir(p){ p=P.norm(p); const i=p.lastIndexOf('/'); return i<=0?'/':p.slice(0,i); },
+  base(p){ p=P.norm(p); return p==='/'?'/':p.slice(p.lastIndexOf('/')+1); },
+  ext(p){ const b=P.base(p); const i=b.lastIndexOf('.'); return i>0?b.slice(i+1).toLowerCase():''; }
+};
+
+const MIME = {png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',gif:'image/gif',svg:'image/svg+xml',
+  webp:'image/webp',bmp:'image/bmp',ico:'image/x-icon',avif:'image/avif',
+  mp3:'audio/mpeg',wav:'audio/wav',ogg:'audio/ogg',flac:'audio/flac',aac:'audio/aac',m4a:'audio/mp4',opus:'audio/ogg',
+  mp4:'video/mp4',webm:'video/webm',ogv:'video/ogg',mov:'video/quicktime',
+  txt:'text/plain',html:'text/html',htm:'text/html',css:'text/css',js:'text/javascript',mjs:'text/javascript',
+  json:'application/json',xml:'application/xml',md:'text/markdown',yaml:'text/yaml',yml:'text/yaml',log:'text/plain',
+  csv:'text/csv',tsv:'text/tab-separated-values',pdf:'application/pdf',zip:'application/zip',
+  gz:'application/gzip',tar:'application/x-tar',tgz:'application/gzip','7z':'application/x-7z-compressed',
+  iso:'application/octet-stream',img:'application/octet-stream',wasm:'application/wasm',ttf:'font/ttf',woff2:'font/woff2'};
+const mimeOf = p => MIME[P.ext(p)] || 'application/octet-stream';
+
+const IMG_EXT=['png','jpg','jpeg','gif','svg','webp','bmp','ico','avif'];
+const AUD_EXT=['mp3','wav','ogg','flac','aac','m4a','opus'];
+const VID_EXT=['mp4','webm','ogv','mov'];
+const TXT_EXT=['txt','html','htm','css','js','mjs','json','xml','md','yaml','yml','log','ini','sh','py','c','h','cpp','rs','java','ts','tsx','jsx','toml','conf','bat','svg'];
+const TBL_EXT=['csv','tsv'];
+const ARC_EXT=['zip','gz','tar','tgz','7z'];
+const VM_EXT=['iso','img','fda','bin'];
+const CODE_EXT=['html','htm','css','js','mjs','json','xml','ts','jsx','tsx'];
+
+const fmtSize = n => { if(n==null||isNaN(n)) return '—'; if(n<1024) return n+' B';
+  const u=['KB','MB','GB','TB']; let i=-1; do{ n/=1024; i++; }while(n>=1024&&i<3);
+  return n.toFixed(n<10?2:1)+' '+u[i]; };
+const fmtDate = t => { if(!t) return '—'; const d=new Date(t);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; };
+const typeOf = (name,kind) => { if(kind==='directory') return '文件夹'; const e=P.ext(name);
+  if(IMG_EXT.includes(e)) return e.toUpperCase()+' 图像'; if(AUD_EXT.includes(e)) return e.toUpperCase()+' 音频';
+  if(VID_EXT.includes(e)) return e.toUpperCase()+' 视频'; if(ARC_EXT.includes(e)) return e.toUpperCase()+' 压缩档';
+  if(e==='pdf') return 'PDF 文档'; if(TBL_EXT.includes(e)) return e.toUpperCase()+' 表格';
+  if(TXT_EXT.includes(e)) return e.toUpperCase()+' 文本'; if(VM_EXT.includes(e)) return '磁盘镜像';
+  return e? e.toUpperCase()+' 文件' : '文件'; };
+const esc = s => String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/* ── 配置（localStorage + Cookie 协同） ── */
+const Cfg = {
+  _k:'btos-cfg', _c:null,
+  all(){ if(!this._c){ try{ this._c=JSON.parse(localStorage.getItem(this._k))||{}; }catch{ this._c={}; } } return this._c; },
+  get(k,d){ const v=this.all()[k]; return v===undefined?d:v; },
+  set(k,v){ this.all()[k]=v; try{ localStorage.setItem(this._k, JSON.stringify(this._c)); }catch{} }
+};
+function setCookie(k,v,days=365){ try{ document.cookie=`${k}=${encodeURIComponent(v)};max-age=${days*86400};path=/;SameSite=Lax`; }catch{} }
+function getCookie(k){ try{ const m=document.cookie.match(new RegExp('(?:^|; )'+k+'=([^;]*)')); return m?decodeURIComponent(m[1]):null; }catch{ return null; } }
+
+/* ═══════════════ 文件系统后端 ═══════════════ */
+
+/* OPFS / File System Access 通用句柄后端（两者共用 FileSystemDirectoryHandle 接口） */
+function handleBackend(root){
+  const segs = rel => String(rel||'').split('/').filter(Boolean);
+  async function dirOfSegs(ss, create=false){ let d=root;
+    for(const s of ss) d=await d.getDirectoryHandle(s,{create}); return d; }
+  async function fileOf(rel, create=false){ const ss=segs(rel); const name=ss.pop();
+    if(!name) throw new Error('无效文件路径'); const d=await dirOfSegs(ss, create);
+    return d.getFileHandle(name,{create}); }
+  return {
+    type:'handle', root,
+    async readdir(rel, ...x){ const d=await dirOfSegs(segs(rel)); const out=[];
+      for await (const [name,h] of d.entries()) out.push({name, kind:h.kind}); return out; },
+    async stat(rel, ...x){ const ss=segs(rel);
+      if(!ss.length) return {kind:'directory', size:0, mtime:0};
+      try{ const fh=await fileOf(rel); const f=await fh.getFile();
+        return {kind:'file', size:f.size, mtime:f.lastModified, mime:f.type||mimeOf(rel)}; }
+      catch(e){ await dirOfSegs(ss); return {kind:'directory', size:0, mtime:0}; } },
+    async readFile(rel, ...x){ const fh=await fileOf(rel); return fh.getFile(); },
+    async writeFile(rel, data, ...x){ const ss=segs(rel); const name=ss.pop();
+      const d=await dirOfSegs(ss, true); const fh=await d.getFileHandle(name,{create:true});
+      const w=await fh.createWritable(); await w.write(data); await w.close(); },
+    async mkdir(rel, ...x){ await dirOfSegs(segs(rel), true); },
+    async rm(rel, ...x){ const ss=segs(rel); const name=ss.pop();
+      const d=await dirOfSegs(ss); await d.removeEntry(name,{recursive:true}); },
+    async exists(rel, ...x){ try{ await this.stat(rel); return true; }catch{ return false; } }
+  };
+}
+
+/* IndexedDB 降级后端 */
+function idbBackend(db){
+  const norm = rel => '/'+String(rel||'').split('/').filter(Boolean).join('/');
+  const tx = mode => db.transaction('files', mode).objectStore('files');
+  const req = r => new Promise((res,rej)=>{ r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); });
+  async function allKeys(){ return req(tx('readonly').getAllKeys()); }
+  async function get(k){ return req(tx('readonly').get(k)); }
+  return {
+    type:'idb',
+    async readdir(rel,...x){ const p=norm(rel); const pre=p==='/'?'/':p+'/'; const seen=new Map();
+      for(const k of await allKeys()){ if(k===p||!k.startsWith(pre)) continue;
+        const rest=k.slice(pre.length); const top=rest.split('/')[0]; if(!top) continue;
+        if(!seen.has(top)){ const full=pre+top; const direct=(rest===top);
+          if(direct){ const rec=await get(full); seen.set(top,{name:top, kind:rec&&rec.kind==='file'?'file':'directory'}); }
+          else seen.set(top,{name:top, kind:'directory'}); } }
+      const self=await get(p); if(p!=='/'&&!self&&!seen.size){ /* 隐式目录也允许 */ }
+      return [...seen.values()]; },
+    async stat(rel,...x){ const p=norm(rel); if(p==='/') return {kind:'directory',size:0,mtime:0};
+      const rec=await get(p); if(rec) return {kind:rec.kind, size:rec.data?rec.data.byteLength:0, mtime:rec.mtime||0, mime:rec.mime};
+      const pre=p+'/'; for(const k of await allKeys()) if(k.startsWith(pre)) return {kind:'directory',size:0,mtime:0};
+      throw new Error('不存在: '+p); },
+    async readFile(rel,...x){ const rec=await get(norm(rel)); if(!rec||rec.kind!=='file') throw new Error('文件不存在');
+      return new Blob([rec.data],{type:rec.mime||mimeOf(rel)}); },
+    async writeFile(rel,data,...x){ let buf;
+      if(typeof data==='string') buf=new TextEncoder().encode(data).buffer;
+      else if(data instanceof Blob) buf=await data.arrayBuffer();
+      else if(data instanceof ArrayBuffer) buf=data;
+      else buf=data.buffer ? data.buffer.slice(data.byteOffset, data.byteOffset+data.byteLength) : new ArrayBuffer(0);
+      const p=norm(rel); const parts=p.split('/').filter(Boolean); let cur='';
+      const store=tx('readwrite');
+      for(let i=0;i<parts.length-1;i++){ cur+='/'+parts[i];
+        await req(store.put({kind:'directory',mtime:Date.now()}, cur)).catch(()=>{}); }
+      await req(tx('readwrite').put({kind:'file', data:buf, mtime:Date.now(), mime:(data&&data.type)||mimeOf(rel)}, p)); },
+    async mkdir(rel,...x){ const p=norm(rel); const parts=p.split('/').filter(Boolean); let cur='';
+      for(const s of parts){ cur+='/'+s; await req(tx('readwrite').put({kind:'directory',mtime:Date.now()}, cur)); } },
+    async rm(rel,...x){ const p=norm(rel); const pre=p+'/'; const st=tx('readwrite');
+      for(const k of await allKeys()){ if(k===p||k.startsWith(pre)) await req(tx('readwrite').delete(k)); } },
+    async exists(rel,...x){ try{ await this.stat(rel); return true; }catch{ return false; } }
+  };
+}
+
+/* 内存后端（最终降级，小文本经 localStorage 持久化） */
+function memBackend(){
+  const files=new Map(); // path -> {kind, data:ArrayBuffer|null, mtime, mime}
+  const LSK='btos-memfs';
+  try{ const snap=JSON.parse(localStorage.getItem(LSK)||'{}');
+    for(const [k,v] of Object.entries(snap)){ files.set(k, v.kind==='file'
+      ? {kind:'file', data:new TextEncoder().encode(v.text).buffer, mtime:v.mtime, mime:v.mime}
+      : {kind:'directory', data:null, mtime:v.mtime}); } }catch{}
+  let saveT=null;
+  function persist(){ clearTimeout(saveT); saveT=setTimeout(()=>{ try{
+    const snap={}; let budget=1800000;
+    for(const [k,v] of files){ if(v.kind==='directory'){ snap[k]={kind:'directory',mtime:v.mtime}; continue; }
+      if(v.data && v.data.byteLength<200000 && budget>0){ try{ const text=new TextDecoder('utf-8',{fatal:true}).decode(v.data);
+        budget-=text.length; snap[k]={kind:'file',text,mtime:v.mtime,mime:v.mime}; }catch{} } }
+    localStorage.setItem(LSK, JSON.stringify(snap)); }catch{} }, 600); }
+  const norm = rel => '/'+String(rel||'').split('/').filter(Boolean).join('/');
+  return {
+    type:'mem',
+    async readdir(rel,...x){ const p=norm(rel); const pre=p==='/'?'/':p+'/'; const seen=new Map();
+      for(const k of files.keys()){ if(k===p||!k.startsWith(pre)) continue;
+        const top=k.slice(pre.length).split('/')[0]; if(!top||seen.has(top)) continue;
+        const full=pre+top; const rec=files.get(full);
+        seen.set(top,{name:top, kind:rec&&rec.kind==='file'&&k===full?'file':(rec?rec.kind:'directory')}); }
+      return [...seen.values()]; },
+    async stat(rel,...x){ const p=norm(rel); if(p==='/') return {kind:'directory',size:0,mtime:0};
+      const rec=files.get(p); if(rec) return {kind:rec.kind, size:rec.data?rec.data.byteLength:0, mtime:rec.mtime, mime:rec.mime};
+      const pre=p+'/'; for(const k of files.keys()) if(k.startsWith(pre)) return {kind:'directory',size:0,mtime:0};
+      throw new Error('不存在: '+p); },
+    async readFile(rel,...x){ const rec=files.get(norm(rel)); if(!rec||rec.kind!=='file') throw new Error('文件不存在');
+      return new Blob([rec.data],{type:rec.mime||mimeOf(rel)}); },
+    async writeFile(rel,data,...x){ let buf;
+      if(typeof data==='string') buf=new TextEncoder().encode(data).buffer;
+      else if(data instanceof Blob) buf=await data.arrayBuffer();
+      else buf=data instanceof ArrayBuffer ? data : (data.buffer||new ArrayBuffer(0));
+      const p=norm(rel); const parts=p.split('/').filter(Boolean); let cur='';
+      for(let i=0;i<parts.length-1;i++){ cur+='/'+parts[i];
+        if(!files.has(cur)) files.set(cur,{kind:'directory',data:null,mtime:Date.now()}); }
+      files.set(p,{kind:'file', data:buf, mtime:Date.now(), mime:(data&&data.type)||mimeOf(rel)}); persist(); },
+    async mkdir(rel,...x){ const p=norm(rel); const parts=p.split('/').filter(Boolean); let cur='';
+      for(const s of parts){ cur+='/'+s; if(!files.has(cur)) files.set(cur,{kind:'directory',data:null,mtime:Date.now()}); } persist(); },
+    async rm(rel,...x){ const p=norm(rel); const pre=p+'/';
+      for(const k of [...files.keys()]) if(k===p||k.startsWith(pre)) files.delete(k); persist(); },
+    async exists(rel,...x){ try{ await this.stat(rel); return true; }catch{ return false; } }
+  };
+}
+
+/* ═══════════════ FS 统一文件系统（挂载路由层） ═══════════════
+   所有 App 一律通过 fs 调用；本地挂载与虚拟文件完全透明，无 isLocal 分支 */
+const FS = {
+  mounts: [], listeners: new Set(), backendName: 'OPFS',
+  mount(path, backend, meta={}){ path=P.norm(path);
+    this.mounts=this.mounts.filter(m=>m.path!==path);
+    this.mounts.push({path, backend, meta});
+    this.mounts.sort((a,b)=>b.path.length-a.path.length); this.emit(); },
+  unmount(path){ path=P.norm(path); this.mounts=this.mounts.filter(m=>m.path!==path); this.emit(); },
+  mountAt(path){ path=P.norm(path); return this.mounts.find(m=>m.path===path&&m.path!=='/'); },
+  _r(path){ path=P.norm(path);
+    for(const m of this.mounts){ if(path===m.path || m.path==='/' || path.startsWith(m.path+'/'))
+      return {b:m.backend, rel: m.path==='/' ? path : (path.slice(m.path.length)||'/'), m}; }
+    throw new Error('无可用文件系统'); },
+  onChange(cb){ this.listeners.add(cb); },
+  emit(){ for(const cb of this.listeners){ try{ cb(); }catch{} } },
+
+  async readdir(path){ path=P.norm(path); const {b,rel}=this._r(path);
+    let list=[]; try{ list=await b.readdir(rel); }catch(e){ if(!this.mounts.some(m=>P.dir(m.path)===path&&m.path!=='/')) throw e; }
+    for(const m of this.mounts){ if(m.path!=='/' && P.dir(m.path)===path){
+      const nm=P.base(m.path); if(!list.some(e=>e.name===nm)) list.push({name:nm, kind:'directory', mount:true});
+      else list.forEach(e=>{ if(e.name===nm) e.mount=true; }); } }
+    return list; },
+  async stat(path, ...x){ path=P.norm(path); if(this.mountAt(path)) {
+      const {b,rel}=this._r(path); try{ return await b.stat(rel); }catch{ return {kind:'directory',size:0,mtime:0}; } }
+    const {b,rel}=this._r(path); return b.stat(rel, ...x); },
+  async readFile(path, as='blob', ...x){ const {b,rel}=this._r(path); const f=await b.readFile(rel, ...x);
+    const blob = f instanceof Blob ? f : new Blob([f]);
+    if(as==='text') return blob.text(); if(as==='arrayBuffer') return blob.arrayBuffer(); return blob; },
+  async writeFile(path, data, ...x){ const {b,rel}=this._r(path); await b.writeFile(rel, data, ...x); this.emit(); },
+  async mkdir(path, ...x){ const {b,rel}=this._r(path); await b.mkdir(rel, ...x); this.emit(); },
+  async rm(path, ...x){ path=P.norm(path); if(this.mountAt(path)){ this.unmount(path); return; }
+    const {b,rel}=this._r(path); await b.rm(rel, ...x); this.emit(); },
+  async exists(path){ try{ await this.stat(path); return true; }catch{ return false; } },
+  async copy(src, dst){ const st=await this.stat(src);
+    if(st.kind==='directory'){ await this.mkdir(dst);
+      for(const e of await this.readdir(src)) await this.copy(P.join(src,e.name), P.join(dst,e.name)); }
+    else { const blob=await this.readFile(src); await this.writeFile(dst, blob); } },
+  async move(src, dst){ src=P.norm(src); dst=P.norm(dst);
+    if(src===dst || dst.startsWith(src+'/')) return;
+    await this.copy(src, dst); await this.rm(src); },
+  async uniqueName(dir, name){ if(!await this.exists(P.join(dir,name))) return name;
+    const i=name.lastIndexOf('.'); const stem=i>0?name.slice(0,i):name; const ext=i>0?name.slice(i):'';
+    for(let n=2;n<999;n++){ const c=`${stem} (${n})${ext}`; if(!await this.exists(P.join(dir,c))) return c; }
+    return `${stem}-${Date.now()}${ext}`; },
+  async dirSize(path){ let s=0; let list=[]; try{ list=await this.readdir(path); }catch{ return 0; }
+    for(const e of list){ if(e.mount) continue; try{ const p=P.join(path,e.name); const st=await this.stat(p);
+      if(st.kind==='file') s+=st.size||0; else s+=await this.dirSize(p); }catch{} } return s; }
+};
+window.fs = FS; // 全局挂载，供所有 App 调用
+
+/* ── 初始化：OPFS → IndexedDB → 内存 三级降级 ── */
+async function initFS(){
+  // 1) OPFS
+  try{ if(navigator.storage && navigator.storage.getDirectory){
+    const root=await navigator.storage.getDirectory();
+    // 探测写入能力
+    const t=await root.getFileHandle('.btos-probe',{create:true});
+    const w=await t.createWritable(); await w.write('ok'); await w.close();
+    await root.removeEntry('.btos-probe').catch(()=>{});
+    FS.mount('/', handleBackend(root)); FS.backendName='OPFS（源私有文件系统）';
+    navigator.storage.persist && navigator.storage.persist().catch(()=>{});
+    return; } }catch(e){ console.warn('OPFS 不可用，降级 IndexedDB', e); }
+  // 2) IndexedDB
+  try{ const db=await new Promise((res,rej)=>{ const r=indexedDB.open('btos-fs',1);
+    r.onupgradeneeded=()=>r.result.createObjectStore('files');
+    r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); });
+    FS.mount('/', idbBackend(db)); FS.backendName='IndexedDB（降级模式）'; return;
+  }catch(e){ console.warn('IndexedDB 不可用，降级内存', e); }
+  // 3) 内存 + localStorage
+  FS.mount('/', memBackend()); FS.backendName='内存+localStorage（临时模式）';
+}
+
+/* ── 初始目录与种子文件 ── */
+async function seedFS(){
+  const dirs=['/Desktop','/Documents','/Pictures','/Music','/Downloads','/System','/mnt/local'];
+  for(const d of dirs){ if(!await FS.exists(d)) await FS.mkdir(d).catch(()=>{}); }
+  if(!Cfg.get('seeded')){
+    await FS.writeFile('/Desktop/血誓之书.txt',
+`致继承诅咒者：
+
+汝已踏入「血棘」之境 —— 一座以铁与血铸成的浏览器操作系统。
+
+· 双击图标可开启秘仪（应用）
+· 右键（或长按）召唤诅咒之环（上下文菜单）
+· 将外界之物拖入此境，它们将被铭刻于 OPFS 永恒石窟
+· 亦可将此境之物拖出，归还尘世
+
+愿汝的血脉在数据的迷宫中永不干涸。
+
+—— 守墓人 敬上`).catch(()=>{});
+    await FS.writeFile('/Desktop/welcome.html',
+`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Bloodthorn Relic</title>
+<style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:radial-gradient(ellipse at 50% 120%,#3a0a14,#0a0710);color:#d9cdb8;font-family:Georgia,serif;text-align:center}
+h1{font-size:42px;letter-spacing:.25em;color:#c9a45c;text-shadow:0 0 30px rgba(232,57,75,.4)}
+p{font-style:italic;color:#a89a82}.r{width:60px;height:2px;margin:18px auto;background:linear-gradient(90deg,transparent,#9c1626,transparent)}</style></head>
+<body><div><h1>BLOODTHORN</h1><div class="r"></div><p>This page was conjured from the crypt —<br>edit me in the Codex, behold me in the Mirror.</p></div></body></html>`).catch(()=>{});
+    await FS.writeFile('/Documents/家族血脉志.csv',
+`世代,姓名,封号,继承诅咒,存活年岁
+I,Vladrik Thorne,铁冠伯爵,血月之印,87
+II,Morgana Thorne,荆棘夫人,不眠之眼,102
+III,Caspian Thorne,灰烬骑士,枯萎之手,64
+IV,Isolde Thorne,挽歌歌者,镜中低语,91
+V,Lucien Thorne,末裔守墓人,血棘缠心,?`).catch(()=>{});
+    Cfg.set('seeded', true);
+  }
+}
+/* ═══════════════ 原创 SVG 图标库（哥特纹章风，无 emoji） ═══════════════ */
+const I_ = (d,extra='') => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" ${extra}>${d}</svg>`;
+const ICONS = {
+  sigil: I_('<path d="M12 2l2 4.5 5-1-3 4 5 2.5-5 2.5 3 4-5-1L12 22l-2-4.5-5 1 3-4L3 12l5-2.5-3-4 5 1z"/><circle cx="12" cy="12" r="3"/>'),
+  folder: I_('<path d="M3 8.5V19h18V8.5"/><path d="M3 8.5V5.8L5 4h5l1.6 2.2H21v2.3"/><path d="M3 8.5h18"/><path d="M12 12v4M10 14h4"/>'),
+  folderMnt: I_('<path d="M3 8.5V19h18V8.5"/><path d="M3 8.5V5.8L5 4h5l1.6 2.2H21v2.3"/><path d="M3 8.5h18"/><path d="M9 14.5l2.5 2 3.5-4"/>'),
+  file: I_('<path d="M6 2.5h8l4 4V21.5H6z"/><path d="M14 2.5v4h4"/><path d="M9 12h6M9 15.5h6M9 8.5h2.5"/>'),
+  fileImg: I_('<path d="M4 4h16v16H4z"/><path d="M4 15.5l4.5-5 4 4.5 2.5-2.5 5 3.5"/><circle cx="9.2" cy="8.5" r="1.6"/>'),
+  fileAud: I_('<path d="M8 18.5V6.5l10-2.5v11.5"/><circle cx="6" cy="18.5" r="2.2"/><circle cx="16" cy="15.5" r="2.2"/>'),
+  fileVid: I_('<path d="M3.5 5h17v14h-17z"/><path d="M3.5 8.5h17M7 5v3.5M12 5v3.5M17 5v3.5"/><path d="M10.3 11.5l4.5 3-4.5 3z"/>'),
+  filePdf: I_('<path d="M6 2.5h8l4 4V21.5H6z"/><path d="M14 2.5v4h4"/><path d="M8.5 16.5v-5h1.8a1.6 1.6 0 010 3.2H8.5M13.2 16.5v-5h1.2a2.5 2.5 0 010 5z"/>'),
+  fileArc: I_('<path d="M4.5 8V20h15V8"/><path d="M3.5 4h17v4h-17z"/><path d="M12 8v2M12 12v2M12 16v2M10.2 18h3.6"/>'),
+  fileCode: I_('<path d="M6 2.5h8l4 4V21.5H6z"/><path d="M14 2.5v4h4"/><path d="M10 10.5l-2.2 2.5L10 15.5M14 10.5l2.2 2.5L14 15.5"/>'),
+  fileTbl: I_('<path d="M4 4.5h16v15H4z"/><path d="M4 9.5h16M4 14.5h16M10 4.5v15M16 4.5v15"/>'),
+  fileDisk: I_('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.6"/><path d="M12 3v3.5M12 17.5V21M3.6 9.2l3.3 1.1M17.1 13.7l3.3 1.1"/>'),
+  explorer: I_('<path d="M4 21V8l3-2V3.5h2V6h6V3.5h2V6l3 2v13z"/><path d="M4 21h16M10 21v-5a2 2 0 014 0v5"/><path d="M8 11h2M14 11h2"/>'),
+  notepad: I_('<path d="M17.5 3.5l3 3L9 18l-4.2 1.2L6 15z"/><path d="M14.8 6.2l3 3"/><path d="M4 21.5h16"/>'),
+  codex: I_('<path d="M5 3h13.5v18H5a1.5 1.5 0 01-1.5-1.5V4.5A1.5 1.5 0 015 3z"/><path d="M5 17.5h13.5M9 8l-1.8 2.4L9 12.8M13 8l1.8 2.4L13 12.8"/>'),
+  ledger: I_('<path d="M4 3.5h16v17H4z"/><path d="M4 8h16M9.5 8v12.5M4 13h16M4 17h16"/>'),
+  mirror: I_('<circle cx="12" cy="10" r="6.5"/><path d="M12 16.5V21M8.5 21h7"/><path d="M9 8a4 4 0 013-1.5"/>'),
+  calc: I_('<path d="M5 2.5h14v19H5z"/><path d="M8 5.5h8v3.5H8z"/><path d="M8.5 13h.01M12 13h.01M15.5 13h.01M8.5 16.5h.01M12 16.5h.01M15.5 16.5h.01" stroke-width="2.4"/>'),
+  paint: I_('<path d="M12 2.5c-5 0-9 3.8-9 8.5s4 8.5 9 8.5c1.4 0 2-1 1.5-2-.6-1.2 0-2.5 1.5-2.5h2.5c2 0 3.5-1.6 3.5-4 0-4.7-4-8.5-9-8.5z"/><circle cx="8" cy="9" r="1.2"/><circle cx="13" cy="6.8" r="1.2"/><circle cx="17" cy="10" r="1.2"/>'),
+  settings: I_('<circle cx="12" cy="12" r="3.2"/><path d="M12 2.8l1.5 2.8 3.1-.9.4 3.2 3.2.4-.9 3.1L22 12l-2.7 1.6.9 3.1-3.2.4-.4 3.2-3.1-.9L12 21.2l-1.5-2.8-3.1.9-.4-3.2-3.2-.4.9-3.1L2 12l2.7-1.6-.9-3.1 3.2-.4.4-3.2 3.1.9z"/>'),
+  vm: I_('<path d="M4 4h16v12H4z"/><path d="M8 20h8M12 16v4"/><path d="M7 7.5h4M7 10.5h7M7 13h3" stroke-dasharray="0"/>'),
+  search: I_('<circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5.5 5.5"/>'),
+  close: I_('<path d="M5 5l14 14M19 5L5 19"/>'),
+  min: I_('<path d="M5 12h14"/>'),
+  max: I_('<path d="M5.5 5.5h13v13h-13z"/>'),
+  restore: I_('<path d="M8 8V4.5h11.5V16H16M4.5 8H16v11.5H4.5z"/>'),
+  back: I_('<path d="M14.5 5L8 12l6.5 7"/>'),
+  fwd: I_('<path d="M9.5 5L16 12l-6.5 7"/>'),
+  up: I_('<path d="M12 19V5M5.5 11.5L12 5l6.5 6.5"/>'),
+  refresh: I_('<path d="M20 12a8 8 0 11-2.3-5.6M20 3.5V7h-3.5"/>'),
+  plus: I_('<path d="M12 5v14M5 12h14"/>'),
+  upload: I_('<path d="M12 16V4M7 8.5L12 3.5l5 5"/><path d="M4 20.5h16"/>'),
+  download: I_('<path d="M12 4v12M7 11.5l5 5 5-5"/><path d="M4 20.5h16"/>'),
+  trash: I_('<path d="M5 7h14M9.5 7V4.5h5V7M7 7l1 14h8l1-14"/><path d="M10.2 11v6M13.8 11v6"/>'),
+  rename: I_('<path d="M4 20h16"/><path d="M14.5 4.5l3 3L8 17l-4 1 1-4z"/>'),
+  copy: I_('<path d="M9 9h11v11H9z"/><path d="M5 15H4V4h11v1"/>'),
+  cut: I_('<circle cx="6.5" cy="17.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/><path d="M8.5 15.5L19 4M15.5 15.5L5 4"/>'),
+  paste: I_('<path d="M8 4.5h8V8H8z"/><path d="M16 6h3v15.5H5V6h3"/><path d="M9 12.5h6M9 16h6"/>'),
+  open: I_('<path d="M5 4h7l2 2.5h7L18 19H3z"/>'),
+  eye: I_('<path d="M2.5 12S6 5.8 12 5.8 21.5 12 21.5 12 18 18.2 12 18.2 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.8"/>'),
+  full: I_('<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>'),
+  wall: I_('<path d="M3 4.5h18v15H3z"/><path d="M3 15l5-5.5 4.5 5L15 12l6 4.5"/><circle cx="8.5" cy="8.7" r="1.4"/>'),
+  home: I_('<path d="M4 11l8-7.5 8 7.5"/><path d="M6 9.5V20h12V9.5"/><path d="M10 20v-5.5h4V20"/>'),
+  music: I_('<path d="M8 18.5V6.5l10-2.5v11.5"/><circle cx="6" cy="18.5" r="2.2"/><circle cx="16" cy="15.5" r="2.2"/>'),
+  doc: I_('<path d="M6 2.5h8l4 4V21.5H6z"/><path d="M14 2.5v4h4"/><path d="M9 12h6M9 15.5h6"/>'),
+  drive: I_('<path d="M3 13.5L5.5 5h13L21 13.5"/><path d="M3 13.5h18V19H3z"/><path d="M16.5 16.2h.01M18.5 16.2h.01" stroke-width="2.4"/>'),
+  eject: I_('<path d="M5 14l7-8 7 8z"/><path d="M5 18h14"/>'),
+  zap: I_('<path d="M13 2.5L5 13.5h5L10.5 21.5l8-11h-5z"/>'),
+  table: I_('<path d="M4 4.5h16v15H4z"/><path d="M4 9.5h16M4 14.5h16M10 4.5v15M16 4.5v15"/>'),
+  text: I_('<path d="M5 5.5h14M12 5.5V19M8.5 19h7"/>'),
+  play: I_('<path d="M7 4.5l13 7.5-13 7.5z"/>'),
+  stop: I_('<path d="M6 6h12v12H6z"/>'),
+  info: I_('<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.2v.4" stroke-width="2.2"/>'),
+  warn: I_('<path d="M12 3L1.8 20.5h20.4z"/><path d="M12 9.5V15M12 17.5v.4" stroke-width="2"/>'),
+  check: I_('<path d="M4.5 12.5l5 5L19.5 6.5"/>'),
+  sword: I_('<path d="M14.5 3.5L20.5 9.5 11 19l-6-6z" /><path d="M5 13l-2.5 6 1 1 6-2.5M16 11.5l3 3"/>'),
+  skull: I_('<path d="M12 3a7.5 7.5 0 00-7.5 7.5c0 2.6 1.3 4.4 3 5.6V20h9v-3.9c1.7-1.2 3-3 3-5.6A7.5 7.5 0 0012 3z"/><circle cx="9" cy="11" r="1.6"/><circle cx="15" cy="11" r="1.6"/><path d="M10.5 20v-2.2M13.5 20v-2.2"/>'),
+  grid: I_('<path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/>'),
+  mount: I_('<path d="M3 13.5L5.5 5h13L21 13.5"/><path d="M3 13.5h18V19H3z"/><path d="M12 1.5v8M9 6.5l3 3 3-3"/>'),
+};
+const iconForFile = (name, kind) => { if(kind==='directory') return ICONS.folder;
+  const e=P.ext(name);
+  if(IMG_EXT.includes(e)) return ICONS.fileImg; if(AUD_EXT.includes(e)) return ICONS.fileAud;
+  if(VID_EXT.includes(e)) return ICONS.fileVid; if(e==='pdf') return ICONS.filePdf;
+  if(ARC_EXT.includes(e)) return ICONS.fileArc; if(TBL_EXT.includes(e)) return ICONS.fileTbl;
+  if(CODE_EXT.includes(e)) return ICONS.fileCode; if(VM_EXT.includes(e)) return ICONS.fileDisk;
+  return ICONS.file; };
+
+/* ═══════════════ Toast / 对话框 / 菜单 ═══════════════ */
+function toast(msg, type='info', ms=3400){ const t=document.createElement('div');
+  t.className='toast'+(type==='err'?' err':'');
+  t.innerHTML=(type==='err'?ICONS.warn:type==='ok'?ICONS.check:ICONS.info)+`<span>${esc(msg)}</span>`;
+  document.getElementById('toasts').appendChild(t);
+  setTimeout(()=>{ t.classList.add('fading'); setTimeout(()=>t.remove(), 380); }, ms); }
+
+const dlgWrap=document.getElementById('dlgWrap');
+function dialog(build){ return new Promise(res=>{
+  dlgWrap.innerHTML=''; dlgWrap.classList.add('open');
+  const d=document.createElement('div'); d.className='dlg'; dlgWrap.appendChild(d);
+  const done=v=>{ dlgWrap.classList.remove('open'); dlgWrap.innerHTML=''; res(v); };
+  build(d, done);
+  dlgWrap.onmousedown=e=>{ if(e.target===dlgWrap) done(null); }; }); }
+function promptDialog(title, value='', label=''){ return dialog((d,done)=>{
+  d.innerHTML=`<div class="dlg-t">${esc(title)}</div><div class="dlg-b">${label?`<div style="color:var(--parch)">${esc(label)}</div>`:''}
+    <input type="text" value="${esc(value)}"></div>
+    <div class="dlg-f"><button class="btn" data-x>放弃</button><button class="btn primary" data-ok>铭刻</button></div>`;
+  const inp=d.querySelector('input'); setTimeout(()=>{ inp.focus(); inp.select(); },50);
+  inp.onkeydown=e=>{ if(e.key==='Enter') done(inp.value.trim()); if(e.key==='Escape') done(null); };
+  d.querySelector('[data-ok]').onclick=()=>done(inp.value.trim());
+  d.querySelector('[data-x]').onclick=()=>done(null); }); }
+function confirmDialog(title, msg, okText='执行'){ return dialog((d,done)=>{
+  d.innerHTML=`<div class="dlg-t">${esc(title)}</div><div class="dlg-b">${esc(msg)}</div>
+    <div class="dlg-f"><button class="btn" data-x>退避</button><button class="btn primary" data-ok>${esc(okText)}</button></div>`;
+  d.querySelector('[data-ok]').onclick=()=>done(true);
+  d.querySelector('[data-x]').onclick=()=>done(false); }); }
+
+/* 上下文菜单 */
+const ctxEl=document.getElementById('ctxMenu');
+function showMenu(x, y, items){ ctxEl.innerHTML='';
+  for(const it of items){ if(it==='-'){ const s=document.createElement('div'); s.className='ctx-sep'; ctxEl.appendChild(s); continue; }
+    if(!it) continue;
+    const b=document.createElement('button'); b.className='ctx-it'+(it.danger?' danger':'');
+    if(it.disabled) b.setAttribute('disabled','');
+    b.innerHTML=(it.icon||ICONS.sigil)+`<span>${esc(it.label)}</span>`;
+    b.onclick=()=>{ hideMenu(); it.fn && it.fn(); }; ctxEl.appendChild(b); }
+  ctxEl.classList.add('open');
+  const r=ctxEl.getBoundingClientRect();
+  ctxEl.style.left=Math.min(x, innerWidth-r.width-8)+'px';
+  ctxEl.style.top=Math.min(y, innerHeight-r.height-8)+'px'; }
+function hideMenu(){ ctxEl.classList.remove('open'); }
+addEventListener('pointerdown', e=>{ if(!ctxEl.contains(e.target)) hideMenu(); }, true);
+addEventListener('blur', hideMenu);
+
+/* ═══════════════ 窗口管理器 ═══════════════ */
+const isMobile = () => matchMedia('(max-width:768px)').matches;
+const WM = {
+  wins: new Map(), zTop: 50, seq: 0,
+  desk: document.getElementById('desktop'),
+  open({title, icon, w=720, h=500, x, y, build, onClose, single}){
+    if(single){ for(const win of this.wins.values()) if(win.singleKey===single){ this.restore(win); return win; } }
+    const id='w'+(++this.seq);
+    const el=document.createElement('div'); el.className='win'; el.dataset.id=id;
+    const dw=this.desk.clientWidth, dh=this.desk.clientHeight;
+    w=Math.min(w, dw-16); h=Math.min(h, dh-16);
+    if(x==null) x=Math.max(8,(dw-w)/2 + (this.seq%7)*22 - 60);
+    if(y==null) y=Math.max(8,(dh-h)/2 + (this.seq%5)*18 - 40);
+    el.style.cssText=`left:${x}px;top:${y}px;width:${w}px;height:${h}px;z-index:${++this.zTop}`;
+    el.innerHTML=`<div class="tbar"><span class="ticon">${icon||ICONS.sigil}</span><span class="ttl">${esc(title)}</span>
+      <div class="tbtns">
+        <button class="tb min" title="收敛">${ICONS.min}</button>
+        <button class="tb max" title="盈满">${ICONS.max}</button>
+        <button class="tb cls" title="封印">${ICONS.close}</button></div></div>
+      <div class="wbody"></div>
+      ${['n','s','e','w','ne','nw','se','sw'].map(d=>`<div class="rh rh-${d}" data-rh="${d}"></div>`).join('')}`;
+    this.desk.appendChild(el);
+    const win={id, el, body:el.querySelector('.wbody'), title, icon, minimized:false, maxed:false,
+      prev:null, onClose, singleKey:single,
+      setTitle(t){ this.title=t; el.querySelector('.ttl').textContent=t; this.task&&(this.task.querySelector('span').textContent=t); }};
+    this.wins.set(id, win);
+    // 任务栏
+    const task=document.createElement('button'); task.className='task active';
+    task.innerHTML=`${icon||ICONS.sigil}<span>${esc(title)}</span>`;
+    task.onclick=()=>{ if(win.minimized) this.restore(win);
+      else if(el.classList.contains('focus')) this.minimize(win); else this.focus(win); };
+    document.getElementById('tasks').appendChild(task); win.task=task;
+    // 事件
+    el.addEventListener('pointerdown', ()=>this.focus(win), true);
+    el.querySelector('.tb.cls').onclick=e=>{ e.stopPropagation(); this.close(win); };
+    el.querySelector('.tb.min').onclick=e=>{ e.stopPropagation(); this.minimize(win); };
+    el.querySelector('.tb.max').onclick=e=>{ e.stopPropagation(); this.toggleMax(win); };
+    this._drag(win); this._resize(win);
+    el.querySelector('.tbar').addEventListener('dblclick', e=>{ if(!e.target.closest('.tb')) this.toggleMax(win); });
+    if(isMobile()) this.toggleMax(win, true);
+    this.focus(win);
+    try{ build && build(win.body, win); }catch(err){ console.error(err); win.body.innerHTML=`<div class="fx-empty">秘仪召唤失败：${esc(err.message)}</div>`; }
+    return win;
+  },
+  focus(win){ if(!win||!this.wins.has(win.id)) return;
+    for(const w of this.wins.values()){ w.el.classList.toggle('focus', w===win); w.task.classList.toggle('active', w===win); }
+    win.el.style.zIndex=++this.zTop; },
+  minimize(win){ win.minimized=true; win.el.classList.add('minimized'); win.task.classList.add('minned'); win.task.classList.remove('active'); },
+  restore(win){ win.minimized=false; win.el.classList.remove('minimized'); win.task.classList.remove('minned'); this.focus(win); },
+  toggleMax(win, force){ const el=win.el;
+    if(!win.maxed||force){ if(!win.maxed) win.prev={l:el.style.left,t:el.style.top,w:el.style.width,h:el.style.height};
+      win.maxed=true; el.classList.add('maxed');
+      el.style.left='0'; el.style.top='0'; el.style.width='100%'; el.style.height='100%';
+      el.querySelector('.tb.max').innerHTML=ICONS.restore; }
+    else { win.maxed=false; el.classList.remove('maxed');
+      const p=win.prev||{l:'60px',t:'40px',w:'720px',h:'500px'};
+      el.style.left=p.l; el.style.top=p.t; el.style.width=p.w; el.style.height=p.h;
+      el.querySelector('.tb.max').innerHTML=ICONS.max; } },
+  close(win){ if(!this.wins.has(win.id)) return;
+    try{ win.onClose && win.onClose(); }catch{}
+    this.wins.delete(win.id); win.task.remove();
+    win.el.classList.add('closing'); setTimeout(()=>win.el.remove(), 200); },
+  _drag(win){ const bar=win.el.querySelector('.tbar'); let sx,sy,ox,oy,moving=false;
+    bar.addEventListener('pointerdown', e=>{ if(e.target.closest('.tb')||win.maxed) return;
+      moving=true; sx=e.clientX; sy=e.clientY; ox=win.el.offsetLeft; oy=win.el.offsetTop;
+      bar.setPointerCapture(e.pointerId); });
+    bar.addEventListener('pointermove', e=>{ if(!moving) return;
+      const nx=Math.max(-win.el.offsetWidth+90, Math.min(ox+e.clientX-sx, this.desk.clientWidth-50));
+      const ny=Math.max(0, Math.min(oy+e.clientY-sy, this.desk.clientHeight-36));
+      win.el.style.left=nx+'px'; win.el.style.top=ny+'px'; });
+    bar.addEventListener('pointerup', ()=>moving=false);
+    bar.addEventListener('pointercancel', ()=>moving=false); },
+  _resize(win){ for(const h of win.el.querySelectorAll('.rh')){ const dir=h.dataset.rh;
+    let sx,sy,r0,on=false;
+    h.addEventListener('pointerdown', e=>{ if(win.maxed) return; on=true; sx=e.clientX; sy=e.clientY;
+      r0={l:win.el.offsetLeft, t:win.el.offsetTop, w:win.el.offsetWidth, h:win.el.offsetHeight};
+      h.setPointerCapture(e.pointerId); e.preventDefault(); });
+    h.addEventListener('pointermove', e=>{ if(!on) return;
+      const dx=e.clientX-sx, dy=e.clientY-sy; let {l,t,w,h:hh}=r0;
+      if(dir.includes('e')) w=Math.max(320, r0.w+dx);
+      if(dir.includes('s')) hh=Math.max(200, r0.h+dy);
+      if(dir.includes('w')){ w=Math.max(320, r0.w-dx); l=r0.l+r0.w-w; }
+      if(dir.includes('n')){ hh=Math.max(200, r0.h-dy); t=r0.t+r0.h-hh; }
+      Object.assign(win.el.style,{left:l+'px',top:t+'px',width:w+'px',height:hh+'px'}); });
+    h.addEventListener('pointerup', ()=>on=false); } }
+};
+
+/* ═══════════════ 时钟 ═══════════════ */
+function tickClock(){ const d=new Date(); const wd=['日','一','二','三','四','五','六'];
+  document.querySelector('#clock .t').textContent=`${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+  document.querySelector('#clock .d').textContent=`${d.getMonth()+1}月${d.getDate()}日 · 星期${wd[d.getDay()]}`; }
+setInterval(tickClock, 20000); tickClock();
+
+/* ═══════════════ 开始菜单 ═══════════════ */
+const APPS = [
+  {id:'explorer', name:'秘库', desc:'文件资源管理器', icon:ICONS.explorer, launch:()=>openExplorer('/')},
+  {id:'notepad', name:'书记官', desc:'记事本', icon:ICONS.notepad, launch:()=>openNotepad(null)},
+  {id:'codex', name:'法典', desc:'代码编辑器', icon:ICONS.codex, launch:()=>openCodex(null)},
+  {id:'ledger', name:'账簿', desc:'CSV / TSV 表格', icon:ICONS.ledger, launch:()=>openLedger(null)},
+  {id:'mirror', name:'黑曜之镜', desc:'网页浏览器', icon:ICONS.mirror, launch:()=>openBrowser()},
+  {id:'calc', name:'算术师', desc:'计算器', icon:ICONS.calc, launch:()=>openCalc()},
+  {id:'paint', name:'画室', desc:'画板', icon:ICONS.paint, launch:()=>openPaint()},
+  {id:'vm', name:'魔像', desc:'v86 虚拟机', icon:ICONS.vm, launch:()=>openVM()},
+  {id:'settings', name:'圣所', desc:'设置与存储', icon:ICONS.settings, launch:()=>openSettings()},
+];
+const smEl=document.getElementById('startMenu');
+const startBtn=document.getElementById('startBtn');
+startBtn.innerHTML=ICONS.sigil+'<span class="sb-txt">BLOODTHORN</span>';
+function renderStartMenu(filter=''){
+  const f=filter.toLowerCase();
+  const apps=APPS.filter(a=>!f||a.name.toLowerCase().includes(f)||a.desc.toLowerCase().includes(f)||a.id.includes(f));
+  smEl.innerHTML=`<div class="sm-head"><div class="sig">${ICONS.sigil}</div><h1>BLOODTHORN</h1><p>blood remembers what stone forgets</p></div>
+    <div class="sm-search">${ICONS.search}<input type="text" placeholder="搜寻秘仪…" value="${esc(filter)}"></div>
+    <div class="sm-grid">${apps.map((a,i)=>`<button class="sm-app" data-app="${a.id}" style="animation-delay:${.04*i}s">
+      <span class="ic">${a.icon}</span><span class="nm">${esc(a.name)}</span><span class="ds">${esc(a.desc)}</span></button>`).join('')||'<div class="fx-empty" style="grid-column:1/-1">无此秘仪</div>'}</div>
+    <div class="sm-foot">
+      <button class="sm-fbtn" data-f="full">${ICONS.full}<span>全屏</span></button>
+      <button class="sm-fbtn" data-f="wall">${ICONS.wall}<span>壁纸</span></button>
+      <button class="sm-fbtn" data-f="store">${ICONS.drive}<span>存储</span></button>
+    </div>`;
+  const inp=smEl.querySelector('input');
+  inp.oninput=()=>{ const v=inp.value; renderStartMenu(v); const i2=smEl.querySelector('input'); i2.focus(); i2.setSelectionRange(v.length,v.length); };
+  smEl.querySelectorAll('.sm-app').forEach(b=>b.onclick=()=>{ toggleStart(false);
+    const app=APPS.find(a=>a.id===b.dataset.app); app&&app.launch(); });
+  smEl.querySelector('[data-f=full]').onclick=()=>{ toggleStart(false); toggleFullscreen(); };
+  smEl.querySelector('[data-f=wall]').onclick=()=>{ toggleStart(false); openSettings('wall'); };
+  smEl.querySelector('[data-f=store]').onclick=()=>{ toggleStart(false); openSettings('storage'); };
+}
+function toggleStart(force){ const open = force!==undefined?force:!smEl.classList.contains('open');
+  if(open){ renderStartMenu(); smEl.classList.add('open'); startBtn.classList.add('on');
+    if(!isMobile()) setTimeout(()=>{ const i=smEl.querySelector('input'); i&&i.focus(); },80); }
+  else { smEl.classList.remove('open'); startBtn.classList.remove('on'); } }
+startBtn.onclick=()=>toggleStart();
+addEventListener('pointerdown', e=>{ if(smEl.classList.contains('open') && !smEl.contains(e.target) && !startBtn.contains(e.target)) toggleStart(false); }, true);
+function toggleFullscreen(){ if(document.fullscreenElement) document.exitFullscreen().catch(()=>{});
+  else document.documentElement.requestFullscreen().catch(()=>toast('此浏览器拒绝了全屏请求','err')); }
+/* ═══════════════ 壁纸系统 ═══════════════ */
+const WALLPAPERS=[
+  {id:'crypt', name:'血色穹顶', css:`radial-gradient(ellipse 110% 80% at 50% 115%, rgba(110,15,29,.55), transparent 55%),radial-gradient(ellipse 70% 45% at 50% -12%, rgba(60,46,68,.7), transparent 65%),repeating-linear-gradient(115deg, rgba(201,164,92,.025) 0 2px, transparent 2px 90px),linear-gradient(180deg,#0d0812,#070409)`},
+  {id:'iron', name:'铁雾荒原', css:`radial-gradient(ellipse 80% 60% at 18% 100%, rgba(43,33,51,.85), transparent 60%),radial-gradient(ellipse 70% 50% at 85% 0%, rgba(30,23,36,.9), transparent 55%),repeating-linear-gradient(0deg, rgba(217,205,184,.018) 0 1px, transparent 1px 5px),linear-gradient(160deg,#16121c,#08060b)`},
+  {id:'gild', name:'鎏金黑弥撒', css:`radial-gradient(circle 380px at 78% 28%, rgba(201,164,92,.16), transparent 70%),radial-gradient(circle 260px at 76% 30%, rgba(236,210,154,.1), transparent 65%),radial-gradient(ellipse 100% 60% at 50% 120%, rgba(90,72,39,.3), transparent 60%),linear-gradient(180deg,#0b0810,#060408)`},
+  {id:'plague', name:'瘟疫血月', css:`radial-gradient(circle 200px at 24% 22%, rgba(232,57,75,.35), rgba(156,22,38,.18) 45%, transparent 72%),radial-gradient(circle 130px at 24% 22%, rgba(255,92,108,.4), transparent 70%),radial-gradient(ellipse 120% 70% at 50% 118%, rgba(20,12,24,.95), transparent 70%),linear-gradient(180deg,#120a14,#070409)`},
+];
+async function applyWallpaper(){ const d=document.getElementById('desktop');
+  const w=Cfg.get('wall','crypt');
+  if(w==='custom'){ try{ const blob=await FS.readFile('/System/wallpaper.img');
+      const url=URL.createObjectURL(blob);
+      d.style.background=`url(${url}) center/cover no-repeat, #0a0710`; return; }catch{ } }
+  const wp=WALLPAPERS.find(x=>x.id===w)||WALLPAPERS[0];
+  d.style.background=wp.css; d.style.backgroundColor='#0a0710'; }
+async function setCustomWallpaper(file){ await FS.writeFile('/System/wallpaper.img', file);
+  Cfg.set('wall','custom'); applyWallpaper(); toast('壁纸已铭刻于石窟'); }
+document.getElementById('wallImport').addEventListener('change', async e=>{
+  const f=e.target.files[0]; if(f) await setCustomWallpaper(f); e.target.value=''; });
+
+/* ═══════════════ 剪贴板 / 拖拽缓存 ═══════════════ */
+const Clip={mode:null, paths:[]};
+const dragCache=new Map(); // path -> {file,url,mime,name}
+async function preloadDrag(path){ if(dragCache.has(path)) return;
+  try{ const st=await FS.stat(path); if(st.kind!=='file'||st.size>80*1024*1024) return;
+    const blob=await FS.readFile(path); const mime=blob.type||mimeOf(path);
+    const file=new File([blob], P.base(path), {type:mime});
+    dragCache.set(path,{file, url:URL.createObjectURL(file), mime, name:P.base(path)}); }catch{} }
+
+/* 内部拖拽数据约定 */
+const DT_PATHS='application/x-btos-paths';
+let dragState=null; // {paths, from}
+
+/* 为元素绑定「文件拖出」能力（桌面图标 / 资源管理器行共用）
+   规则：dragstart 严格同步；数据在 pointerenter/pointerdown 时预载 */
+function bindFileDrag(el, getPath, getSelPaths){
+  el.setAttribute('draggable','true');
+  el.addEventListener('pointerenter', ()=>preloadDrag(getPath()));
+  el.addEventListener('pointerdown', ()=>preloadDrag(getPath()));
+  el.addEventListener('dragstart', e=>{ const path=getPath();
+    let sel=getSelPaths?getSelPaths():[path]; if(!sel.includes(path)) sel=[path];
+    dragState={paths:sel, from:P.dir(path)};
+    e.dataTransfer.setData(DT_PATHS, JSON.stringify(sel));
+    e.dataTransfer.setData('text/plain', sel.join('\n'));
+    if(sel.length===1){ const c=dragCache.get(path);
+      if(c){ try{ e.dataTransfer.items.add(c.file); }catch{}
+        try{ e.dataTransfer.setData('DownloadURL', `${c.mime}:${c.name}:${c.url}`); }catch{} } }
+    e.dataTransfer.effectAllowed='copyMove'; el.classList.add('dragging'); });
+  el.addEventListener('dragend', ()=>{ el.classList.remove('dragging');
+    const c=dragCache.get(getPath());
+    if(c){ setTimeout(()=>{ URL.revokeObjectURL(c.url); dragCache.delete(getPath()); }, 6000); }
+    dragState=null; });
+}
+
+/* 外部文件递归导入（webkitGetAsEntry；readEntries 必须循环；禁用 Buffer） */
+function entryFile(entry){ return new Promise((res,rej)=>entry.file(res,rej)); }
+function readAllEntries(reader){ return new Promise((res,rej)=>{ const all=[];
+  (function next(){ reader.readEntries(batch=>{ if(!batch.length) return res(all);
+    all.push(...batch); next(); }, rej); })(); }); }
+async function importEntry(entry, destDir){
+  if(entry.isFile){ const file=await entryFile(entry);
+    const nm=await FS.uniqueName(destDir, entry.name);
+    await FS.writeFile(P.join(destDir,nm), file); return 1; }
+  if(entry.isDirectory){ const nm=await FS.uniqueName(destDir, entry.name);
+    const sub=P.join(destDir,nm); await FS.mkdir(sub);
+    const reader=entry.createReader(); let n=0;
+    const children=await readAllEntries(reader);
+    for(const c of children) n+=await importEntry(c, sub);
+    return n+1; }
+  return 0; }
+async function importDataTransfer(dt, destDir){
+  // 必须在任何 await 之前同步抓取 entries / files
+  const entries=[], rawFiles=[];
+  if(dt.items){ for(const it of dt.items){ if(it.kind!=='file') continue;
+    const en=it.webkitGetAsEntry ? it.webkitGetAsEntry() : null;
+    if(en) entries.push(en); else { const f=it.getAsFile(); if(f) rawFiles.push(f); } } }
+  else if(dt.files) rawFiles.push(...dt.files);
+  let n=0;
+  for(const en of entries) n+=await importEntry(en, destDir);
+  for(const f of rawFiles){ const nm=await FS.uniqueName(destDir, f.name);
+    await FS.writeFile(P.join(destDir,nm), f); n++; }
+  return n; }
+
+/* 通用放置区：接受内部路径移动 + 外部文件导入 */
+function makeDropZone(el, getDestDir, opts={}){
+  el.addEventListener('dragover', e=>{ e.preventDefault(); e.stopPropagation();
+    e.dataTransfer.dropEffect = dragState?'move':'copy'; el.classList.add('dropglow'); });
+  el.addEventListener('dragleave', e=>{ if(!el.contains(e.relatedTarget)) el.classList.remove('dropglow'); });
+  el.addEventListener('drop', async e=>{ e.preventDefault(); e.stopPropagation(); el.classList.remove('dropglow');
+    const dest=getDestDir(); if(!dest) return;
+    const internal=e.dataTransfer.getData(DT_PATHS);
+    if(internal){ try{ const paths=JSON.parse(internal); let moved=0;
+        for(const sp of paths){ if(sp===dest||dest.startsWith(sp+'/')) continue;
+          if(P.dir(sp)===dest){ if(opts.onSamedir) opts.onSamedir(sp, e); continue; }
+          const nm=await FS.uniqueName(dest, P.base(sp)); await FS.move(sp, P.join(dest,nm)); moved++; }
+        if(moved) toast(`${moved} 件圣物已移入 ${P.base(dest)||'根穴'}`); }catch(err){ toast('移动失败：'+err.message,'err'); }
+      return; }
+    try{ const n=await importDataTransfer(e.dataTransfer, dest);
+      if(n) toast(`${n} 件外界之物已封入 ${P.base(dest)||'根穴'}`); }
+    catch(err){ toast('导入失败：'+err.message,'err'); } });
+}
+
+/* 导出（拖出之外的触摸替代方案：下载按钮） */
+async function exportPath(path){ try{ const st=await FS.stat(path);
+    let blob, name=P.base(path);
+    if(st.kind==='directory'){ if(!window.JSZip){ toast('JSZip 未能加载，无法打包文件夹','err'); return; }
+      const zip=new JSZip();
+      async function add(dir, zf){ for(const e of await FS.readdir(dir)){ const p=P.join(dir,e.name);
+        const s=await FS.stat(p);
+        if(s.kind==='directory') await add(p, zf.folder(e.name));
+        else zf.file(e.name, await FS.readFile(p,'arrayBuffer')); } }
+      await add(path, zip); blob=await zip.generateAsync({type:'blob'}); name+='.zip'; }
+    else blob=await FS.readFile(path);
+    const url=URL.createObjectURL(blob); const a=document.createElement('a');
+    a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 8000); toast('已遣返尘世：'+name); }
+  catch(e){ toast('导出失败：'+e.message,'err'); } }
+
+async function pasteInto(dir){ if(!Clip.paths.length){ toast('诅咒之囊空空如也'); return; }
+  try{ for(const sp of Clip.paths){ if(dir===sp||dir.startsWith(sp+'/')) continue;
+      const nm=await FS.uniqueName(dir, P.base(sp));
+      if(Clip.mode==='cut') await FS.move(sp, P.join(dir,nm));
+      else await FS.copy(sp, P.join(dir,nm)); }
+    toast((Clip.mode==='cut'?'已迁葬 ':'已誊抄 ')+Clip.paths.length+' 件');
+    if(Clip.mode==='cut'){ Clip.paths=[]; Clip.mode=null; } }
+  catch(e){ toast('粘贴失败：'+e.message,'err'); } }
+
+/* ═══════════════ 压缩 / 解压引擎 ═══════════════ */
+async function gunzipBuf(buf){ if(!window.DecompressionStream) throw new Error('浏览器不支持 DecompressionStream');
+  const ds=new DecompressionStream('gzip');
+  return new Response(new Blob([buf]).stream().pipeThrough(ds)).arrayBuffer(); }
+function untarBuf(buf, write){ const u8=new Uint8Array(buf); const td=new TextDecoder(); const out=[];
+  let off=0, longName=null;
+  while(off+512<=u8.length){ const block=u8.subarray(off, off+512);
+    if(block.every(b=>b===0)) break;
+    let name=td.decode(block.subarray(0,100)).replace(/\0.*$/,'');
+    const sizeStr=td.decode(block.subarray(124,136)).replace(/\0.*$/,'').trim();
+    const size=parseInt(sizeStr,8)||0; const type=String.fromCharCode(block[156]);
+    const prefix=td.decode(block.subarray(345,500)).replace(/\0.*$/,'');
+    if(prefix) name=prefix+'/'+name;
+    if(longName){ name=longName; longName=null; }
+    const dataStart=off+512; const data=u8.subarray(dataStart, dataStart+size);
+    if(type==='L') longName=td.decode(data).replace(/\0.*$/,'');
+    else if(type==='5') out.push({name, dir:true});
+    else if(type==='0'||type==='\0'||type==='') out.push({name, data:data.slice().buffer});
+    off=dataStart+Math.ceil(size/512)*512; }
+  return out; }
+async function extractArchive(path, destDir){
+  const ext=P.ext(path); const base=P.base(path);
+  const stem=base.replace(/\.(zip|7z|gz|tgz|tar)$/i,'').replace(/\.tar$/i,'');
+  if(!destDir){ destDir=P.join(P.dir(path), await FS.uniqueName(P.dir(path), stem+'_启封')); }
+  await FS.mkdir(destDir);
+  const isTarGz=/\.(tar\.gz|tgz)$/i.test(base);
+  toast('启封中：'+base+' …');
+  try{
+    if(ext==='zip'){ if(!window.JSZip) throw new Error('JSZip 未加载（网络受阻）');
+      const zip=await JSZip.loadAsync(await FS.readFile(path,'arrayBuffer'));
+      const names=Object.keys(zip.files);
+      for(const n of names){ const f=zip.files[n]; const tp=P.join(destDir, n);
+        if(f.dir) await FS.mkdir(tp);
+        else await FS.writeFile(tp, await f.async('blob')); } }
+    else if(isTarGz){ const tar=await gunzipBuf(await FS.readFile(path,'arrayBuffer'));
+      for(const e of untarBuf(tar)){ const tp=P.join(destDir,e.name);
+        if(e.dir) await FS.mkdir(tp); else await FS.writeFile(tp, e.data); } }
+    else if(ext==='tar'){ for(const e of untarBuf(await FS.readFile(path,'arrayBuffer'))){
+        const tp=P.join(destDir,e.name);
+        if(e.dir) await FS.mkdir(tp); else await FS.writeFile(tp, e.data); } }
+    else if(ext==='gz'){ const data=await gunzipBuf(await FS.readFile(path,'arrayBuffer'));
+      await FS.writeFile(P.join(destDir, base.replace(/\.gz$/i,'')||'extracted'), data); }
+    else if(ext==='7z'){ await extract7z(path, destDir); }
+    else throw new Error('未知封印形式：'+ext);
+    toast('启封完成 → '+P.base(destDir),'ok'); }
+  catch(e){ toast('启封失败：'+e.message,'err'); }
+}
+/* 7z-wasm 解压引擎（按需动态加载） */
+let _7zMod=null;
+async function extract7z(path, destDir){
+  if(!_7zMod){ toast('召唤 7z-wasm 引擎…');
+    const m=await import('https://cdn.jsdelivr.net/npm/7z-wasm@1.2.0/7zz.es6.min.js');
+    _7zMod=m.default; }
+  const seven=await _7zMod({ print:()=>{}, printErr:()=>{} });
+  const buf=new Uint8Array(await FS.readFile(path,'arrayBuffer'));
+  seven.FS.writeFile('/in.7z', buf);
+  seven.FS.mkdir('/out');
+  seven.callMain(['x','/in.7z','-o/out','-y']);
+  async function walk(dir, vdir){ for(const name of seven.FS.readdir(dir)){
+    if(name==='.'||name==='..') continue; const full=dir+'/'+name;
+    const st=seven.FS.stat(full);
+    if(seven.FS.isDir(st.mode)){ const nd=P.join(vdir,name); await FS.mkdir(nd); await walk(full, nd); }
+    else { const data=seven.FS.readFile(full); await FS.writeFile(P.join(vdir,name), data.buffer); } } }
+  await walk('/out', destDir); }
+async function compressToZip(paths){ if(!window.JSZip){ toast('JSZip 未加载','err'); return; }
+  const zip=new JSZip();
+  async function add(p, zf){ const st=await FS.stat(p);
+    if(st.kind==='directory'){ const f=zf.folder(P.base(p));
+      for(const e of await FS.readdir(p)) await addInto(P.join(p,e.name), f); }
+    else zf.file(P.base(p), await FS.readFile(p,'arrayBuffer')); }
+  async function addInto(p, zf){ const st=await FS.stat(p);
+    if(st.kind==='directory'){ const f=zf.folder(P.base(p));
+      for(const e of await FS.readdir(p)) await addInto(P.join(p,e.name), f); }
+    else zf.file(P.base(p), await FS.readFile(p,'arrayBuffer')); }
+  for(const p of paths) await add(p, zip);
+  const dir=P.dir(paths[0]);
+  const nm=await FS.uniqueName(dir, (paths.length===1?P.base(paths[0]).replace(/\.[^.]+$/,''):'封印集')+'.zip');
+  await FS.writeFile(P.join(dir,nm), await zip.generateAsync({type:'blob'}));
+  toast('已封印为 '+nm,'ok'); }
+
+/* ═══════════════ 打开分派器（先 stat 判类型，目录→导航 文件→对应秘仪） ═══════════════ */
+async function openPath(path, opts={}){ path=P.norm(path);
+  let st; try{ st=await FS.stat(path); }catch(e){ toast('无法触及：'+e.message,'err'); return; }
+  if(st.kind==='directory'){ if(opts.navigate) opts.navigate(path); else openExplorer(path); return; }
+  const e=P.ext(path);
+  if(IMG_EXT.includes(e) && e!=='svg') return openImageViewer(path);
+  if(e==='svg') return openCodex(path);
+  if(AUD_EXT.includes(e)) return openPlayer(path,'audio');
+  if(VID_EXT.includes(e)) return openPlayer(path,'video');
+  if(e==='pdf') return openPDF(path);
+  if(TBL_EXT.includes(e)) return openLedger(path);
+  if(e==='html'||e==='htm') return openCodex(path);
+  if(ARC_EXT.includes(e)||/\.(tar\.gz)$/i.test(path)) return extractArchive(path);
+  if(VM_EXT.includes(e)) return openVM(path);
+  if(CODE_EXT.includes(e)) return openCodex(path);
+  return openNotepad(path); // 任何未知类型 → 以纯文本形式打开
+}
+/* 文件上下文菜单（桌面与资源管理器共用） */
+function fileMenuItems(paths, refresh, currentDir){
+  const single=paths.length===1, p0=paths[0]; const ext=single?P.ext(p0):'';
+  const items=[
+    {label:'开启', icon:ICONS.open, fn:()=>paths.forEach(p=>openPath(p))},
+    single&&(ext==='html'||ext==='htm')?{label:'于黑曜之镜中显形', icon:ICONS.mirror, fn:()=>openBrowserFile(p0)}:null,
+    single&&(ext==='html'||ext==='htm')?{label:'修订源码（法典）', icon:ICONS.codex, fn:()=>openCodex(p0)}:null,
+    single&&VM_EXT.includes(ext)?{label:'唤醒魔像（v86 启动）', icon:ICONS.vm, fn:()=>openVM(p0)}:null,
+    single?{label:'以纯文本剖视', icon:ICONS.text, fn:()=>openNotepad(p0)}:null,
+    '-',
+    {label:'誊抄（复制）', icon:ICONS.copy, fn:()=>{ Clip.mode='copy'; Clip.paths=[...paths]; toast('已纳入诅咒之囊'); }},
+    {label:'迁葬（剪切）', icon:ICONS.cut, fn:()=>{ Clip.mode='cut'; Clip.paths=[...paths]; toast('已标记迁葬'); }},
+    single?{label:'更名', icon:ICONS.rename, fn:async()=>{ const nn=await promptDialog('赐予新名', P.base(p0));
+      if(nn&&nn!==P.base(p0)){ try{ await FS.move(p0, P.join(P.dir(p0),nn)); }catch(e){ toast(e.message,'err'); } } }}:null,
+    '-',
+    single&&(ARC_EXT.includes(ext))?{label:'就地启封（解压）', icon:ICONS.fileArc, fn:()=>extractArchive(p0)}:null,
+    {label:'封印为 ZIP', icon:ICONS.fileArc, fn:()=>compressToZip(paths)},
+    {label:'遣返尘世（导出下载）', icon:ICONS.download, fn:()=>paths.forEach(p=>exportPath(p))},
+    single&&IMG_EXT.includes(ext)?{label:'设为壁纸', icon:ICONS.wall, fn:async()=>setCustomWallpaper(await FS.readFile(p0))}:null,
+    '-',
+    {label:'焚毁（删除）', icon:ICONS.trash, danger:true, fn:async()=>{
+      if(await confirmDialog('焚毁仪式', `确定将 ${paths.length===1?'「'+P.base(p0)+'」':paths.length+' 件圣物'} 付之一炬？此咒不可逆转。`,'焚毁')){
+        for(const p of paths) await FS.rm(p).catch(e=>toast(e.message,'err'));
+        toast('灰烬已随风而逝'); } }},
+  ];
+  return items.filter(Boolean);
+}
+
+/* ═══════════════ 桌面图标 ═══════════════ */
+const Desktop={
+  el:document.getElementById('desktop'), sel:new Set(), CW:96, CH:112,
+  pos(){ return Cfg.get('deskpos',{}); },
+  savePos(p){ Cfg.set('deskpos',p); },
+  cellAt(x,y){ const r=this.el.getBoundingClientRect();
+    return {c:Math.max(0,Math.round((x-r.left-8)/this.CW)), r:Math.max(0,Math.round((y-r.top-8)/this.CH))}; },
+  async refresh(){
+    this.el.querySelectorAll('.dicon').forEach(n=>n.remove());
+    let entries=[]; try{ entries=await FS.readdir('/Desktop'); }catch{ return; }
+    entries.sort((a,b)=>(a.kind===b.kind?0:a.kind==='directory'?-1:1)||a.name.localeCompare(b.name,'zh'));
+    const pos=this.pos(); const used=new Set();
+    const maxRows=Math.max(1, Math.floor((this.el.clientHeight-16)/this.CH));
+    for(const k of Object.keys(pos)) if(!entries.some(e=>e.name===k)) delete pos[k];
+    for(const e of entries){ let pc=pos[e.name];
+      if(!pc||used.has(pc.c+','+pc.r)){ let c=0,r=0;
+        while(used.has(c+','+r)){ r++; if(r>=maxRows){ r=0; c++; } } pc={c,r}; pos[e.name]=pc; }
+      used.add(pc.c+','+pc.r);
+      this.el.appendChild(this.makeIcon(e, pc)); }
+    this.savePos(pos);
+  },
+  makeIcon(entry, pc){
+    const path=P.join('/Desktop', entry.name);
+    const el=document.createElement('div'); el.className='dicon'; el.dataset.path=path; el.dataset.name=entry.name;
+    el.dataset.kind=entry.kind;
+    el.style.left=(8+pc.c*this.CW)+'px'; el.style.top=(8+pc.r*this.CH)+'px';
+    el.innerHTML=`<div class="ic">${entry.mount?ICONS.folderMnt:iconForFile(entry.name, entry.kind)}</div><div class="lbl">${esc(entry.name)}</div>`;
+    if(this.sel.has(path)) el.classList.add('sel');
+    el.addEventListener('click', e=>{ e.stopPropagation();
+      if(e.ctrlKey||e.metaKey){ this.toggleSel(path); } else { this.clearSel(); this.addSel(path); } });
+    el.addEventListener('dblclick', e=>{ e.stopPropagation(); openPath(path); });
+    el.addEventListener('contextmenu', e=>{ e.preventDefault(); e.stopPropagation();
+      if(!this.sel.has(path)){ this.clearSel(); this.addSel(path); }
+      showMenu(e.clientX, e.clientY, fileMenuItems([...this.sel], null, '/Desktop')); });
+    // 拖出 + 内部拖动（统一 HTML5 DnD）
+    bindFileDrag(el, ()=>path, ()=>[...this.sel.size?this.sel:[path]]);
+    // 文件夹作为放置目标
+    if(entry.kind==='directory'){
+      el.addEventListener('dragover', e=>{ e.preventDefault(); e.stopPropagation(); el.classList.add('droptarget'); });
+      el.addEventListener('dragleave', ()=>el.classList.remove('droptarget'));
+      el.addEventListener('drop', async e=>{ e.preventDefault(); e.stopPropagation(); el.classList.remove('droptarget');
+        const internal=e.dataTransfer.getData(DT_PATHS);
+        if(internal){ try{ const paths=JSON.parse(internal); let n=0;
+            for(const sp of paths){ if(sp===path||path.startsWith(sp+'/')) continue;
+              const nm=await FS.uniqueName(path, P.base(sp)); await FS.move(sp, P.join(path,nm)); n++; }
+            if(n) toast(`${n} 件已沉入「${entry.name}」`); }catch(err){ toast(err.message,'err'); } }
+        else { const n=await importDataTransfer(e.dataTransfer, path).catch(err=>{ toast(err.message,'err'); return 0; });
+          if(n) toast(`${n} 件外物已沉入「${entry.name}」`); } });
+    }
+    this.bindTouch(el, path, entry);
+    return el;
+  },
+  addSel(p){ this.sel.add(p); this.paint(); }, toggleSel(p){ this.sel.has(p)?this.sel.delete(p):this.sel.add(p); this.paint(); },
+  clearSel(){ this.sel.clear(); this.paint(); },
+  paint(){ this.el.querySelectorAll('.dicon').forEach(n=>n.classList.toggle('sel', this.sel.has(n.dataset.path))); },
+  moveIconTo(name, clientX, clientY){ const pos=this.pos(); const cell=this.cellAt(clientX, clientY);
+    for(const [k,v] of Object.entries(pos)){ if(k!==name && v.c===cell.c && v.r===cell.r){
+      // 目标格被占 → 寻找最近空格
+      const used=new Set(Object.entries(pos).filter(([kk])=>kk!==name).map(([,vv])=>vv.c+','+vv.r));
+      let best=null,bd=1e9;
+      for(let c=0;c<24;c++) for(let r=0;r<16;r++){ if(used.has(c+','+r)) continue;
+        const d=(c-cell.c)**2+(r-cell.r)**2; if(d<bd){ bd=d; best={c,r}; } }
+      pos[name]=best||cell; this.savePos(pos); this.refresh(); return; } }
+    pos[name]=cell; this.savePos(pos);
+    const el=this.el.querySelector(`.dicon[data-name="${CSS.escape(name)}"]`);
+    if(el){ el.style.left=(8+cell.c*this.CW)+'px'; el.style.top=(8+cell.r*this.CH)+'px'; } },
+  /* 触摸：长按 → 拖动 / 原地长按 → 菜单；单击 → 打开 */
+  bindTouch(el, path, entry){ let t0=null, moved=false, dragging=false, lpTimer=null, ghost=document.getElementById('touchGhost');
+    el.addEventListener('touchstart', e=>{ if(e.touches.length!==1) return;
+      const t=e.touches[0]; t0={x:t.clientX, y:t.clientY}; moved=false; dragging=false;
+      lpTimer=setTimeout(()=>{ dragging=true; el.classList.add('dragging');
+        ghost.innerHTML=el.innerHTML; ghost.style.display='block'; ghost.style.width='88px';
+        ghost.style.left=t0.x+'px'; ghost.style.top=t0.y+'px';
+        navigator.vibrate && navigator.vibrate(20); }, 420); }, {passive:true});
+    el.addEventListener('touchmove', e=>{ const t=e.touches[0];
+      if(Math.hypot(t.clientX-t0.x, t.clientY-t0.y)>12){ moved=true; if(!dragging) clearTimeout(lpTimer); }
+      if(dragging){ e.preventDefault(); ghost.style.left=t.clientX+'px'; ghost.style.top=t.clientY+'px'; } }, {passive:false});
+    el.addEventListener('touchend', e=>{ clearTimeout(lpTimer); ghost.style.display='none'; el.classList.remove('dragging');
+      const t=e.changedTouches[0];
+      if(dragging){
+        if(!moved){ // 长按未移动 → 呼出诅咒之环（移动端右键菜单）
+          this.clearSel(); this.addSel(path);
+          showMenu(t.clientX, t.clientY, fileMenuItems([path], null, '/Desktop'));
+          return; }
+        // 放置：检查是否落在文件夹图标上
+        el.style.pointerEvents='none';
+        const under=document.elementFromPoint(t.clientX, t.clientY);
+        el.style.pointerEvents='';
+        const target=under && under.closest && under.closest('.dicon');
+        if(target && target!==el && target.dataset.kind==='directory'){
+          FS.uniqueName(target.dataset.path, entry.name)
+            .then(nm=>FS.move(path, P.join(target.dataset.path, nm)))
+            .then(()=>toast(`已沉入「${target.dataset.name}」`)).catch(err=>toast(err.message,'err')); }
+        else this.moveIconTo(entry.name, t.clientX, t.clientY);
+        return; }
+      if(!moved) openPath(path); // 普通 tap → 打开
+    }, {passive:true});
+  },
+};
+FS.onChange(()=>{ Desktop.refresh(); });
+
+/* 桌面空白区交互：框选、右键菜单、放置 */
+(function setupDesktop(){
+  const desk=Desktop.el, mq=document.getElementById('marquee');
+  makeDropZone(desk, ()=>'/Desktop', { onSamedir:(sp, e)=>{ // 同目录 → 重新摆放
+    Desktop.moveIconTo(P.base(sp), e.clientX, e.clientY); } });
+  // 框选（鼠标）
+  let m0=null;
+  desk.addEventListener('mousedown', e=>{ if(e.button!==0 || e.target!==desk) return;
+    m0={x:e.clientX, y:e.clientY}; if(!e.ctrlKey&&!e.metaKey) Desktop.clearSel();
+    const onMove=ev=>{ if(!m0) return;
+      const x1=Math.min(m0.x,ev.clientX), y1=Math.min(m0.y,ev.clientY),
+            x2=Math.max(m0.x,ev.clientX), y2=Math.max(m0.y,ev.clientY);
+      Object.assign(mq.style,{display:'block',left:x1+'px',top:y1+'px',width:(x2-x1)+'px',height:(y2-y1)+'px'});
+      desk.querySelectorAll('.dicon').forEach(ic=>{ const r=ic.getBoundingClientRect();
+        const hit=!(r.right<x1||r.left>x2||r.bottom<y1||r.top>y2);
+        if(hit) Desktop.sel.add(ic.dataset.path); else if(!ev.ctrlKey&&!ev.metaKey) Desktop.sel.delete(ic.dataset.path); });
+      Desktop.paint(); };
+    const onUp=()=>{ m0=null; mq.style.display='none';
+      removeEventListener('mousemove',onMove); removeEventListener('mouseup',onUp); };
+    addEventListener('mousemove',onMove); addEventListener('mouseup',onUp); });
+  desk.addEventListener('click', e=>{ if(e.target===desk) Desktop.clearSel(); });
+  // 桌面右键
+  desk.addEventListener('contextmenu', e=>{ if(e.target!==desk) return; e.preventDefault();
+    showMenu(e.clientX, e.clientY, [
+      {label:'刷新结界', icon:ICONS.refresh, fn:()=>Desktop.refresh()},
+      {label:'重列圣物', icon:ICONS.grid, fn:()=>{ Cfg.set('deskpos',{}); Desktop.refresh(); }},
+      '-',
+      {label:'新建墓室（文件夹）', icon:ICONS.folder, fn:async()=>{ const n=await promptDialog('新墓室之名','新建文件夹');
+        if(n) FS.mkdir(P.join('/Desktop', await FS.uniqueName('/Desktop', n))).catch(err=>toast(err.message,'err')); }},
+      {label:'新建羊皮卷（文本）', icon:ICONS.file, fn:async()=>{ const n=await promptDialog('新卷之名','无题.txt');
+        if(n) FS.writeFile(P.join('/Desktop', await FS.uniqueName('/Desktop', n)), '').catch(err=>toast(err.message,'err')); }},
+      {label:'献祭外物（上传）', icon:ICONS.upload, fn:()=>pickUpload('/Desktop')},
+      Clip.paths.length?{label:`粘贴（${Clip.paths.length} 件）`, icon:ICONS.paste, fn:()=>pasteInto('/Desktop')}:null,
+      '-',
+      {label:'更换壁纸', icon:ICONS.wall, fn:()=>openSettings('wall')},
+      {label:'全屏结界', icon:ICONS.full, fn:toggleFullscreen},
+      {label:'圣所（设置）', icon:ICONS.settings, fn:()=>openSettings()},
+    ].filter(Boolean)); });
+  // 移动端：桌面长按空白 → 菜单
+  let dlp=null;
+  desk.addEventListener('touchstart', e=>{ if(e.target!==desk) return; const t=e.touches[0];
+    dlp=setTimeout(()=>{ desk.dispatchEvent(new MouseEvent('contextmenu',{clientX:t.clientX, clientY:t.clientY, bubbles:true})); },520); }, {passive:true});
+  desk.addEventListener('touchmove', ()=>clearTimeout(dlp), {passive:true});
+  desk.addEventListener('touchend', ()=>clearTimeout(dlp), {passive:true});
+})();
+
+/* 上传入口 */
+let _uploadDest='/Desktop';
+function pickUpload(dest){ _uploadDest=dest; document.getElementById('fileImport').click(); }
+document.getElementById('fileImport').addEventListener('change', async e=>{
+  let n=0; for(const f of e.target.files){ const nm=await FS.uniqueName(_uploadDest, f.name);
+    await FS.writeFile(P.join(_uploadDest,nm), f).catch(err=>toast(err.message,'err')); n++; }
+  if(n) toast(`${n} 件外物已献祭`); e.target.value=''; });
+/* ═══════════════ 本地文件夹挂载（File System Access API → 统一 fs 后端） ═══════════════ */
+async function mountLocalFolder(){
+  if(!window.showDirectoryPicker){ toast('此浏览器不支持 File System Access API','err'); return null; }
+  try{ const handle=await showDirectoryPicker({mode:'readwrite'});
+    try{ await handle.requestPermission({mode:'readwrite'}); }catch{}
+    let name=handle.name||'local';
+    let mp=P.join('/mnt/local', name); let i=2;
+    while(FS.mountAt(mp)) mp=P.join('/mnt/local', name+'-'+(i++));
+    FS.mount(mp, handleBackend(handle), {local:true, label:handle.name});
+    const hints=Cfg.get('mountHints',[]); if(!hints.includes(handle.name)){ hints.push(handle.name); Cfg.set('mountHints',hints); }
+    toast(`尘世之域「${handle.name}」已锚定于 ${mp}`,'ok');
+    return mp; }
+  catch(e){ if(e.name!=='AbortError') toast('挂载失败：'+e.message,'err'); return null; }
+}
+
+/* ═══════════════ 文件资源管理器「秘库」 ═══════════════ */
+function openExplorer(startPath='/'){
+  const win=WM.open({title:'秘库 — 文件资源管理器', icon:ICONS.explorer, w:920, h:580,
+    build(body, win){
+      let cwd=null, hist=[], hi=-1, sortKey=Cfg.get('fxSort','name'), sortAsc=Cfg.get('fxAsc',true);
+      const sel=new Set(); let entries=[]; let searching=false;
+      body.innerHTML=`
+        <div class="atb">
+          <button class="itb" data-a="side" title="导航窗格">${ICONS.grid}</button>
+          <button class="itb" data-a="back" title="回溯">${ICONS.back}</button>
+          <button class="itb" data-a="fwd" title="前行">${ICONS.fwd}</button>
+          <button class="itb" data-a="up" title="升上一层">${ICONS.up}</button>
+          <button class="itb" data-a="refresh" title="刷新">${ICONS.refresh}</button>
+          <div class="fx-crumbs"></div>
+          <div class="fx-search">${ICONS.search}<input type="text" placeholder="搜寻此墓穴…"></div>
+        </div>
+        <div class="atb" style="border-top:none">
+          <button class="itb" data-a="newdir">${ICONS.folder}<span>新墓室</span></button>
+          <button class="itb" data-a="newfile">${ICONS.file}<span>新羊皮卷</span></button>
+          <button class="itb" data-a="upload">${ICONS.upload}<span>上传</span></button>
+          <button class="itb" data-a="paste">${ICONS.paste}<span>粘贴</span></button>
+          <button class="itb" data-a="export">${ICONS.download}<span>导出</span></button>
+          <button class="itb" data-a="del" style="color:var(--ember2)">${ICONS.trash}<span>焚毁</span></button>
+          <div class="sp"></div>
+          <button class="itb" data-a="mount">${ICONS.mount}<span>挂载本地文件夹</span></button>
+        </div>
+        <div class="fx">
+          <div class="fx-side"></div>
+          <div class="fx-main">
+            <div class="fx-cols">
+              <button class="fx-col" data-s="name">名讳</button>
+              <button class="fx-col" data-s="mtime">修改日期</button>
+              <button class="fx-col" data-s="type">类型</button>
+              <button class="fx-col" data-s="size">大小</button>
+            </div>
+            <div class="fx-list"></div>
+            <div class="fx-status"><span class="st-n"></span><span class="st-s"></span><span class="st-b" style="margin-left:auto"></span></div>
+          </div>
+        </div>`;
+      const $=s=>body.querySelector(s);
+      const listEl=$('.fx-list'), sideEl=$('.fx-side'), crumbsEl=$('.fx-crumbs'), searchInp=$('.fx-search input');
+      const QUICK=[['桌面','/Desktop',ICONS.home],['文卷','/Documents',ICONS.doc],['画像','/Pictures',ICONS.fileImg],
+        ['乐章','/Music',ICONS.music],['坠物','/Downloads',ICONS.download],['根穴','/',ICONS.sigil],['尘世锚点','/mnt/local',ICONS.drive]];
+
+      function renderSide(){
+        let html=`<h4>速达之径</h4>`+QUICK.map(([n,p,ic])=>
+          `<button class="fx-si ${cwd===p?'on':''}" data-p="${esc(p)}">${ic}<span>${esc(n)}</span></button>`).join('');
+        const locals=FS.mounts.filter(m=>m.meta&&m.meta.local);
+        html+=`<h4>尘世之域</h4>`;
+        html+=locals.map(m=>`<button class="fx-si ${cwd===m.path?'on':''}" data-p="${esc(m.path)}">${ICONS.folderMnt}<span>${esc(P.base(m.path))}</span></button>`).join('');
+        html+=`<button class="fx-si" data-mount>${ICONS.mount}<span>挂载本地文件夹…</span></button>`;
+        sideEl.innerHTML=html;
+        sideEl.querySelectorAll('[data-p]').forEach(b=>{ b.onclick=()=>{ nav(b.dataset.p); if(isMobile()) sideEl.classList.remove('open'); };
+          // 侧边栏目录也可作放置目标
+          makeDropZone(b, ()=>b.dataset.p); });
+        const mb=sideEl.querySelector('[data-mount]'); if(mb) mb.onclick=async()=>{ const mp=await mountLocalFolder(); if(mp) nav(mp); };
+      }
+      function renderCrumbs(){ const parts=cwd.split('/').filter(Boolean); let acc='';
+        let html=`<button class="crumb ${cwd==='/'?'cur':''}" data-p="/">根穴</button>`;
+        for(const s of parts){ acc+='/'+s;
+          html+=`<span class="crumb-sep">❖</span><button class="crumb ${acc===cwd?'cur':''}" data-p="${esc(acc)}">${esc(s)}</button>`; }
+        crumbsEl.innerHTML=html;
+        crumbsEl.querySelectorAll('.crumb').forEach(b=>b.onclick=()=>nav(b.dataset.p)); }
+      function sortEntries(arr){ const k=sortKey, dir=sortAsc?1:-1;
+        return arr.sort((a,b)=>{ if(a.kind!==b.kind) return a.kind==='directory'?-1:1;
+          let va,vb;
+          if(k==='name'){ va=a.name.toLowerCase(); vb=b.name.toLowerCase(); return va.localeCompare(vb,'zh')*dir; }
+          if(k==='mtime'){ va=a.st?.mtime||0; vb=b.st?.mtime||0; }
+          else if(k==='size'){ va=a.st?.size||0; vb=b.st?.size||0; }
+          else { va=typeOf(a.name,a.kind); vb=typeOf(b.name,b.kind); return va.localeCompare(vb,'zh')*dir; }
+          return (va-vb)*dir; }); }
+      function paintCols(){ body.querySelectorAll('.fx-col').forEach(c=>{
+        c.classList.toggle('on', c.dataset.s===sortKey);
+        c.innerHTML=({name:'名讳',mtime:'修改日期',type:'类型',size:'大小'})[c.dataset.s]+(c.dataset.s===sortKey?(sortAsc?' ▲':' ▼'):''); }); }
+      async function load(){ sel.clear(); searching=false; searchInp.value='';
+        let list=[]; try{ list=await FS.readdir(cwd); }catch(e){ listEl.innerHTML=`<div class="fx-empty">此墓穴拒绝开启：${esc(e.message)}</div>`; return; }
+        entries=await Promise.all(list.map(async e=>{ let st=null;
+          try{ st=await FS.stat(P.join(cwd,e.name)); }catch{}
+          return {...e, st}; }));
+        render(); }
+      function render(){ sortEntries(entries); paintCols();
+        if(!entries.length){ listEl.innerHTML=`<div class="fx-empty">空荡的墓穴，唯有回声。</div>`; }
+        else { listEl.innerHTML='';
+          for(const e of entries){ const p=e.fullPath||P.join(cwd,e.name);
+            const row=document.createElement('div');
+            row.className='frow'+(e.kind==='directory'?' isdir':'')+(sel.has(p)?' sel':'');
+            row.dataset.path=p; row.dataset.kind=e.kind;
+            row.innerHTML=`<div class="fc nm">${e.mount?ICONS.folderMnt:iconForFile(e.name,e.kind)}<span>${esc(searching?p:e.name)}</span></div>
+              <div class="fc">${fmtDate(e.st?.mtime)}</div>
+              <div class="fc">${e.mount?'挂载点':typeOf(e.name,e.kind)}</div>
+              <div class="fc">${e.kind==='directory'?'—':fmtSize(e.st?.size)}</div>`;
+            row.addEventListener('click', ev=>{ ev.stopPropagation();
+              if(ev.ctrlKey||ev.metaKey){ sel.has(p)?sel.delete(p):sel.add(p); }
+              else if(ev.shiftKey && sel.size){ const rows=[...listEl.querySelectorAll('.frow')];
+                const idx=rows.indexOf(row); const last=rows.findIndex(r=>sel.has(r.dataset.path));
+                const [a,b]=[Math.min(idx,last),Math.max(idx,last)];
+                rows.slice(a,b+1).forEach(r=>sel.add(r.dataset.path)); }
+              else { sel.clear(); sel.add(p); }
+              paintSel(); });
+            row.addEventListener('dblclick', ev=>{ ev.stopPropagation();
+              openPath(p, {navigate: e.kind==='directory' ? nav : null}); });
+            // 触摸：单击行即打开目录 / 文件（双击在触屏不便）
+            row.addEventListener('contextmenu', ev=>{ ev.preventDefault(); ev.stopPropagation();
+              if(!sel.has(p)){ sel.clear(); sel.add(p); paintSel(); }
+              const items=fileMenuItems([...sel], load, cwd);
+              if(e.mount) items.unshift({label:'解除锚定（卸载）', icon:ICONS.eject, fn:async()=>{
+                if(await confirmDialog('解除锚定','卸载尘世之域「'+e.name+'」？（不会删除本地文件）','卸载')) FS.unmount(p); }},'-');
+              showMenu(ev.clientX, ev.clientY, items); });
+            let lp=null;
+            row.addEventListener('touchstart', ev=>{ const t=ev.touches[0];
+              lp=setTimeout(()=>{ lp=null; row.dispatchEvent(new MouseEvent('contextmenu',{clientX:t.clientX,clientY:t.clientY,bubbles:true})); },520); }, {passive:true});
+            row.addEventListener('touchmove', ()=>{ clearTimeout(lp); lp=null; }, {passive:true});
+            row.addEventListener('touchend', ev=>{ if(lp){ clearTimeout(lp);
+              ev.preventDefault(); openPath(p, {navigate: e.kind==='directory'?nav:null}); } });
+            bindFileDrag(row, ()=>p, ()=>[...sel.size?sel:[p]]);
+            if(e.kind==='directory') makeDropZone(row, ()=>p);
+            listEl.appendChild(row); } }
+        $('.st-n').textContent=entries.length+' 件圣物';
+        $('.st-b').textContent=FS.backendName;
+        paintSel(); renderSide(); }
+      function paintSel(){ listEl.querySelectorAll('.frow').forEach(r=>r.classList.toggle('sel', sel.has(r.dataset.path)));
+        $('.st-s').textContent=sel.size?`已选 ${sel.size} 件`:''; }
+      function nav(p, push=true){ p=P.norm(p);
+        if(push){ hist=hist.slice(0,hi+1); hist.push(p); hi=hist.length-1; }
+        cwd=p; win.setTitle('秘库 — '+(p==='/'?'根穴':P.base(p)));
+        renderCrumbs(); load(); }
+      listEl.addEventListener('click', e=>{ if(e.target===listEl){ sel.clear(); paintSel(); } });
+      listEl.addEventListener('contextmenu', e=>{ if(e.target!==listEl) return; e.preventDefault();
+        showMenu(e.clientX, e.clientY, [
+          {label:'刷新', icon:ICONS.refresh, fn:load},
+          {label:'新建墓室', icon:ICONS.folder, fn:()=>act('newdir')},
+          {label:'新建羊皮卷', icon:ICONS.file, fn:()=>act('newfile')},
+          {label:'献祭外物（上传）', icon:ICONS.upload, fn:()=>pickUpload(cwd)},
+          Clip.paths.length?{label:`粘贴（${Clip.paths.length} 件）`, icon:ICONS.paste, fn:()=>pasteInto(cwd)}:null,
+        ].filter(Boolean)); });
+      makeDropZone(listEl, ()=>cwd);
+      // 框选（鼠标橡皮筋多选）
+      const mqEl=document.getElementById('marquee');
+      listEl.addEventListener('mousedown', e=>{ if(e.button!==0 || e.target!==listEl) return;
+        e.preventDefault(); const m0={x:e.clientX, y:e.clientY};
+        if(!e.ctrlKey&&!e.metaKey){ sel.clear(); paintSel(); }
+        const onMove=ev=>{ const x1=Math.min(m0.x,ev.clientX), y1=Math.min(m0.y,ev.clientY),
+            x2=Math.max(m0.x,ev.clientX), y2=Math.max(m0.y,ev.clientY);
+          Object.assign(mqEl.style,{display:'block',left:x1+'px',top:y1+'px',width:(x2-x1)+'px',height:(y2-y1)+'px'});
+          listEl.querySelectorAll('.frow').forEach(r=>{ const rc=r.getBoundingClientRect();
+            const hit=!(rc.right<x1||rc.left>x2||rc.bottom<y1||rc.top>y2);
+            if(hit) sel.add(r.dataset.path); else if(!ev.ctrlKey&&!ev.metaKey) sel.delete(r.dataset.path); });
+          paintSel(); };
+        const onUp=()=>{ mqEl.style.display='none';
+          removeEventListener('mousemove',onMove); removeEventListener('mouseup',onUp); };
+        addEventListener('mousemove',onMove); addEventListener('mouseup',onUp); });
+      // 列排序
+      body.querySelectorAll('.fx-col').forEach(c=>c.onclick=()=>{
+        if(sortKey===c.dataset.s) sortAsc=!sortAsc; else { sortKey=c.dataset.s; sortAsc=true; }
+        Cfg.set('fxSort',sortKey); Cfg.set('fxAsc',sortAsc); render(); });
+      // 搜索（递归，上限 400）
+      let searchT=null;
+      searchInp.addEventListener('input', ()=>{ clearTimeout(searchT);
+        const q=searchInp.value.trim().toLowerCase();
+        if(!q){ load(); return; }
+        searchT=setTimeout(async()=>{ searching=true; const found=[]; const LIM=400;
+          async function walk(dir, depth){ if(found.length>=LIM||depth>6) return;
+            let list=[]; try{ list=await FS.readdir(dir); }catch{ return; }
+            for(const e of list){ if(found.length>=LIM) return; const p=P.join(dir,e.name);
+              if(e.name.toLowerCase().includes(q)){ let st=null; try{ st=await FS.stat(p); }catch{}
+                found.push({...e, st, fullPath:p}); }
+              if(e.kind==='directory'&&!e.mount) await walk(p, depth+1); } }
+          await walk(cwd,0); entries=found; sel.clear(); render();
+          $('.st-n').textContent=`搜得 ${found.length} 件`; }, 300); });
+      // 工具栏
+      async function act(a){ switch(a){
+        case 'side': sideEl.classList.toggle('open'); break;
+        case 'back': if(hi>0){ hi--; nav(hist[hi], false); } break;
+        case 'fwd': if(hi<hist.length-1){ hi++; nav(hist[hi], false); } break;
+        case 'up': if(cwd!=='/') nav(P.dir(cwd)); break;
+        case 'refresh': load(); break;
+        case 'newdir': { const n=await promptDialog('新墓室之名','新建文件夹');
+          if(n) await FS.mkdir(P.join(cwd, await FS.uniqueName(cwd,n))).catch(e=>toast(e.message,'err')); break; }
+        case 'newfile': { const n=await promptDialog('新卷之名','无题.txt');
+          if(n) await FS.writeFile(P.join(cwd, await FS.uniqueName(cwd,n)),'').catch(e=>toast(e.message,'err')); break; }
+        case 'upload': pickUpload(cwd); break;
+        case 'paste': pasteInto(cwd); break;
+        case 'export': if(!sel.size){ toast('未选中任何圣物'); break; } [...sel].forEach(p=>exportPath(p)); break;
+        case 'del': if(!sel.size){ toast('未选中任何圣物'); break; }
+          if(await confirmDialog('焚毁仪式',`确定焚毁 ${sel.size} 件圣物？`,'焚毁')){
+            for(const p of sel) await FS.rm(p).catch(e=>toast(e.message,'err')); sel.clear(); }
+          break;
+        case 'mount': { const mp=await mountLocalFolder(); if(mp) nav(mp); break; } } }
+      body.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>act(b.dataset.a));
+      const reload=()=>{ if(!searching) load(); };
+      FS.onChange(reload); win.onClose=()=>FS.listeners.delete(reload);
+      nav(startPath);
+    }});
+  return win;
+}
+
+/* ═══════════════ 通用文件选择器（供 VM / 打开操作） ═══════════════ */
+function pickFile(title='择取圣物', exts=null){ return dialog((d, done)=>{
+  let cwd='/';
+  d.innerHTML=`<div class="dlg-t">${esc(title)}</div>
+    <div class="dlg-b" style="padding:10px 14px">
+      <div style="display:flex;gap:6px;margin-bottom:8px;align-items:center">
+        <button class="btn" data-up style="height:30px;padding:0 12px">${ICONS.up}</button>
+        <div class="pk-path" style="flex:1;font-family:'Fira Code',monospace;font-size:12px;color:var(--gold2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div></div>
+      <div class="pk-list" style="max-height:46vh;overflow-y:auto;border:1px solid var(--vein);border-radius:6px;background:rgba(7,4,9,.5)"></div></div>
+    <div class="dlg-f"><button class="btn" data-x>放弃</button></div>`;
+  const listEl=d.querySelector('.pk-list');
+  async function load(){ d.querySelector('.pk-path').textContent=cwd;
+    let list=[]; try{ list=await FS.readdir(cwd); }catch{ list=[]; }
+    list.sort((a,b)=>(a.kind===b.kind?0:a.kind==='directory'?-1:1)||a.name.localeCompare(b.name,'zh'));
+    listEl.innerHTML=list.map(e=>{ const dim=e.kind==='file'&&exts&&!exts.includes(P.ext(e.name));
+      return `<button class="fx-si" style="${dim?'opacity:.35;pointer-events:none;':''}" data-n="${esc(e.name)}" data-k="${e.kind}">
+        ${iconForFile(e.name,e.kind)}<span>${esc(e.name)}</span></button>`; }).join('')
+      ||`<div class="fx-empty">空无一物</div>`;
+    listEl.querySelectorAll('[data-n]').forEach(b=>b.onclick=()=>{ const p=P.join(cwd,b.dataset.n);
+      if(b.dataset.k==='directory'){ cwd=p; load(); } else done(p); }); }
+  d.querySelector('[data-up]').onclick=()=>{ if(cwd!=='/'){ cwd=P.dir(cwd); load(); } };
+  d.querySelector('[data-x]').onclick=()=>done(null);
+  load(); }); }
+/* ═══════════════ 记事本「书记官」 ═══════════════ */
+function openNotepad(path){
+  WM.open({title:'书记官'+(path?' — '+P.base(path):''), icon:ICONS.notepad, w:700, h:520,
+    build(body, win){
+      let cur=path, dirty=false;
+      body.innerHTML=`<div class="atb">
+          <button class="itb" data-a="open">${ICONS.open}<span>开卷</span></button>
+          <button class="itb" data-a="save">${ICONS.check}<span>铭刻</span></button>
+          <button class="itb" data-a="saveas">${ICONS.copy}<span>另铭于…</span></button>
+          <div class="sp"></div><span class="np-stat" style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:.1em;color:var(--dust)"></span></div>
+        <textarea class="ed-ta" spellcheck="false" placeholder="于此书写汝之血誓…"></textarea>`;
+      const ta=body.querySelector('textarea'), stat=body.querySelector('.np-stat');
+      const upd=()=>{ stat.textContent=`${ta.value.length} 字符 · ${ta.value.split('\n').length} 行${dirty?' · 未铭刻':''}`; };
+      ta.addEventListener('input', ()=>{ dirty=true; upd(); });
+      async function load(p){ try{ ta.value=await FS.readFile(p,'text'); cur=p; dirty=false;
+          win.setTitle('书记官 — '+P.base(p)); upd(); }catch(e){ toast('开卷失败：'+e.message,'err'); } }
+      async function save(as){ let p=cur;
+        if(as||!p){ const n=await promptDialog('铭刻于何处（完整路径）', p||'/Documents/无题.txt'); if(!n) return; p=P.norm(n); }
+        try{ await FS.writeFile(p, ta.value); cur=p; dirty=false;
+          win.setTitle('书记官 — '+P.base(p)); upd(); toast('已铭刻：'+P.base(p),'ok'); }
+        catch(e){ toast('铭刻失败：'+e.message,'err'); } }
+      body.querySelector('[data-a=open]').onclick=async()=>{ const p=await pickFile('开启何卷'); if(p) load(p); };
+      body.querySelector('[data-a=save]').onclick=()=>save(false);
+      body.querySelector('[data-a=saveas]').onclick=()=>save(true);
+      ta.addEventListener('keydown', e=>{ if((e.ctrlKey||e.metaKey)&&e.key==='s'){ e.preventDefault(); save(false); } });
+      if(path) load(path); else upd();
+    }});
+}
+
+/* ═══════════════ 表格「账簿」CSV/TSV 双视图 ═══════════════ */
+function parseDSV(text, delim){ const rows=[]; let row=[], cell='', q=false;
+  for(let i=0;i<text.length;i++){ const c=text[i];
+    if(q){ if(c==='"'){ if(text[i+1]==='"'){ cell+='"'; i++; } else q=false; } else cell+=c; }
+    else if(c==='"') q=true;
+    else if(c===delim){ row.push(cell); cell=''; }
+    else if(c==='\n'){ row.push(cell); rows.push(row); row=[]; cell=''; }
+    else if(c!=='\r') cell+=c; }
+  if(cell!==''||row.length){ row.push(cell); rows.push(row); }
+  return rows; }
+function openLedger(path){
+  WM.open({title:'账簿'+(path?' — '+P.base(path):''), icon:ICONS.ledger, w:820, h:560,
+    build(body, win){
+      let cur=path, mode='table';
+      body.innerHTML=`<div class="atb">
+          <button class="itb" data-a="open">${ICONS.open}<span>开卷</span></button>
+          <button class="itb" data-a="save">${ICONS.check}<span>铭刻</span></button>
+          <div style="width:1px;height:20px;background:var(--vein)"></div>
+          <button class="itb md-t" data-m="table">${ICONS.table}<span>表格视图</span></button>
+          <button class="itb md-x" data-m="text">${ICONS.text}<span>文本视图</span></button>
+          <div class="sp"></div><span class="lg-stat" style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:.1em;color:var(--dust)"></span></div>
+        <div class="lg-body" style="flex:1;display:flex;flex-direction:column;min-height:0"></div>`;
+      const bodyEl=body.querySelector('.lg-body'), stat=body.querySelector('.lg-stat');
+      let text='世代,姓名,封号\nI,Vladrik,铁冠伯爵';
+      const delim=()=>P.ext(cur||'')==='tsv'?'\t':',';
+      function render(){ body.querySelector('.md-t').classList.toggle('on',mode==='table');
+        body.querySelector('.md-x').classList.toggle('on',mode==='text');
+        if(mode==='text'){ bodyEl.innerHTML=`<textarea class="ed-ta" spellcheck="false"></textarea>`;
+          const ta=bodyEl.querySelector('textarea'); ta.value=text;
+          ta.addEventListener('input',()=>{ text=ta.value; }); stat.textContent='原始文本 · 可自由编辑'; }
+        else { const rows=parseDSV(text, delim()); const head=rows[0]||[]; const max=Math.min(rows.length,3000);
+          let html='<div class="tbl-wrap"><table><thead><tr>'+head.map(h=>`<th>${esc(h)}</th>`).join('')+'</tr></thead><tbody>';
+          for(let i=1;i<max;i++) html+='<tr>'+rows[i].map(c=>`<td>${esc(c)}</td>`).join('')+'</tr>';
+          html+='</tbody></table></div>'; bodyEl.innerHTML=html;
+          stat.textContent=`${Math.max(0,rows.length-1)} 行 × ${head.length} 列${rows.length>max?' · 仅显前 3000 行':''}`; } }
+      async function load(p){ try{ text=await FS.readFile(p,'text'); cur=p;
+          win.setTitle('账簿 — '+P.base(p)); render(); }catch(e){ toast(e.message,'err'); } }
+      body.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>{ mode=b.dataset.m; render(); });
+      body.querySelector('[data-a=open]').onclick=async()=>{ const p=await pickFile('开启账册',['csv','tsv']); if(p) load(p); };
+      body.querySelector('[data-a=save]').onclick=async()=>{ let p=cur;
+        if(!p){ const n=await promptDialog('铭刻于何处','/Documents/账册.csv'); if(!n) return; p=P.norm(n); }
+        try{ await FS.writeFile(p, text); cur=p; toast('已铭刻','ok'); }catch(e){ toast(e.message,'err'); } };
+      if(path) load(path); else render();
+    }});
+}
+
+/* ═══════════════ 代码编辑器「法典」（CodeMirror + HTML 实时预览） ═══════════════ */
+function openCodex(path){
+  WM.open({title:'法典'+(path?' — '+P.base(path):''), icon:ICONS.codex, w:1000, h:600,
+    build(body, win){
+      let cur=path, cm=null, ta=null, previewOn=true;
+      const isHtml=p=>['html','htm'].includes(P.ext(p||''));
+      body.innerHTML=`<div class="atb">
+          <button class="itb" data-a="open">${ICONS.open}<span>开卷</span></button>
+          <button class="itb" data-a="save">${ICONS.check}<span>铭刻</span></button>
+          <button class="itb" data-a="browser">${ICONS.mirror}<span>于镜中显形</span></button>
+          <button class="itb" data-a="preview">${ICONS.eye}<span>实时预览</span></button>
+          <div class="sp"></div><span class="cx-stat" style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:.1em;color:var(--dust)"></span></div>
+        <div style="flex:1;display:flex;min-height:0">
+          <div class="cx-ed" style="flex:1;min-width:0;display:flex;flex-direction:column"></div>
+          <div class="cx-pv" style="flex:1;min-width:0;border-left:1px solid var(--vein);display:none;flex-direction:column;background:#fff">
+            <iframe sandbox="allow-scripts" style="flex:1;border:none;width:100%"></iframe></div></div>`;
+      const edEl=body.querySelector('.cx-ed'), pvEl=body.querySelector('.cx-pv'),
+        iframe=pvEl.querySelector('iframe'), stat=body.querySelector('.cx-stat');
+      const modeFor=p=>({js:'javascript',mjs:'javascript',json:{name:'javascript',json:true},css:'css',
+        xml:'xml',svg:'xml',html:'htmlmixed',htm:'htmlmixed'})[P.ext(p||'')]||null;
+      function getText(){ return cm?cm.getValue():(ta?ta.value:''); }
+      let pvT=null;
+      function schedulePreview(){ if(!previewOn||!isHtml(cur)) return;
+        clearTimeout(pvT); pvT=setTimeout(()=>{ iframe.srcdoc=getText(); }, 450); }
+      function setupEditor(content){
+        edEl.innerHTML='';
+        if(window.CodeMirror){ cm=CodeMirror(edEl,{value:content, lineNumbers:true, mode:modeFor(cur),
+            theme:'default', indentUnit:2, tabSize:2, lineWrapping:false});
+          cm.on('change', ()=>{ stat.textContent='未铭刻'; schedulePreview(); });
+          setTimeout(()=>cm.refresh(), 60); }
+        else { edEl.innerHTML='<textarea class="ed-ta" spellcheck="false"></textarea>';
+          ta=edEl.querySelector('textarea'); ta.value=content; cm=null;
+          ta.addEventListener('input', ()=>{ stat.textContent='未铭刻'; schedulePreview(); });
+          stat.textContent='CodeMirror 未能召唤（网络受阻）— 已降级为朴素文本'; }
+        updPreviewVis(); schedulePreview(); }
+      function updPreviewVis(){ const show=previewOn&&isHtml(cur);
+        pvEl.style.display=show?'flex':'none';
+        body.querySelector('[data-a=preview]').classList.toggle('on', show);
+        body.querySelector('[data-a=browser]').style.display=isHtml(cur)?'':'none';
+        if(cm) setTimeout(()=>cm.refresh(),60); }
+      async function load(p){ try{ const t=await FS.readFile(p,'text'); cur=p;
+          win.setTitle('法典 — '+P.base(p)); setupEditor(t); stat.textContent=''; }
+        catch(e){ toast(e.message,'err'); } }
+      async function save(){ let p=cur;
+        if(!p){ const n=await promptDialog('铭刻于何处','/Documents/scroll.html'); if(!n) return; p=P.norm(n);
+          cur=p; win.setTitle('法典 — '+P.base(p)); }
+        try{ await FS.writeFile(p, getText()); stat.textContent='已铭刻 '+new Date().toLocaleTimeString();
+          updPreviewVis(); }catch(e){ toast(e.message,'err'); } }
+      body.querySelector('[data-a=open]').onclick=async()=>{ const p=await pickFile('开启何卷'); if(p) load(p); };
+      body.querySelector('[data-a=save]').onclick=save;
+      body.querySelector('[data-a=preview]').onclick=()=>{ previewOn=!previewOn; updPreviewVis(); schedulePreview(); };
+      body.querySelector('[data-a=browser]').onclick=async()=>{ if(!cur){ toast('请先铭刻此卷'); return; }
+        await save(); openBrowserFile(cur); };
+      body.addEventListener('keydown', e=>{ if((e.ctrlKey||e.metaKey)&&e.key==='s'){ e.preventDefault(); save(); } });
+      if(path) load(path); else setupEditor('<!DOCTYPE html>\n<html>\n<head><meta charset="utf-8"><title>新咒文</title></head>\n<body>\n  <h1>Bloodthorn</h1>\n</body>\n</html>');
+    }});
+}
+
+/* ═══════════════ 浏览器「黑曜之镜」 ═══════════════ */
+const MIRROR_HOME=`<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+body{margin:0;min-height:100vh;display:grid;place-items:center;background:radial-gradient(ellipse at 50% 130%,#2a0a12,#0a0710);color:#a89a82;font-family:Georgia,serif;text-align:center}
+h1{color:#c9a45c;letter-spacing:.3em;font-size:34px;margin:0 0 10px}.r{width:80px;height:1px;margin:14px auto;background:linear-gradient(90deg,transparent,#9c1626,transparent)}
+p{font-style:italic;font-size:14px;max-width:420px;line-height:1.8}</style></head><body><div>
+<h1>OBSIDIAN MIRROR</h1><div class="r"></div><p>于上方刻入网址以窥探尘世。<br>注：诸多尘世站点以 X-Frame-Options 圣印自护，拒绝映入镜中。<br>本境内的 HTML 圣物可经 vfs:// 之径完美显形。</p></div></body></html>`;
+function openBrowser(initial){
+  WM.open({title:'黑曜之镜', icon:ICONS.mirror, w:960, h:620,
+    build(body, win){
+      let hist=[], hi=-1; const blobUrls=[];
+      body.innerHTML=`<div class="atb">
+          <button class="itb" data-a="back">${ICONS.back}</button>
+          <button class="itb" data-a="fwd">${ICONS.fwd}</button>
+          <button class="itb" data-a="reload">${ICONS.refresh}</button>
+          <button class="itb" data-a="home">${ICONS.home}</button>
+          <input class="mb-addr" type="text" placeholder="https://… 或 vfs://Desktop/welcome.html" spellcheck="false"
+            style="flex:1;min-width:120px;height:31px;padding:0 12px;border-radius:16px;border:1px solid var(--vein);background:rgba(7,4,9,.6);color:var(--gold3);font-family:'Fira Code',monospace;font-size:12.5px;outline:none">
+          <button class="itb" data-a="go">${ICONS.fwd}<span>窥探</span></button>
+          <button class="itb" data-a="vfs">${ICONS.open}<span>本境圣物</span></button></div>
+        <iframe class="web-frame" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-downloads"></iframe>`;
+      const iframe=body.querySelector('iframe'), addr=body.querySelector('.mb-addr');
+      async function go(url, push=true){ if(!url) return;
+        let display=url, real=url;
+        if(url==='about:home'){ iframe.srcdoc=MIRROR_HOME; display='about:home'; }
+        else if(url.startsWith('vfs://')){ const vp=P.norm(url.slice(6));
+          try{ const blob=await FS.readFile(vp);
+            const real2=URL.createObjectURL(new Blob([blob],{type:mimeOf(vp)})); blobUrls.push(real2);
+            iframe.removeAttribute('srcdoc'); iframe.src=real2; }
+          catch(e){ toast('镜面破碎：'+e.message,'err'); return; } }
+        else { if(!/^[a-z]+:/i.test(url)) real='https://'+url;
+          display=real; iframe.removeAttribute('srcdoc'); iframe.src=real; }
+        addr.value=display;
+        if(push){ hist=hist.slice(0,hi+1); hist.push(display); hi=hist.length-1; }
+        win.setTitle('黑曜之镜 — '+display.replace(/^https?:\/\//,'').slice(0,40)); }
+      body.querySelector('[data-a=go]').onclick=()=>go(addr.value.trim());
+      addr.addEventListener('keydown', e=>{ if(e.key==='Enter') go(addr.value.trim()); });
+      body.querySelector('[data-a=back]').onclick=()=>{ if(hi>0){ hi--; go(hist[hi], false); } };
+      body.querySelector('[data-a=fwd]').onclick=()=>{ if(hi<hist.length-1){ hi++; go(hist[hi], false); } };
+      body.querySelector('[data-a=reload]').onclick=()=>go(addr.value.trim()||'about:home', false);
+      body.querySelector('[data-a=home]').onclick=()=>go('about:home');
+      body.querySelector('[data-a=vfs]').onclick=async()=>{ const p=await pickFile('择取显形之物',['html','htm','svg','pdf','png','jpg','jpeg','gif','webp','txt','md']);
+        if(p) go('vfs://'+p); };
+      win.onClose=()=>blobUrls.forEach(u=>URL.revokeObjectURL(u));
+      go(initial||'about:home');
+    }});
+}
+function openBrowserFile(path){ openBrowser('vfs://'+P.norm(path)); }
+
+/* ═══════════════ 图片查看器（缩放 / 平移 / 触摸捏合） ═══════════════ */
+function openImageViewer(path){
+  WM.open({title:'画像 — '+P.base(path), icon:ICONS.fileImg, w:780, h:560,
+    build(body, win){
+      let url=null, scale=1, tx=0, ty=0;
+      body.innerHTML=`<div class="atb">
+          <button class="itb" data-a="zo">−</button>
+          <button class="itb" data-a="zi">+</button>
+          <button class="itb" data-a="fit">${ICONS.full}<span>适窗</span></button>
+          <button class="itb" data-a="orig">1:1</button>
+          <div class="sp"></div>
+          <span class="iv-z" style="font-family:'Fira Code',monospace;font-size:11px;color:var(--dust)">100%</span>
+          <button class="itb" data-a="export">${ICONS.download}<span>导出</span></button>
+          <button class="itb" data-a="wall">${ICONS.wall}<span>设为壁纸</span></button></div>
+        <div class="viewer-img"><img alt="" draggable="false"></div>`;
+      const wrap=body.querySelector('.viewer-img'), img=wrap.querySelector('img'), zl=body.querySelector('.iv-z');
+      function apply(){ img.style.transform=`translate(${tx}px,${ty}px) scale(${scale})`;
+        zl.textContent=Math.round(scale*100)+'%'; }
+      function fit(){ if(!img.naturalWidth) return;
+        scale=Math.min(wrap.clientWidth/img.naturalWidth, wrap.clientHeight/img.naturalHeight, 1)*0.96;
+        tx=ty=0; apply(); }
+      FS.readFile(path).then(blob=>{ url=URL.createObjectURL(blob); img.src=url; img.onload=fit; })
+        .catch(e=>toast(e.message,'err'));
+      body.querySelector('[data-a=zi]').onclick=()=>{ scale=Math.min(scale*1.25,20); apply(); };
+      body.querySelector('[data-a=zo]').onclick=()=>{ scale=Math.max(scale/1.25,.05); apply(); };
+      body.querySelector('[data-a=fit]').onclick=fit;
+      body.querySelector('[data-a=orig]').onclick=()=>{ scale=1; tx=ty=0; apply(); };
+      body.querySelector('[data-a=export]').onclick=()=>exportPath(path);
+      body.querySelector('[data-a=wall]').onclick=async()=>setCustomWallpaper(await FS.readFile(path));
+      wrap.addEventListener('wheel', e=>{ e.preventDefault();
+        scale=Math.max(.05, Math.min(20, scale*(e.deltaY<0?1.12:0.89))); apply(); }, {passive:false});
+      let pan=null;
+      wrap.addEventListener('pointerdown', e=>{ pan={x:e.clientX,y:e.clientY,tx,ty}; wrap.setPointerCapture(e.pointerId); });
+      wrap.addEventListener('pointermove', e=>{ if(!pan) return; tx=pan.tx+e.clientX-pan.x; ty=pan.ty+e.clientY-pan.y; apply(); });
+      wrap.addEventListener('pointerup', ()=>pan=null);
+      // 触摸捏合
+      let pinch=null;
+      wrap.addEventListener('touchstart', e=>{ if(e.touches.length===2){ const [a,b]=e.touches;
+        pinch={d:Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY), s:scale}; } }, {passive:true});
+      wrap.addEventListener('touchmove', e=>{ if(pinch&&e.touches.length===2){ e.preventDefault();
+        const [a,b]=e.touches; const d=Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);
+        scale=Math.max(.05,Math.min(20,pinch.s*d/pinch.d)); apply(); } }, {passive:false});
+      wrap.addEventListener('touchend', ()=>pinch=null);
+      win.onClose=()=>url&&URL.revokeObjectURL(url);
+    }});
+}
+
+/* ═══════════════ 音视频播放器 ═══════════════ */
+function openPlayer(path, kind){
+  WM.open({title:(kind==='audio'?'乐章 — ':'幻影 — ')+P.base(path), icon:kind==='audio'?ICONS.fileAud:ICONS.fileVid,
+    w:kind==='audio'?520:840, h:kind==='audio'?300:560,
+    build(body, win){
+      let url=null;
+      body.innerHTML=`<div class="player-wrap">
+        ${kind==='audio'?`<div style="width:72px;height:72px;color:var(--gold2);filter:drop-shadow(0 0 18px rgba(201,164,92,.4))">${ICONS.fileAud}</div>
+          <div style="font-family:'Cinzel',serif;font-size:15px;font-weight:700;letter-spacing:.08em;color:var(--gold3);text-align:center;word-break:break-all">${esc(P.base(path))}</div>`:''}
+        <${kind} controls ${kind==='video'?'':'autoplay'} style="outline:none"></${kind}>
+        <button class="btn" data-a="export">${ICONS.download}<span>导出此物</span></button></div>`;
+      const media=body.querySelector(kind);
+      FS.readFile(path).then(blob=>{ url=URL.createObjectURL(new Blob([blob],{type:mimeOf(path)})); media.src=url; })
+        .catch(e=>toast(e.message,'err'));
+      body.querySelector('[data-a=export]').onclick=()=>exportPath(path);
+      win.onClose=()=>{ media.pause&&media.pause(); url&&URL.revokeObjectURL(url); };
+    }});
+}
+
+/* ═══════════════ PDF 查看器 ═══════════════ */
+function openPDF(path){
+  WM.open({title:'圣典 — '+P.base(path), icon:ICONS.filePdf, w:860, h:640,
+    build(body, win){ let url=null;
+      body.innerHTML=`<iframe style="flex:1;border:none;width:100%;background:#3a3142"></iframe>`;
+      FS.readFile(path).then(blob=>{ url=URL.createObjectURL(new Blob([blob],{type:'application/pdf'}));
+        body.querySelector('iframe').src=url; }).catch(e=>toast(e.message,'err'));
+      win.onClose=()=>url&&URL.revokeObjectURL(url);
+    }});
+}
+/* ═══════════════ 计算器「算术师」 ═══════════════ */
+function openCalc(){
+  WM.open({title:'算术师', icon:ICONS.calc, w:340, h:480, single:'calc',
+    build(body, win){ win.singleKey='calc';
+      let expr='', last='0';
+      body.innerHTML=`<div class="calc">
+        <div class="calc-scr"><div class="ex"></div><div class="rs">0</div></div>
+        <div class="calc-grid">
+          ${['C','( )','%','÷','7','8','9','×','4','5','6','−','1','2','3','+','±','0','.','='].map(k=>
+            `<button class="cbtn ${'÷×−+%'.includes(k)||k==='( )'?'op':''} ${k==='='?'eq':''} ${k==='C'?'op':''}" data-k="${k}">${k}</button>`).join('')}
+        </div></div>`;
+      const exEl=body.querySelector('.ex'), rsEl=body.querySelector('.rs');
+      function evaluate(e){ const s=e.replace(/÷/g,'/').replace(/×/g,'*').replace(/−/g,'-').replace(/%/g,'/100');
+        if(!/^[-+*/().\d\s]*$/.test(s)||!s.trim()) return null;
+        try{ const v=Function('"use strict";return('+s+')')();
+          return (typeof v==='number'&&isFinite(v))?+v.toPrecision(12):null; }catch{ return null; } }
+      function upd(){ exEl.textContent=expr||' ';
+        const v=evaluate(expr); rsEl.textContent=v!=null?String(v):last; }
+      function press(k){ if(k==='C'){ expr=''; last='0'; }
+        else if(k==='='){ const v=evaluate(expr); if(v!=null){ last=String(v); expr=String(v); } }
+        else if(k==='( )'){ const o=(expr.match(/\(/g)||[]).length, c=(expr.match(/\)/g)||[]).length;
+          expr+= o>c && !/[+×÷−(*\/-]$/.test(expr) ? ')' : '('; }
+        else if(k==='±'){ const v=evaluate(expr); if(v!=null) expr=String(-v); }
+        else expr+=k;
+        upd(); }
+      body.querySelectorAll('.cbtn').forEach(b=>b.onclick=()=>press(b.dataset.k));
+      body.tabIndex=0;
+      body.addEventListener('keydown', e=>{ const map={'/':'÷','*':'×','-':'−','Enter':'=','=':'=','Backspace':null,'Escape':'C'};
+        if(e.key==='Backspace'){ expr=expr.slice(0,-1); upd(); return; }
+        if(/^[0-9.+()%]$/.test(e.key)) press(e.key);
+        else if(map[e.key]!==undefined&&map[e.key]) press(map[e.key]); });
+      upd();
+    }});
+}
+
+/* ═══════════════ 画板「画室」 ═══════════════ */
+function openPaint(){
+  WM.open({title:'画室', icon:ICONS.paint, w:860, h:600,
+    build(body, win){
+      body.innerHTML=`<div class="atb">
+          <button class="itb on" data-t="brush">${ICONS.paint}<span>血笔</span></button>
+          <button class="itb" data-t="eraser">${ICONS.close}<span>蚀刻</span></button>
+          <input type="color" value="#9c1626" title="墨色">
+          <input type="range" min="1" max="60" value="6" style="width:90px" title="笔锋">
+          <div style="width:1px;height:20px;background:var(--vein)"></div>
+          <button class="itb" data-a="clear">${ICONS.trash}<span>涤净</span></button>
+          <div class="sp"></div>
+          <button class="itb" data-a="save">${ICONS.check}<span>铭刻为 PNG</span></button>
+          <button class="itb" data-a="export">${ICONS.download}<span>导出</span></button></div>
+        <div class="paint-cv"><canvas width="1024" height="640"></canvas></div>`;
+      const cv=body.querySelector('canvas'), ctx=cv.getContext('2d');
+      ctx.fillStyle='#16121c'; ctx.fillRect(0,0,cv.width,cv.height);
+      ctx.lineCap='round'; ctx.lineJoin='round';
+      const colorI=body.querySelector('input[type=color]'), sizeI=body.querySelector('input[type=range]');
+      let tool='brush', drawing=false;
+      function fitCanvas(){ const box=body.querySelector('.paint-cv');
+        const s=Math.min((box.clientWidth-20)/cv.width,(box.clientHeight-20)/cv.height);
+        cv.style.width=(cv.width*s)+'px'; cv.style.height=(cv.height*s)+'px'; }
+      new ResizeObserver(fitCanvas).observe(body.querySelector('.paint-cv'));
+      function pt(e){ const r=cv.getBoundingClientRect();
+        return {x:(e.clientX-r.left)*cv.width/r.width, y:(e.clientY-r.top)*cv.height/r.height}; }
+      cv.addEventListener('pointerdown', e=>{ drawing=true; cv.setPointerCapture(e.pointerId);
+        const p=pt(e); ctx.beginPath(); ctx.moveTo(p.x,p.y);
+        ctx.strokeStyle=tool==='eraser'?'#16121c':colorI.value;
+        ctx.lineWidth=sizeI.value*(tool==='eraser'?2.5:1);
+        ctx.lineTo(p.x+0.1,p.y+0.1); ctx.stroke(); });
+      cv.addEventListener('pointermove', e=>{ if(!drawing) return; const p=pt(e); ctx.lineTo(p.x,p.y); ctx.stroke(); });
+      cv.addEventListener('pointerup', ()=>drawing=false);
+      body.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{ tool=b.dataset.t;
+        body.querySelectorAll('[data-t]').forEach(x=>x.classList.toggle('on',x===b)); });
+      body.querySelector('[data-a=clear]').onclick=async()=>{ if(await confirmDialog('涤净仪式','抹去画布上的一切痕迹？','涤净')){
+        ctx.fillStyle='#16121c'; ctx.fillRect(0,0,cv.width,cv.height); } };
+      async function toBlob(){ return new Promise(r=>cv.toBlob(r,'image/png')); }
+      body.querySelector('[data-a=save]').onclick=async()=>{ const blob=await toBlob();
+        const nm=await FS.uniqueName('/Pictures','画作-'+new Date().toISOString().slice(0,10)+'.png');
+        await FS.writeFile('/Pictures/'+nm, blob); toast('已铭刻 → /Pictures/'+nm,'ok'); };
+      body.querySelector('[data-a=export]').onclick=async()=>{ const blob=await toBlob();
+        const url=URL.createObjectURL(blob); const a=document.createElement('a');
+        a.href=url; a.download='bloodthorn-painting.png'; a.click();
+        setTimeout(()=>URL.revokeObjectURL(url),8000); };
+    }});
+}
+
+/* ═══════════════ 设置「圣所」 ═══════════════ */
+function openSettings(tab='storage'){
+  WM.open({title:'圣所 — 设置', icon:ICONS.settings, w:780, h:560,
+    build(body, win){
+      body.innerHTML=`<div class="set-wrap">
+        <div class="set-nav">
+          <button class="fx-si" data-t="storage">${ICONS.drive}<span>存储窟窿</span></button>
+          <button class="fx-si" data-t="wall">${ICONS.wall}<span>壁纸结界</span></button>
+          <button class="fx-si" data-t="sys">${ICONS.info}<span>体系铭文</span></button>
+          <button class="fx-si" data-t="reset">${ICONS.warn}<span>湮灭重生</span></button></div>
+        <div class="set-body"></div></div>`;
+      const bodyEl=body.querySelector('.set-body');
+      function paintNav(){ body.querySelectorAll('[data-t]').forEach(b=>b.classList.toggle('on',b.dataset.t===tab)); }
+      const COLORS=['#9c1626','#c9a45c','#3c2e44','#7eb8c4','#5a8a4f','#c084d8','#e0a060'];
+      async function show(){ paintNav();
+        if(tab==='storage'){
+          bodyEl.innerHTML=`<h2>存储窟窿</h2><div class="st-load fx-empty">勘测中…</div>`;
+          let est={usage:0, quota:0};
+          try{ est=await navigator.storage.estimate(); }catch{}
+          const roots=[]; let total=0;
+          try{ for(const e of await FS.readdir('/')){ if(e.name==='mnt') continue;
+            const sz=e.kind==='directory'?await FS.dirSize('/'+e.name):(await FS.stat('/'+e.name)).size||0;
+            roots.push({name:e.name, sz, kind:e.kind}); total+=sz; } }catch{}
+          roots.sort((a,b)=>b.sz-a.sz);
+          const pct=est.quota?Math.min(100,(est.usage/est.quota*100)):0;
+          bodyEl.innerHTML=`<h2>存储窟窿</h2>
+            <div style="font-family:'Cinzel',serif;font-size:12px;letter-spacacing:.1em;color:var(--parch);margin-bottom:8px">
+              后端：<span style="color:var(--gold3)">${esc(FS.backendName)}</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:14px;color:var(--parch);margin-bottom:6px">
+              <span>已用 <b style="color:var(--gold3)">${fmtSize(est.usage)}</b> / 配额 ${fmtSize(est.quota)}</span>
+              <span style="color:var(--ember2)">${pct.toFixed(2)}%</span></div>
+            <div class="meter"><div style="width:${Math.max(pct,.5)}%;background:linear-gradient(90deg,var(--blood2),var(--ember))"></div></div>
+            <h2 style="margin-top:26px">疆域占据（虚拟文件系统 ${fmtSize(total)}）</h2>
+            <div class="meter" style="margin-bottom:14px">${roots.map((r,i)=>
+              `<div style="width:${total?Math.max(r.sz/total*100,r.sz?1:0):0}%;background:${COLORS[i%COLORS.length]}" title="${esc(r.name)}"></div>`).join('')}</div>
+            ${roots.map((r,i)=>`<div style="display:flex;align-items:center;gap:10px;padding:5px 0;font-size:15px">
+              <span style="width:11px;height:11px;border-radius:3px;background:${COLORS[i%COLORS.length]};flex:none"></span>
+              <span style="flex:1;color:var(--bone)">/${esc(r.name)}</span>
+              <span style="color:var(--parch);font-family:'Fira Code',monospace;font-size:12px">${fmtSize(r.sz)}</span>
+              <span style="color:var(--dust);font-family:'Fira Code',monospace;font-size:12px;width:56px;text-align:right">${total?(r.sz/total*100).toFixed(1):0}%</span></div>`).join('')||'<div class="fx-empty">虚无</div>'}
+            <div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap">
+              <button class="btn" data-a="persist">${ICONS.check}<span>请求持久化特权</span></button>
+              <button class="btn" data-a="rescan">${ICONS.refresh}<span>重新勘测</span></button></div>`;
+          bodyEl.querySelector('[data-a=persist]').onclick=async()=>{
+            try{ const ok=await navigator.storage.persist();
+              toast(ok?'石窟已获永恒持久化特权':'浏览器暂未授予特权（可稍后再试）', ok?'ok':'info'); }
+            catch{ toast('此浏览器不支持持久化请求','err'); } };
+          bodyEl.querySelector('[data-a=rescan]').onclick=show; }
+        else if(tab==='wall'){
+          const cur=Cfg.get('wall','crypt');
+          bodyEl.innerHTML=`<h2>壁纸结界</h2><div class="wall-grid">
+            ${WALLPAPERS.map(w=>`<div class="wall-card ${cur===w.id?'on':''}" data-w="${w.id}" style="background:${w.css.replace(/"/g,'&quot;')}"><span>${esc(w.name)}</span></div>`).join('')}
+            <div class="wall-card ${cur==='custom'?'on':''}" data-w="custom" style="display:grid;place-items:center;background:linear-gradient(180deg,#241c2c,#120d17)">
+              <div style="color:var(--gold2);width:30px;height:30px">${ICONS.upload}</div><span>献祭自有画像…</span></div></div>
+            <p style="margin-top:16px;font-family:'IM Fell English',serif;font-style:italic;color:var(--dust)">自有画像将被铭刻于 OPFS 石窟（/System/wallpaper.img），刷新后仍存。</p>`;
+          bodyEl.querySelectorAll('.wall-card').forEach(c=>c.onclick=()=>{
+            if(c.dataset.w==='custom'){ document.getElementById('wallImport').click(); return; }
+            Cfg.set('wall', c.dataset.w); applyWallpaper(); show(); }); }
+        else if(tab==='sys'){
+          const mounts=FS.mounts.filter(m=>m.meta&&m.meta.local);
+          bodyEl.innerHTML=`<h2>体系铭文</h2>
+            <div style="line-height:2.1;font-size:16px">
+            <div>体系：<b style="color:var(--gold3)">BLOODTHORN OS</b> · 血棘秘典 v1.0</div>
+            <div>存储后端：${esc(FS.backendName)}</div>
+            <div>降级链：OPFS → IndexedDB → 内存+localStorage</div>
+            <div>JSZip：${window.JSZip?'已就绪':'未召唤'} · CodeMirror：${window.CodeMirror?'已就绪':'未召唤'} · v86：${(window.V86||window.V86Starter)?'已就绪':'未召唤'}</div>
+            <div>尘世锚点：${mounts.length?mounts.map(m=>esc(m.path)).join('、'):'无'}</div>
+            <div>上次降临：${esc(getCookie('btos_last')||'初临此境')}</div></div>
+            <h2 style="margin-top:22px">触摸者须知</h2>
+            <p style="color:var(--parch);line-height:1.9">长按图标可拖移；长按列表项呼出诅咒之环；触屏无法拖出浏览器，请以「遣返尘世（导出）」替代。</p>`; }
+        else if(tab==='reset'){
+          bodyEl.innerHTML=`<h2 style="color:var(--ember2)">湮灭重生</h2>
+            <p style="line-height:1.9;color:var(--parch)">此仪式将焚毁 OPFS 石窟中的一切圣物、抹除 IndexedDB 与 localStorage 之铭文，并令体系重归初诞之态。<b style="color:var(--ember2)">血誓既立，不可反悔。</b></p>
+            <button class="btn primary" style="margin-top:18px" data-a="reset">${ICONS.skull}<span>执行湮灭仪式</span></button>`;
+          bodyEl.querySelector('[data-a=reset]').onclick=async()=>{
+            if(!await confirmDialog('湮灭仪式','最后确认：彻底清空虚拟文件系统并重置？','湮灭')) return;
+            toast('湮灭进行中…');
+            try{ if(navigator.storage&&navigator.storage.getDirectory){
+                const root=await navigator.storage.getDirectory();
+                for await (const [name] of root.entries()) await root.removeEntry(name,{recursive:true}).catch(()=>{}); } }catch{}
+            try{ indexedDB.deleteDatabase('btos-fs'); }catch{}
+            try{ localStorage.clear(); }catch{}
+            setCookie('btos_last','',0);
+            location.reload(); }; }
+      }
+      body.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{ tab=b.dataset.t; show(); });
+      show();
+    }});
+}
+
+/* ═══════════════ v86 虚拟机「魔像」 ═══════════════ */
+const V86RES={
+  wasm:'https://cdn.jsdelivr.net/npm/v86@0.5.319/build/v86.wasm',
+  bios:'https://cdn.jsdelivr.net/gh/copy/v86@bbb2a5b4fd44e85d902792f9b93ec3e0d42e1b0f/bios/seabios.bin',
+  vga:'https://cdn.jsdelivr.net/gh/copy/v86@bbb2a5b4fd44e85d902792f9b93ec3e0d42e1b0f/bios/vgabios.bin'};
+function openVM(diskPath){
+  WM.open({title:'魔像 — v86 虚拟机', icon:ICONS.vm, w:860, h:620,
+    build(body, win){
+      let emulator=null;
+      body.innerHTML=`<div class="atb">
+          <button class="itb" data-a="boot">${ICONS.play}<span>择镜像而唤醒</span></button>
+          <button class="itb" data-a="stop" disabled>${ICONS.stop}<span>沉眠</span></button>
+          <div class="sp"></div>
+          <span class="vm-st" style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:.12em;color:var(--dust)">沉睡中</span></div>
+        <div class="v86sc vm-screen"><div style="white-space:pre; font:14px monospace; line-height:14px"></div><canvas style="display:none"></canvas></div>
+        <div class="vm-tip" style="flex:none;padding:8px 14px;border-top:1px solid var(--vein);font-family:'IM Fell English',serif;font-style:italic;font-size:13px;color:var(--dust)">
+          先以「秘库」导入 .iso / .img 启动镜像（如 FreeDOS、TinyCore），再于此唤醒魔像。iso→光驱 · img/fda/bin→软驱 · 其余→硬盘。</div>`;
+      const sc=body.querySelector('.vm-screen'), st=body.querySelector('.vm-st');
+      const stopBtn=body.querySelector('[data-a=stop]'), bootBtn=body.querySelector('[data-a=boot]');
+      async function boot(p){
+        const VC=window.V86||window.V86Starter;
+        if(!VC){ toast('v86 引擎未能召唤（网络受阻）','err'); return; }
+        try{ st.textContent='灌注血液…';
+          const buffer=await FS.readFile(p,'arrayBuffer');
+          const ext=P.ext(p);
+          const opt={ wasm_path:V86RES.wasm, memory_size:128*1024*1024, vga_memory_size:8*1024*1024,
+            screen_container:sc, bios:{url:V86RES.bios}, vga_bios:{url:V86RES.vga}, autostart:true };
+          if(ext==='iso') opt.cdrom={buffer};
+          else if(['img','fda','bin'].includes(ext)) opt.fda={buffer};
+          else opt.hda={buffer};
+          if(emulator){ try{ emulator.destroy(); }catch{} }
+          emulator=new VC(opt);
+          st.textContent='魔像苏醒 — '+P.base(p); stopBtn.removeAttribute('disabled');
+          win.setTitle('魔像 — '+P.base(p));
+          sc.addEventListener('click', ()=>{ try{ emulator.lock_mouse&&document.activeElement!==sc; }catch{} }); }
+        catch(e){ st.textContent='唤醒失败'; toast('魔像唤醒失败：'+e.message,'err'); } }
+      bootBtn.onclick=async()=>{ const p=await pickFile('择取启动镜像', VM_EXT); if(p) boot(p); };
+      stopBtn.onclick=()=>{ if(emulator){ try{ emulator.destroy(); }catch{} emulator=null;
+        st.textContent='已沉眠'; stopBtn.setAttribute('disabled',''); } };
+      win.onClose=()=>{ if(emulator){ try{ emulator.destroy(); }catch{} } };
+      if(diskPath) boot(diskPath);
+    }});
+}
+
+/* ═══════════════ 启动序列 ═══════════════ */
+(async function boot(){
+  const bar=document.getElementById('bootBar'), msg=document.getElementById('bootMsg');
+  const step=(p,m)=>{ bar.style.width=p+'%'; msg.textContent=m; };
+  try{
+    step(15,'AWAKENING THE CRYPT…');
+    await initFS();
+    step(45,'CARVING THE CATACOMBS…');
+    await seedFS();
+    step(70,'SUMMONING THE SIGILS…');
+    applyWallpaper();
+    await Desktop.refresh();
+    step(100,'THE COVENANT IS SEALED');
+  }catch(e){ console.error(e); step(100,'DEGRADED RITE — '+e.message);
+    toast('初始化遭遇阻碍：'+e.message,'err'); }
+  setTimeout(()=>{ document.getElementById('boot').classList.add('gone');
+    setTimeout(()=>document.getElementById('boot').remove(), 900);
+    const last=getCookie('btos_last');
+    if(last) toast('血脉认得你 — 上次降临：'+last);
+    else toast('初临此境者，血誓之书在桌面等你展读');
+    setCookie('btos_last', new Date().toLocaleString());
+    const hints=Cfg.get('mountHints',[]);
+    if(hints.length && window.showDirectoryPicker)
+      setTimeout(()=>toast('上一世曾锚定尘世之域（'+hints.join('、')+'）— 权限随刷新湮灭，请于「秘库」重新挂载'),1800);
+    if(FS.backendName.includes('降级')||FS.backendName.includes('临时'))
+      setTimeout(()=>toast('OPFS 不可用，当前运行于：'+FS.backendName,'err'),2600);
+  }, 700);
+  // 桌面尺寸变化 → 重排
+  addEventListener('resize', ()=>{ clearTimeout(window.__rsT);
+    window.__rsT=setTimeout(()=>Desktop.refresh(), 350); });
+  // 阻止浏览器默认拖放打开文件
+  addEventListener('dragover', e=>e.preventDefault());
+  addEventListener('drop', e=>e.preventDefault());
+})();
+
+
+
+
+
+</script>
+</body>
+</html>
