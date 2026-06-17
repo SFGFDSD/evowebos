@@ -1,0 +1,2758 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+<title>硯 OS — Inkstone Web Desktop</title>
+
+<!-- Fonts: 活版印刷 + 等宽 + 宋体点缀 -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;500;700&family=Noto+Serif+SC:wght@400;600;900&family=Shippori+Mincho:wght@400;700;800&display=swap" rel="stylesheet">
+
+<!-- JSZip -->
+<script src="https://unpkg.com/jszip@3.10.1/dist/jszip.min.js"></script>
+
+<!-- CodeMirror 5 (stable CDN, simple to integrate) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/lib/codemirror.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/theme/monokai.css">
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/lib/codemirror.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/javascript/javascript.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/xml/xml.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/htmlmixed/htmlmixed.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/css/css.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/markdown/markdown.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/python/python.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/addon/edit/closebrackets.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/addon/edit/matchbrackets.min.js"></script>
+
+<style>
+/* ============================================================
+   DESIGN TOKENS — 硯 · Inkstone Palette
+   ============================================================ */
+:root{
+  --paper:#EDE4D0;
+  --paper-2:#E4DAC2;
+  --paper-dark:#D8CDB0;
+  --ink:#141210;
+  --ink-soft:#2B2723;
+  --ink-mute:#6B645A;
+  --vermilion:#C8402D;   /* 朱砂 */
+  --vermilion-dark:#8C2A1C;
+  --jade:#3F5A4A;       /* 青瓷 */
+  --jade-deep:#263A30;
+  --brass:#B89B5E;      /* 旧黄铜 */
+  --shadow:rgba(20,18,16,.18);
+  --shadow-deep:rgba(20,18,16,.38);
+
+  --serif:'Cormorant Garamond','Noto Serif SC','Shippori Mincho',serif;
+  --mono:'JetBrains Mono','Noto Serif SC',ui-monospace,monospace;
+  --cn:'Noto Serif SC','Shippori Mincho',serif;
+
+  --win-radius:2px;
+  --win-chrome:34px;
+  --taskbar-h:44px;
+}
+
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{width:100%;height:100%;overflow:hidden;font-family:var(--mono);font-size:13px;color:var(--ink);user-select:none;}
+button{font-family:inherit;color:inherit;background:none;border:none;cursor:pointer;}
+input,textarea{font-family:inherit;color:inherit;}
+
+/* ============================================================
+   BOOT SCREEN
+   ============================================================ */
+#boot{
+  position:fixed;inset:0;z-index:9999;background:var(--paper);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:30px;
+  transition:opacity .8s ease;
+}
+#boot .seal{
+  width:120px;height:120px;border:3px solid var(--vermilion);
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--cn);font-size:56px;font-weight:900;color:var(--vermilion);
+  letter-spacing:-4px;
+  animation:sealPulse 1.6s ease-in-out infinite;
+  position:relative;
+}
+#boot .seal::before{
+  content:'';position:absolute;inset:-10px;border:1px solid var(--vermilion);opacity:.4;
+}
+@keyframes sealPulse{0%,100%{transform:scale(1);}50%{transform:scale(1.03);}}
+#boot .tagline{font-family:var(--serif);font-size:22px;font-style:italic;color:var(--ink-soft);letter-spacing:1px;}
+#boot .bar{width:220px;height:2px;background:var(--paper-dark);overflow:hidden;position:relative;}
+#boot .bar::after{content:'';position:absolute;inset:0;background:var(--ink);animation:bootFill 2.4s ease forwards;}
+@keyframes bootFill{from{transform:translateX(-100%);}to{transform:translateX(0);}}
+#boot .foot{font-size:10px;color:var(--ink-mute);letter-spacing:3px;text-transform:uppercase;}
+
+/* ============================================================
+   DESKTOP
+   ============================================================ */
+#desktop{
+  position:fixed;inset:0;
+  background:var(--paper);
+  background-image:
+    radial-gradient(circle at 20% 30%, rgba(200,64,45,.04) 0, transparent 40%),
+    radial-gradient(circle at 80% 70%, rgba(63,90,74,.05) 0, transparent 50%),
+    repeating-linear-gradient(45deg, transparent 0 40px, rgba(20,18,16,.012) 40px 41px);
+  overflow:hidden;
+}
+#desktop.has-wallpaper{background-size:cover;background-position:center;background-repeat:no-repeat;}
+
+/* Paper texture overlay */
+#desktop::before{
+  content:'';position:absolute;inset:0;pointer-events:none;
+  background-image:
+    radial-gradient(circle at 10% 20%, rgba(20,18,16,.025) 0, transparent 2px),
+    radial-gradient(circle at 70% 80%, rgba(20,18,16,.02) 0, transparent 2px),
+    radial-gradient(circle at 40% 60%, rgba(20,18,16,.015) 0, transparent 1px);
+  background-size:80px 80px, 120px 120px, 50px 50px;
+  mix-blend-mode:multiply;
+}
+
+/* ============================================================
+   DESKTOP ICONS
+   ============================================================ */
+#icon-layer{position:absolute;inset:0;bottom:var(--taskbar-h);pointer-events:none;}
+.dsk-icon{
+  position:absolute;width:82px;padding:8px 4px;
+  display:flex;flex-direction:column;align-items:center;gap:6px;
+  cursor:pointer;pointer-events:auto;
+  border:1px dashed transparent;
+  transition:transform .15s ease, background .2s ease;
+  touch-action:none;
+}
+.dsk-icon:hover{background:rgba(255,255,255,.35);}
+.dsk-icon.selected{background:rgba(200,64,45,.12);border-color:var(--vermilion);}
+.dsk-icon .glyph{
+  width:44px;height:44px;display:flex;align-items:center;justify-content:center;
+  background:var(--paper);border:1px solid var(--ink-soft);
+  box-shadow:2px 2px 0 var(--ink);
+  position:relative;
+}
+.dsk-icon .glyph svg{width:26px;height:26px;}
+.dsk-icon .label{
+  font-family:var(--cn);font-size:11px;color:var(--ink);text-align:center;
+  line-height:1.2;word-break:break-all;
+  text-shadow:0 0 3px var(--paper),0 0 3px var(--paper);
+  padding:0 2px;
+}
+.dsk-icon.dragging{opacity:.4;}
+.dsk-icon.drop-target .glyph{border-color:var(--vermilion);background:rgba(200,64,45,.15);}
+
+/* ============================================================
+   SELECTION RECTANGLE
+   ============================================================ */
+#selrect{position:absolute;border:1px dashed var(--vermilion);background:rgba(200,64,45,.08);pointer-events:none;display:none;z-index:50;}
+
+/* ============================================================
+   TASKBAR
+   ============================================================ */
+#taskbar{
+  position:fixed;left:0;right:0;bottom:0;height:var(--taskbar-h);
+  background:var(--paper-2);border-top:1px solid var(--ink);
+  display:flex;align-items:center;padding:0 10px;gap:8px;z-index:1000;
+  box-shadow:0 -2px 0 var(--ink-soft);
+}
+#start-btn{
+  width:48px;height:32px;background:var(--vermilion);color:var(--paper);
+  font-family:var(--cn);font-size:18px;font-weight:900;
+  border:1px solid var(--ink);box-shadow:2px 2px 0 var(--ink);
+  display:flex;align-items:center;justify-content:center;
+  transition:transform .1s;
+}
+#start-btn:active{transform:translate(1px,1px);box-shadow:1px 1px 0 var(--ink);}
+#task-items{flex:1;display:flex;gap:6px;overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+.task-item{
+  height:28px;padding:0 12px;background:var(--paper);border:1px solid var(--ink);
+  display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ink);
+  cursor:pointer;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  font-family:var(--cn);
+}
+.task-item.active{background:var(--ink);color:var(--paper);}
+.task-item:hover{background:var(--paper-dark);}
+.task-item svg{width:14px;height:14px;flex-shrink:0;}
+#tray{display:flex;align-items:center;gap:12px;padding-left:12px;border-left:1px solid var(--ink-mute);}
+#tray .clock{font-family:var(--serif);font-size:16px;font-weight:600;letter-spacing:.5px;}
+#tray .clock small{display:block;font-size:9px;color:var(--ink-mute);font-family:var(--mono);font-weight:400;letter-spacing:2px;text-align:right;}
+
+/* ============================================================
+   START MENU
+   ============================================================ */
+#start-menu{
+  position:fixed;bottom:calc(var(--taskbar-h) + 8px);left:10px;
+  width:340px;max-height:70vh;
+  background:var(--paper);border:1px solid var(--ink);
+  box-shadow:6px 6px 0 var(--ink);
+  display:none;flex-direction:column;z-index:1001;
+  animation:menuOpen .25s cubic-bezier(.3,1.3,.5,1);
+}
+@keyframes menuOpen{from{transform:translateY(12px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+#start-menu.open{display:flex;}
+#start-menu .header{
+  padding:14px 16px;border-bottom:1px solid var(--ink);
+  font-family:var(--serif);font-style:italic;font-size:18px;color:var(--ink-soft);
+  display:flex;justify-content:space-between;align-items:baseline;
+}
+#start-menu .header small{font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--vermilion);font-style:normal;}
+#start-menu .list{padding:8px;overflow-y:auto;flex:1;display:grid;grid-template-columns:1fr 1fr;gap:4px;}
+.start-item{
+  padding:10px 12px;display:flex;align-items:center;gap:10px;cursor:pointer;
+  border:1px solid transparent;transition:all .12s;
+}
+.start-item:hover{background:var(--ink);color:var(--paper);border-color:var(--ink);}
+.start-item svg{width:20px;height:20px;flex-shrink:0;}
+.start-item .n{font-family:var(--cn);font-size:12px;}
+.start-item .d{font-size:9px;opacity:.6;font-family:var(--mono);letter-spacing:1px;}
+#start-menu .footer{
+  padding:8px 16px;border-top:1px solid var(--ink);
+  display:flex;justify-content:space-between;font-size:10px;color:var(--ink-mute);
+  letter-spacing:1px;text-transform:uppercase;
+}
+#start-menu .footer button{font-size:10px;color:var(--vermilion);letter-spacing:1px;text-transform:uppercase;}
+#start-menu .footer button:hover{text-decoration:underline;}
+
+/* ============================================================
+   WINDOWS
+   ============================================================ */
+.win{
+  position:absolute;min-width:280px;min-height:180px;
+  background:var(--paper);border:1px solid var(--ink);
+  box-shadow:6px 6px 0 var(--shadow-deep);
+  display:flex;flex-direction:column;overflow:hidden;
+  animation:winOpen .22s cubic-bezier(.3,1.2,.5,1);
+}
+@keyframes winOpen{from{transform:scale(.96) translateY(6px);opacity:0;}to{transform:scale(1) translateY(0);opacity:1;}}
+.win.minimized{display:none;}
+.win.maximized{border:none;box-shadow:none;}
+.win-header{
+  height:var(--win-chrome);background:var(--paper-2);border-bottom:1px solid var(--ink);
+  display:flex;align-items:center;padding:0 6px 0 12px;gap:8px;
+  cursor:move;user-select:none;flex-shrink:0;
+}
+.win.inactive .win-header{background:var(--paper-dark);opacity:.85;}
+.win-title{flex:1;font-family:var(--cn);font-size:12px;letter-spacing:.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.win-title .app-tag{font-family:var(--mono);font-size:9px;color:var(--vermilion);margin-right:6px;letter-spacing:1px;text-transform:uppercase;}
+.win-ctrls{display:flex;gap:0;}
+.win-ctrls button{
+  width:26px;height:22px;border:1px solid var(--ink);background:var(--paper);
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;color:var(--ink);
+  margin-left:-1px;
+}
+.win-ctrls button:hover{background:var(--ink);color:var(--paper);}
+.win-ctrls button.close:hover{background:var(--vermilion);border-color:var(--vermilion);}
+.win-body{flex:1;overflow:auto;background:var(--paper);position:relative;}
+.win-resize{position:absolute;z-index:5;}
+.win-resize.n{top:-3px;left:6px;right:6px;height:6px;cursor:ns-resize;}
+.win-resize.s{bottom:-3px;left:6px;right:6px;height:6px;cursor:ns-resize;}
+.win-resize.w{left:-3px;top:6px;bottom:6px;width:6px;cursor:ew-resize;}
+.win-resize.e{right:-3px;top:6px;bottom:6px;width:6px;cursor:ew-resize;}
+.win-resize.nw{top:-3px;left:-3px;width:10px;height:10px;cursor:nwse-resize;}
+.win-resize.ne{top:-3px;right:-3px;width:10px;height:10px;cursor:nesw-resize;}
+.win-resize.sw{bottom:-3px;left:-3px;width:10px;height:10px;cursor:nesw-resize;}
+.win-resize.se{bottom:-3px;right:-3px;width:10px;height:10px;cursor:nwse-resize;}
+
+/* ============================================================
+   CONTEXT MENU
+   ============================================================ */
+#ctx-menu{
+  position:fixed;background:var(--paper);border:1px solid var(--ink);
+  box-shadow:4px 4px 0 var(--shadow-deep);
+  min-width:200px;z-index:10000;display:none;padding:4px;
+  font-family:var(--cn);font-size:12px;
+}
+#ctx-menu.open{display:block;animation:menuOpen .15s ease;}
+#ctx-menu .item{padding:6px 12px;display:flex;align-items:center;gap:8px;cursor:pointer;}
+#ctx-menu .item:hover{background:var(--ink);color:var(--paper);}
+#ctx-menu .item.disabled{opacity:.4;pointer-events:none;}
+#ctx-menu .sep{height:1px;background:var(--ink-mute);margin:4px 8px;opacity:.4;}
+#ctx-menu .item .kbd{margin-left:auto;font-family:var(--mono);font-size:9px;opacity:.5;}
+
+/* ============================================================
+   APP: FILE EXPLORER
+   ============================================================ */
+.fe{display:flex;height:100%;font-size:12px;}
+.fe-side{width:180px;border-right:1px solid var(--ink);background:var(--paper-2);overflow-y:auto;padding:8px 0;flex-shrink:0;}
+.fe-side .grp{font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--ink-mute);padding:6px 12px;text-transform:uppercase;}
+.fe-side .node{padding:5px 12px 5px 20px;display:flex;align-items:center;gap:6px;cursor:pointer;font-family:var(--cn);}
+.fe-side .node:hover{background:rgba(20,18,16,.08);}
+.fe-side .node.active{background:var(--ink);color:var(--paper);}
+.fe-side .node svg{width:14px;height:14px;flex-shrink:0;}
+.fe-main{flex:1;display:flex;flex-direction:column;min-width:0;}
+.fe-toolbar{
+  padding:6px 10px;border-bottom:1px solid var(--ink);background:var(--paper-2);
+  display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+}
+.fe-toolbar button{
+  padding:4px 10px;border:1px solid var(--ink);background:var(--paper);font-family:var(--cn);font-size:11px;
+  display:flex;align-items:center;gap:4px;
+}
+.fe-toolbar button:hover{background:var(--ink);color:var(--paper);}
+.fe-toolbar button:disabled{opacity:.35;}
+.fe-toolbar button svg{width:12px;height:12px;}
+.fe-breadcrumb{flex:1;display:flex;align-items:center;gap:2px;font-family:var(--mono);font-size:11px;min-width:150px;overflow-x:auto;white-space:nowrap;padding:0 6px;}
+.fe-breadcrumb .crumb{cursor:pointer;padding:2px 4px;}
+.fe-breadcrumb .crumb:hover{background:var(--ink);color:var(--paper);}
+.fe-breadcrumb .sep{color:var(--ink-mute);}
+.fe-search{width:140px;padding:3px 8px;border:1px solid var(--ink);background:var(--paper);font-size:11px;font-family:var(--mono);}
+.fe-list{flex:1;overflow:auto;padding:6px;position:relative;}
+.fe-list.view-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:6px;align-content:start;}
+.fe-list.view-list{display:block;}
+.fe-item{
+  padding:8px;display:flex;flex-direction:column;align-items:center;gap:4px;
+  cursor:pointer;border:1px dashed transparent;position:relative;
+}
+.fe-item:hover{background:rgba(20,18,16,.05);}
+.fe-item.selected{background:rgba(200,64,45,.12);border-color:var(--vermilion);}
+.fe-item svg{width:32px;height:32px;}
+.fe-item .n{font-family:var(--cn);font-size:11px;text-align:center;word-break:break-all;line-height:1.2;}
+.fe-list.view-list .fe-item{flex-direction:row;justify-content:flex-start;gap:10px;padding:4px 10px;}
+.fe-list.view-list .fe-item svg{width:18px;height:18px;}
+.fe-list.view-list .fe-item .meta{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--ink-mute);display:flex;gap:14px;}
+.fe-list.view-grid .fe-item .meta{display:none;}
+.fe-list.view-list .fe-head{
+  display:flex;padding:4px 10px;border-bottom:1px solid var(--ink);font-family:var(--mono);
+  font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--ink-mute);
+  background:var(--paper-2);position:sticky;top:0;
+}
+.fe-list.view-grid .fe-head{display:none;}
+.fe-head span{cursor:pointer;}
+.fe-head span:hover{color:var(--vermilion);}
+.fe-head .col-name{flex:1;padding-left:28px;}
+.fe-head .col-date{width:140px;}
+.fe-head .col-type{width:90px;}
+.fe-head .col-size{width:80px;text-align:right;}
+.fe-status{padding:4px 10px;border-top:1px solid var(--ink);background:var(--paper-2);font-family:var(--mono);font-size:10px;color:var(--ink-mute);letter-spacing:1px;}
+
+/* ============================================================
+   APP: NOTEPAD / CODE EDITOR
+   ============================================================ */
+.np{display:flex;flex-direction:column;height:100%;}
+.np-toolbar{padding:6px 10px;border-bottom:1px solid var(--ink);background:var(--paper-2);display:flex;gap:6px;align-items:center;}
+.np-toolbar button{padding:3px 10px;border:1px solid var(--ink);background:var(--paper);font-family:var(--cn);font-size:11px;}
+.np-toolbar button:hover{background:var(--ink);color:var(--paper);}
+.np-toolbar .spacer{flex:1;}
+.np-toolbar .path{font-family:var(--mono);font-size:10px;color:var(--ink-mute);}
+.np-body{flex:1;position:relative;overflow:hidden;}
+.np-body textarea{
+  width:100%;height:100%;border:none;outline:none;resize:none;
+  padding:14px;font-family:var(--mono);font-size:13px;line-height:1.6;
+  background:var(--paper);color:var(--ink);
+}
+.np-body .CodeMirror{height:100%;font-family:var(--mono);font-size:13px;}
+.np-status{padding:2px 10px;border-top:1px solid var(--ink);background:var(--paper-2);font-family:var(--mono);font-size:10px;color:var(--ink-mute);display:flex;gap:14px;}
+
+/* HTML preview split */
+.html-preview{display:flex;flex-direction:column;flex:1;min-width:0;}
+.html-preview iframe{flex:1;border:none;background:white;}
+
+/* ============================================================
+   APP: IMAGE VIEWER
+   ============================================================ */
+.iv{display:flex;flex-direction:column;height:100%;background:var(--ink);}
+.iv-toolbar{padding:6px 10px;background:var(--paper-2);border-bottom:1px solid var(--ink);display:flex;gap:6px;align-items:center;}
+.iv-toolbar button{padding:3px 10px;border:1px solid var(--ink);background:var(--paper);font-family:var(--cn);font-size:11px;}
+.iv-toolbar button:hover{background:var(--ink);color:var(--paper);}
+.iv-toolbar .info{flex:1;text-align:center;font-family:var(--mono);font-size:10px;color:var(--ink-mute);}
+.iv-stage{flex:1;overflow:auto;display:flex;align-items:center;justify-content:center;padding:20px;}
+.iv-stage img{max-width:100%;max-height:100%;box-shadow:0 0 0 1px var(--paper), 4px 4px 0 var(--brass);transition:transform .2s;}
+
+/* ============================================================
+   APP: MEDIA PLAYER
+   ============================================================ */
+.mp{display:flex;flex-direction:column;height:100%;background:var(--ink);color:var(--paper);}
+.mp-stage{flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+.mp-stage video,.mp-stage audio{max-width:100%;max-height:100%;}
+.mp-stage audio{width:80%;}
+
+/* ============================================================
+   APP: CALCULATOR
+   ============================================================ */
+.calc{padding:14px;height:100%;display:flex;flex-direction:column;gap:10px;background:var(--paper);}
+.calc-disp{
+  background:var(--paper-dark);border:1px solid var(--ink);padding:12px;text-align:right;
+  font-family:var(--mono);font-size:28px;font-weight:700;min-height:60px;
+  box-shadow:inset 2px 2px 0 rgba(0,0,0,.08);word-break:break-all;
+}
+.calc-disp small{display:block;font-size:11px;color:var(--ink-mute);font-weight:400;min-height:14px;}
+.calc-grid{flex:1;display:grid;grid-template-columns:repeat(4,1fr);gap:6px;}
+.calc-grid button{border:1px solid var(--ink);background:var(--paper-2);font-family:var(--serif);font-size:20px;font-weight:600;transition:transform .08s;}
+.calc-grid button:hover{background:var(--ink);color:var(--paper);}
+.calc-grid button:active{transform:translate(1px,1px);}
+.calc-grid button.op{background:var(--brass);color:var(--paper);}
+.calc-grid button.eq{background:var(--vermilion);color:var(--paper);grid-column:span 1;}
+.calc-grid button.clr{background:var(--ink);color:var(--paper);}
+
+/* ============================================================
+   APP: PAINT
+   ============================================================ */
+.paint{display:flex;flex-direction:column;height:100%;}
+.paint-toolbar{padding:6px 10px;border-bottom:1px solid var(--ink);background:var(--paper-2);display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+.paint-toolbar button,.paint-toolbar label{padding:3px 10px;border:1px solid var(--ink);background:var(--paper);font-family:var(--cn);font-size:11px;cursor:pointer;}
+.paint-toolbar button:hover{background:var(--ink);color:var(--paper);}
+.paint-toolbar input[type=color]{width:24px;height:22px;border:1px solid var(--ink);padding:0;background:transparent;cursor:pointer;}
+.paint-toolbar input[type=range]{width:80px;}
+.paint-stage{flex:1;overflow:auto;background:var(--paper-dark);display:flex;align-items:center;justify-content:center;padding:20px;}
+.paint-stage canvas{background:white;box-shadow:4px 4px 0 var(--ink);cursor:crosshair;touch-action:none;}
+
+/* ============================================================
+   APP: SETTINGS
+   ============================================================ */
+.settings{display:flex;height:100%;font-size:12px;}
+.set-side{width:180px;border-right:1px solid var(--ink);background:var(--paper-2);padding:8px 0;}
+.set-side .item{padding:8px 14px;cursor:pointer;font-family:var(--cn);}
+.set-side .item:hover{background:rgba(20,18,16,.08);}
+.set-side .item.active{background:var(--ink);color:var(--paper);}
+.set-main{flex:1;overflow-y:auto;padding:20px;}
+.set-main h2{font-family:var(--serif);font-size:26px;font-weight:600;margin-bottom:4px;}
+.set-main .sub{font-family:var(--mono);font-size:10px;color:var(--ink-mute);letter-spacing:2px;text-transform:uppercase;margin-bottom:20px;}
+.set-card{border:1px solid var(--ink);padding:14px;margin-bottom:14px;background:var(--paper-2);}
+.set-card h3{font-family:var(--cn);font-size:13px;margin-bottom:10px;border-bottom:1px dashed var(--ink-mute);padding-bottom:6px;}
+.set-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+.set-row label{flex:0 0 120px;font-family:var(--mono);font-size:11px;color:var(--ink-mute);}
+.set-row select,.set-row input[type=file]{font-family:var(--mono);font-size:11px;padding:3px 6px;border:1px solid var(--ink);background:var(--paper);}
+.set-btn{padding:5px 12px;border:1px solid var(--ink);background:var(--paper);font-family:var(--cn);font-size:11px;cursor:pointer;}
+.set-btn:hover{background:var(--ink);color:var(--paper);}
+.set-btn.danger{background:var(--vermilion);color:var(--paper);border-color:var(--vermilion);}
+.wp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px;}
+.wp-item{aspect-ratio:16/10;border:1px solid var(--ink);cursor:pointer;position:relative;overflow:hidden;}
+.wp-item.active{border-color:var(--vermilion);box-shadow:0 0 0 2px var(--vermilion);}
+.storage-bar{height:14px;background:var(--paper);border:1px solid var(--ink);position:relative;overflow:hidden;}
+.storage-seg{position:absolute;top:0;bottom:0;transition:left .5s, width .5s;}
+.storage-seg.app{background:var(--vermilion);}
+.storage-seg.doc{background:var(--jade);}
+.storage-seg.img{background:var(--brass);}
+.storage-seg.other{background:var(--ink-soft);}
+.storage-legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;font-family:var(--mono);font-size:10px;}
+.storage-legend span::before{content:'';display:inline-block;width:10px;height:10px;margin-right:4px;border:1px solid var(--ink);vertical-align:middle;}
+.storage-legend .app::before{background:var(--vermilion);}
+.storage-legend .doc::before{background:var(--jade);}
+.storage-legend .img::before{background:var(--brass);}
+.storage-legend .other::before{background:var(--ink-soft);}
+
+/* ============================================================
+   APP: BROWSER
+   ============================================================ */
+.wb{display:flex;flex-direction:column;height:100%;}
+.wb-bar{padding:6px 10px;border-bottom:1px solid var(--ink);background:var(--paper-2);display:flex;gap:6px;align-items:center;}
+.wb-bar button{padding:3px 10px;border:1px solid var(--ink);background:var(--paper);font-family:var(--cn);font-size:11px;}
+.wb-bar button:hover{background:var(--ink);color:var(--paper);}
+.wb-bar input{flex:1;padding:4px 10px;border:1px solid var(--ink);background:var(--paper);font-family:var(--mono);font-size:11px;}
+.wb-stage{flex:1;background:white;}
+.wb-stage iframe{width:100%;height:100%;border:none;}
+
+/* ============================================================
+   APP: SPREADSHEET
+   ============================================================ */
+.ss{display:flex;flex-direction:column;height:100%;}
+.ss-tabs{display:flex;background:var(--paper-2);border-bottom:1px solid var(--ink);}
+.ss-tabs button{padding:6px 14px;font-family:var(--cn);font-size:11px;border-right:1px solid var(--ink);}
+.ss-tabs button.active{background:var(--paper);font-weight:600;}
+.ss-body{flex:1;overflow:auto;}
+.ss-body table{border-collapse:collapse;width:100%;font-family:var(--mono);font-size:11px;}
+.ss-body th,.ss-body td{border:1px solid var(--ink-mute);padding:3px 8px;text-align:left;}
+.ss-body th{background:var(--paper-2);position:sticky;top:0;}
+.ss-body textarea{width:100%;height:100%;border:none;outline:none;padding:10px;font-family:var(--mono);font-size:12px;background:var(--paper);resize:none;}
+
+/* ============================================================
+   APP: V86
+   ============================================================ */
+.v86{display:flex;flex-direction:column;height:100%;background:#1a1a1a;}
+.v86-bar{padding:6px 10px;background:var(--paper-2);border-bottom:1px solid var(--ink);display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+.v86-bar button,.v86-bar select{padding:3px 10px;border:1px solid var(--ink);background:var(--paper);font-family:var(--cn);font-size:11px;}
+.v86-stage{flex:1;overflow:auto;padding:10px;display:flex;align-items:center;justify-content:center;}
+.v86-stage .screen_container{background:#000;}
+.v86-status{padding:4px 10px;background:var(--paper-2);border-top:1px solid var(--ink);font-family:var(--mono);font-size:10px;color:var(--ink-mute);}
+
+/* ============================================================
+   TOAST / DIALOG
+   ============================================================ */
+#toast-layer{position:fixed;top:20px;right:20px;z-index:10001;display:flex;flex-direction:column;gap:8px;pointer-events:none;}
+.toast{
+  background:var(--paper);border:1px solid var(--ink);padding:10px 16px;
+  box-shadow:4px 4px 0 var(--shadow-deep);font-family:var(--cn);font-size:12px;
+  animation:toastIn .3s ease;pointer-events:auto;max-width:320px;
+}
+.toast.err{border-color:var(--vermilion);border-left-width:4px;}
+.toast.ok{border-left:4px solid var(--jade);}
+@keyframes toastIn{from{transform:translateX(40px);opacity:0;}to{transform:translateX(0);opacity:1;}}
+
+#modal-layer{position:fixed;inset:0;background:rgba(20,18,16,.35);z-index:10002;display:none;align-items:center;justify-content:center;}
+#modal-layer.open{display:flex;}
+.modal{background:var(--paper);border:1px solid var(--ink);box-shadow:8px 8px 0 var(--shadow-deep);min-width:320px;max-width:90vw;max-height:80vh;display:flex;flex-direction:column;animation:winOpen .2s ease;}
+.modal-head{padding:10px 14px;border-bottom:1px solid var(--ink);background:var(--paper-2);font-family:var(--cn);font-weight:600;}
+.modal-body{padding:16px;overflow:auto;font-family:var(--cn);font-size:12px;}
+.modal-body input{width:100%;padding:5px 8px;border:1px solid var(--ink);background:var(--paper);font-family:var(--mono);font-size:12px;margin-top:6px;}
+.modal-foot{padding:10px 14px;border-top:1px solid var(--ink);background:var(--paper-2);display:flex;gap:8px;justify-content:flex-end;}
+.modal-foot button{padding:4px 14px;border:1px solid var(--ink);background:var(--paper);font-family:var(--cn);font-size:11px;}
+.modal-foot button.primary{background:var(--ink);color:var(--paper);}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 720px){
+  :root{--taskbar-h:56px;}
+  #taskbar{padding:4px 6px;}
+  #start-btn{width:44px;height:40px;}
+  .task-item{padding:0 8px;font-size:10px;max-width:110px;height:34px;}
+  .task-item .t-text{display:none;}
+  #tray .clock{font-size:13px;}
+  #start-menu{left:4px;right:4px;width:auto;max-height:60vh;}
+  #start-menu .list{grid-template-columns:1fr 1fr;}
+  .fe-side{width:140px;}
+  .set-side{width:120px;}
+  .dsk-icon{width:72px;}
+  .dsk-icon .glyph{width:38px;height:38px;}
+  .dsk-icon .glyph svg{width:22px;height:22px;}
+  .win{min-width:220px;}
+}
+@media (max-width: 480px){
+  .fe-side,.set-side{display:none;}
+  .fe-toolbar .mobile-only{display:inline-flex;}
+  #start-menu .list{grid-template-columns:1fr;}
+}
+
+/* Scrollbars */
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--paper-2);}
+::-webkit-scrollbar-thumb{background:var(--ink-mute);border:2px solid var(--paper-2);}
+::-webkit-scrollbar-thumb:hover{background:var(--ink);}
+
+/* hidden util */
+.hidden{display:none !important;}
+
+</style>
+</head>
+<body>
+
+<!-- ==================== BOOT ==================== -->
+<div id="boot">
+  <div class="seal">硯</div>
+  <div class="tagline">— an inkstone of the web —</div>
+  <div class="bar"></div>
+  <div class="foot">loading virtual filesystem · opfs</div>
+</div>
+
+<!-- ==================== DESKTOP ==================== -->
+<div id="desktop">
+  <div id="icon-layer"></div>
+  <div id="selrect"></div>
+</div>
+
+<!-- ==================== TASKBAR ==================== -->
+<div id="taskbar">
+  <button id="start-btn" title="开始">硯</button>
+  <div id="task-items"></div>
+  <div id="tray">
+    <div class="clock" id="clock">
+      <span id="clock-time">--:--</span>
+      <small id="clock-date">----</small>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== START MENU ==================== -->
+<div id="start-menu">
+  <div class="header"><span>硯 OS</span><small>v1.0 · inkstone</small></div>
+  <div class="list" id="start-list"></div>
+  <div class="footer">
+    <span>所有应用</span>
+    <button id="btn-lock">锁屏</button>
+  </div>
+</div>
+
+<!-- ==================== CONTEXT MENU ==================== -->
+<div id="ctx-menu"></div>
+
+<!-- ==================== TOAST / MODAL ==================== -->
+<div id="toast-layer"></div>
+<div id="modal-layer"><div class="modal" id="modal"></div></div>
+
+<!-- Hidden file inputs -->
+<input type="file" id="file-import" style="display:none" multiple>
+<input type="file" id="wallpaper-pick" style="display:none" accept="image/*">
+
+<script>
+/* ================================================================
+   0. UTILITIES
+   ================================================================ */
+const $ = (s,r=document)=>r.querySelector(s);
+const $$ = (s,r=document)=>[...r.querySelectorAll(s)];
+const el = (tag,cls,txt)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(txt!==undefined)e.textContent=txt;return e;};
+const escapeHtml = s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmtSize = b=>{if(b==null||isNaN(b))return'—';const u=['B','KB','MB','GB'];let i=0;while(b>=1024&&i<u.length-1){b/=1024;i++;}return b.toFixed(b<10&&i>0?1:0)+' '+u[i];};
+const fmtDate = d=>{if(!d)return'—';const dt=new Date(d);const p=n=>String(n).padStart(2,'0');return `${dt.getFullYear()}-${p(dt.getMonth()+1)}-${p(dt.getDate())} ${p(dt.getHours())}:${p(dt.getMinutes())}`;};
+const uid = ()=>'id_'+Math.random().toString(36).slice(2,10)+Date.now().toString(36);
+const sleep = ms=>new Promise(r=>setTimeout(r,ms));
+
+function toast(msg,type='ok',ms=3000){
+  const t=el('div','toast '+type,msg);
+  $('#toast-layer').appendChild(t);
+  setTimeout(()=>{t.style.opacity=0;t.style.transform='translateX(40px)';t.style.transition='all .3s';setTimeout(()=>t.remove(),300);},ms);
+}
+
+function modal({title,body,buttons=['取消','确定']}){
+  return new Promise(resolve=>{
+    const m=$('#modal');
+    m.innerHTML='';
+    m.appendChild(el('div','modal-head',title));
+    const b=el('div','modal-body');
+    if(typeof body==='string')b.innerHTML=body;else b.appendChild(body);
+    m.appendChild(b);
+    const f=el('div','modal-foot');
+    buttons.forEach((txt,i)=>{
+      const btn=el('button',i===buttons.length-1?'primary':'',txt);
+      btn.onclick=()=>{$('#modal-layer').classList.remove('open');resolve(i);};
+      f.appendChild(btn);
+    });
+    m.appendChild(f);
+    $('#modal-layer').classList.add('open');
+  });
+}
+function promptDialog(title,def=''){
+  return new Promise(resolve=>{
+    const body=document.createElement('div');
+    body.textContent=title;
+    const inp=document.createElement('input');inp.value=def;
+    body.appendChild(inp);
+    modal({title:'输入',body,buttons:['取消','确定']}).then(r=>{
+      resolve(r===1?inp.value:null);
+    });
+    setTimeout(()=>inp.focus(),50);
+  });
+}
+
+/* ================================================================
+   1. SVG ICONS (原创, 无 emoji)
+   ================================================================ */
+const ICONS = {
+  folder:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 7h7l2 2h9v10H3z"/><path d="M3 7v12"/></svg>`,
+  folderOpen:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 7h7l2 2h9v10H3z" fill="currentColor" opacity=".15"/><path d="M3 7v12h18"/></svg>`,
+  file:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5"/></svg>`,
+  image:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="16"/><circle cx="9" cy="10" r="1.8"/><path d="M3 17l5-5 4 4 3-3 6 6"/></svg>`,
+  video:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="5" width="15" height="14"/><path d="M17 9l5-3v12l-5-3z"/></svg>`,
+  audio:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 18V6l10-2v12"/><circle cx="6" cy="18" r="3"/><circle cx="16" cy="16" r="3"/></svg>`,
+  code:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 7l-5 5 5 5M15 7l5 5-5 5M13 4l-3 16"/></svg>`,
+  text:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 3h9l4 4v14H6z"/><path d="M9 11h6M9 14h6M9 17h4"/></svg>`,
+  pdf:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 3h9l4 4v14H6z"/><text x="8" y="18" font-size="6" fill="currentColor" font-family="serif" font-weight="700">PDF</text></svg>`,
+  zip:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 3h9l4 4v14H6z"/><path d="M12 3v18M10 6h4M10 9h4M10 12h4M10 15h4"/></svg>`,
+  table:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="16"/><path d="M3 9h18M3 14h18M9 4v16M15 4v16"/></svg>`,
+  calc:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="3" width="14" height="18" rx="1"/><rect x="7" y="5" width="10" height="4"/><circle cx="8.5" cy="12.5" r=".5" fill="currentColor"/><circle cx="12" cy="12.5" r=".5" fill="currentColor"/><circle cx="15.5" cy="12.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="16" r=".5" fill="currentColor"/><circle cx="12" cy="16" r=".5" fill="currentColor"/><circle cx="15.5" cy="16" r=".5" fill="currentColor"/></svg>`,
+  paint:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 3l7 7-11 11H3v-7z"/><path d="M11 6l7 7"/></svg>`,
+  settings:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>`,
+  browser:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18"/></svg>`,
+  terminal:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="16"/><path d="M7 9l3 3-3 3M12 15h5"/></svg>`,
+  vm:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="20" height="14"/><path d="M8 20h8M12 18v2M6 8h2M6 11h2"/></svg>`,
+  explorer:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 7h7l2 2h9v10H3z"/><circle cx="12" cy="13" r="2.5"/><path d="M14 13l2 2"/></svg>`,
+  notepad:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 3h10l3 3v15H6z"/><path d="M9 10h6M9 13h6M9 16h4"/></svg>`,
+  upload:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 15V4M7 9l5-5 5 5M5 20h14"/></svg>`,
+  download:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>`,
+  plus:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>`,
+  trash:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>`,
+  refresh:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 11a8 8 0 10-3 6"/><path d="M20 5v6h-6"/></svg>`,
+  search:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>`,
+  back:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 5l-7 7 7 7"/></svg>`,
+  fwd:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 5l7 7-7 7"/></svg>`,
+  up:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 15l7-7 7 7"/></svg>`,
+  home:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 11l9-8 9 8v10h-6v-6h-6v6H3z"/></svg>`,
+  copy:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="8" y="8" width="12" height="12"/><path d="M4 16V4h12"/></svg>`,
+  paste:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 4h6v3H9z"/><path d="M6 7h12v13H6z"/></svg>`,
+  rename:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 20h5l10-10-5-5L4 15z"/><path d="M14 5l5 5"/></svg>`,
+  fullscreen:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>`,
+  mount:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 9l9-6 9 6v11H3z"/><path d="M12 13v5"/></svg>`,
+  newfile:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 3h9l4 4v14H6z"/><path d="M12 11v6M9 14h6"/></svg>`,
+  close:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 6l12 12M18 6l-12 12"/></svg>`,
+};
+
+function iconFor(name, isDir){
+  if(isDir) return ICONS.folder;
+  const ext = (name.split('.').pop()||'').toLowerCase();
+  if(['png','jpg','jpeg','gif','svg','webp','bmp','ico','avif'].includes(ext)) return ICONS.image;
+  if(['mp4','webm','ogv','mov','mkv'].includes(ext)) return ICONS.video;
+  if(['mp3','wav','ogg','flac','aac','m4a'].includes(ext)) return ICONS.audio;
+  if(['pdf'].includes(ext)) return ICONS.pdf;
+  if(['zip','gz','tar','tgz','7z','rar'].includes(ext)) return ICONS.zip;
+  if(['csv','tsv'].includes(ext)) return ICONS.table;
+  if(['html','htm','css','js','json','xml','py','c','cpp','java','ts'].includes(ext)) return ICONS.code;
+  if(['md','yaml','yml','log','txt'].includes(ext)) return ICONS.text;
+  return ICONS.file;
+}
+
+/* ================================================================
+   2. VIRTUAL FILESYSTEM (OPFS + IndexedDB fallback + Mounts)
+   ================================================================ */
+const fs = (()=>{
+  let opfsRoot = null;
+  let opfsAvailable = false;
+  // In-memory metadata tree (also persisted via localStorage)
+  // Structure: { path: { kind:'dir'|'file', size, mtime, mime } }
+  let meta = {};
+  const mounts = {}; // { '/mnt/local/name': { handle, name } }
+
+  const norm = p=>{p=String(p||'/');if(!p.startsWith('/'))p='/'+p;p=p.replace(/\/+/g,'/');if(p.length>1&&p.endsWith('/'))p=p.slice(0,-1);return p;};
+  const parent = p=>{p=norm(p);if(p==='/')return '/';const i=p.lastIndexOf('/');return i===0?'/':p.slice(0,i);};
+  const base = p=>{p=norm(p);if(p==='/')return '/';return p.slice(p.lastIndexOf('/')+1);};
+
+  async function init(){
+    try{
+      if(navigator.storage && navigator.storage.getDirectory){
+        opfsRoot = await navigator.storage.getDirectory();
+        opfsAvailable = true;
+        console.log('[fs] OPFS available');
+      }else{
+        console.warn('[fs] OPFS not available, falling back to IndexedDB');
+      }
+    }catch(e){console.warn('[fs] OPFS init failed:',e);}
+    // Load meta
+    try{
+      const raw = localStorage.getItem('vfs.meta');
+      if(raw) meta = JSON.parse(raw);
+    }catch(e){}
+    if(!meta['/']) meta['/']={kind:'dir',mtime:Date.now()};
+    // Seed default folders
+    await ensureDir('/Desktop');
+    await ensureDir('/Documents');
+    await ensureDir('/Pictures');
+    await ensureDir('/Music');
+    await ensureDir('/mnt');
+    await ensureDir('/mnt/local');
+  }
+
+  function saveMeta(){
+    try{localStorage.setItem('vfs.meta',JSON.stringify(meta));}catch(e){}
+  }
+
+  // --- OPFS helpers ---
+  async function walkCreate(path){
+    // Returns the FileSystemHandle for the given path, creating dirs along the way
+    const parts = norm(path).split('/').filter(Boolean);
+    let h = opfsRoot;
+    for(let i=0;i<parts.length;i++){
+      const isLast = i===parts.length-1;
+      const segment = parts[i];
+      const entryMeta = meta[norm('/'+parts.slice(0,i+1).join('/'))];
+      if(isLast){
+        return h;
+      }else{
+        h = await h.getDirectoryHandle(segment,{create:true});
+      }
+    }
+    return h;
+  }
+  async function getDirHandle(path,create=false){
+    const parts = norm(path).split('/').filter(Boolean);
+    let h = opfsRoot;
+    for(const seg of parts){
+      h = await h.getDirectoryHandle(seg,{create});
+    }
+    return h;
+  }
+
+  // --- Mount handling ---
+  function isMountPath(path){
+    const p=norm(path);
+    for(const mp of Object.keys(mounts)){
+      if(p===mp||p.startsWith(mp+'/')) return mp;
+    }
+    return null;
+  }
+
+  async function mountLocal(name, dirHandle){
+    const mp = norm('/mnt/local/'+name);
+    mounts[mp] = { handle:dirHandle, name };
+    meta[mp] = { kind:'dir', mtime:Date.now(), mount:true };
+    saveMeta();
+    toast(`已挂载 ${name}`,'ok');
+    return mp;
+  }
+  async function unmountLocal(mp){
+    delete mounts[mp];
+    // recursively remove meta
+    Object.keys(meta).forEach(k=>{if(k===mp||k.startsWith(mp+'/'))delete meta[k];});
+    saveMeta();
+    toast(`已卸载 ${mp}`,'ok');
+  }
+
+  // --- Public API ---
+  async function ensureDir(path){
+    path=norm(path);
+    if(meta[path]) return;
+    // ensure parents
+    const p = parent(path);
+    if(p!==path) await ensureDir(p);
+    if(opfsAvailable && !isMountPath(path)){
+      try{await getDirHandle(path,true);}catch(e){}
+    }
+    meta[path] = { kind:'dir', mtime:Date.now() };
+    saveMeta();
+  }
+
+  async function stat(path){
+    path=norm(path);
+    const mp = isMountPath(path);
+    if(mp && path!==mp){
+      // stat a file/dir inside mount
+      const rel = path.slice(mp.length+1);
+      const mnt = mounts[mp];
+      const parts = rel.split('/').filter(Boolean);
+      let h = mnt.handle;
+      try{
+        for(let i=0;i<parts.length-1;i++){
+          h = await h.getDirectoryHandle(parts[i]);
+        }
+        const last = parts[parts.length-1];
+        try{
+          const fh = await h.getFileHandle(last);
+          const f = await fh.getFile();
+          return { path, kind:'file', size:f.size, mtime:f.lastModified, mime:f.type };
+        }catch{
+          const dh = await h.getDirectoryHandle(last);
+          return { path, kind:'dir', mtime:Date.now() };
+        }
+      }catch(e){throw new Error('ENOENT: '+path);}
+    }
+    if(meta[path]){
+      const m = {...meta[path], path};
+      // refresh size for files from OPFS
+      if(m.kind==='file' && opfsAvailable){
+        try{
+          const dh = await getDirHandle(parent(path));
+          const fh = await dh.getFileHandle(base(path));
+          const f = await fh.getFile();
+          m.size = f.size; m.mtime = f.lastModified;
+        }catch(e){}
+      }
+      return m;
+    }
+    if(path==='/')return {path:'/',kind:'dir',mtime:Date.now()};
+    throw new Error('ENOENT: '+path);
+  }
+
+  async function exists(path){
+    try{await stat(path);return true;}catch{return false;}
+  }
+
+  async function readdir(path){
+    path=norm(path);
+    const mp = isMountPath(path);
+    if(mp){
+      // list from mount
+      const rel = path===mp ? '' : path.slice(mp.length+1);
+      const mnt = mounts[mp];
+      let h = mnt.handle;
+      if(rel){
+        const parts = rel.split('/').filter(Boolean);
+        for(const seg of parts) h = await h.getDirectoryHandle(seg);
+      }
+      const out=[];
+      for await (const [name,hh] of h.entries()){
+        if(hh.kind==='file'){
+          const f = await hh.getFile();
+          out.push({ name, kind:'file', size:f.size, mtime:f.lastModified, mime:f.type, path:norm(path+'/'+name) });
+        }else{
+          const cp = norm(path+'/'+name);
+          if(!meta[cp]) meta[cp]={kind:'dir',mtime:Date.now(),mount:true};
+          out.push({ name, kind:'dir', mtime:Date.now(), path:cp });
+        }
+      }
+      saveMeta();
+      return out;
+    }
+    // OPFS / virtual
+    const entries = {};
+    // from meta
+    for(const k of Object.keys(meta)){
+      const pr = parent(k);
+      if(pr===path && k!==path){
+        entries[base(k)] = { ...meta[k], name:base(k), path:k };
+      }
+    }
+    // from OPFS
+    if(opfsAvailable && path!=='/mnt' && !path.startsWith('/mnt/')){
+      try{
+        const dh = path==='/' ? opfsRoot : await getDirHandle(path);
+        for await (const [name,hh] of dh.entries()){
+          if(!entries[name]){
+            const cp = norm(path+'/'+name);
+            if(hh.kind==='file'){
+              try{
+                const f = await hh.getFile();
+                entries[name] = { name, kind:'file', size:f.size, mtime:f.lastModified, mime:f.type, path:cp };
+                meta[cp] = { kind:'file', size:f.size, mtime:f.lastModified, mime:f.type };
+              }catch(e){}
+            }else{
+              entries[name] = { name, kind:'dir', mtime:Date.now(), path:cp };
+              meta[cp] = { kind:'dir', mtime:Date.now() };
+            }
+          }
+        }
+        saveMeta();
+      }catch(e){}
+    }
+    return Object.values(entries);
+  }
+
+  async function readFile(path){
+    path=norm(path);
+    const mp = isMountPath(path);
+    if(mp){
+      const rel = path.slice(mp.length+1);
+      const mnt = mounts[mp];
+      const parts = rel.split('/').filter(Boolean);
+      let h = mnt.handle;
+      for(let i=0;i<parts.length-1;i++) h = await h.getDirectoryHandle(parts[i]);
+      const fh = await h.getFileHandle(parts[parts.length-1]);
+      return await fh.getFile();
+    }
+    if(!opfsAvailable) throw new Error('OPFS unavailable');
+    const dh = await getDirHandle(parent(path));
+    const fh = await dh.getFileHandle(base(path));
+    return await fh.getFile();
+  }
+
+  async function readFileAsText(path){
+    const f = await readFile(path);
+    return await f.text();
+  }
+
+  async function writeFile(path, data, mime){
+    path=norm(path);
+    const mp = isMountPath(path);
+    if(mp){
+      const rel = path.slice(mp.length+1);
+      const mnt = mounts[mp];
+      const parts = rel.split('/').filter(Boolean);
+      let h = mnt.handle;
+      for(let i=0;i<parts.length-1;i++) h = await h.getDirectoryHandle(parts[i],{create:true});
+      const fh = await h.getFileHandle(parts[parts.length-1],{create:true});
+      const w = await fh.createWritable();
+      await w.write(data);
+      await w.close();
+      meta[path] = { kind:'file', size:typeof data==='string'?data.length:(data.size||data.byteLength||0), mtime:Date.now(), mime };
+      saveMeta();
+      return;
+    }
+    if(!opfsAvailable){
+      // fallback: store as base64 in meta
+      let b64;
+      if(typeof data==='string'){
+        b64 = btoa(unescape(encodeURIComponent(data)));
+      }else{
+        const buf = data instanceof ArrayBuffer ? data : await new Blob([data]).arrayBuffer();
+        const bytes = new Uint8Array(buf);
+        let str='';for(let i=0;i<bytes.length;i++)str+=String.fromCharCode(bytes[i]);
+        b64 = btoa(str);
+      }
+      await ensureDir(parent(path));
+      meta[path] = { kind:'file', size:typeof data==='string'?data.length:(data.size||data.byteLength||0), mtime:Date.now(), mime, _b64:b64 };
+      saveMeta();
+      return;
+    }
+    await ensureDir(parent(path));
+    const dh = await getDirHandle(parent(path));
+    const fh = await dh.getFileHandle(base(path),{create:true});
+    const w = await fh.createWritable();
+    await w.write(data);
+    await w.close();
+    meta[path] = { kind:'file', size:typeof data==='string'?data.length:(data.size||data.byteLength||0), mtime:Date.now(), mime };
+    saveMeta();
+  }
+
+  async function mkdir(path){
+    await ensureDir(path);
+  }
+
+  async function unlink(path){
+    path=norm(path);
+    const mp = isMountPath(path);
+    if(mp){
+      const rel = path.slice(mp.length+1);
+      const mnt = mounts[mp];
+      const parts = rel.split('/').filter(Boolean);
+      let h = mnt.handle;
+      for(let i=0;i<parts.length-1;i++) h = await h.getDirectoryHandle(parts[i]);
+      await h.removeEntry(parts[parts.length-1],{recursive:true});
+    }else if(opfsAvailable){
+      try{
+        const s = await stat(path);
+        if(s.kind==='dir'){
+          const dh = await getDirHandle(parent(path));
+          await dh.removeEntry(base(path),{recursive:true});
+        }else{
+          const dh = await getDirHandle(parent(path));
+          await dh.removeEntry(base(path));
+        }
+      }catch(e){}
+    }
+    // remove meta subtree
+    Object.keys(meta).forEach(k=>{if(k===path||k.startsWith(path+'/'))delete meta[k];});
+    saveMeta();
+  }
+
+  async function rename(src, dst){
+    // OPFS doesn't have native rename — copy + delete
+    const s = await stat(src);
+    if(s.kind==='dir'){
+      await copyDir(src,dst);
+      await unlink(src);
+    }else{
+      const data = await readFile(src);
+      await writeFile(dst, data, s.mime);
+      await unlink(src);
+    }
+  }
+
+  async function copyDir(src, dst){
+    await ensureDir(dst);
+    const items = await readdir(src);
+    for(const it of items){
+      const sp = norm(src+'/'+it.name);
+      const dp = norm(dst+'/'+it.name);
+      if(it.kind==='dir') await copyDir(sp,dp);
+      else{
+        const data = await readFile(sp);
+        await writeFile(dp, data, it.mime);
+      }
+    }
+  }
+
+  async function copy(src, dst){
+    const s = await stat(src);
+    if(s.kind==='dir') await copyDir(src,dst);
+    else{
+      const data = await readFile(src);
+      await writeFile(dst, data, s.mime);
+    }
+  }
+
+  // Storage usage
+  async function usage(){
+    let total=0, used=0, breakdown={app:0,doc:0,img:0,other:0};
+    try{
+      if(navigator.storage && navigator.storage.estimate){
+        const e = await navigator.storage.estimate();
+        total = e.quota||0; used = e.usage||0;
+      }
+    }catch(e){}
+    // classify meta
+    for(const k of Object.keys(meta)){
+      const m = meta[k];
+      if(m.kind!=='file')continue;
+      const ext = (k.split('.').pop()||'').toLowerCase();
+      const sz = m.size||0;
+      if(['png','jpg','jpeg','gif','webp','bmp','svg','avif'].includes(ext)) breakdown.img += sz;
+      else if(['html','js','css','json','py','xml'].includes(ext)) breakdown.app += sz;
+      else if(['txt','md','csv','tsv'].includes(ext)) breakdown.doc += sz;
+      else breakdown.other += sz;
+    }
+    return {total,used,breakdown};
+  }
+
+  async function reset(){
+    if(opfsAvailable){
+      try{
+        for await (const [name] of opfsRoot.entries()){
+          await opfsRoot.removeEntry(name,{recursive:true});
+        }
+      }catch(e){}
+    }
+    meta = {'/':{kind:'dir',mtime:Date.now()}};
+    saveMeta();
+    localStorage.removeItem('vfs.meta');
+    localStorage.removeItem('wallpaper');
+    await ensureDir('/Desktop');
+    await ensureDir('/Documents');
+    await ensureDir('/Pictures');
+    await ensureDir('/Music');
+    await ensureDir('/mnt/local');
+  }
+
+  return {
+    init, norm, parent, base, stat, exists, readdir, readFile, readFileAsText,
+    writeFile, mkdir, unlink, rename, copy, ensureDir, mountLocal, unmountLocal,
+    isMountPath, getMounts:()=>({...mounts}), usage, reset,
+    get opfsAvailable(){return opfsAvailable;}
+  };
+})();
+window.fs = fs;
+
+/* ================================================================
+   3. WINDOW MANAGER
+   ================================================================ */
+const WM = (()=>{
+  let zTop = 100;
+  const wins = new Map(); // id -> {el, state, app}
+  let activeId = null;
+
+  function create({title, icon, width=560, height=400, content, app, onClose}){
+    const id = uid();
+    const w = el('div','win');
+    w.dataset.id = id;
+    // Position staggered
+    const cx = Math.max(20, (window.innerWidth-width)/2 + (wins.size%6)*24);
+    const cy = Math.max(20, (window.innerHeight-height-60)/2 + (wins.size%6)*24);
+    w.style.left = cx+'px';
+    w.style.top = cy+'px';
+    w.style.width = width+'px';
+    w.style.height = height+'px';
+    w.style.zIndex = ++zTop;
+
+    const header = el('div','win-header');
+    const t = el('div','win-title');
+    t.innerHTML = `<span class="app-tag">${app||''}</span>${escapeHtml(title)}`;
+    header.appendChild(t);
+    const ctrls = el('div','win-ctrls');
+    const bMin = el('button','','_');bMin.title='最小化';
+    const bMax = el('button','','◻');bMax.title='最大化';
+    const bCls = el('button','close','✕');bCls.title='关闭';
+    ctrls.append(bMin,bMax,bCls);
+    header.appendChild(ctrls);
+    const body = el('div','win-body');
+    if(content instanceof Node) body.appendChild(content);
+    else if(content) body.innerHTML = content;
+    w.append(header,body);
+    // resize handles
+    ['n','s','w','e','nw','ne','sw','se'].forEach(d=>{
+      const h = el('div','win-resize '+d);
+      h.dataset.dir = d;
+      w.appendChild(h);
+    });
+    document.body.appendChild(w);
+
+    const state = { id, el:w, title, app, minimized:false, maximized:false, prev:null };
+    wins.set(id, state);
+
+    // focus
+    const focus = ()=>{
+      if(activeId===id) { w.style.zIndex = ++zTop; return; }
+      wins.forEach(s=>s.el.classList.add('inactive'));
+      w.classList.remove('inactive');
+      w.style.zIndex = ++zTop;
+      activeId = id;
+      renderTaskbar();
+    };
+    w.addEventListener('mousedown', focus, true);
+    w.addEventListener('touchstart', focus, {passive:true, capture:true});
+    focus();
+
+    // drag header
+    let drag=null;
+    const startDrag = (cx,cy)=>{
+      if(state.maximized) return;
+      const r = w.getBoundingClientRect();
+      drag = { dx:cx-r.left, dy:cy-r.top };
+    };
+    header.addEventListener('mousedown',e=>{if(e.target===header||e.target===t||t.contains(e.target))startDrag(e.clientX,e.clientY);});
+    header.addEventListener('touchstart',e=>{if(e.touches.length===1)startDrag(e.touches[0].clientX,e.touches[0].clientY);},{passive:true});
+    header.addEventListener('dblclick',()=>toggleMax());
+
+    // resize
+    let resize=null;
+    w.querySelectorAll('.win-resize').forEach(h=>{
+      const start = (cx,cy)=>{
+        if(state.maximized) return;
+        const r = w.getBoundingClientRect();
+        resize = { dir:h.dataset.dir, sx:cx, sy:cy, sw:r.width, sh:r.height, sl:r.left, st:r.top };
+      };
+      h.addEventListener('mousedown',e=>{e.stopPropagation();start(e.clientX,e.clientY);});
+      h.addEventListener('touchstart',e=>{e.stopPropagation();if(e.touches.length===1)start(e.touches[0].clientX,e.touches[0].clientY);},{passive:true});
+    });
+
+    const onMove = (cx,cy)=>{
+      if(drag){
+        let nx = cx - drag.dx, ny = cy - drag.dy;
+        nx = Math.max(-w.offsetWidth+80, Math.min(window.innerWidth-40, nx));
+        ny = Math.max(0, Math.min(window.innerHeight-60, ny));
+        w.style.left = nx+'px';
+        w.style.top = ny+'px';
+      }
+      if(resize){
+        const dx = cx - resize.sx, dy = cy - resize.sy;
+        let {sw,sh,sl,st,dir} = resize;
+        let nw=sw, nh=sh, nl=sl, nt=st;
+        if(dir.includes('e')) nw = Math.max(280, sw+dx);
+        if(dir.includes('s')) nh = Math.max(180, sh+dy);
+        if(dir.includes('w')){ nw = Math.max(280, sw-dx); nl = sl + (sw-nw); }
+        if(dir.includes('n')){ nh = Math.max(180, sh-dy); nt = st + (sh-nh); }
+        w.style.width=nw+'px';w.style.height=nh+'px';w.style.left=nl+'px';w.style.top=nt+'px';
+      }
+    };
+    const onUp = ()=>{ drag=null; resize=null; };
+    document.addEventListener('mousemove',e=>onMove(e.clientX,e.clientY));
+    document.addEventListener('touchmove',e=>{if(e.touches.length===1)onMove(e.touches[0].clientX,e.touches[0].clientY);},{passive:true});
+    document.addEventListener('mouseup',onUp);
+    document.addEventListener('touchend',onUp);
+
+    // controls
+    bMin.onclick = ()=>{ state.minimized = true; w.classList.add('minimized'); if(activeId===id){activeId=null;} renderTaskbar(); };
+    bMax.onclick = ()=>toggleMax();
+    bCls.onclick = async ()=>{
+      if(onClose){ const r = await onClose(); if(r===false) return; }
+      w.remove();
+      wins.delete(id);
+      if(activeId===id) activeId=null;
+      renderTaskbar();
+    };
+
+    function toggleMax(){
+      if(state.maximized){
+        const p = state.prev;
+        w.style.left=p.left;w.style.top=p.top;w.style.width=p.width;w.style.height=p.height;
+        w.classList.remove('maximized');
+        state.maximized=false;
+      }else{
+        state.prev = {left:w.style.left,top:w.style.top,width:w.style.width,height:w.style.height};
+        w.style.left='0px';w.style.top='0px';
+        w.style.width='100vw';
+        w.style.height=`calc(100vh - var(--taskbar-h))`;
+        w.classList.add('maximized');
+        state.maximized=true;
+      }
+    }
+
+    renderTaskbar();
+    return { id, el:w, body, focus, close:()=>bCls.click(), setTitle:(newT)=>{state.title=newT;t.innerHTML=`<span class="app-tag">${app||''}</span>${escapeHtml(newT)}`;renderTaskbar();} };
+  }
+
+  function renderTaskbar(){
+    const c = $('#task-items');
+    c.innerHTML='';
+    wins.forEach(s=>{
+      const t = el('div','task-item'+(activeId===s.id&&!s.minimized?' active':''));
+      t.innerHTML = (ICONS[s.app]||ICONS.file) + `<span class="t-text">${escapeHtml(s.title)}</span>`;
+      t.onclick = ()=>{
+        if(s.minimized){ s.minimized=false; s.el.classList.remove('minimized'); }
+        if(activeId===s.id && !s.minimized){ s.minimized=true; s.el.classList.add('minimized'); activeId=null; renderTaskbar(); return;}
+        s.el.style.zIndex = ++zTop;
+        activeId = s.id;
+        wins.forEach(x=>x.el.classList.add('inactive'));
+        s.el.classList.remove('inactive');
+        renderTaskbar();
+      };
+      c.appendChild(t);
+    });
+  }
+
+  function all(){return [...wins.values()];}
+
+  return { create, renderTaskbar, all };
+})();
+
+/* ================================================================
+   4. CONTEXT MENU
+   ================================================================ */
+const CtxMenu = (()=>{
+  const m = $('#ctx-menu');
+  function show(x,y,items){
+    m.innerHTML='';
+    items.forEach(it=>{
+      if(it==='-'){m.appendChild(el('div','sep'));return;}
+      const d = el('div','item'+(it.disabled?' disabled':''));
+      d.innerHTML = (it.icon||'') + `<span>${escapeHtml(it.label)}</span>` + (it.kbd?`<span class="kbd">${it.kbd}</span>`:'');
+      if(it.icon) d.querySelector('svg')&&(d.querySelector('svg').style.width='14px', d.querySelector('svg').style.height='14px');
+      d.onclick = ()=>{ hide(); it.action&&it.action(); };
+      m.appendChild(d);
+    });
+    // position
+    m.classList.add('open');
+    const r = m.getBoundingClientRect();
+    let nx = x, ny = y;
+    if(x + r.width > window.innerWidth) nx = window.innerWidth - r.width - 4;
+    if(y + r.height > window.innerHeight) ny = window.innerHeight - r.height - 4;
+    m.style.left = Math.max(0,nx)+'px';
+    m.style.top = Math.max(0,ny)+'px';
+  }
+  function hide(){ m.classList.remove('open'); }
+  document.addEventListener('click',e=>{ if(!m.contains(e.target)) hide(); });
+  window.addEventListener('blur',hide);
+  return { show, hide };
+})();
+
+/* ================================================================
+   5. DESKTOP ICONS
+   ================================================================ */
+const Desktop = (()=>{
+  const layer = $('#icon-layer');
+  const positions = {}; // name -> {x,y}
+  const selected = new Set();
+  // Drag cache for HTML5 drag-out
+  const dragCache = new Map(); // path -> {blob, url}
+  let dragSrc = null;
+
+  function loadPositions(){
+    try{const r=localStorage.getItem('dsk.pos');if(r)Object.assign(positions,JSON.parse(r));}catch{}
+  }
+  function savePositions(){try{localStorage.setItem('dsk.pos',JSON.stringify(positions));}catch{}}
+
+  async function render(){
+    layer.innerHTML='';
+    loadPositions();
+    const items = await fs.readdir('/Desktop');
+    items.forEach((it,idx)=>{
+      const pos = positions[it.name] || { x: 20 + (idx%Math.max(1,Math.floor((window.innerWidth-40)/92)))*92, y: 20 + Math.floor(idx/Math.max(1,Math.floor((window.innerWidth-40)/92)))*96 };
+      positions[it.name] = pos;
+      const d = el('div','dsk-icon');
+      d.style.left = pos.x+'px';
+      d.style.top = pos.y+'px';
+      d.dataset.path = '/Desktop/'+it.name;
+      d.dataset.name = it.name;
+      d.dataset.isDir = it.kind==='dir'?'1':'0';
+      d.draggable = true;
+      d.innerHTML = `<div class="glyph">${iconFor(it.name, it.kind==='dir')}</div><div class="label">${escapeHtml(it.name)}</div>`;
+      // click / dblclick
+      let clickTimer=null, clickCount=0;
+      d.addEventListener('click',e=>{
+        e.stopPropagation();
+        selectOnly(it.name, e.ctrlKey||e.metaKey);
+        clickCount++;
+        if(clickCount===1){
+          clickTimer = setTimeout(()=>{clickCount=0;},300);
+        }else if(clickCount>=2){
+          clearTimeout(clickTimer);clickCount=0;
+          openItem('/Desktop/'+it.name);
+        }
+      });
+      // context menu
+      d.addEventListener('contextmenu',e=>{
+        e.preventDefault();e.stopPropagation();
+        if(!selected.has(it.name)) selectOnly(it.name,false);
+        showItemContext(e.clientX,e.clientY);
+      });
+      // drag start (HTML5 native)
+      d.addEventListener('dragstart',e=>{
+        dragSrc = it;
+        d.classList.add('dragging');
+        e.dataTransfer.effectAllowed='copyMove';
+        // internal marker
+        e.dataTransfer.setData('application/x-inkstone-path','/Desktop/'+it.name);
+        // cache must have been pre-loaded; synchronous read
+        const cached = dragCache.get('/Desktop/'+it.name);
+        if(cached && cached.file){
+          try{
+            e.dataTransfer.items.add(cached.file);
+            const url = cached.url || (cached.url = URL.createObjectURL(cached.file));
+            const mt = cached.file.type || 'application/octet-stream';
+            e.dataTransfer.setData('DownloadURL', `${mt}:${it.name}:${url}`);
+          }catch(err){console.warn(err);}
+        }
+      });
+      d.addEventListener('dragend',()=>{
+        d.classList.remove('dragging');
+        dragSrc=null;
+        $$('.dsk-icon.drop-target').forEach(x=>x.classList.remove('drop-target'));
+        // revoke URLs after 5s
+        setTimeout(()=>{
+          dragCache.forEach(v=>{ if(v.url){try{URL.revokeObjectURL(v.url);}catch{} v.url=null;} });
+          dragCache.clear();
+        },5000);
+      });
+      // dragover to allow reposition / folder drop
+      d.addEventListener('dragover',e=>{
+        if(it.kind==='dir' && dragSrc && dragSrc.name!==it.name){
+          e.preventDefault();
+          d.classList.add('drop-target');
+        }
+      });
+      d.addEventListener('dragleave',()=>d.classList.remove('drop-target'));
+      d.addEventListener('drop',async e=>{
+        e.preventDefault();e.stopPropagation();
+        d.classList.remove('drop-target');
+        if(it.kind==='dir' && dragSrc && dragSrc.name!==it.name){
+          try{
+            await fs.rename('/Desktop/'+dragSrc.name, '/Desktop/'+it.name+'/'+dragSrc.name);
+            toast(`移动 ${dragSrc.name}`);
+            render();
+          }catch(err){toast(err.message,'err');}
+        }
+      });
+      // preload file data on hover (for drag-out)
+      d.addEventListener('mouseenter', async ()=>{
+        if(it.kind==='file' && !dragCache.has('/Desktop/'+it.name)){
+          try{
+            const f = await fs.readFile('/Desktop/'+it.name);
+            dragCache.set('/Desktop/'+it.name, { file: new File([f], it.name, {type:f.type||'application/octet-stream'}) });
+          }catch(e){}
+        }
+      });
+
+      // Touch drag for mobile
+      let touchDrag=null;
+      d.addEventListener('touchstart',e=>{
+        if(e.touches.length!==1)return;
+        const t = e.touches[0];
+        touchDrag = { startX:t.clientX, startY:t.clientY, moved:false, origX:pos.x, origY:pos.y };
+      },{passive:true});
+      d.addEventListener('touchmove',e=>{
+        if(!touchDrag)return;
+        const t = e.touches[0];
+        const dx = t.clientX-touchDrag.startX, dy = t.clientY-touchDrag.startY;
+        if(Math.abs(dx)>6||Math.abs(dy)>6) touchDrag.moved=true;
+        if(touchDrag.moved){
+          e.preventDefault();
+          d.style.left=(touchDrag.origX+dx)+'px';
+          d.style.top=(touchDrag.origY+dy)+'px';
+        }
+      },{passive:false});
+      d.addEventListener('touchend',()=>{
+        if(touchDrag && touchDrag.moved){
+          const nx = parseInt(d.style.left), ny = parseInt(d.style.top);
+          positions[it.name] = {x:nx,y:ny};
+          savePositions();
+        }
+        touchDrag=null;
+      });
+
+      layer.appendChild(d);
+    });
+    savePositions();
+  }
+
+  function selectOnly(name, add){
+    if(!add){
+      selected.clear();
+      $$('.dsk-icon.selected').forEach(x=>x.classList.remove('selected'));
+    }
+    selected.add(name);
+    const e = $(`.dsk-icon[data-name="${CSS.escape(name)}"]`);
+    if(e)e.classList.add('selected');
+  }
+  function clearSelection(){
+    selected.clear();
+    $$('.dsk-icon.selected').forEach(x=>x.classList.remove('selected'));
+  }
+
+  function showItemContext(x,y){
+    const names = [...selected];
+    CtxMenu.show(x,y,[
+      {label:'打开',icon:ICONS.folder,action:()=>openItem('/Desktop/'+names[0])},
+      {label:'在资源管理器中显示',icon:ICONS.explorer,action:()=>Apps.explorer('/Desktop')},
+      '-',
+      {label:'重命名',icon:ICONS.rename,action:()=>renameDesktop(names[0])},
+      {label:'删除',icon:ICONS.trash,action:async()=>{
+        if(await modal({title:'确认删除',body:`删除 ${names.length} 项？`,buttons:['取消','删除']})===1){
+          for(const n of names){try{await fs.unlink('/Desktop/'+n);}catch{}}
+          render();
+        }
+      }},
+      '-',
+      {label:'下载',icon:ICONS.download,action:()=>{names.forEach(n=>downloadFile('/Desktop/'+n));}},
+    ]);
+  }
+
+  async function renameDesktop(name){
+    const nn = await promptDialog('新名称',name);
+    if(!nn||nn===name)return;
+    try{await fs.rename('/Desktop/'+name,'/Desktop/'+nn);render();}
+    catch(e){toast(e.message,'err');}
+  }
+
+  return { render, clearSelection, selectOnly, getSelected:()=>[...selected] };
+})();
+
+async function downloadFile(path){
+  try{
+    const f = await fs.readFile(path);
+    const name = fs.base(path);
+    const url = URL.createObjectURL(f);
+    const a = document.createElement('a');
+    a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+  }catch(e){toast(e.message,'err');}
+}
+
+async function openItem(path){
+  try{
+    const s = await fs.stat(path);
+    if(s.kind==='dir'){ Apps.explorer(path); return; }
+    const ext = (path.split('.').pop()||'').toLowerCase();
+    if(['png','jpg','jpeg','gif','svg','webp','bmp','ico','avif'].includes(ext)) return Apps.imageViewer(path);
+    if(['mp4','webm','ogv','mov','mkv'].includes(ext)) return Apps.mediaPlayer(path);
+    if(['mp3','wav','ogg','flac','aac','m4a'].includes(ext)) return Apps.mediaPlayer(path);
+    if(['pdf'].includes(ext)) return Apps.pdfViewer(path);
+    if(['csv','tsv'].includes(ext)) return Apps.spreadsheet(path);
+    if(['html','htm'].includes(ext)) return Apps.codeEditor(path);
+    if(['zip','gz','tgz','tar'].includes(ext)) return Apps.unzip(path);
+    if(['txt','md','log','yaml','yml','json','xml','js','css','py','c','cpp','java','ts','ini','cfg'].includes(ext)) return Apps.notepad(path);
+    // fallback
+    return Apps.notepad(path);
+  }catch(e){toast(e.message,'err');}
+}
+
+/* ================================================================
+   6. DESKTOP CONTEXT MENU + DROP
+   ================================================================ */
+function setupDesktopEvents(){
+  const d = $('#desktop');
+  d.addEventListener('contextmenu',e=>{
+    if(e.target.closest('.dsk-icon')||e.target.closest('.win'))return;
+    e.preventDefault();
+    CtxMenu.show(e.clientX,e.clientY,[
+      {label:'刷新',icon:ICONS.refresh,action:()=>Desktop.render()},
+      {label:'新建文件夹',icon:ICONS.folder,action:async()=>{
+        const n = await promptDialog('文件夹名','新建文件夹');
+        if(!n)return;
+        await fs.mkdir('/Desktop/'+n); Desktop.render();
+      }},
+      {label:'新建文本文件',icon:ICONS.newfile,action:async()=>{
+        const n = await promptDialog('文件名','新建文件.txt');
+        if(!n)return;
+        await fs.writeFile('/Desktop/'+n,'','text/plain'); Desktop.render();
+      }},
+      '-',
+      {label:'上传文件',icon:ICONS.upload,action:()=>$('#file-import').click()},
+      {label:'挂载本地文件夹',icon:ICONS.mount,action:()=>mountLocalFolder()},
+      '-',
+      {label:'切换全屏',icon:ICONS.fullscreen,action:()=>{
+        if(document.fullscreenElement)document.exitFullscreen();else document.documentElement.requestFullscreen();
+      }},
+      {label:'壁纸设置',icon:ICONS.settings,action:()=>Apps.settings('wallpaper')},
+    ]);
+  });
+
+  // Click to clear selection
+  d.addEventListener('click',e=>{
+    if(e.target===d||e.target.id==='icon-layer') Desktop.clearSelection();
+  });
+
+  // Drop to desktop (import)
+  d.addEventListener('dragover',e=>{
+    if(e.target.closest('.dsk-icon'))return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect='copy';
+  });
+  d.addEventListener('drop', async e=>{
+    if(e.target.closest('.dsk-icon'))return;
+    e.preventDefault();
+    // internal move?
+    const internal = e.dataTransfer.getData('application/x-inkstone-path');
+    if(internal){
+      // reposition icon — compute drop point
+      const name = fs.base(internal);
+      const pos = loadPositions();
+      pos[name] = { x: e.clientX - 41, y: e.clientY - 30 };
+      savePositionsLocal(pos);
+      Desktop.render();
+      return;
+    }
+    // external files
+    const items = e.dataTransfer.items;
+    if(items && items.length){
+      const entries = [];
+      for(let i=0;i<items.length;i++){
+        const it = items[i];
+        const entry = it.webkitGetAsEntry ? it.webkitGetAsEntry() : null;
+        if(entry) entries.push(entry);
+      }
+      if(entries.length){
+        for(const ent of entries){
+          await importEntry(ent,'/Desktop');
+        }
+        Desktop.render();
+        toast('导入完成','ok');
+        return;
+      }
+    }
+    // fallback to files
+    const files = e.dataTransfer.files;
+    if(files && files.length){
+      for(const f of files){
+        const buf = await f.arrayBuffer();
+        await fs.writeFile('/Desktop/'+f.name, buf, f.type);
+      }
+      Desktop.render();
+      toast('导入完成','ok');
+    }
+  });
+
+  // Rubber-band selection
+  let rb=null;
+  d.addEventListener('mousedown',e=>{
+    if(e.target.closest('.dsk-icon')||e.target.closest('.win')||e.target.closest('#taskbar'))return;
+    rb = { x:e.clientX, y:e.clientY, moved:false };
+  });
+  document.addEventListener('mousemove',e=>{
+    if(!rb)return;
+    const dx = e.clientX-rb.x, dy = e.clientY-rb.y;
+    if(Math.abs(dx)>4||Math.abs(dy)>4) rb.moved=true;
+    if(rb.moved){
+      const r = $('#selrect');
+      r.style.display='block';
+      r.style.left = Math.min(rb.x,e.clientX)+'px';
+      r.style.top = Math.min(rb.y,e.clientY)+'px';
+      r.style.width = Math.abs(dx)+'px';
+      r.style.height = Math.abs(dy)+'px';
+      // select icons intersecting
+      const sr = r.getBoundingClientRect();
+      $$('.dsk-icon').forEach(ic=>{
+        const ir = ic.getBoundingClientRect();
+        const hit = !(ir.right<sr.left||ir.left>sr.right||ir.bottom<sr.top||ir.top>sr.bottom);
+        ic.classList.toggle('selected', hit);
+      });
+    }
+  });
+  document.addEventListener('mouseup',()=>{
+    if(rb){$('#selrect').style.display='none';rb=null;}
+  });
+}
+function loadPositions(){try{return JSON.parse(localStorage.getItem('dsk.pos')||'{}');}catch{return {};}}
+function savePositionsLocal(p){try{localStorage.setItem('dsk.pos',JSON.stringify(p));}catch{}}
+
+async function importEntry(entry, target){
+  if(entry.isFile){
+    const file = await new Promise((res,rej)=>entry.file(res,rej));
+    const buf = await file.arrayBuffer();
+    await fs.mkdir(target);
+    await fs.writeFile(target+'/'+entry.name, buf, file.type);
+  }else if(entry.isDirectory){
+    const newPath = target+'/'+entry.name;
+    await fs.mkdir(newPath);
+    const reader = entry.createReader();
+    const all = [];
+    while(true){
+      const batch = await new Promise(res=>reader.readEntries(res));
+      if(!batch.length)break;
+      all.push(...batch);
+    }
+    for(const ch of all) await importEntry(ch,newPath);
+  }
+}
+
+async function mountLocalFolder(){
+  if(!window.showDirectoryPicker){
+    toast('当前浏览器不支持 File System Access API','err');
+    return;
+  }
+  try{
+    const handle = await showDirectoryPicker({mode:'readwrite'});
+    await fs.mountLocal(handle.name, handle);
+    // create desktop shortcut
+    const mp = '/mnt/local/'+handle.name;
+    await fs.writeFile('/Desktop/'+handle.name+'.mount', mp, 'text/plain');
+    Desktop.render();
+    Apps.explorer(mp);
+  }catch(e){if(e.name!=='AbortError')toast(e.message,'err');}
+}
+
+/* ================================================================
+   7. FILE IMPORT BUTTON
+   ================================================================ */
+$('#file-import').addEventListener('change', async e=>{
+  const files = e.target.files;
+  for(const f of files){
+    const buf = await f.arrayBuffer();
+    await fs.writeFile('/Desktop/'+f.name, buf, f.type);
+  }
+  Desktop.render();
+  toast(`已导入 ${files.length} 个文件`);
+  e.target.value='';
+});
+
+/* ================================================================
+   8. START MENU
+   ================================================================ */
+function buildStartMenu(){
+  const list = $('#start-list');
+  list.innerHTML='';
+  APPS.forEach(a=>{
+    const d = el('div','start-item');
+    d.innerHTML = a.icon + `<div><div class="n">${a.label}</div><div class="d">${a.desc||''}</div></div>`;
+    d.onclick = ()=>{ $('#start-menu').classList.remove('open'); a.run(); };
+    list.appendChild(d);
+  });
+}
+$('#start-btn').onclick = e=>{
+  e.stopPropagation();
+  $('#start-menu').classList.toggle('open');
+};
+document.addEventListener('click',e=>{
+  if(!e.target.closest('#start-menu') && !e.target.closest('#start-btn')) $('#start-menu').classList.remove('open');
+});
+$('#btn-lock').onclick = ()=>{
+  document.documentElement.requestFullscreen?.();
+  $('#start-menu').classList.remove('open');
+};
+
+/* ================================================================
+   9. CLOCK
+   ================================================================ */
+function tickClock(){
+  const d = new Date();
+  const p=n=>String(n).padStart(2,'0');
+  $('#clock-time').textContent = `${p(d.getHours())}:${p(d.getMinutes())}`;
+  const wd = ['SUN','MON','TUE','WED','THU','FRI','SAT'][d.getDay()];
+  $('#clock-date').textContent = `${p(d.getMonth()+1)}·${p(d.getDate())} · ${wd}`;
+}
+setInterval(tickClock,1000);tickClock();
+
+/* ================================================================
+   10. APPS REGISTRY
+   ================================================================ */
+const APPS = [
+  { id:'explorer', label:'文件管理器', desc:'file explorer', icon:ICONS.explorer, run:()=>Apps.explorer('/Desktop') },
+  { id:'notepad', label:'记事本', desc:'text editor', icon:ICONS.notepad, run:()=>Apps.notepad() },
+  { id:'code', label:'代码编辑器', desc:'codemirror', icon:ICONS.code, run:()=>Apps.codeEditor() },
+  { id:'image', label:'图片查看器', desc:'image viewer', icon:ICONS.image, run:()=>toast('请双击图片打开','ok') },
+  { id:'media', label:'媒体播放器', desc:'audio/video', icon:ICONS.video, run:()=>toast('请双击媒体文件','ok') },
+  { id:'sheet', label:'表格', desc:'csv / tsv', icon:ICONS.table, run:()=>toast('请打开 CSV 文件','ok') },
+  { id:'browser', label:'网页浏览器', desc:'web browser', icon:ICONS.browser, run:()=>Apps.browser() },
+  { id:'calc', label:'计算器', desc:'calculator', icon:ICONS.calc, run:()=>Apps.calculator() },
+  { id:'paint', label:'画板', desc:'paint', icon:ICONS.paint, run:()=>Apps.paint() },
+  { id:'vm', label:'虚拟机', desc:'v86 dos/linux', icon:ICONS.vm, run:()=>Apps.v86() },
+  { id:'settings', label:'设置', desc:'preferences', icon:ICONS.settings, run:()=>Apps.settings() },
+];
+
+const Apps = {};
+
+/* ================================================================
+   10.1 FILE EXPLORER
+   ================================================================ */
+Apps.explorer = (startPath='/Desktop')=>{
+  const root = el('div','fe');
+  // sidebar
+  const side = el('div','fe-side');
+  const quick = [
+    {label:'桌面',path:'/Desktop',icon:ICONS.home},
+    {label:'文档',path:'/Documents',icon:ICONS.folder},
+    {label:'图片',path:'/Pictures',icon:ICONS.image},
+    {label:'音乐',path:'/Music',icon:ICONS.audio},
+  ];
+  side.appendChild(grp('快速访问'));
+  quick.forEach(q=>{
+    const n = el('div','node');
+    n.innerHTML = q.icon + `<span>${q.label}</span>`;
+    n.onclick = ()=>navigate(q.path);
+    side.appendChild(n);
+  });
+  side.appendChild(grp('挂载'));
+  const mountNode = el('div','node');
+  mountNode.innerHTML = ICONS.mount + `<span>挂载本地目录</span>`;
+  mountNode.onclick = mountLocalFolder;
+  side.appendChild(mountNode);
+  const mountsDiv = el('div','mounts');
+  side.appendChild(mountsDiv);
+  function grp(t){const g=el('div','grp',t);return g;}
+
+  // main
+  const main = el('div','fe-main');
+  const tb = el('div','fe-toolbar');
+  const bBack = el('button');bBack.innerHTML=ICONS.back;bBack.title='后退';
+  const bFwd = el('button');bFwd.innerHTML=ICONS.fwd;bFwd.title='前进';
+  const bUp = el('button');bUp.innerHTML=ICONS.up;bUp.title='上级';
+  const crumb = el('div','fe-breadcrumb');
+  const search = el('input','fe-search');search.placeholder='搜索...';
+  const bNewFolder = el('button');bNewFolder.innerHTML=ICONS.plus+' 新建';
+  const bUpload = el('button');bUpload.innerHTML=ICONS.upload;
+  tb.append(bBack,bFwd,bUp,crumb,search,bNewFolder,bUpload);
+
+  const list = el('div','fe-list view-list');
+  const status = el('div','fe-status');
+
+  main.append(tb,list,status);
+  root.append(side,main);
+
+  let cwd = startPath;
+  let history = [startPath], hIdx = 0;
+  let sortKey='name', sortAsc=true;
+  let viewMode='list';
+  let selected = new Set();
+  let clipboard = null;
+
+  async function navigate(path, pushHistory=true){
+    try{
+      const s = await fs.stat(path);
+      if(s.kind!=='dir'){ openItem(path); return; }
+      cwd = path;
+      if(pushHistory){
+        history = history.slice(0,hIdx+1);
+        history.push(path);hIdx=history.length-1;
+      }
+      render();
+    }catch(e){toast(e.message,'err');}
+  }
+  async function render(){
+    // update side active
+    side.querySelectorAll('.node').forEach(n=>n.classList.remove('active'));
+    // mounts list
+    mountsDiv.innerHTML='';
+    const mnts = fs.getMounts();
+    for(const [mp,m] of Object.entries(mnts)){
+      const n = el('div','node');
+      n.innerHTML = ICONS.folder+`<span>${m.name}</span>`;
+      n.onclick = ()=>navigate(mp);
+      if(cwd.startsWith(mp))n.classList.add('active');
+      mountsDiv.appendChild(n);
+    }
+    // breadcrumb
+    const parts = cwd.split('/').filter(Boolean);
+    crumb.innerHTML = `<span class="crumb" data-path="/">/</span>`;
+    let acc='/';
+    parts.forEach((p,i)=>{
+      acc += (acc==='/'?'':'/')+p;
+      const sep = el('span','sep','/');
+      const c = el('span','crumb',p);
+      c.dataset.path=acc;
+      c.onclick = ()=>navigate(acc);
+      crumb.append(sep,c);
+    });
+    // list
+    let items = await fs.readdir(cwd);
+    const q = search.value.trim().toLowerCase();
+    if(q) items = items.filter(i=>i.name.toLowerCase().includes(q));
+    // sort: folders first, then by key
+    items.sort((a,b)=>{
+      if(a.kind!==b.kind) return a.kind==='dir'?-1:1;
+      let av=a[sortKey], bv=b[sortKey];
+      if(sortKey==='name'){av=av.toLowerCase();bv=bv.toLowerCase();}
+      if(av<bv)return sortAsc?-1:1;if(av>bv)return sortAsc?1:-1;return 0;
+    });
+    list.innerHTML='';
+    const head = el('div','fe-head');
+    head.innerHTML = `<span class="col-name" data-k="name">名称 ${sortKey==='name'?(sortAsc?'▲':'▼'):''}</span><span class="col-date" data-k="mtime">修改日期 ${sortKey==='mtime'?(sortAsc?'▲':'▼'):''}</span><span class="col-type" data-k="type">类型 ${sortKey==='type'?(sortAsc?'▲':'▼'):''}</span><span class="col-size" data-k="size">大小 ${sortKey==='size'?(sortAsc?'▲':'▼'):''}</span>`;
+    head.querySelectorAll('[data-k]').forEach(h=>h.onclick=()=>{
+      const k = h.dataset.k;
+      if(sortKey===k) sortAsc=!sortAsc; else {sortKey=k;sortAsc=true;}
+      render();
+    });
+    list.appendChild(head);
+    items.forEach(it=>{
+      const d = el('div','fe-item');
+      d.dataset.path = it.path;
+      d.dataset.name = it.name;
+      d.dataset.isDir = it.kind==='dir'?'1':'0';
+      d.draggable = true;
+      const ext = (it.name.split('.').pop()||'').toLowerCase();
+      const typeLabel = it.kind==='dir'?'文件夹':(ext.toUpperCase()||'—');
+      d.innerHTML = iconFor(it.name,it.kind==='dir')+`<span class="n">${escapeHtml(it.name)}</span><span class="meta"><span>${fmtDate(it.mtime)}</span><span>${typeLabel}</span><span>${it.kind==='file'?fmtSize(it.size):'—'}</span></span>`;
+      // double click
+      d.addEventListener('dblclick',()=>{
+        if(it.kind==='dir') navigate(it.path);
+        else openItem(it.path);
+      });
+      // single click select
+      d.addEventListener('click',e=>{
+        e.stopPropagation();
+        if(e.ctrlKey||e.metaKey){
+          if(selected.has(it.name)){selected.delete(it.name);d.classList.remove('selected');}
+          else{selected.add(it.name);d.classList.add('selected');}
+        }else{
+          selected.clear();
+          list.querySelectorAll('.fe-item.selected').forEach(x=>x.classList.remove('selected'));
+          selected.add(it.name);d.classList.add('selected');
+        }
+        updateStatus(items);
+      });
+      // context menu
+      d.addEventListener('contextmenu',e=>{
+        e.preventDefault();e.stopPropagation();
+        if(!selected.has(it.name)){
+          selected.clear();list.querySelectorAll('.fe-item.selected').forEach(x=>x.classList.remove('selected'));
+          selected.add(it.name);d.classList.add('selected');
+        }
+        showFeContext(e.clientX,e.clientY,it);
+      });
+      // drag
+      d.addEventListener('dragstart',e=>{
+        e.dataTransfer.effectAllowed='copyMove';
+        e.dataTransfer.setData('application/x-inkstone-path', it.path);
+        // preload for drag-out (async preloaded on hover)
+        const cached = feDragCache.get(it.path);
+        if(cached && cached.file){
+          try{
+            e.dataTransfer.items.add(cached.file);
+            const url = cached.url || (cached.url=URL.createObjectURL(cached.file));
+            e.dataTransfer.setData('DownloadURL',`${cached.file.type||'application/octet-stream'}:${it.name}:${url}`);
+          }catch{}
+        }
+      });
+      d.addEventListener('dragover',e=>{
+        if(it.kind==='dir' && feDragSrc && feDragSrc!==it.path){
+          e.preventDefault();d.classList.add('drop-target');
+        }
+      });
+      d.addEventListener('dragleave',()=>d.classList.remove('drop-target'));
+      d.addEventListener('drop',async e=>{
+        e.preventDefault();e.stopPropagation();d.classList.remove('drop-target');
+        const src = e.dataTransfer.getData('application/x-inkstone-path');
+        if(src && it.kind==='dir' && src!==it.path){
+          try{await fs.rename(src,it.path+'/'+fs.base(src));render();}catch(err){toast(err.message,'err');}
+        }
+      });
+      // hover preload
+      d.addEventListener('mouseenter',async()=>{
+        if(it.kind==='file' && !feDragCache.has(it.path)){
+          try{
+            const f = await fs.readFile(it.path);
+            feDragCache.set(it.path,{file:new File([f],it.name,{type:f.type||'application/octet-stream'})});
+          }catch{}
+        }
+      });
+      list.appendChild(d);
+    });
+    // drop on list (move within)
+    list.ondragover = e=>{
+      if(!e.target.closest('.fe-item') && feDragSrc){e.preventDefault();}
+    };
+    list.ondrop = async e=>{
+      if(e.target.closest('.fe-item'))return;
+      const src = e.dataTransfer.getData('application/x-inkstone-path');
+      if(src){
+        const newP = cwd+'/'+fs.base(src);
+        if(fs.parent(src)!==cwd){
+          try{await fs.rename(src,newP);render();}catch(err){toast(err.message,'err');}
+        }
+        return;
+      }
+      // external drop
+      e.preventDefault();
+      const entries=[];
+      if(e.dataTransfer.items){
+        for(let i=0;i<e.dataTransfer.items.length;i++){
+          const entry = e.dataTransfer.items[i].webkitGetAsEntry?.();
+          if(entry)entries.push(entry);
+        }
+      }
+      if(entries.length){
+        for(const en of entries)await importEntry(en,cwd);
+        render();toast('导入完成');
+      }else if(e.dataTransfer.files?.length){
+        for(const f of e.dataTransfer.files){
+          const buf = await f.arrayBuffer();
+          await fs.writeFile(cwd+'/'+f.name, buf, f.type);
+        }
+        render();toast('导入完成');
+      }
+    };
+    list.onclick = e=>{
+      if(e.target===list){selected.clear();list.querySelectorAll('.fe-item.selected').forEach(x=>x.classList.remove('selected'));updateStatus(items);}
+    };
+    updateStatus(items);
+  }
+  function updateStatus(items){
+    status.textContent = `${items.length} 项${selected.size?` · 已选 ${selected.size} 项`:''} · ${cwd}`;
+  }
+
+  bBack.onclick = ()=>{if(hIdx>0){hIdx--;navigate(history[hIdx],false);}};
+  bFwd.onclick = ()=>{if(hIdx<history.length-1){hIdx++;navigate(history[hIdx],false);}};
+  bUp.onclick = ()=>{if(cwd!=='/')navigate(fs.parent(cwd));};
+  search.oninput = ()=>render();
+  bNewFolder.onclick = async()=>{
+    const n = await promptDialog('新建文件夹','新建文件夹');
+    if(!n)return;
+    await fs.mkdir(cwd+'/'+n);render();
+  };
+  bUpload.onclick = ()=>{
+    const inp = document.createElement('input');inp.type='file';inp.multiple=true;
+    inp.onchange = async()=>{
+      for(const f of inp.files){
+        const buf = await f.arrayBuffer();
+        await fs.writeFile(cwd+'/'+f.name, buf, f.type);
+      }
+      render();toast(`已上传 ${inp.files.length} 个文件`);
+    };
+    inp.click();
+  };
+
+  function showFeContext(x,y,it){
+    const names=[...selected];
+    CtxMenu.show(x,y,[
+      {label:'打开',action:()=>{if(it.kind==='dir')navigate(it.path);else openItem(it.path);}},
+      {label:'复制',action:()=>{clipboard={op:'copy',paths:names.map(n=>cwd+'/'+n)};}},
+      {label:'剪切',action:()=>{clipboard={op:'cut',paths:names.map(n=>cwd+'/'+n)};}},
+      {label:'粘贴',disabled:!clipboard,action:async()=>{
+        for(const p of clipboard.paths){
+          const dst = cwd+'/'+fs.base(p);
+          if(clipboard.op==='copy') await fs.copy(p,dst);
+          else {await fs.rename(p,dst);}
+        }
+        if(clipboard.op==='cut')clipboard=null;
+        render();
+      }},
+      '-',
+      {label:'重命名',action:async()=>{
+        const nn = await promptDialog('重命名',it.name);
+        if(!nn||nn===it.name)return;
+        try{await fs.rename(it.path,cwd+'/'+nn);render();}catch(e){toast(e.message,'err');}
+      }},
+      {label:'删除',action:async()=>{
+        if(await modal({title:'删除',body:`确定删除 ${names.length} 项？`,buttons:['取消','删除']})!==1)return;
+        for(const n of names){try{await fs.unlink(cwd+'/'+n);}catch{}}
+        render();
+      }},
+      '-',
+      {label:'下载',action:()=>names.forEach(n=>downloadFile(cwd+'/'+n))},
+    ]);
+  }
+
+  WM.create({title:fs.base(startPath)||'根目录',icon:ICONS.explorer,app:'explorer',width:720,height:480,content:root});
+  navigate(startPath);
+};
+const feDragCache = new Map();
+let feDragSrc = null;
+document.addEventListener('dragstart',e=>{
+  const p = e.dataTransfer.getData?.('application/x-inkstone-path');
+  if(p) feDragSrc = p;
+},true);
+document.addEventListener('dragend',()=>{feDragSrc=null;setTimeout(()=>feDragCache.clear(),5000);});
+
+/* ================================================================
+   10.2 NOTEPAD
+   ================================================================ */
+Apps.notepad = async (path)=>{
+  const root = el('div','np');
+  const tb = el('div','np-toolbar');
+  const pathLabel = el('span','path',path||'(未保存)');
+  const bNew = el('button','' ,'新建');
+  const bOpen = el('button','','打开');
+  const bSave = el('button','','保存');
+  const bSaveAs = el('button','','另存为');
+  const spacer = el('div','spacer');
+  tb.append(bNew,bOpen,bSave,bSaveAs,spacer,pathLabel);
+  const body = el('div','np-body');
+  const ta = el('textarea');
+  body.appendChild(ta);
+  const st = el('div','np-status');
+  root.append(tb,body,st);
+
+  let currentPath = path||null;
+  if(path){
+    try{ta.value = await fs.readFileAsText(path);}catch(e){toast(e.message,'err');}
+  }
+  const updateStatus = ()=>{
+    const v = ta.value;
+    const lines = v.split('\n').length;
+    st.textContent = `${lines} 行 · ${v.length} 字符 · ${currentPath||'未保存'}`;
+  };
+  ta.addEventListener('input',updateStatus);updateStatus();
+
+  bNew.onclick = ()=>{ta.value='';currentPath=null;pathLabel.textContent='(未保存)';updateStatus();};
+  bOpen.onclick = async()=>{
+    const inp = document.createElement('input');inp.type='file';
+    inp.onchange = async()=>{
+      const f = inp.files[0];if(!f)return;
+      const buf = await f.arrayBuffer();
+      await fs.writeFile('/Documents/'+f.name, buf, f.type);
+      currentPath = '/Documents/'+f.name;
+      ta.value = await fs.readFileAsText(currentPath);
+      pathLabel.textContent = currentPath;
+      updateStatus();
+    };
+    inp.click();
+  };
+  bSave.onclick = async()=>{
+    if(!currentPath){
+      const n = await promptDialog('保存为','新建文件.txt');
+      if(!n)return;
+      currentPath = '/Documents/'+n;
+    }
+    await fs.writeFile(currentPath, ta.value, 'text/plain');
+    pathLabel.textContent = currentPath;
+    toast('已保存');
+  };
+  bSaveAs.onclick = async()=>{
+    const n = await promptDialog('另存为',currentPath?fs.base(currentPath):'新建文件.txt');
+    if(!n)return;
+    currentPath = '/Documents/'+n;
+    await fs.writeFile(currentPath, ta.value, 'text/plain');
+    pathLabel.textContent = currentPath;
+    toast('已保存');
+  };
+
+  WM.create({title:path?fs.base(path):'记事本',app:'notepad',width:560,height:420,content:root});
+};
+
+/* ================================================================
+   10.3 CODE EDITOR (CodeMirror) — HTML live preview
+   ================================================================ */
+Apps.codeEditor = async (path)=>{
+  const root = el('div','np');
+  const tb = el('div','np-toolbar');
+  const pathLabel = el('span','path',path||'(未保存)');
+  const bSave = el('button','','保存');
+  const bOpen = el('button','','打开');
+  const bPreview = el('button','','浏览器中打开');
+  const spacer = el('div','spacer');
+  tb.append(bOpen,bSave,bPreview,spacer,pathLabel);
+  const body = el('div','np-body');
+  body.style.display='flex';
+  const editorHost = el('div');
+  editorHost.style.flex='1';editorHost.style.minWidth='0';editorHost.style.display='flex';editorHost.style.flexDirection='column';
+  body.appendChild(editorHost);
+
+  let currentPath = path||null;
+  let code = '';
+  if(path){
+    try{code = await fs.readFileAsText(path);}catch(e){toast(e.message,'err');}
+  }
+  const ext = (path||'').split('.').pop().toLowerCase();
+  const modeMap = {js:'javascript',json:'javascript',html:'htmlmixed',htm:'htmlmixed',css:'css',md:'markdown',xml:'xml',py:'python'};
+  const cm = CodeMirror(editorHost,{
+    value:code, mode: modeMap[ext] || 'text/plain',
+    theme:'monokai', lineNumbers:true, matchBrackets:true, autoCloseBrackets:true,
+    indentUnit:2, tabSize:2
+  });
+
+  // HTML preview pane
+  let previewPane = null;
+  function ensurePreview(){
+    if(previewPane) return;
+    previewPane = el('div','html-preview');
+    previewPane.style.borderLeft='1px solid var(--ink)';
+    previewPane.style.width='50%';
+    const iframe = document.createElement('iframe');
+    iframe.sandbox='allow-scripts';
+    previewPane.appendChild(iframe);
+    body.appendChild(previewPane);
+    cm.refresh();
+  }
+  function updatePreview(){
+    if(!previewPane) return;
+    const iframe = previewPane.querySelector('iframe');
+    const doc = iframe.contentDocument;
+    doc.open();doc.write(cm.getValue());doc.close();
+  }
+  const isHtml = ()=>['html','htm'].includes((currentPath||'').split('.').pop().toLowerCase());
+  if(isHtml()){ensurePreview();updatePreview();}
+  cm.on('change',()=>{
+    if(previewPane && isHtml()) updatePreview();
+  });
+
+  bSave.onclick = async()=>{
+    if(!currentPath){
+      const n = await promptDialog('保存为','untitled.html');
+      if(!n)return;
+      currentPath = '/Documents/'+n;
+    }
+    await fs.writeFile(currentPath, cm.getValue(), 'text/plain');
+    pathLabel.textContent = currentPath;
+    toast('已保存');
+    if(isHtml() && previewPane) updatePreview();
+  };
+  bOpen.onclick = ()=>{
+    const inp = document.createElement('input');inp.type='file';
+    inp.onchange = async()=>{
+      const f = inp.files[0];if(!f)return;
+      const buf = await f.arrayBuffer();
+      await fs.writeFile('/Documents/'+f.name, buf, f.type);
+      currentPath = '/Documents/'+f.name;
+      cm.setValue(await fs.readFileAsText(currentPath));
+      pathLabel.textContent = currentPath;
+      if(isHtml()){ensurePreview();updatePreview();}
+    };
+    inp.click();
+  };
+  bPreview.onclick = ()=>{
+    if(!isHtml()){ toast('仅支持 HTML 预览','err');return; }
+    // open in browser app with blob
+    const blob = new Blob([cm.getValue()],{type:'text/html'});
+    const url = URL.createObjectURL(blob);
+    Apps.browser(url);
+  };
+
+  WM.create({title:path?fs.base(path):'代码编辑器',app:'code',width:780,height:500,content:root});
+};
+
+/* ================================================================
+   10.4 IMAGE VIEWER
+   ================================================================ */
+Apps.imageViewer = async (path)=>{
+  const root = el('div','iv');
+  const tb = el('div','iv-toolbar');
+  const bZI = el('button','','+');
+  const bZO = el('button','','−');
+  const bR = el('button','','↻');
+  const info = el('div','info');
+  const bDown = el('button','','下载');
+  tb.append(bZI,bZO,bR,info,bDown);
+  const stage = el('div','iv-stage');
+  const img = document.createElement('img');
+  stage.appendChild(img);
+  root.append(tb,stage);
+
+  let scale=1, rot=0;
+  const f = await fs.readFile(path);
+  const url = URL.createObjectURL(f);
+  img.src = url;
+  img.onload = ()=>{ info.textContent = `${fs.base(path)} · ${img.naturalWidth}×${img.naturalHeight} · ${fmtSize(f.size)}`; };
+  bZI.onclick=()=>{scale=Math.min(5,scale*1.2);apply();};
+  bZO.onclick=()=>{scale=Math.max(.1,scale/1.2);apply();};
+  bR.onclick=()=>{rot=(rot+90)%360;apply();};
+  bDown.onclick=()=>downloadFile(path);
+  function apply(){img.style.transform=`scale(${scale}) rotate(${rot}deg)`;}
+
+  WM.create({title:fs.base(path),app:'image',width:600,height:480,content:root});
+};
+
+/* ================================================================
+   10.5 MEDIA PLAYER
+   ================================================================ */
+Apps.mediaPlayer = async (path)=>{
+  const root = el('div','mp');
+  const stage = el('div','mp-stage');
+  const f = await fs.readFile(path);
+  const ext = path.split('.').pop().toLowerCase();
+  const isAudio = ['mp3','wav','ogg','flac','aac','m4a'].includes(ext);
+  const url = URL.createObjectURL(f);
+  const el1 = document.createElement(isAudio?'audio':'video');
+  el1.src=url;el1.controls=true;el1.autoplay=true;
+  stage.appendChild(el1);
+  root.appendChild(stage);
+  WM.create({title:fs.base(path),app:'media',width:isAudio?380:640,height:isAudio?180:420,content:root});
+};
+
+/* ================================================================
+   10.6 PDF VIEWER
+   ============================================================ */
+Apps.pdfViewer = async (path)=>{
+  const root = el('div');root.style.height='100%';
+  const f = await fs.readFile(path);
+  const url = URL.createObjectURL(f);
+  const iframe = document.createElement('iframe');
+  iframe.src=url;iframe.style.width='100%';iframe.style.height='100%';iframe.style.border='none';
+  root.appendChild(iframe);
+  WM.create({title:fs.base(path),app:'pdf',width:700,height:560,content:root});
+};
+
+/* ================================================================
+   10.7 SPREADSHEET
+   ================================================================ */
+Apps.spreadsheet = async (path)=>{
+  const root = el('div','ss');
+  const tabs = el('div','ss-tabs');
+  const bTable = el('button','active','表格视图');
+  const bText = el('button','','文本视图');
+  const bSave = el('button','','保存');
+  const title = el('span');title.style.marginLeft='auto';title.style.fontFamily='var(--mono)';title.style.fontSize='11px';title.style.padding='6px';title.textContent=fs.base(path);
+  tabs.append(bTable,bText,bSave,title);
+  const body = el('div','ss-body');
+  root.append(tabs,body);
+
+  const delim = path.endsWith('.tsv')?'\t':',';
+  let raw = await fs.readFileAsText(path);
+
+  function renderTable(){
+    body.innerHTML='';
+    const rows = raw.split(/\r?\n/).filter(r=>r.length);
+    if(!rows.length)return;
+    const tbl = document.createElement('table');
+    const head = rows[0].split(delim);
+    const thead = document.createElement('thead');
+    const trh = document.createElement('tr');
+    head.forEach(h=>{const th=document.createElement('th');th.textContent=h;trh.appendChild(th);});
+    thead.appendChild(trh);tbl.appendChild(thead);
+    const tbody = document.createElement('tbody');
+    for(let i=1;i<rows.length;i++){
+      const cells = rows[i].split(delim);
+      const tr = document.createElement('tr');
+      for(let j=0;j<head.length;j++){
+        const td = document.createElement('td');td.textContent = cells[j]||'';
+        td.contentEditable='true';
+        td.onblur = ()=>{
+          const cs = [...tr.children].map(x=>x.textContent);
+          rows[i] = cs.join(delim);
+          raw = rows.join('\n');
+        };
+        tr.appendChild(td);
+      }
+      tbody.appendChild(tr);
+    }
+    tbl.appendChild(tbody);
+    body.appendChild(tbl);
+  }
+  function renderText(){
+    body.innerHTML='';
+    const ta = document.createElement('textarea');
+    ta.value=raw;
+    ta.oninput=()=>{raw=ta.value;};
+    body.appendChild(ta);
+  }
+  renderTable();
+  bTable.onclick=()=>{bTable.classList.add('active');bText.classList.remove('active');renderTable();};
+  bText.onclick=()=>{bText.classList.add('active');bTable.classList.remove('active');renderText();};
+  bSave.onclick=async()=>{await fs.writeFile(path, raw, 'text/plain');toast('已保存');};
+
+  WM.create({title:fs.base(path),app:'sheet',width:680,height:460,content:root});
+};
+
+/* ================================================================
+   10.8 CALCULATOR
+   ================================================================ */
+Apps.calculator = ()=>{
+  const root = el('div','calc');
+  const disp = el('div','calc-disp');
+  const sub = el('small','','');
+  const main = document.createElement('span');main.textContent='0';
+  disp.append(sub,main);
+  const grid = el('div','calc-grid');
+  const btns = ['C','±','%','÷','7','8','9','×','4','5','6','−','1','2','3','+','0','.','⌫','='];
+  let cur='0',prev=null,op=null,reset=false;
+  btns.forEach(b=>{
+    const bt = el('button','',b);
+    if('÷×−+'.includes(b))bt.classList.add('op');
+    if(b==='=')bt.classList.add('eq');
+    if(b==='C')bt.classList.add('clr');
+    bt.onclick=()=>handle(b);
+    grid.appendChild(bt);
+  });
+  root.append(disp,grid);
+  function handle(b){
+    if(b==='C'){cur='0';prev=null;op=null;sub.textContent='';}
+    else if(b==='⌫'){cur = cur.length>1?cur.slice(0,-1):'0';}
+    else if(b==='±'){cur = cur.startsWith('-')?cur.slice(1):'-'+cur;}
+    else if(b==='%'){cur = String(parseFloat(cur)/100);}
+    else if('÷×−+'.includes(b)){
+      if(op&&!reset){calc();}
+      prev = parseFloat(cur);op=b;reset=true;
+      sub.textContent = `${prev} ${b}`;
+    }else if(b==='='){
+      if(op){calc();op=null;sub.textContent='';}
+    }else if(b==='.'){
+      if(reset){cur='0';reset=false;}
+      if(!cur.includes('.'))cur+='.';
+    }else{
+      if(reset||cur==='0'){cur=b;reset=false;}else cur+=b;
+    }
+    main.textContent = cur;
+  }
+  function calc(){
+    const a=prev,b=parseFloat(cur);let r=0;
+    if(op==='+')r=a+b;else if(op==='−')r=a-b;else if(op==='×')r=a*b;else if(op==='÷')r=b===0?NaN:a/b;
+    cur = String(+r.toFixed(10));
+    prev=r;reset=true;
+  }
+  WM.create({title:'计算器',app:'calc',width:280,height:400,content:root});
+};
+
+/* ================================================================
+   10.9 PAINT
+   ================================================================ */
+Apps.paint = ()=>{
+  const root = el('div','paint');
+  const tb = el('div','paint-toolbar');
+  const colorInp = document.createElement('input');colorInp.type='color';colorInp.value='#141210';
+  const sizeInp = document.createElement('input');sizeInp.type='range';sizeInp.min=1;sizeInp.max=50;sizeInp.value=3;
+  const bClear = el('button','','清空');
+  const bSave = el('button','','保存到图片');
+  const bEraser = el('button','','橡皮');
+  tb.append(colorInp,sizeInp,bEraser,bClear,bSave);
+  const stage = el('div','paint-stage');
+  const c = document.createElement('canvas');
+  c.width=800;c.height=500;
+  stage.appendChild(c);
+  root.append(tb,stage);
+  const ctx = c.getContext('2d');
+  ctx.fillStyle='white';ctx.fillRect(0,0,c.width,c.height);
+  let drawing=false, lastX=0,lastY=0, eraser=false;
+  const pos = e=>{
+    const r = c.getBoundingClientRect();
+    const x = (e.touches?e.touches[0].clientX:e.clientX)-r.left;
+    const y = (e.touches?e.touches[0].clientY:e.clientY)-r.top;
+    return {x:x*c.width/r.width, y:y*c.height/r.height};
+  };
+  const start = e=>{drawing=true;const p=pos(e);lastX=p.x;lastY=p.y;e.preventDefault();};
+  const move = e=>{
+    if(!drawing)return;
+    const p = pos(e);
+    ctx.strokeStyle = eraser?'white':colorInp.value;
+    ctx.lineWidth = sizeInp.value;ctx.lineCap='round';ctx.lineJoin='round';
+    ctx.beginPath();ctx.moveTo(lastX,lastY);ctx.lineTo(p.x,p.y);ctx.stroke();
+    lastX=p.x;lastY=p.y;
+    e.preventDefault();
+  };
+  const end = ()=>{drawing=false;};
+  c.addEventListener('mousedown',start);c.addEventListener('mousemove',move);window.addEventListener('mouseup',end);
+  c.addEventListener('touchstart',start);c.addEventListener('touchmove',move);c.addEventListener('touchend',end);
+  bClear.onclick=()=>{ctx.fillStyle='white';ctx.fillRect(0,0,c.width,c.height);};
+  bEraser.onclick=()=>{eraser=!eraser;bEraser.style.background=eraser?'var(--ink)':'';bEraser.style.color=eraser?'var(--paper)':'';};
+  bSave.onclick=async()=>{
+    const n = await promptDialog('保存文件名','画板.png');if(!n)return;
+    c.toBlob(async b=>{
+      await fs.writeFile('/Pictures/'+n, b, 'image/png');
+      toast('已保存到 /Pictures/'+n);
+      // shortcut on desktop
+      await fs.copy('/Pictures/'+n,'/Desktop/'+n);
+      Desktop.render();
+    });
+  };
+  WM.create({title:'画板',app:'paint',width:880,height:600,content:root});
+};
+
+/* ================================================================
+   10.10 BROWSER
+   ================================================================ */
+Apps.browser = (startUrl='https://duckduckgo.com')=>{
+  const root = el('div','wb');
+  const bar = el('div','wb-bar');
+  const bBack = el('button','','◀');
+  const bFwd = el('button','','▶');
+  const bReload = el('button','','↻');
+  const addr = document.createElement('input');addr.value=startUrl;
+  const bGo = el('button','','前往');
+  bar.append(bBack,bFwd,bReload,addr,bGo);
+  const stage = el('div','wb-stage');
+  const iframe = document.createElement('iframe');
+  iframe.sandbox='allow-scripts allow-forms allow-same-origin allow-popups';
+  iframe.src=startUrl;
+  stage.appendChild(iframe);
+  root.append(bar,stage);
+  bGo.onclick=()=>{let u=addr.value.trim();if(!/^https?:\/\//.test(u))u='https://'+u;iframe.src=u;};
+  addr.onkeydown=e=>{if(e.key==='Enter')bGo.click();};
+  bReload.onclick=()=>{iframe.src=iframe.src;};
+  bBack.onclick=()=>{try{iframe.contentWindow.history.back();}catch{}};
+  bFwd.onclick=()=>{try{iframe.contentWindow.history.forward();}catch{}};
+  WM.create({title:'网页浏览器',app:'browser',width:820,height:560,content:root});
+};
+
+/* ================================================================
+   10.11 UNZIP
+   ================================================================ */
+Apps.unzip = async (path)=>{
+  const name = fs.base(path);
+  const target = fs.parent(path)+'/'+name.replace(/\.(zip|gz|tgz|tar)$/i,'');
+  await fs.mkdir(target);
+  toast('正在解压 '+name);
+  try{
+    const f = await fs.readFile(path);
+    const buf = await f.arrayBuffer();
+    if(typeof JSZip==='undefined') throw new Error('JSZip 未加载');
+    const zip = await JSZip.loadAsync(buf);
+    let count=0;
+    for(const [rel, entry] of Object.entries(zip.files)){
+      if(entry.dir){
+        await fs.mkdir(target+'/'+rel);
+      }else{
+        const blob = await entry.async('blob');
+        await fs.writeFile(target+'/'+rel, blob);
+        count++;
+      }
+    }
+    toast(`解压完成 · ${count} 个文件`);
+    Apps.explorer(target);
+    Desktop.render();
+  }catch(e){toast('解压失败: '+e.message,'err',5000);}
+};
+
+/* ================================================================
+   10.12 SETTINGS
+   ================================================================ */
+Apps.settings = (section='general')=>{
+  const root = el('div','settings');
+  const side = el('div','set-side');
+  const main = el('div','set-main');
+  root.append(side,main);
+  const sections = [
+    {id:'general',label:'通用'},
+    {id:'wallpaper',label:'壁纸'},
+    {id:'storage',label:'存储'},
+    {id:'mounts',label:'挂载'},
+    {id:'about',label:'关于'},
+  ];
+  sections.forEach(s=>{
+    const it = el('div','item'+(s.id===section?' active':''),s.label);
+    it.onclick = ()=>{renderSection(s.id);side.querySelectorAll('.item').forEach(x=>x.classList.remove('active'));it.classList.add('active');};
+    side.appendChild(it);
+  });
+
+  function renderSection(id){
+    main.innerHTML='';
+    if(id==='general'){
+      main.innerHTML = `<h2>通用</h2><div class="sub">preferences</div>`;
+      const card = el('div','set-card');
+      card.innerHTML = `<h3>系统</h3>`;
+      const r1 = el('div','set-row');
+      r1.innerHTML = `<label>语言</label><select><option>简体中文</option><option>English</option></select>`;
+      card.appendChild(r1);
+      const r2 = el('div','set-row');
+      r2.innerHTML = `<label>OPFS 状态</label><span>${fs.opfsAvailable?'✓ 已启用':'✗ 降级到 IndexedDB'}</span>`;
+      card.appendChild(r2);
+      main.appendChild(card);
+    }
+    if(id==='wallpaper'){
+      main.innerHTML = `<h2>壁纸</h2><div class="sub">wallpaper</div>`;
+      const card = el('div','set-card');
+      card.innerHTML = `<h3>内置壁纸</h3>`;
+      const grid = el('div','wp-grid');
+      wallpapers.forEach((wp,i)=>{
+        const it = el('div','wp-item');
+        it.style.background = wp.css;
+        it.onclick=()=>{applyWallpaper(wp);grid.querySelectorAll('.wp-item').forEach(x=>x.classList.remove('active'));it.classList.add('active');};
+        grid.appendChild(it);
+      });
+      card.appendChild(grid);
+      main.appendChild(card);
+
+      const card2 = el('div','set-card');
+      card2.innerHTML = `<h3>自定义壁纸</h3>`;
+      const b = el('button','set-btn','上传图片');
+      b.onclick=()=>{
+        $('#wallpaper-pick').click();
+      };
+      const bClr = el('button','set-btn','清除壁纸');
+      bClr.onclick=()=>{localStorage.removeItem('wallpaper');document.getElementById('desktop').style.backgroundImage='';document.getElementById('desktop').classList.remove('has-wallpaper');};
+      card2.append(b,bClr);
+      main.appendChild(card2);
+    }
+    if(id==='storage'){
+      main.innerHTML = `<h2>存储</h2><div class="sub">storage usage</div>`;
+      const card = el('div','set-card');
+      card.innerHTML = `<h3>使用情况</h3><div id="st-info">加载中...</div>`;
+      main.appendChild(card);
+      const card2 = el('div','set-card');
+      const resetBtn = el('button','set-btn danger','一键重置系统');
+      resetBtn.onclick = async()=>{
+        if(await modal({title:'⚠ 危险操作',body:'这将删除所有虚拟文件、设置与壁纸。本地挂载不受影响。确认？',buttons:['取消','重置']})!==1)return;
+        await fs.reset();
+        Desktop.render();
+        toast('系统已重置','ok');
+      };
+      card2.innerHTML='<h3>重置</h3>';
+      card2.appendChild(resetBtn);
+      main.appendChild(card2);
+      // async usage
+      fs.usage().then(u=>{
+        const total = u.total||1;
+        const pct = (u.used/total*100).toFixed(2);
+        const b = u.breakdown;
+        const sum = b.app+b.doc+b.img+b.other || 1;
+        card.querySelector('#st-info').innerHTML = `
+          <div style="font-family:var(--serif);font-size:32px;font-weight:600;margin-bottom:4px;">${fmtSize(u.used)} <span style="font-size:14px;color:var(--ink-mute);">/ ${fmtSize(u.total)} · ${pct}%</span></div>
+          <div class="storage-bar">
+            <div class="storage-seg app" style="left:0;width:${b.app/total*100}%"></div>
+            <div class="storage-seg doc" style="left:${b.app/total*100}%;width:${b.doc/total*100}%"></div>
+            <div class="storage-seg img" style="left:${(b.app+b.doc)/total*100}%;width:${b.img/total*100}%"></div>
+            <div class="storage-seg other" style="left:${(b.app+b.doc+b.img)/total*100}%;width:${b.other/total*100}%"></div>
+          </div>
+          <div class="storage-legend">
+            <span class="app">应用 ${fmtSize(b.app)}</span>
+            <span class="doc">文档 ${fmtSize(b.doc)}</span>
+            <span class="img">图片 ${fmtSize(b.img)}</span>
+            <span class="other">其他 ${fmtSize(b.other)}</span>
+          </div>`;
+      });
+    }
+    if(id==='mounts'){
+      main.innerHTML = `<h2>挂载</h2><div class="sub">mounted folders</div>`;
+      const card = el('div','set-card');
+      card.innerHTML = `<h3>本地文件夹</h3>`;
+      const list = el('div');
+      const mnts = fs.getMounts();
+      if(!Object.keys(mnts).length){
+        list.innerHTML = `<div style="color:var(--ink-mute);font-size:11px;font-family:var(--mono);">暂无挂载</div>`;
+      }
+      for(const [mp,m] of Object.entries(mnts)){
+        const row = el('div','set-row');
+        row.innerHTML = `<label>${m.name}</label><span style="flex:1;font-family:var(--mono);font-size:11px;">${mp}</span>`;
+        const bOpen = el('button','set-btn','打开');bOpen.onclick=()=>Apps.explorer(mp);
+        const bUn = el('button','set-btn danger','卸载');bUn.onclick=async()=>{await fs.unmountLocal(mp);renderSection('mounts');Desktop.render();};
+        row.append(bOpen,bUn);
+        list.appendChild(row);
+      }
+      card.appendChild(list);
+      const bAdd = el('button','set-btn','挂载新文件夹');
+      bAdd.onclick = async()=>{await mountLocalFolder();renderSection('mounts');};
+      card.appendChild(bAdd);
+      main.appendChild(card);
+    }
+    if(id==='about'){
+      main.innerHTML = `
+        <h2>硯 OS</h2>
+        <div class="sub">inkstone web desktop · v1.0</div>
+        <div class="set-card"><h3>关于</h3>
+          <p style="font-family:var(--serif);font-size:16px;font-style:italic;line-height:1.6;">
+            一方砚台，承载文件、应用与记忆。<br>
+            基于浏览器原生 OPFS 持久化，零后端，单文件交付。
+          </p>
+          <div style="margin-top:14px;font-family:var(--mono);font-size:11px;color:var(--ink-mute);">
+            · OPFS 虚拟文件系统<br>
+            · File System Access API 挂载<br>
+            · HTML5 原生拖拽（双向导入/导出）<br>
+            · JSZip 解压 · CodeMirror 编辑 · v86 虚拟机<br>
+          </div>
+        </div>`;
+    }
+  }
+  renderSection(section);
+  WM.create({title:'设置',app:'settings',width:680,height:500,content:root});
+};
+
+/* ================================================================
+   10.13 V86
+   ================================================================ */
+Apps.v86 = ()=>{
+  const root = el('div','v86');
+  const bar = el('div','v86-bar');
+  const sel = document.createElement('select');
+  sel.innerHTML = `<option value="">选择系统...</option>
+    <option value="freedos">FreeDOS</option>
+    <option value="linux">Linux (Buildroot)</option>
+    <option value="win95">Windows 95 (需下载)</option>`;
+  const bStart = el('button','','启动');
+  const bStop = el('button','','停止');
+  const bFile = el('button','','从文件启动');
+  const status = el('span');status.style.marginLeft='auto';status.style.fontFamily='var(--mono)';status.style.fontSize='10px';status.style.color='var(--ink-mute)';
+  status.textContent='未启动';
+  bar.append(sel,bStart,bStop,bFile,status);
+  const stage = el('div','v86-stage');
+  const screen = document.createElement('div');
+  screen.className='screen_container';
+  screen.style.display='inline-block';
+  const textDiv = document.createElement('div');
+  textDiv.style.cssText='white-space:pre;font:14px monospace;line-height:14px;color:#fff;background:#000;';
+  const canvas = document.createElement('canvas');
+  screen.append(textDiv,canvas);
+  stage.appendChild(screen);
+  const foot = el('div','v86-status','v86 0.5.319 · 版本锁定 · 内存 128MB');
+  root.append(bar,stage,foot);
+
+  let emulator = null;
+  async function ensureLib(){
+    if(window.V86) return true;
+    status.textContent='正在加载 libv86.js...';
+    await new Promise((res,rej)=>{
+      const s = document.createElement('script');
+      s.src='https://cdn.jsdelivr.net/npm/v86@0.5.319/build/libv86.js';
+      s.onload=res;s.onerror=rej;
+      document.head.appendChild(s);
+    });
+    return !!window.V86;
+  }
+
+  bStart.onclick = async()=>{
+    const v = sel.value;
+    if(!v){toast('请选择系统','err');return;}
+    try{
+      await ensureLib();
+      status.textContent='正在启动...';
+      if(emulator){try{emulator.stop();}catch{} emulator=null;}
+      const opts = {
+        wasm_path:'https://cdn.jsdelivr.net/npm/v86@0.5.319/build/v86.wasm',
+        memory_size:128*1024*1024,
+        screen_container: screen,
+        bios:{url:'https://cdn.jsdelivr.net/gh/copy/v86@bbb2a5b4fd44e85d902792f9b93ec3e0d42e1b0f/bios/seabios.bin'},
+        vga_bios:{url:'https://cdn.jsdelivr.net/gh/copy/v86@bbb2a5b4fd44e85d902792f9b93ec3e0d42e1b0f/bios/vgabios.bin'},
+        autostart:true,
+      };
+      if(v==='freedos') opts.fda={url:'https://copy.sh/v86/images/freedos722.img'};
+      else if(v==='linux') opts.hda={url:'https://copy.sh/v86/images/buildroot-bzimage.bin'};
+      else if(v==='win95') opts.hda={url:'https://copy.sh/v86/images/windows95.img'};
+      emulator = new V86(opts);
+      status.textContent='运行中 · '+v;
+    }catch(e){status.textContent='启动失败: '+e.message;toast(e.message,'err');}
+  };
+  bStop.onclick = ()=>{if(emulator){try{emulator.stop();}catch{}emulator=null;status.textContent='已停止';}};
+  bFile.onclick = async()=>{
+    const inp = document.createElement('input');inp.type='file';inp.accept='.iso,.img,.bin';
+    inp.onchange = async()=>{
+      const f = inp.files[0];if(!f)return;
+      try{
+        await ensureLib();
+        status.textContent='从文件启动...';
+        const ext = f.name.split('.').pop().toLowerCase();
+        const mount = ext==='iso'?{cdrom:{buffer:await f.arrayBuffer()}}:(ext==='img'||ext==='bin'||ext==='fda'?{fda:{buffer:await f.arrayBuffer()}}:{hda:{buffer:await f.arrayBuffer()}});
+        if(emulator){try{emulator.stop();}catch{}}
+        emulator = new V86({
+          wasm_path:'https://cdn.jsdelivr.net/npm/v86@0.5.319/build/v86.wasm',
+          memory_size:128*1024*1024,
+          screen_container: screen,
+          bios:{url:'https://cdn.jsdelivr.net/gh/copy/v86@bbb2a5b4fd44e85d902792f9b93ec3e0d42e1b0f/bios/seabios.bin'},
+          vga_bios:{url:'https://cdn.jsdelivr.net/gh/copy/v86@bbb2a5b4fd44e85d902792f9b93ec3e0d42e1b0f/bios/vgabios.bin'},
+          autostart:true,
+          ...mount,
+        });
+        status.textContent='运行中 · '+f.name;
+      }catch(e){toast(e.message,'err');}
+    };
+    inp.click();
+  };
+
+  WM.create({title:'虚拟机 · v86',app:'vm',width:760,height:540,content:root});
+};
+
+/* ================================================================
+   11. WALLPAPER
+   ================================================================ */
+const wallpapers = [
+  { name:'朱砂墨', css:`radial-gradient(circle at 30% 40%, #C8402D 0%, #8C2A1C 40%, #141210 100%)` },
+  { name:'青瓷',   css:`linear-gradient(135deg, #3F5A4A 0%, #263A30 60%, #141210 100%)` },
+  { name:'旧黄铜', css:`radial-gradient(ellipse at 50% 30%, #D8B872 0%, #8C6A2C 60%, #141210 100%)` },
+  { name:'宣纸',   css:`linear-gradient(180deg, #EDE4D0 0%, #D8CDB0 100%)` },
+  { name:'夜空',   css:`radial-gradient(ellipse at 70% 30%, #2B2A4A 0%, #0A0814 100%)` },
+  { name:'墨痕',   css:`linear-gradient(120deg, #141210 0%, #2B2723 50%, #4A453B 100%)` },
+];
+function applyWallpaper(wp){
+  const d = $('#desktop');
+  if(wp.url){
+    d.style.backgroundImage = `url(${wp.url})`;
+  }else{
+    d.style.backgroundImage = wp.css;
+  }
+  d.classList.add('has-wallpaper');
+  try{localStorage.setItem('wallpaper',JSON.stringify(wp));}catch{}
+}
+$('#wallpaper-pick').addEventListener('change',async e=>{
+  const f = e.target.files[0];if(!f)return;
+  const buf = await f.arrayBuffer();
+  await fs.writeFile('/Pictures/wallpaper_'+f.name, buf, f.type);
+  // also store as base64 for wallpaper ref
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    applyWallpaper({url:reader.result});
+    toast('已设为壁纸');
+  };
+  reader.readAsDataURL(f);
+  e.target.value='';
+});
+function restoreWallpaper(){
+  try{
+    const w = JSON.parse(localStorage.getItem('wallpaper')||'null');
+    if(w) applyWallpaper(w);
+  }catch{}
+}
+
+/* ================================================================
+   12. SEED DEMO FILES
+   ================================================================ */
+async function seedIfEmpty(){
+  const items = await fs.readdir('/Desktop');
+  if(items.length>0) return;
+  await fs.writeFile('/Desktop/欢迎.txt', `硯 OS · 欢迎\n\n这是一个运行在浏览器里的桌面系统。\n所有文件持久化存储在 OPFS 中。\n\n你可以：\n- 右键桌面：新建、上传、全屏\n- 双击图标：打开文件\n- 拖动图标：重新排列\n- 拖动文件到桌面：导入\n- 拖动图标到浏览器外：导出下载\n\n点击左下角的「硯」按钮查看所有应用。\n\n— inkstone, 2026`, 'text/plain');
+  await fs.writeFile('/Documents/demo.html', `<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{font-family:serif;background:#EDE4D0;padding:40px;color:#141210;}h1{font-style:italic;border-bottom:2px solid #C8402D;display:inline-block;}</style></head><body><h1>你好，世界</h1><p>这是从硯 OS 代码编辑器实时预览的 HTML。</p></body></html>`, 'text/html');
+  await fs.writeFile('/Documents/notes.md', `# 笔记\n\n- OPFS 持久化\n- File System Access 挂载\n- 拖拽导入/导出\n`, 'text/markdown');
+  await fs.writeFile('/Documents/data.csv', `姓名,年龄,城市\n张三,28,北京\n李四,32,上海\n王五,25,深圳\n`, 'text/csv');
+}
+
+/* ================================================================
+   13. BOOT
+   ================================================================ */
+(async function main(){
+  try{
+    await fs.init();
+    await seedIfEmpty();
+    restoreWallpaper();
+    setupDesktopEvents();
+    buildStartMenu();
+    await Desktop.render();
+    // hide boot
+    await sleep(2000);
+    const b = $('#boot');
+    b.style.opacity=0;
+    setTimeout(()=>b.remove(),800);
+    // welcome toast once
+    if(!sessionStorage.getItem('welcomed')){
+      setTimeout(()=>toast('硯 OS 已就绪 · 点击左下角「硯」开始'),600);
+      sessionStorage.setItem('welcomed','1');
+    }
+  }catch(e){
+    console.error(e);
+    $('#boot .tagline').textContent = '启动失败：'+e.message;
+  }
+})();
+
+// Prevent default context menu on document
+document.addEventListener('contextmenu',e=>{
+  if(e.target.closest('#desktop') || e.target.closest('.win')) e.preventDefault();
+});
+
+</script>
+</body>
+</html>
