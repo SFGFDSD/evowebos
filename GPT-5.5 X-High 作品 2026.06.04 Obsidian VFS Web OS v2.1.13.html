@@ -1,0 +1,4085 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Obsidian VFS Web OS</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://unpkg.com/jszip@3.10.1/dist/jszip.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=ZCOOL+XiaoWei&display=swap"
+      rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+    <link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material-darker.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/xml/xml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/css/css.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/htmlmixed/htmlmixed.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/markdown/markdown.min.js"></script>
+    <script type="module">
+      import SevenZip from 'https://cdn.jsdelivr.net/npm/7z-wasm@1.2.0/7zz.es6.min.js';
+      window.SevenZip = SevenZip;
+      window.dispatchEvent(new CustomEvent('sevenzip-ready'));
+
+    </script>
+    <style>
+      :root {
+        --ink: #08100f;
+        --ink-2: #101a18;
+        --panel: rgba(15, 25, 23, .78);
+        --panel-strong: rgba(12, 18, 17, .94);
+        --paper: #e7dec1;
+        --muted: #a99d78;
+        --line: rgba(231, 222, 193, .18);
+        --line-strong: rgba(231, 222, 193, .34);
+        --acid: #c8ff44;
+        --cyan: #48f2cd;
+        --red: #ff704d;
+        --amber: #f5bd4f;
+        --violet: #9585ff;
+        --shadow: 0 28px 90px rgba(0, 0, 0, .48);
+        --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+        --display: "ZCOOL XiaoWei", "Songti SC", serif;
+        --taskbar: 76px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+      }
+
+      body {
+        margin: 0;
+        color: var(--paper);
+        background: var(--ink);
+        font-family: var(--display);
+        user-select: none;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      button,
+      input,
+      textarea,
+      select {
+        font: inherit;
+      }
+
+      textarea,
+      input {
+        user-select: text;
+      }
+
+      ::selection {
+        color: var(--ink);
+        background: var(--acid);
+      }
+
+      #desktop {
+        position: fixed;
+        inset: 0;
+        overflow: hidden;
+        background-color: var(--ink);
+        background-size: cover;
+        background-position: center;
+        transition: background-image .7s ease, filter .35s ease;
+      }
+
+      #desktop::before,
+      #desktop::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+      }
+
+      #desktop::before {
+        background:
+          radial-gradient(circle at 22% 14%, rgba(72, 242, 205, .18), transparent 32%),
+          radial-gradient(circle at 82% 24%, rgba(200, 255, 68, .12), transparent 28%),
+          linear-gradient(115deg, rgba(8, 16, 15, .25), rgba(8, 16, 15, .78) 58%);
+        mix-blend-mode: screen;
+      }
+
+      #desktop::after {
+        opacity: .34;
+        background-image:
+          linear-gradient(rgba(231, 222, 193, .07) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(231, 222, 193, .045) 1px, transparent 1px),
+          repeating-linear-gradient(0deg, rgba(255, 255, 255, .025) 0 1px, transparent 1px 4px);
+        background-size: 96px 96px, 96px 96px, 100% 4px;
+      }
+
+      .wallpaper-lacquer {
+        background-image:
+          radial-gradient(circle at 18% 20%, rgba(255, 112, 77, .24), transparent 31%),
+          radial-gradient(circle at 80% 30%, rgba(200, 255, 68, .16), transparent 30%),
+          linear-gradient(135deg, #07110f 0%, #10211d 44%, #0a0c0b 100%);
+      }
+
+      .wallpaper-blueprint {
+        background-image:
+          radial-gradient(circle at 74% 20%, rgba(72, 242, 205, .2), transparent 30%),
+          linear-gradient(130deg, #05111c, #0f2b31 48%, #071012);
+      }
+
+      .wallpaper-paper {
+        background-image:
+          radial-gradient(circle at 28% 18%, rgba(245, 189, 79, .18), transparent 28%),
+          radial-gradient(circle at 85% 68%, rgba(149, 133, 255, .15), transparent 34%),
+          linear-gradient(135deg, #211910, #0f1714 58%, #07100f);
+      }
+
+      #boot {
+        position: fixed;
+        inset: 0;
+        z-index: 10000;
+        display: grid;
+        place-items: center;
+        background:
+          radial-gradient(circle at 50% 42%, rgba(200, 255, 68, .18), transparent 30%),
+          #050909;
+        transition: opacity .6s ease, visibility .6s ease;
+      }
+
+      #boot.ready {
+        opacity: 0;
+        visibility: hidden;
+      }
+
+      .boot-card {
+        width: min(560px, 86vw);
+        padding: 36px;
+        border: 1px solid var(--line-strong);
+        background: rgba(8, 16, 15, .72);
+        box-shadow: var(--shadow);
+        clip-path: polygon(0 0, calc(100% - 34px) 0, 100% 34px, 100% 100%, 34px 100%, 0 calc(100% - 34px));
+        animation: bootIn .85s cubic-bezier(.2, .9, .2, 1) both;
+      }
+
+      .boot-title {
+        font-size: clamp(34px, 8vw, 78px);
+        letter-spacing: .06em;
+        line-height: .9;
+      }
+
+      .boot-bar {
+        height: 2px;
+        background: rgba(231, 222, 193, .15);
+        margin-top: 28px;
+        overflow: hidden;
+      }
+
+      .boot-bar span {
+        display: block;
+        height: 100%;
+        width: 55%;
+        background: var(--acid);
+        animation: scan 1.4s ease-in-out infinite;
+      }
+
+      @keyframes bootIn {
+        from {
+          opacity: 0;
+          transform: translateY(20px) scale(.96);
+        }
+
+        to {
+          opacity: 1;
+          transform: none;
+        }
+      }
+
+      @keyframes scan {
+        0% {
+          transform: translateX(-105%);
+        }
+
+        100% {
+          transform: translateX(205%);
+        }
+      }
+
+      #iconsLayer {
+        position: absolute;
+        inset: 18px 10px var(--taskbar) 10px;
+        z-index: 2;
+      }
+
+      .desktop-icon {
+        position: absolute;
+        width: 92px;
+        min-height: 106px;
+        display: grid;
+        justify-items: center;
+        align-content: start;
+        gap: 7px;
+        padding: 9px 7px;
+        color: var(--paper);
+        border: 1px solid transparent;
+        background: transparent;
+        border-radius: 18px;
+        cursor: grab;
+        touch-action: none;
+        transition: transform .22s cubic-bezier(.2, .9, .2, 1), background .22s ease, border-color .22s ease, filter .22s ease;
+        animation: iconRise .48s cubic-bezier(.18, .9, .24, 1.08) both;
+      }
+
+      .desktop-icon:active {
+        cursor: grabbing;
+      }
+
+      .desktop-icon:hover,
+      .desktop-icon.selected {
+        background: rgba(231, 222, 193, .08);
+        border-color: rgba(200, 255, 68, .38);
+        filter: drop-shadow(0 14px 26px rgba(0, 0, 0, .35));
+      }
+
+      .desktop-icon.dragging {
+        opacity: .55;
+        transform: scale(.96);
+      }
+
+      .desktop-icon svg {
+        width: 48px;
+        height: 48px;
+        filter: drop-shadow(0 10px 18px rgba(0, 0, 0, .38));
+      }
+
+      .desktop-icon .icon-name {
+        max-width: 88px;
+        padding: 2px 5px;
+        line-height: 1.18;
+        text-align: center;
+        font-size: 13px;
+        color: var(--paper);
+        text-shadow: 0 2px 10px #000;
+        overflow-wrap: anywhere;
+        border-radius: 9px;
+      }
+
+      @keyframes iconRise {
+        from {
+          opacity: 0;
+          transform: translateY(18px) scale(.92);
+        }
+
+        to {
+          opacity: 1;
+          transform: none;
+        }
+      }
+
+      #selectionBox {
+        position: fixed;
+        z-index: 6000;
+        display: none;
+        border: 1px solid var(--acid);
+        background: rgba(200, 255, 68, .12);
+        pointer-events: none;
+      }
+
+      #windows {
+        position: absolute;
+        inset: 0 0 var(--taskbar) 0;
+        pointer-events: none;
+        z-index: 10;
+      }
+
+      .window {
+        position: absolute;
+        min-width: 320px;
+        min-height: 230px;
+        display: grid;
+        grid-template-rows: 42px minmax(0, 1fr);
+        color: var(--paper);
+        background: var(--panel);
+        border: 1px solid var(--line-strong);
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(22px) saturate(135%);
+        pointer-events: auto;
+        overflow: hidden;
+        clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px));
+        animation: windowOpen .28s cubic-bezier(.2, .9, .25, 1.08) both;
+      }
+
+      .window.minimized {
+        display: none;
+      }
+
+      .window.maximized {
+        left: 8px !important;
+        top: 8px !important;
+        width: calc(100vw - 16px) !important;
+        height: calc(100vh - var(--taskbar) - 16px) !important;
+      }
+
+      @keyframes windowOpen {
+        from {
+          opacity: 0;
+          transform: translateY(18px) scale(.985);
+        }
+
+        to {
+          opacity: 1;
+          transform: none;
+        }
+      }
+
+      .titlebar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 0 10px 0 14px;
+        background: linear-gradient(90deg, rgba(231, 222, 193, .12), rgba(8, 16, 15, .2));
+        border-bottom: 1px solid var(--line);
+        cursor: move;
+        touch-action: none;
+      }
+
+      .title-left {
+        min-width: 0;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .title-left svg {
+        width: 21px;
+        height: 21px;
+      }
+
+      .title-text {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        letter-spacing: .03em;
+      }
+
+      .win-actions {
+        display: flex;
+        gap: 6px;
+      }
+
+      .win-action,
+      .tool-btn,
+      .dock-btn,
+      .menu-btn,
+      .small-btn {
+        color: var(--paper);
+        border: 1px solid var(--line);
+        background: rgba(231, 222, 193, .06);
+        cursor: pointer;
+        transition: transform .18s ease, border-color .18s ease, background .18s ease, color .18s ease;
+      }
+
+      .win-action {
+        width: 30px;
+        height: 28px;
+        display: grid;
+        place-items: center;
+      }
+
+      .win-action:hover,
+      .tool-btn:hover,
+      .dock-btn:hover,
+      .menu-btn:hover,
+      .small-btn:hover {
+        transform: translateY(-1px);
+        border-color: rgba(200, 255, 68, .52);
+        background: rgba(200, 255, 68, .12);
+      }
+
+      .win-action svg {
+        width: 15px;
+        height: 15px;
+      }
+
+      .window-content {
+        min-height: 0;
+        overflow: hidden;
+        background: rgba(6, 10, 10, .18);
+      }
+
+      .resize-handle {
+        position: absolute;
+        z-index: 4;
+      }
+
+      .resize-n {
+        top: -4px;
+        left: 12px;
+        right: 12px;
+        height: 8px;
+        cursor: ns-resize;
+      }
+
+      .resize-s {
+        bottom: -4px;
+        left: 12px;
+        right: 12px;
+        height: 8px;
+        cursor: ns-resize;
+      }
+
+      .resize-e {
+        right: -4px;
+        top: 12px;
+        bottom: 12px;
+        width: 8px;
+        cursor: ew-resize;
+      }
+
+      .resize-w {
+        left: -4px;
+        top: 12px;
+        bottom: 12px;
+        width: 8px;
+        cursor: ew-resize;
+      }
+
+      .resize-ne {
+        right: -5px;
+        top: -5px;
+        width: 18px;
+        height: 18px;
+        cursor: nesw-resize;
+      }
+
+      .resize-nw {
+        left: -5px;
+        top: -5px;
+        width: 18px;
+        height: 18px;
+        cursor: nwse-resize;
+      }
+
+      .resize-se {
+        right: -5px;
+        bottom: -5px;
+        width: 18px;
+        height: 18px;
+        cursor: nwse-resize;
+      }
+
+      .resize-sw {
+        left: -5px;
+        bottom: -5px;
+        width: 18px;
+        height: 18px;
+        cursor: nesw-resize;
+      }
+
+      #taskbar {
+        position: fixed;
+        left: 12px;
+        right: 12px;
+        bottom: 12px;
+        z-index: 7000;
+        height: 52px;
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 7px;
+        color: var(--paper);
+        background: rgba(7, 12, 11, .72);
+        border: 1px solid var(--line-strong);
+        box-shadow: 0 20px 60px rgba(0, 0, 0, .45);
+        backdrop-filter: blur(18px) saturate(130%);
+        clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px));
+      }
+
+      .dock-btn {
+        height: 38px;
+        min-width: 42px;
+        padding: 0 12px;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .dock-btn svg {
+        width: 20px;
+        height: 20px;
+        flex: none;
+      }
+
+      #taskButtons {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        gap: 7px;
+        overflow: auto;
+        scrollbar-width: none;
+      }
+
+      #taskButtons::-webkit-scrollbar {
+        display: none;
+      }
+
+      .task-btn {
+        max-width: 170px;
+      }
+
+      .task-btn.min {
+        opacity: .55;
+      }
+
+      #clock {
+        font-family: var(--mono);
+        font-size: 12px;
+        color: var(--muted);
+        padding: 0 9px;
+        white-space: nowrap;
+      }
+
+      #startMenu {
+        position: fixed;
+        left: 18px;
+        bottom: 74px;
+        z-index: 8000;
+        width: min(460px, calc(100vw - 36px));
+        max-height: min(620px, calc(100vh - 110px));
+        display: none;
+        grid-template-rows: auto auto minmax(0, 1fr);
+        gap: 14px;
+        padding: 18px;
+        background: rgba(8, 16, 15, .9);
+        border: 1px solid var(--line-strong);
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(24px);
+        clip-path: polygon(0 0, calc(100% - 22px) 0, 100% 22px, 100% 100%, 22px 100%, 0 calc(100% - 22px));
+        animation: menuIn .22s cubic-bezier(.2, .9, .2, 1) both;
+      }
+
+      #startMenu.open {
+        display: grid;
+      }
+
+      @keyframes menuIn {
+        from {
+          opacity: 0;
+          transform: translateY(14px) scale(.98);
+        }
+
+        to {
+          opacity: 1;
+          transform: none;
+        }
+      }
+
+      .brand {
+        font-size: 34px;
+        letter-spacing: .06em;
+        line-height: .9;
+      }
+
+      .brand-sub {
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--muted);
+        margin-top: 8px;
+      }
+
+      .searchbox,
+      .field {
+        width: 100%;
+        color: var(--paper);
+        background: rgba(231, 222, 193, .07);
+        border: 1px solid var(--line);
+        outline: none;
+        padding: 10px 12px;
+      }
+
+      .searchbox:focus,
+      .field:focus {
+        border-color: rgba(200, 255, 68, .62);
+      }
+
+      .app-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 9px;
+        overflow: auto;
+        padding-right: 2px;
+      }
+
+      .menu-btn {
+        min-height: 76px;
+        display: grid;
+        grid-template-columns: 38px 1fr;
+        align-items: center;
+        gap: 12px;
+        padding: 12px;
+        text-align: left;
+      }
+
+      .menu-btn svg {
+        width: 34px;
+        height: 34px;
+      }
+
+      .menu-title {
+        font-size: 16px;
+      }
+
+      .menu-desc {
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--muted);
+        margin-top: 3px;
+      }
+
+      #contextMenu {
+        position: fixed;
+        z-index: 9000;
+        min-width: 190px;
+        display: none;
+        padding: 7px;
+        color: var(--paper);
+        background: rgba(8, 16, 15, .94);
+        border: 1px solid var(--line-strong);
+        box-shadow: 0 22px 60px rgba(0, 0, 0, .48);
+        backdrop-filter: blur(18px);
+      }
+
+      #contextMenu button {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 9px 10px;
+        color: var(--paper);
+        background: transparent;
+        border: 0;
+        text-align: left;
+        cursor: pointer;
+      }
+
+      #contextMenu button:hover {
+        background: rgba(200, 255, 68, .12);
+        color: var(--acid);
+      }
+
+      #contextMenu hr {
+        border: 0;
+        border-top: 1px solid var(--line);
+        margin: 6px;
+      }
+
+      #toastStack {
+        position: fixed;
+        right: 18px;
+        top: 18px;
+        z-index: 9500;
+        display: grid;
+        gap: 10px;
+        max-width: min(420px, calc(100vw - 36px));
+      }
+
+      .toast {
+        padding: 12px 14px;
+        background: rgba(8, 16, 15, .92);
+        border: 1px solid var(--line-strong);
+        box-shadow: 0 18px 42px rgba(0, 0, 0, .32);
+        backdrop-filter: blur(16px);
+        animation: toastIn .24s ease both;
+      }
+
+      @keyframes toastIn {
+        from {
+          opacity: 0;
+          transform: translateY(-10px);
+        }
+
+        to {
+          opacity: 1;
+          transform: none;
+        }
+      }
+
+      .app-shell {
+        height: 100%;
+        min-height: 0;
+        display: grid;
+        background: rgba(8, 16, 15, .32);
+      }
+
+      .toolbar {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        padding: 10px;
+        border-bottom: 1px solid var(--line);
+        background: rgba(8, 16, 15, .34);
+        overflow: auto;
+        scrollbar-width: none;
+      }
+
+      .toolbar::-webkit-scrollbar {
+        display: none;
+      }
+
+      .tool-btn,
+      .small-btn {
+        min-height: 34px;
+        padding: 0 10px;
+        white-space: nowrap;
+      }
+
+      .small-btn {
+        min-height: 28px;
+        font-size: 13px;
+      }
+
+      .mono {
+        font-family: var(--mono);
+      }
+
+      .muted {
+        color: var(--muted);
+      }
+
+      .split {
+        display: grid;
+        grid-template-columns: 220px minmax(0, 1fr);
+        min-height: 0;
+      }
+
+      .sidebar {
+        border-right: 1px solid var(--line);
+        padding: 10px;
+        overflow: auto;
+        background: rgba(7, 12, 11, .32);
+      }
+
+      .side-link {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--paper);
+        background: transparent;
+        border: 1px solid transparent;
+        padding: 9px;
+        text-align: left;
+        cursor: pointer;
+      }
+
+      .side-link:hover,
+      .side-link.active {
+        border-color: var(--line);
+        background: rgba(231, 222, 193, .06);
+        color: var(--acid);
+      }
+
+      .side-link svg {
+        width: 18px;
+        height: 18px;
+        flex: none;
+      }
+
+      .main-pane {
+        min-width: 0;
+        min-height: 0;
+        display: grid;
+        grid-template-rows: auto minmax(0, 1fr);
+      }
+
+      .breadcrumbs {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        min-width: 0;
+        flex: 1;
+      }
+
+      .crumb {
+        color: var(--paper);
+        border: 0;
+        background: transparent;
+        cursor: pointer;
+        padding: 4px 6px;
+        white-space: nowrap;
+      }
+
+      .crumb:hover {
+        color: var(--acid);
+      }
+
+      .file-table-wrap {
+        min-height: 0;
+        overflow: auto;
+        position: relative;
+      }
+
+      table.file-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-family: var(--mono);
+        font-size: 12px;
+      }
+
+      .file-table th {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        background: rgba(8, 16, 15, .94);
+        color: var(--muted);
+        text-align: left;
+        padding: 9px 10px;
+        border-bottom: 1px solid var(--line);
+        cursor: pointer;
+      }
+
+      .file-table td {
+        padding: 9px 10px;
+        border-bottom: 1px solid rgba(231, 222, 193, .08);
+        vertical-align: middle;
+      }
+
+      .file-table tr {
+        transition: background .14s ease;
+      }
+
+      .file-table tr:hover,
+      .file-table tr.selected {
+        background: rgba(200, 255, 68, .1);
+      }
+
+      .name-cell {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        min-width: 210px;
+      }
+
+      .name-cell svg {
+        width: 24px;
+        height: 24px;
+        flex: none;
+      }
+
+      .editor-grid {
+        height: 100%;
+        min-height: 0;
+        display: grid;
+        grid-template-rows: auto minmax(0, 1fr);
+      }
+
+      .editor-main {
+        min-height: 0;
+        display: grid;
+      }
+
+      .editor-main.html {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      }
+
+      .editor-main textarea {
+        width: 100%;
+        height: 100%;
+        resize: none;
+        color: var(--paper);
+        background: #07100f;
+        border: 0;
+        outline: none;
+        padding: 14px;
+        font-family: var(--mono);
+        font-size: 13px;
+        line-height: 1.55;
+      }
+
+      .CodeMirror {
+        height: 100%;
+        font-family: var(--mono);
+        font-size: 13px;
+      }
+
+      .preview-frame,
+      .browser-frame,
+      .pdf-frame {
+        width: 100%;
+        height: 100%;
+        border: 0;
+        background: #fff;
+      }
+
+      .table-preview {
+        overflow: auto;
+        padding: 12px;
+      }
+
+      .table-preview table {
+        border-collapse: collapse;
+        min-width: 100%;
+        font-family: var(--mono);
+        font-size: 12px;
+      }
+
+      .table-preview td,
+      .table-preview th {
+        border: 1px solid var(--line);
+        padding: 6px 8px;
+        white-space: pre;
+      }
+
+      .table-preview th {
+        color: var(--acid);
+        background: rgba(200, 255, 68, .08);
+      }
+
+      .viewer {
+        height: 100%;
+        display: grid;
+        grid-template-rows: auto minmax(0, 1fr);
+      }
+
+      .viewer-stage {
+        min-height: 0;
+        display: grid;
+        place-items: center;
+        overflow: auto;
+        background: radial-gradient(circle at center, rgba(231, 222, 193, .08), rgba(0, 0, 0, .22));
+      }
+
+      .viewer-stage img {
+        max-width: 100%;
+        max-height: 100%;
+        transform-origin: center;
+        transition: transform .18s ease;
+      }
+
+      .media-stage {
+        width: min(900px, 94%);
+        display: grid;
+        gap: 18px;
+      }
+
+      audio,
+      video {
+        width: 100%;
+        max-height: 70vh;
+        background: #000;
+      }
+
+      .calc {
+        height: 100%;
+        display: grid;
+        grid-template-rows: 120px minmax(0, 1fr);
+        padding: 16px;
+        gap: 14px;
+      }
+
+      .calc-display {
+        display: grid;
+        align-content: end;
+        text-align: right;
+        padding: 16px;
+        border: 1px solid var(--line);
+        background: rgba(231, 222, 193, .06);
+        font-family: var(--mono);
+        font-size: 34px;
+        overflow: hidden;
+      }
+
+      .calc-keys {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+      }
+
+      .calc-keys button {
+        color: var(--paper);
+        background: rgba(231, 222, 193, .07);
+        border: 1px solid var(--line);
+        font-family: var(--mono);
+        font-size: 18px;
+        cursor: pointer;
+      }
+
+      .calc-keys button.op {
+        color: var(--acid);
+        border-color: rgba(200, 255, 68, .28);
+      }
+
+      .paint {
+        height: 100%;
+        display: grid;
+        grid-template-rows: auto minmax(0, 1fr);
+      }
+
+      .paint-canvas-wrap {
+        min-height: 0;
+        overflow: hidden;
+        display: grid;
+        place-items: center;
+        background: #111917;
+      }
+
+      canvas.paint-canvas {
+        max-width: 100%;
+        max-height: 100%;
+        background: #f6f0df;
+        touch-action: none;
+        box-shadow: 0 24px 70px rgba(0, 0, 0, .38);
+      }
+
+      .settings {
+        height: 100%;
+        overflow: auto;
+        padding: 18px;
+        display: grid;
+        gap: 18px;
+      }
+
+      .settings-section {
+        border-top: 1px solid var(--line);
+        padding-top: 16px;
+      }
+
+      .meter {
+        height: 18px;
+        border: 1px solid var(--line);
+        background: rgba(231, 222, 193, .06);
+        overflow: hidden;
+      }
+
+      .meter span {
+        display: block;
+        height: 100%;
+        background: linear-gradient(90deg, var(--acid), var(--cyan));
+        width: 0%;
+        transition: width .5s ease;
+      }
+
+      .wall-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .wall-tile {
+        height: 92px;
+        border: 1px solid var(--line);
+        cursor: pointer;
+        background-size: cover;
+        background-position: center;
+      }
+
+      .wall-tile:hover {
+        border-color: var(--acid);
+      }
+
+      .drop-glow {
+        outline: 2px solid var(--acid);
+        outline-offset: -8px;
+      }
+
+      .danger {
+        color: var(--red) !important;
+        border-color: rgba(255, 112, 77, .38) !important;
+      }
+
+      .hidden-input {
+        display: none;
+      }
+
+      @media (max-width: 760px) {
+        :root {
+          --taskbar: 86px;
+        }
+
+        #iconsLayer {
+          inset: 12px 4px var(--taskbar) 4px;
+        }
+
+        .desktop-icon {
+          width: 86px;
+          min-height: 100px;
+        }
+
+        #windows {
+          inset: 0 0 var(--taskbar) 0;
+        }
+
+        .window,
+        .window.maximized {
+          left: 0 !important;
+          top: 0 !important;
+          width: 100vw !important;
+          height: calc(100vh - var(--taskbar)) !important;
+          min-width: 0;
+          min-height: 0;
+          clip-path: none;
+        }
+
+        .resize-handle {
+          display: none;
+        }
+
+        .titlebar {
+          height: 48px;
+        }
+
+        #taskbar {
+          left: 8px;
+          right: 8px;
+          bottom: 8px;
+          height: 68px;
+          border-radius: 24px;
+          clip-path: none;
+          justify-content: center;
+        }
+
+        .dock-btn {
+          min-width: 48px;
+          height: 48px;
+          padding: 0 10px;
+          border-radius: 18px;
+        }
+
+        .dock-btn span.label,
+        .task-btn .label,
+        #clock {
+          display: none;
+        }
+
+        #taskButtons {
+          flex: unset;
+          max-width: 58vw;
+        }
+
+        #startMenu {
+          left: 8px;
+          right: 8px;
+          bottom: 86px;
+          width: auto;
+          max-height: calc(100vh - 104px);
+          clip-path: none;
+          border-radius: 26px;
+        }
+
+        .app-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .split {
+          grid-template-columns: 1fr;
+        }
+
+        .sidebar {
+          display: none;
+        }
+
+        .editor-main.html {
+          grid-template-columns: 1fr;
+          grid-template-rows: 1fr 1fr;
+        }
+
+        .wall-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .file-table th:nth-child(3),
+        .file-table td:nth-child(3) {
+          display: none;
+        }
+      }
+
+    </style>
+  </head>
+
+  <body>
+    <div id="boot">
+      <div class="boot-card">
+        <div class="boot-title">OBSIDIAN<br>VFS</div>
+        <div class="boot-sub mono muted mt-4">正在连接 Origin Private File System</div>
+        <div class="boot-bar"><span></span></div>
+      </div>
+    </div>
+
+    <main id="desktop" class="wallpaper-lacquer" aria-label="桌面">
+      <section id="iconsLayer" aria-label="桌面图标"></section>
+      <section id="windows" aria-label="窗口区域"></section>
+    </main>
+
+    <div id="selectionBox"></div>
+    <nav id="taskbar" aria-label="任务栏">
+      <button id="startBtn" class="dock-btn" aria-label="开始菜单"></button>
+      <div id="taskButtons"></div>
+      <button id="desktopBtn" class="dock-btn" title="显示桌面"></button>
+      <div id="clock"></div>
+    </nav>
+
+    <section id="startMenu" aria-label="开始菜单">
+      <div>
+        <div class="brand">Obsidian VFS</div>
+        <div class="brand-sub">OPFS 桌面环境 / 持久化虚拟文件系统</div>
+      </div>
+      <input id="startSearch" class="searchbox mono" placeholder="搜索应用或路径，例如 /Desktop">
+      <div id="startApps" class="app-grid"></div>
+    </section>
+
+    <div id="contextMenu"></div>
+    <div id="toastStack"></div>
+    <input id="fileImport" class="hidden-input" type="file" multiple webkitdirectory>
+    <input id="plainImport" class="hidden-input" type="file" multiple>
+    <input id="wallpaperInput" class="hidden-input" type="file" accept="image/*">
+
+    <script>
+      (() => {
+        "use strict";
+
+        const $ = (sel, root = document) => root.querySelector(sel);
+        const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+        const enc = new TextEncoder();
+        const dec = new TextDecoder();
+        const cssEscape = window.CSS?.escape || (value => String(value).replace(/["\\]/g, '\\$&'));
+        const iconsLayer = $('#iconsLayer');
+        const desktop = $('#desktop');
+        const windowsEl = $('#windows');
+        const contextMenu = $('#contextMenu');
+        const startMenu = $('#startMenu');
+        const taskButtons = $('#taskButtons');
+        const selectionBox = $('#selectionBox');
+        const dragCache = new Map();
+        const objectUrls = new Set();
+
+        let fs;
+        let clipboard = null;
+        let desktopSelection = new Set();
+        let desktopLayout = {};
+        let currentDropDir = '/Desktop';
+        let zSeed = 100;
+
+        function callbackFrom(args) {
+          for (let i = args.length - 1; i >= 0; i--)
+            if (typeof args[i] === 'function') return args[i];
+          return null;
+        }
+
+        function cbify(promise, args) {
+          const cb = callbackFrom(args);
+          if (cb) {
+            promise.then(value => cb(null, value)).catch(error => cb(error));
+            return undefined;
+          }
+          return promise;
+        }
+
+        function normalizePath(input = '/') {
+          let p = String(input || '/').replace(/\\+/g, '/').trim();
+          if (!p.startsWith('/')) p = '/' + p;
+          const parts = [];
+          for (const part of p.split('/')) {
+            if (!part || part === '.') continue;
+            if (part === '..') parts.pop();
+            else parts.push(part);
+          }
+          return '/' + parts.join('/');
+        }
+
+        function pathParts(p) {
+          return normalizePath(p).split('/').filter(Boolean);
+        }
+
+        function joinPath(...parts) {
+          return normalizePath(parts.join('/'));
+        }
+
+        function basename(p) {
+          const parts = pathParts(p);
+          return parts[parts.length - 1] || '';
+        }
+
+        function dirname(p) {
+          const parts = pathParts(p);
+          parts.pop();
+          return '/' + parts.join('/');
+        }
+
+        function extname(p) {
+          const name = basename(p).toLowerCase();
+          const i = name.lastIndexOf('.');
+          return i >= 0 ? name.slice(i) : '';
+        }
+
+        function stripExt(name) {
+          const i = name.lastIndexOf('.');
+          return i > 0 ? name.slice(0, i) : name;
+        }
+
+        function safeName(name) {
+          return String(name || 'untitled').replace(/[\\/:*?"<>|\u0000-\u001f]/g, '_').trim().slice(0, 140) ||
+            'untitled';
+        }
+
+        function formatSize(bytes = 0) {
+          if (!bytes) return '0 B';
+          const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+          let i = 0,
+            n = bytes;
+          while (n >= 1024 && i < units.length - 1) {
+            n /= 1024;
+            i++;
+          }
+          return `${n.toFixed(i ? 1 : 0)} ${units[i]}`;
+        }
+
+        function formatDate(ts) {
+          return ts ? new Date(ts).toLocaleString('zh-CN', {
+            hour12: false
+          }) : '';
+        }
+
+        function mimeFromPath(path) {
+          const map = {
+            '.txt': 'text/plain',
+            '.md': 'text/markdown',
+            '.markdown': 'text/markdown',
+            '.html': 'text/html',
+            '.htm': 'text/html',
+            '.css': 'text/css',
+            '.js': 'text/javascript',
+            '.mjs': 'text/javascript',
+            '.json': 'application/json',
+            '.xml': 'application/xml',
+            '.yaml': 'text/yaml',
+            '.yml': 'text/yaml',
+            '.log': 'text/plain',
+            '.csv': 'text/csv',
+            '.tsv': 'text/tab-separated-values',
+            '.png': 'image/png',
+            '.jpg': 'image/jpeg',
+            '.jpeg': 'image/jpeg',
+            '.gif': 'image/gif',
+            '.svg': 'image/svg+xml',
+            '.webp': 'image/webp',
+            '.bmp': 'image/bmp',
+            '.ico': 'image/x-icon',
+            '.mp3': 'audio/mpeg',
+            '.wav': 'audio/wav',
+            '.ogg': 'audio/ogg',
+            '.flac': 'audio/flac',
+            '.aac': 'audio/aac',
+            '.mp4': 'video/mp4',
+            '.webm': 'video/webm',
+            '.ogv': 'video/ogg',
+            '.pdf': 'application/pdf',
+            '.zip': 'application/zip',
+            '.gz': 'application/gzip',
+            '.tar': 'application/x-tar',
+            '.tgz': 'application/gzip',
+            '.7z': 'application/x-7z-compressed'
+          };
+          return map[extname(path)] || 'application/octet-stream';
+        }
+
+        function isTextPath(path) {
+          return ['.txt', '.md', '.markdown', '.html', '.htm', '.css', '.js', '.mjs', '.json', '.xml', '.yaml',
+            '.yml', '.log', '.csv', '.tsv', '.ini', '.conf', '.sql', '.sh', '.bat', '.py', '.php', '.rb', '.go',
+            '.rs', '.java', '.c', '.cpp', '.h', '.hpp'
+          ].includes(extname(path));
+        }
+
+        function isImagePath(path) {
+          return ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.bmp', '.ico'].includes(extname(path));
+        }
+
+        function isAudioPath(path) {
+          return ['.mp3', '.wav', '.ogg', '.flac', '.aac'].includes(extname(path));
+        }
+
+        function isVideoPath(path) {
+          return ['.mp4', '.webm', '.ogv'].includes(extname(path));
+        }
+
+        function isArchivePath(path) {
+          return ['.zip', '.gz', '.tar', '.tgz', '.7z'].includes(extname(path)) || path.toLowerCase().endsWith(
+            '.tar.gz');
+        }
+
+        function svg(name, cls = '') {
+          const base =
+            'viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" class="' + cls +
+            '"';
+          const stroke = 'stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"';
+          const fill = 'fill="currentColor" opacity=".18"';
+          const icons = {
+            start: `<svg ${base}><path ${fill} d="M10 12h18v18H10zM36 8h18v22H36zM10 38h18v18H10zM36 38h18v14H36z"/><path ${stroke} d="M10 12h18v18H10zM36 8h18v22H36zM10 38h18v18H10zM36 38h18v14H36z"/></svg>`,
+            desktop: `<svg ${base}><path ${fill} d="M9 13h46v32H9z"/><path ${stroke} d="M9 13h46v32H9zM24 55h16M29 45v10M35 45v10"/></svg>`,
+            folder: `<svg ${base}><path ${fill} d="M6 20h22l5 6h25v25H6z"/><path ${stroke} d="M6 20h22l5 6h25v25H6zM6 20v-5h19l5 5"/></svg>`,
+            file: `<svg ${base}><path ${fill} d="M16 7h22l11 12v38H16z"/><path ${stroke} d="M16 7h22l11 12v38H16zM38 8v13h12M24 33h20M24 43h16"/></svg>`,
+            image: `<svg ${base}><path ${fill} d="M9 12h46v40H9z"/><path ${stroke} d="M9 12h46v40H9zM18 43l11-12 8 8 6-7 12 13M42 23h.2"/></svg>`,
+            audio: `<svg ${base}><path ${fill} d="M18 38c0-10 6-20 18-22v32"/><path ${stroke} d="M36 16v32M36 16l12-4v11l-12 4M24 45a7 7 0 1 1-8-7"/></svg>`,
+            video: `<svg ${base}><path ${fill} d="M9 16h34v32H9zM43 25l12-7v28l-12-7z"/><path ${stroke} d="M9 16h34v32H9zM43 25l12-7v28l-12-7z"/></svg>`,
+            code: `<svg ${base}><path ${fill} d="M16 7h22l11 12v38H16z"/><path ${stroke} d="M16 7h22l11 12v38H16zM26 34l-6 6 6 6M38 34l6 6-6 6M35 30l-6 20"/></svg>`,
+            table: `<svg ${base}><path ${fill} d="M9 13h46v38H9z"/><path ${stroke} d="M9 13h46v38H9zM9 25h46M9 38h46M24 13v38M40 13v38"/></svg>`,
+            browser: `<svg ${base}><path ${fill} d="M8 14h48v36H8z"/><path ${stroke} d="M8 14h48v36H8zM8 24h48M17 19h.2M25 19h.2M34 34h13M18 40h21"/></svg>`,
+            calc: `<svg ${base}><path ${fill} d="M16 8h32v48H16z"/><path ${stroke} d="M16 8h32v48H16zM23 17h18M24 30h.2M32 30h.2M40 30h.2M24 39h.2M32 39h.2M40 39h.2M24 48h.2M32 48h.2M40 48h.2"/></svg>`,
+            paint: `<svg ${base}><path ${fill} d="M11 39c0-17 13-29 29-25 10 3 15 12 10 20-3 5-7 4-10 4-4 0-4 5 0 7 4 2-3 9-13 7-10-2-16-7-16-13z"/><path ${stroke} d="M11 39c0-17 13-29 29-25 10 3 15 12 10 20-3 5-7 4-10 4-4 0-4 5 0 7 4 2-3 9-13 7-10-2-16-7-16-13zM25 26h.2M34 23h.2M43 28h.2M23 38h.2"/></svg>`,
+            settings: `<svg ${base}><path ${fill} d="M31 7l6 5 8-1 4 8 7 4-2 9 2 9-7 4-4 8-8-1-6 5-6-5-8 1-4-8-7-4 2-9-2-9 7-4 4-8 8 1z"/><path ${stroke} d="M31 7l6 5 8-1 4 8 7 4-2 9 2 9-7 4-4 8-8-1-6 5-6-5-8 1-4-8-7-4 2-9-2-9 7-4 4-8 8 1zM32 24a8 8 0 1 0 0 16 8 8 0 0 0 0-16z"/></svg>`,
+            pdf: `<svg ${base}><path ${fill} d="M16 7h22l11 12v38H16z"/><path ${stroke} d="M16 7h22l11 12v38H16zM38 8v13h12M22 43h5c4 0 6-2 6-6s-2-6-6-6h-5v18M40 31h8M40 31v18"/></svg>`,
+            archive: `<svg ${base}><path ${fill} d="M15 9h34v46H15z"/><path ${stroke} d="M15 9h34v46H15zM31 9v12M31 29v8M31 45v10M25 17h12M25 25h12M25 41h12"/></svg>`,
+            close: `<svg ${base}><path ${stroke} d="M18 18l28 28M46 18L18 46"/></svg>`,
+            min: `<svg ${base}><path ${stroke} d="M18 41h28"/></svg>`,
+            max: `<svg ${base}><path ${stroke} d="M18 18h28v28H18z"/></svg>`,
+            restore: `<svg ${base}><path ${stroke} d="M20 26h24v24H20zM28 14h24v24"/></svg>`
+          };
+          return icons[name] || icons.file;
+        }
+
+        function iconForEntry(entryOrPath, type) {
+          const p = typeof entryOrPath === 'string' ? entryOrPath : entryOrPath.path;
+          const t = type || (entryOrPath && entryOrPath.type);
+          if (t === 'directory') return svg('folder');
+          if (isImagePath(p)) return svg('image');
+          if (isAudioPath(p)) return svg('audio');
+          if (isVideoPath(p)) return svg('video');
+          if (extname(p) === '.pdf') return svg('pdf');
+          if (['.csv', '.tsv'].includes(extname(p))) return svg('table');
+          if (isArchivePath(p)) return svg('archive');
+          if (isTextPath(p)) return svg('code');
+          return svg('file');
+        }
+
+        function toast(message, timeout = 3200) {
+          const el = document.createElement('div');
+          el.className = 'toast';
+          el.textContent = message;
+          $('#toastStack').append(el);
+          setTimeout(() => {
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(-8px)';
+            setTimeout(() => el.remove(), 260);
+          }, timeout);
+        }
+
+        function closeContextMenu() {
+          contextMenu.style.display = 'none';
+          contextMenu.innerHTML = '';
+        }
+
+        function showContextMenu(x, y, items) {
+          closeContextMenu();
+          for (const item of items) {
+            if (item === 'hr') {
+              contextMenu.append(document.createElement('hr'));
+              continue;
+            }
+            const btn = document.createElement('button');
+            btn.textContent = item.label;
+            if (item.danger) btn.className = 'danger';
+            btn.addEventListener('click', async () => {
+              closeContextMenu();
+              await item.action?.();
+            });
+            contextMenu.append(btn);
+          }
+          contextMenu.style.display = 'block';
+          const rect = contextMenu.getBoundingClientRect();
+          contextMenu.style.left = Math.min(x, innerWidth - rect.width - 8) + 'px';
+          contextMenu.style.top = Math.min(y, innerHeight - rect.height - 8) + 'px';
+        }
+        document.addEventListener('click', e => {
+          if (!contextMenu.contains(e.target)) closeContextMenu();
+          if (!startMenu.contains(e.target) && !$('#startBtn').contains(e.target)) startMenu.classList.remove(
+            'open');
+        });
+        document.addEventListener('contextmenu', e => {
+          if (!e.target.closest('.window') && !e.target.closest('#taskbar')) e.preventDefault();
+        });
+
+        const DB = {
+          db: null,
+          open() {
+            if (this.db) return Promise.resolve(this.db);
+            if (!('indexedDB' in window)) return Promise.reject(new Error('IndexedDB 不可用'));
+            return new Promise((resolve, reject) => {
+              const req = indexedDB.open('obsidian-vfs-db', 4);
+              req.onupgradeneeded = () => {
+                const db = req.result;
+                if (!db.objectStoreNames.contains('files')) db.createObjectStore('files', {
+                  keyPath: 'path'
+                });
+                if (!db.objectStoreNames.contains('meta')) db.createObjectStore('meta', {
+                  keyPath: 'key'
+                });
+                if (!db.objectStoreNames.contains('mounts')) db.createObjectStore('mounts', {
+                  keyPath: 'path'
+                });
+              };
+              req.onsuccess = () => {
+                this.db = req.result;
+                resolve(this.db);
+              };
+              req.onerror = () => reject(req.error);
+            });
+          },
+          async tx(store, mode, job) {
+            const db = await this.open();
+            return new Promise((resolve, reject) => {
+              const tx = db.transaction(store, mode);
+              const os = tx.objectStore(store);
+              let out;
+              tx.oncomplete = () => resolve(out);
+              tx.onerror = () => reject(tx.error);
+              out = job(os);
+            });
+          },
+          get(store, key) {
+            return this.tx(store, 'readonly', os => new Promise((resolve, reject) => {
+              const r = os.get(key);
+              r.onsuccess = () => resolve(r.result);
+              r.onerror = () => reject(r.error);
+            }));
+          },
+          put(store, value) {
+            return this.tx(store, 'readwrite', os => os.put(value));
+          },
+          delete(store, key) {
+            return this.tx(store, 'readwrite', os => os.delete(key));
+          },
+          clear(store) {
+            return this.tx(store, 'readwrite', os => os.clear());
+          },
+          all(store) {
+            return this.tx(store, 'readonly', os => new Promise((resolve, reject) => {
+              const out = [];
+              const r = os.openCursor();
+              r.onsuccess = () => {
+                const cur = r.result;
+                if (cur) {
+                  out.push(cur.value);
+                  cur.continue();
+                } else resolve(out);
+              };
+              r.onerror = () => reject(r.error);
+            }));
+          }
+        };
+        const CookieStore = {
+          set(key, value) {
+            const small = encodeURIComponent(value).slice(0, 3500);
+            document.cookie = `${encodeURIComponent(key)}=${small}; max-age=31536000; path=/; SameSite=Lax`;
+          },
+          get(key) {
+            const needle = encodeURIComponent(key) + '=';
+            const item = document.cookie.split('; ').find(x => x.startsWith(needle));
+            return item ? decodeURIComponent(item.slice(needle.length)) : null;
+          }
+        };
+        const MetaStore = {
+          async get(key, fallback = null) {
+            try {
+              const row = await DB.get('meta', key);
+              if (row) return row.value;
+            } catch {}
+            try {
+              const raw = localStorage.getItem('obsidian:' + key);
+              if (raw != null) return JSON.parse(raw);
+            } catch {}
+            try {
+              const raw = CookieStore.get('obsidian:' + key);
+              if (raw != null) return JSON.parse(raw);
+            } catch {}
+            return fallback;
+          },
+          async set(key, value) {
+            try {
+              await DB.put('meta', {
+                key,
+                value,
+                mtime: Date.now()
+              });
+            } catch {}
+            try {
+              localStorage.setItem('obsidian:' + key, JSON.stringify(value));
+            } catch {}
+            try {
+              CookieStore.set('obsidian:' + key, JSON.stringify(value));
+            } catch {}
+          },
+          async remove(key) {
+            try {
+              await DB.delete('meta', key);
+            } catch {}
+            try {
+              localStorage.removeItem('obsidian:' + key);
+            } catch {}
+          }
+        };
+
+        async function dataToArrayBuffer(data) {
+          if (data instanceof ArrayBuffer) return data;
+          if (ArrayBuffer.isView(data)) return data.buffer.slice(data.byteOffset, data.byteOffset + data
+          .byteLength);
+          if (data instanceof Blob) return data.arrayBuffer();
+          return enc.encode(String(data)).buffer;
+        }
+        async function streamToArrayBuffer(stream) {
+          return new Response(stream).arrayBuffer();
+        }
+
+        class OPFSBackend {
+          constructor() {
+            this.name = 'OPFS';
+            this.root = null;
+          }
+          async init() {
+            if (!navigator.storage || !navigator.storage.getDirectory) throw new Error('当前浏览器不支持 OPFS');
+            try {
+              await navigator.storage.persist?.();
+            } catch {}
+            this.root = await navigator.storage.getDirectory();
+          }
+          _wrap(promise, args) {
+            return cbify(promise, args);
+          }
+          async _dir(path, create = false) {
+            let dir = this.root;
+            for (const part of pathParts(path)) dir = await dir.getDirectoryHandle(part, {
+              create
+            });
+            return dir;
+          }
+          async _parent(path, create = false) {
+            const parent = dirname(path);
+            const name = basename(path);
+            return [await this._dir(parent, create), name];
+          }
+          stat(path, ...args) {
+            return this._wrap((async () => {
+              path = normalizePath(path);
+              if (path === '/') return {
+                path,
+                name: '/',
+                type: 'directory',
+                size: 0,
+                mtime: Date.now(),
+                mime: 'inode/directory'
+              };
+              const [parent, name] = await this._parent(path, false);
+              try {
+                await parent.getDirectoryHandle(name);
+                return {
+                  path,
+                  name,
+                  type: 'directory',
+                  size: 0,
+                  mtime: Date.now(),
+                  mime: 'inode/directory'
+                };
+              } catch {}
+              const fh = await parent.getFileHandle(name);
+              const file = await fh.getFile();
+              return {
+                path,
+                name,
+                type: 'file',
+                size: file.size,
+                mtime: file.lastModified,
+                mime: file.type || mimeFromPath(path)
+              };
+            })(), args);
+          }
+          readdir(path = '/', ...args) {
+            return this._wrap((async () => {
+              path = normalizePath(path);
+              const dir = await this._dir(path, false);
+              const out = [];
+              for await (const [name, handle] of dir.entries()) {
+                const child = joinPath(path, name);
+                if (handle.kind === 'directory') out.push({
+                  path: child,
+                  name,
+                  type: 'directory',
+                  size: 0,
+                  mtime: Date.now(),
+                  mime: 'inode/directory'
+                });
+                else {
+                  const file = await handle.getFile();
+                  out.push({
+                    path: child,
+                    name,
+                    type: 'file',
+                    size: file.size,
+                    mtime: file.lastModified,
+                    mime: file.type || mimeFromPath(child)
+                  });
+                }
+              }
+              return out.sort(sortEntriesDefault);
+            })(), args);
+          }
+          open(path, ...args) {
+            return this._wrap((async () => {
+              const [parent, name] = await this._parent(path, false);
+              return parent.getFileHandle(name);
+            })(), args);
+          }
+          readFile(path, kind = 'arrayBuffer', ...args) {
+            if (typeof kind === 'function') {
+              args.unshift(kind);
+              kind = 'arrayBuffer';
+            }
+            return this._wrap((async () => {
+              const fh = await (await this._parent(path, false))[0].getFileHandle(basename(path));
+              const file = await fh.getFile();
+              const want = typeof kind === 'string' ? kind : (kind && (kind.encoding || kind.as)) ||
+                'arrayBuffer';
+              if (want === 'text' || want === 'utf8' || want === 'utf-8') return file.text();
+              if (want === 'blob') return new Blob([file], {
+                type: file.type || mimeFromPath(path)
+              });
+              return file.arrayBuffer();
+            })(), args);
+          }
+          writeFile(path, data, ...args) {
+            return this._wrap((async () => {
+              path = normalizePath(path);
+              const [parent, name] = await this._parent(path, true);
+              const fh = await parent.getFileHandle(name, {
+                create: true
+              });
+              const writable = await fh.createWritable();
+              await writable.write(data instanceof Blob || typeof data === 'string' ||
+                data instanceof ArrayBuffer || ArrayBuffer.isView(data) ? data : String(data));
+              await writable.close();
+              return this.stat(path);
+            })(), args);
+          }
+          mkdir(path, ...args) {
+            return this._wrap((async () => {
+              await this._dir(path, true);
+              return this.stat(path);
+            })(), args);
+          }
+          unlink(path, ...args) {
+            return this._wrap((async () => {
+              const [parent, name] = await this._parent(path);
+              await parent.removeEntry(name);
+              return true;
+            })(), args);
+          }
+          rmdir(path, ...args) {
+            return this._wrap((async () => {
+              const [parent, name] = await this._parent(path);
+              await parent.removeEntry(name, {
+                recursive: true
+              });
+              return true;
+            })(), args);
+          }
+          delete(path, ...args) {
+            return this._wrap((async () => {
+              const st = await this.stat(path);
+              return st.type === 'directory' ? this.rmdir(path) : this.unlink(path);
+            })(), args);
+          }
+          exists(path, ...args) {
+            return this._wrap((async () => {
+              try {
+                await this.stat(path);
+                return true;
+              } catch {
+                return false;
+              }
+            })(), args);
+          }
+          rename(from, to, ...args) {
+            return this._wrap((async () => {
+              await this.copyPath(from, to);
+              await this.delete(from);
+              return this.stat(to);
+            })(), args);
+          }
+          async copyPath(from, to) {
+            const st = await this.stat(from);
+            if (st.type === 'directory') {
+              await this.mkdir(to);
+              for (const child of await this.readdir(from)) await this.copyPath(child.path, joinPath(to, child
+                .name));
+            } else {
+              await this.writeFile(to, await this.readFile(from, 'blob'));
+            }
+          }
+          async reset() {
+            for await (const [name] of this.root.entries()) await this.root.removeEntry(name, {
+              recursive: true
+            });
+          }
+        }
+
+        class IndexedDBBackend {
+          constructor() {
+            this.name = 'IndexedDB Fallback';
+          }
+          async init() {
+            await this._put({
+              path: '/',
+              name: '/',
+              type: 'directory',
+              size: 0,
+              mtime: Date.now(),
+              mime: 'inode/directory'
+            });
+          }
+          _wrap(promise, args) {
+            return cbify(promise, args);
+          }
+          async _put(entry) {
+            await DB.put('files', entry);
+          }
+          async _get(path) {
+            return DB.get('files', normalizePath(path));
+          }
+          async _all() {
+            return DB.all('files');
+          }
+          async _ensureParent(path) {
+            await this.mkdir(dirname(path));
+          }
+          stat(path, ...args) {
+            return this._wrap((async () => {
+              path = normalizePath(path);
+              const entry = await this._get(path);
+              if (!entry) throw new Error('文件不存在: ' + path);
+              return {
+                ...entry,
+                size: entry.type === 'file' ? (entry.data?.byteLength || 0) : 0
+              };
+            })(), args);
+          }
+          readdir(path = '/', ...args) {
+            return this._wrap((async () => {
+              path = normalizePath(path);
+              const rows = await this._all();
+              return rows.filter(x => x.path !== path && dirname(x.path) === path).map(x => ({
+                ...x,
+                size: x.type === 'file' ? (x.data?.byteLength || 0) : 0
+              })).sort(sortEntriesDefault);
+            })(), args);
+          }
+          open(path, ...args) {
+            return this._wrap((async () => this.stat(path))(), args);
+          }
+          readFile(path, kind = 'arrayBuffer', ...args) {
+            if (typeof kind === 'function') {
+              args.unshift(kind);
+              kind = 'arrayBuffer';
+            }
+            return this._wrap((async () => {
+              const entry = await this.stat(path);
+              if (entry.type !== 'file') throw new Error('不是文件: ' + path);
+              const buffer = entry.data || new ArrayBuffer(0);
+              const want = typeof kind === 'string' ? kind : (kind && (kind.encoding || kind.as)) ||
+                'arrayBuffer';
+              if (want === 'text' || want === 'utf8' || want === 'utf-8') return dec.decode(buffer);
+              if (want === 'blob') return new Blob([buffer], {
+                type: entry.mime || mimeFromPath(path)
+              });
+              return buffer.slice(0);
+            })(), args);
+          }
+          writeFile(path, data, ...args) {
+            return this._wrap((async () => {
+              path = normalizePath(path);
+              await this._ensureParent(path);
+              const buffer = await dataToArrayBuffer(data);
+              const entry = {
+                path,
+                name: basename(path),
+                type: 'file',
+                data: buffer,
+                size: buffer.byteLength,
+                mtime: Date.now(),
+                mime: mimeFromPath(path)
+              };
+              await this._put(entry);
+              return {
+                ...entry,
+                data: undefined
+              };
+            })(), args);
+          }
+          mkdir(path, ...args) {
+            return this._wrap((async () => {
+              path = normalizePath(path);
+              let cur = '/';
+              await this._put({
+                path: '/',
+                name: '/',
+                type: 'directory',
+                size: 0,
+                mtime: Date.now(),
+                mime: 'inode/directory'
+              });
+              for (const part of pathParts(path)) {
+                cur = joinPath(cur, part);
+                if (!await this._get(cur)) await this._put({
+                  path: cur,
+                  name: part,
+                  type: 'directory',
+                  size: 0,
+                  mtime: Date.now(),
+                  mime: 'inode/directory'
+                });
+              }
+              return this.stat(path);
+            })(), args);
+          }
+          unlink(path, ...args) {
+            return this._wrap((async () => {
+              await DB.delete('files', normalizePath(path));
+              return true;
+            })(), args);
+          }
+          rmdir(path, ...args) {
+            return this._wrap((async () => {
+              path = normalizePath(path);
+              const rows = await this._all();
+              for (const row of rows)
+                if (row.path === path || row.path.startsWith(path + '/')) await DB.delete('files', row
+                .path);
+              return true;
+            })(), args);
+          }
+          delete(path, ...args) {
+            return this._wrap((async () => {
+              const st = await this.stat(path);
+              return st.type === 'directory' ? this.rmdir(path) : this.unlink(path);
+            })(), args);
+          }
+          exists(path, ...args) {
+            return this._wrap((async () => {
+              const row = await this._get(path).catch(() => null);
+              return !!row;
+            })(), args);
+          }
+          rename(from, to, ...args) {
+            return this._wrap((async () => {
+              await this.copyPath(from, to);
+              await this.delete(from);
+              return this.stat(to);
+            })(), args);
+          }
+          async copyPath(from, to) {
+            const st = await this.stat(from);
+            if (st.type === 'directory') {
+              await this.mkdir(to);
+              for (const child of await this.readdir(from)) await this.copyPath(child.path, joinPath(to, child
+                .name));
+            } else await this.writeFile(to, await this.readFile(from, 'arrayBuffer'));
+          }
+          async reset() {
+            await DB.clear('files');
+            await this.init();
+          }
+        }
+
+        class AccessHandleBackend {
+          constructor(handle) {
+            this.name = handle.name || 'Mounted';
+            this.root = handle;
+          }
+          async init() {
+            await this._permission(true);
+          }
+          _wrap(promise, args) {
+            return cbify(promise, args);
+          }
+          async _permission(write = false) {
+            const opts = write ? {
+              mode: 'readwrite'
+            } : {
+              mode: 'read'
+            };
+            if (!this.root.queryPermission) return true;
+            if (await this.root.queryPermission(opts) === 'granted') return true;
+            return await this.root.requestPermission(opts) === 'granted';
+          }
+          async _dir(path, create = false) {
+            let dir = this.root;
+            for (const part of pathParts(path)) dir = await dir.getDirectoryHandle(part, {
+              create
+            });
+            return dir;
+          }
+          async _parent(path, create = false) {
+            return [await this._dir(dirname(path), create), basename(path)];
+          }
+          stat(path, ...args) {
+            return this._wrap((async () => {
+              path = normalizePath(path);
+              await this._permission(false);
+              if (path === '/') return {
+                path,
+                name: this.name,
+                type: 'directory',
+                size: 0,
+                mtime: Date.now(),
+                mime: 'inode/directory'
+              };
+              const [parent, name] = await this._parent(path);
+              try {
+                await parent.getDirectoryHandle(name);
+                return {
+                  path,
+                  name,
+                  type: 'directory',
+                  size: 0,
+                  mtime: Date.now(),
+                  mime: 'inode/directory'
+                };
+              } catch {}
+              const fh = await parent.getFileHandle(name);
+              const file = await fh.getFile();
+              return {
+                path,
+                name,
+                type: 'file',
+                size: file.size,
+                mtime: file.lastModified,
+                mime: file.type || mimeFromPath(path)
+              };
+            })(), args);
+          }
+          readdir(path = '/', ...args) {
+            return this._wrap((async () => {
+              await this._permission(false);
+              path = normalizePath(path);
+              const dir = await this._dir(path);
+              const out = [];
+              for await (const [name, handle] of dir.entries()) {
+                const child = joinPath(path, name);
+                if (handle.kind === 'directory') out.push({
+                  path: child,
+                  name,
+                  type: 'directory',
+                  size: 0,
+                  mtime: Date.now(),
+                  mime: 'inode/directory'
+                });
+                else {
+                  const file = await handle.getFile();
+                  out.push({
+                    path: child,
+                    name,
+                    type: 'file',
+                    size: file.size,
+                    mtime: file.lastModified,
+                    mime: file.type || mimeFromPath(child)
+                  });
+                }
+              }
+              return out.sort(sortEntriesDefault);
+            })(), args);
+          }
+          open(path, ...args) {
+            return this._wrap((async () => {
+              await this._permission(false);
+              const [parent, name] = await this._parent(path);
+              return parent.getFileHandle(name);
+            })(), args);
+          }
+          readFile(path, kind = 'arrayBuffer', ...args) {
+            if (typeof kind === 'function') {
+              args.unshift(kind);
+              kind = 'arrayBuffer';
+            }
+            return this._wrap((async () => {
+              await this._permission(false);
+              const [parent, name] = await this._parent(path);
+              const file = await (await parent.getFileHandle(name)).getFile();
+              const want = typeof kind === 'string' ? kind : (kind && (kind.encoding || kind.as)) ||
+                'arrayBuffer';
+              if (want === 'text' || want === 'utf8' || want === 'utf-8') return file.text();
+              if (want === 'blob') return new Blob([file], {
+                type: file.type || mimeFromPath(path)
+              });
+              return file.arrayBuffer();
+            })(), args);
+          }
+          writeFile(path, data, ...args) {
+            return this._wrap((async () => {
+              await this._permission(true);
+              path = normalizePath(path);
+              const [parent, name] = await this._parent(path, true);
+              const fh = await parent.getFileHandle(name, {
+                create: true
+              });
+              const writable = await fh.createWritable();
+              await writable.write(data instanceof Blob || typeof data === 'string' ||
+                data instanceof ArrayBuffer || ArrayBuffer.isView(data) ? data : String(data));
+              await writable.close();
+              return this.stat(path);
+            })(), args);
+          }
+          mkdir(path, ...args) {
+            return this._wrap((async () => {
+              await this._permission(true);
+              await this._dir(path, true);
+              return this.stat(path);
+            })(), args);
+          }
+          unlink(path, ...args) {
+            return this._wrap((async () => {
+              await this._permission(true);
+              const [parent, name] = await this._parent(path);
+              await parent.removeEntry(name);
+              return true;
+            })(), args);
+          }
+          rmdir(path, ...args) {
+            return this._wrap((async () => {
+              await this._permission(true);
+              const [parent, name] = await this._parent(path);
+              await parent.removeEntry(name, {
+                recursive: true
+              });
+              return true;
+            })(), args);
+          }
+          delete(path, ...args) {
+            return this._wrap((async () => {
+              const st = await this.stat(path);
+              return st.type === 'directory' ? this.rmdir(path) : this.unlink(path);
+            })(), args);
+          }
+          exists(path, ...args) {
+            return this._wrap((async () => {
+              try {
+                await this.stat(path);
+                return true;
+              } catch {
+                return false;
+              }
+            })(), args);
+          }
+          rename(from, to, ...args) {
+            return this._wrap((async () => {
+              await this.copyPath(from, to);
+              await this.delete(from);
+              return this.stat(to);
+            })(), args);
+          }
+          async copyPath(from, to) {
+            const st = await this.stat(from);
+            if (st.type === 'directory') {
+              await this.mkdir(to);
+              for (const child of await this.readdir(from)) await this.copyPath(child.path, joinPath(to, child
+                .name));
+            } else await this.writeFile(to, await this.readFile(from, 'blob'));
+          }
+        }
+
+        class MountableFS {
+          constructor(primary) {
+            this.primary = primary;
+            this.mounts = new Map();
+          }
+          async init() {
+            await this.primary.init();
+            await this.primary.mkdir('/mnt/local').catch(() => {});
+          }
+          _route(path) {
+            const p = normalizePath(path);
+            let hit = null;
+            for (const mountPath of this.mounts.keys()) {
+              if ((p === mountPath || p.startsWith(mountPath + '/')) && (!hit || mountPath.length > hit.length))
+                hit = mountPath;
+            }
+            if (hit) return {
+              backend: this.mounts.get(hit),
+              sub: normalizePath(p.slice(hit.length) || '/'),
+              mountPath: hit
+            };
+            return {
+              backend: this.primary,
+              sub: p,
+              mountPath: null
+            };
+          }
+          _wrap(promise, args) {
+            return cbify(promise, args);
+          }
+          _outPath(mountPath, item) {
+            return mountPath ? {
+              ...item,
+              path: joinPath(mountPath, item.path),
+              name: basename(joinPath(mountPath, item.path)) || item.name
+            } : item;
+          }
+          stat(path, ...args) {
+            return this._wrap((async () => {
+              const p = normalizePath(path);
+              const r = this._route(p);
+              const st = await r.backend.stat(r.sub);
+              return r.mountPath ? {
+                ...st,
+                path: p,
+                name: basename(p) || st.name
+              } : st;
+            })(), args);
+          }
+          readdir(path = '/', ...args) {
+            return this._wrap((async () => {
+              const p = normalizePath(path);
+              const r = this._route(p);
+              let rows = (await r.backend.readdir(r.sub)).map(item => this._outPath(r.mountPath, item));
+              if (!r.mountPath && p === '/mnt/local') {
+                const active = [];
+                for (const [mountPath, backend] of this.mounts) active.push({
+                  path: mountPath,
+                  name: basename(mountPath),
+                  type: 'directory',
+                  size: 0,
+                  mtime: Date.now(),
+                  mime: 'inode/directory',
+                  source: backend.name
+                });
+                const seen = new Set(rows.map(x => x.path));
+                rows = rows.concat(active.filter(x => !seen.has(x.path)));
+              }
+              return rows.sort(sortEntriesDefault);
+            })(), args);
+          }
+          open(path, ...args) {
+            return this._wrap((async () => {
+              const r = this._route(path);
+              return r.backend.open(r.sub);
+            })(), args);
+          }
+          readFile(path, kind = 'arrayBuffer', ...args) {
+            if (typeof kind === 'function') {
+              args.unshift(kind);
+              kind = 'arrayBuffer';
+            }
+            return this._wrap((async () => {
+              const r = this._route(path);
+              return r.backend.readFile(r.sub, kind);
+            })(), args);
+          }
+          writeFile(path, data, ...args) {
+            return this._wrap((async () => {
+              const r = this._route(path);
+              const out = await r.backend.writeFile(r.sub, data);
+              return this.stat(path).catch(() => out);
+            })(), args);
+          }
+          mkdir(path, ...args) {
+            return this._wrap((async () => {
+              const r = this._route(path);
+              const out = await r.backend.mkdir(r.sub);
+              return this.stat(path).catch(() => out);
+            })(), args);
+          }
+          unlink(path, ...args) {
+            return this._wrap((async () => {
+              const r = this._route(path);
+              return r.backend.unlink(r.sub);
+            })(), args);
+          }
+          rmdir(path, ...args) {
+            return this._wrap((async () => {
+              const r = this._route(path);
+              return r.backend.rmdir(r.sub);
+            })(), args);
+          }
+          delete(path, ...args) {
+            return this._wrap((async () => {
+              const st = await this.stat(path);
+              return st.type === 'directory' ? this.rmdir(path) : this.unlink(path);
+            })(), args);
+          }
+          exists(path, ...args) {
+            return this._wrap((async () => {
+              try {
+                await this.stat(path);
+                return true;
+              } catch {
+                return false;
+              }
+            })(), args);
+          }
+          rename(from, to, ...args) {
+            return this._wrap((async () => {
+              const a = this._route(from),
+                b = this._route(to);
+              if (a.backend === b.backend) return a.backend.rename(a.sub, b.sub);
+              await this.copyPath(from, to);
+              await this.delete(from);
+              return this.stat(to);
+            })(), args);
+          }
+          async copyPath(from, to) {
+            const st = await this.stat(from);
+            if (st.type === 'directory') {
+              await this.mkdir(to);
+              for (const child of await this.readdir(from)) await this.copyPath(child.path, joinPath(to, child
+                .name));
+            } else await this.writeFile(to, await this.readFile(from, 'blob'));
+          }
+          async mountPickedFolder() {
+            if (!window.showDirectoryPicker) throw new Error('此浏览器不支持 showDirectoryPicker');
+            const handle = await window.showDirectoryPicker({
+              mode: 'readwrite'
+            });
+            const backend = new AccessHandleBackend(handle);
+            await backend.init();
+            let name = safeName(handle.name || 'folder');
+            let mountPath = joinPath('/mnt/local', name);
+            let n = 2;
+            while (this.mounts.has(mountPath)) mountPath = joinPath('/mnt/local', `${name}-${n++}`);
+            await this.primary.mkdir(mountPath).catch(() => {});
+            this.mounts.set(mountPath, backend);
+            await DB.put('mounts', {
+              path: mountPath,
+              name,
+              handle,
+              mtime: Date.now()
+            }).catch(() => {});
+            await rememberMounts();
+            return mountPath;
+          }
+          async tryRestoreHandles() {
+            const rows = await DB.all('mounts').catch(() => []);
+            const restored = [];
+            for (const row of rows) {
+              if (!row.handle) continue;
+              try {
+                const backend = new AccessHandleBackend(row.handle);
+                if (await row.handle.queryPermission?.({
+                    mode: 'readwrite'
+                  }) === 'granted') {
+                  await backend.init();
+                  this.mounts.set(row.path, backend);
+                  await this.primary.mkdir(row.path).catch(() => {});
+                  restored.push(row.path);
+                }
+              } catch {}
+            }
+            return restored;
+          }
+          async unmount(mountPath) {
+            mountPath = normalizePath(mountPath);
+            this.mounts.delete(mountPath);
+            await DB.delete('mounts', mountPath).catch(() => {});
+            await rememberMounts();
+          }
+          listMounts() {
+            return Array.from(this.mounts.keys()).map(path => ({
+              path,
+              name: basename(path),
+              backend: this.mounts.get(path).name
+            }));
+          }
+          async reset() {
+            await this.primary.reset();
+            this.mounts.clear();
+            await DB.clear('mounts').catch(() => {});
+            await this.init();
+          }
+        }
+
+        function sortEntriesDefault(a, b) {
+          return (a.type === b.type ? a.name.localeCompare(b.name, 'zh-CN') : a.type === 'directory' ? -1 : 1);
+        }
+        async function rememberMounts() {
+          const list = fs ? fs.listMounts().map(x => ({
+            path: x.path,
+            name: x.name
+          })) : [];
+          await MetaStore.set('mountReminders', list);
+        }
+        async function uniquePath(dir, name) {
+          name = safeName(name);
+          let target = joinPath(dir, name);
+          if (!await fs.exists(target)) return target;
+          const base = stripExt(name),
+            ex = extname(name);
+          let i = 2;
+          do {
+            target = joinPath(dir, `${base}-${i++}${ex}`);
+          } while (await fs.exists(target));
+          return target;
+        }
+
+        const WindowManager = {
+          windows: new Map(),
+          open(app, title, content, opts = {}) {
+            const id = 'w' + Math.random().toString(36).slice(2);
+            const win = document.createElement('section');
+            win.className = 'window';
+            win.dataset.id = id;
+            win.dataset.app = app;
+            const vw = innerWidth,
+              vh = innerHeight - 90;
+            const width = Math.min(opts.width || 820, Math.max(340, vw - 28));
+            const height = Math.min(opts.height || 560, Math.max(260, vh - 28));
+            const cascade = (this.windows.size % 6) * 24;
+            win.style.width = width + 'px';
+            win.style.height = height + 'px';
+            win.style.left = Math.max(8, Math.min(opts.x ?? (70 + cascade), vw - width - 8)) + 'px';
+            win.style.top = Math.max(8, Math.min(opts.y ?? (38 + cascade), vh - height - 8)) + 'px';
+            win.style.zIndex = ++zSeed;
+            win.innerHTML =
+              `
+          <div class="titlebar">
+            <div class="title-left">${svg(opts.icon || app)}<div class="title-text"></div></div>
+            <div class="win-actions">
+              <button class="win-action min" title="最小化">${svg('min')}</button>
+              <button class="win-action max" title="最大化">${svg('max')}</button>
+              <button class="win-action close" title="关闭">${svg('close')}</button>
+            </div>
+          </div>
+          <div class="window-content"></div>
+          <div class="resize-handle resize-n" data-dir="n"></div><div class="resize-handle resize-e" data-dir="e"></div><div class="resize-handle resize-s" data-dir="s"></div><div class="resize-handle resize-w" data-dir="w"></div>
+          <div class="resize-handle resize-ne" data-dir="ne"></div><div class="resize-handle resize-nw" data-dir="nw"></div><div class="resize-handle resize-se" data-dir="se"></div><div class="resize-handle resize-sw" data-dir="sw"></div>`;
+            $('.title-text', win).textContent = title;
+            $('.window-content', win).append(content);
+            windowsEl.append(win);
+            this.windows.set(id, {
+              id,
+              app,
+              title,
+              win,
+              minimized: false,
+              maximized: false,
+              icon: opts.icon || app,
+              onClose: opts.onClose
+            });
+            win.addEventListener('pointerdown', () => this.focus(id));
+            $('.close', win).addEventListener('click', () => this.close(id));
+            $('.min', win).addEventListener('click', () => this.minimize(id));
+            $('.max', win).addEventListener('click', () => this.toggleMax(id));
+            this.bindDrag(win, id);
+            this.bindResize(win, id);
+            this.renderTasks();
+            return id;
+          },
+          focus(id) {
+            const rec = this.windows.get(id);
+            if (!rec) return;
+            rec.win.style.zIndex = ++zSeed;
+            rec.win.classList.remove('minimized');
+            rec.minimized = false;
+            this.renderTasks();
+          },
+          minimize(id) {
+            const rec = this.windows.get(id);
+            if (!rec) return;
+            rec.minimized = true;
+            rec.win.classList.add('minimized');
+            this.renderTasks();
+          },
+          close(id) {
+            const rec = this.windows.get(id);
+            if (!rec) return;
+            try {
+              rec.onClose?.();
+            } catch {}
+            rec.win.remove();
+            this.windows.delete(id);
+            this.renderTasks();
+          },
+          toggleMax(id) {
+            const rec = this.windows.get(id);
+            if (!rec) return;
+            rec.maximized = !rec.maximized;
+            rec.win.classList.toggle('maximized', rec.maximized);
+            $('.max', rec.win).innerHTML = rec.maximized ? svg('restore') : svg('max');
+            this.focus(id);
+          },
+          bindDrag(win, id) {
+            const bar = $('.titlebar', win);
+            let start = null;
+            bar.addEventListener('pointerdown', e => {
+              if (e.target.closest('button')) return;
+              const rec = this.windows.get(id);
+              if (rec?.maximized) return;
+              start = {
+                x: e.clientX,
+                y: e.clientY,
+                left: win.offsetLeft,
+                top: win.offsetTop
+              };
+              bar.setPointerCapture(e.pointerId);
+            });
+            bar.addEventListener('pointermove', e => {
+              if (!start) return;
+              const maxTop = innerHeight - 120;
+              win.style.left = Math.max(-win.offsetWidth + 80, Math.min(innerWidth - 80, start.left + e
+                .clientX - start.x)) + 'px';
+              win.style.top = Math.max(0, Math.min(maxTop, start.top + e.clientY - start.y)) + 'px';
+            });
+            bar.addEventListener('pointerup', e => {
+              start = null;
+              try {
+                bar.releasePointerCapture(e.pointerId);
+              } catch {}
+            });
+          },
+          bindResize(win, id) {
+            let start = null;
+            $$('.resize-handle', win).forEach(handle => {
+              handle.addEventListener('pointerdown', e => {
+                const rec = this.windows.get(id);
+                if (rec?.maximized) return;
+                e.preventDefault();
+                e.stopPropagation();
+                start = {
+                  dir: handle.dataset.dir,
+                  x: e.clientX,
+                  y: e.clientY,
+                  left: win.offsetLeft,
+                  top: win.offsetTop,
+                  w: win.offsetWidth,
+                  h: win.offsetHeight
+                };
+                handle.setPointerCapture(e.pointerId);
+              });
+              handle.addEventListener('pointermove', e => {
+                if (!start) return;
+                let {
+                  left,
+                  top,
+                  w,
+                  h
+                } = start;
+                const dx = e.clientX - start.x,
+                  dy = e.clientY - start.y;
+                if (start.dir.includes('e')) w += dx;
+                if (start.dir.includes('s')) h += dy;
+                if (start.dir.includes('w')) {
+                  w -= dx;
+                  left += dx;
+                }
+                if (start.dir.includes('n')) {
+                  h -= dy;
+                  top += dy;
+                }
+                w = Math.max(320, w);
+                h = Math.max(230, h);
+                win.style.left = Math.max(0, left) + 'px';
+                win.style.top = Math.max(0, top) + 'px';
+                win.style.width = w + 'px';
+                win.style.height = h + 'px';
+              });
+              handle.addEventListener('pointerup', e => {
+                start = null;
+                try {
+                  handle.releasePointerCapture(e.pointerId);
+                } catch {}
+              });
+            });
+          },
+          renderTasks() {
+            taskButtons.innerHTML = '';
+            for (const rec of this.windows.values()) {
+              const btn = document.createElement('button');
+              btn.className = 'dock-btn task-btn' + (rec.minimized ? ' min' : '');
+              btn.innerHTML = `${svg(rec.icon)}<span class="label"></span>`;
+              $('.label', btn).textContent = rec.title;
+              btn.addEventListener('click', () => rec.minimized ? this.focus(rec.id) : this.minimize(rec.id));
+              taskButtons.append(btn);
+            }
+          }
+        };
+
+        async function preloadDragPayload(path) {
+          if (dragCache.has(path)) return;
+          try {
+            const st = await fs.stat(path);
+            if (st.type !== 'file' || st.size > 256 * 1024 * 1024) return;
+            const blob = await fs.readFile(path, 'blob');
+            const file = new File([blob], basename(path), {
+              type: st.mime || mimeFromPath(path),
+              lastModified: st.mtime || Date.now()
+            });
+            const url = URL.createObjectURL(file);
+            objectUrls.add(url);
+            dragCache.set(path, {
+              file,
+              url,
+              mime: file.type || 'application/octet-stream',
+              name: file.name
+            });
+          } catch {}
+        }
+
+        function applyDragData(e, path, paths = null) {
+          const list = paths && paths.length ? paths : [path];
+          e.dataTransfer.effectAllowed = 'copyMove';
+          e.dataTransfer.setData('application/x-obsidian-path', path);
+          e.dataTransfer.setData('application/x-obsidian-paths', JSON.stringify(list));
+          e.dataTransfer.setData('text/plain', basename(path));
+          const payload = dragCache.get(path);
+          if (payload) {
+            try {
+              e.dataTransfer.items.add(payload.file);
+            } catch {}
+            e.dataTransfer.setData('DownloadURL',
+            `${payload.mime}:${payload.name.replace(/:/g, '_')}:${payload.url}`);
+          }
+        }
+
+        function transferPaths(dt) {
+          try {
+            const raw = dt.getData('application/x-obsidian-paths');
+            if (raw) return JSON.parse(raw).map(normalizePath);
+          } catch {}
+          const one = dt.getData('application/x-obsidian-path');
+          return one ? [normalizePath(one)] : [];
+        }
+
+        function delayedRevoke(path) {
+          const payload = dragCache.get(path);
+          if (!payload) return;
+          setTimeout(() => {
+            URL.revokeObjectURL(payload.url);
+            objectUrls.delete(payload.url);
+            dragCache.delete(path);
+          }, 5500);
+        }
+
+        async function renderDesktop() {
+          desktopLayout = await MetaStore.get('desktopLayout', {});
+          iconsLayer.innerHTML = '';
+          let entries = [];
+          try {
+            entries = await fs.readdir('/Desktop');
+          } catch {}
+          const cols = Math.max(1, Math.floor((innerWidth - 20) / 104));
+          entries.forEach((entry, i) => {
+            const saved = desktopLayout[entry.path] || {
+              x: 12 + (i % cols) * 104,
+              y: 12 + Math.floor(i / cols) * 116
+            };
+            const icon = document.createElement('button');
+            icon.className = 'desktop-icon';
+            icon.draggable = true;
+            icon.dataset.path = entry.path;
+            icon.style.left = Math.max(0, saved.x) + 'px';
+            icon.style.top = Math.max(0, saved.y) + 'px';
+            icon.style.animationDelay = `${Math.min(i * 35, 450)}ms`;
+            icon.innerHTML = `${iconForEntry(entry)}<span class="icon-name"></span>`;
+            $('.icon-name', icon).textContent = entry.name;
+            icon.addEventListener('mouseenter', () => preloadDragPayload(entry.path));
+            icon.addEventListener('mousedown', () => preloadDragPayload(entry.path));
+            icon.addEventListener('click', async ev => {
+              if (icon.classList.contains('dragging') || icon.dataset.wasDragged === '1') return;
+              if (ev.ctrlKey || ev.metaKey || ev.shiftKey) toggleDesktopSelection(entry.path);
+              else await openPath(entry.path);
+            });
+            icon.addEventListener('contextmenu', ev => {
+              ev.preventDefault();
+              selectOnlyDesktop(entry.path);
+              showPathMenu(ev.clientX, ev.clientY, entry.path, '/Desktop');
+            });
+            icon.addEventListener('dragstart', ev => {
+              icon.classList.add('dragging');
+              icon.dataset.wasDragged = '1';
+              applyDragData(ev, entry.path, desktopSelection.has(entry.path) ? Array.from(
+                desktopSelection) : [entry.path]);
+            });
+            icon.addEventListener('dragend', () => {
+              icon.classList.remove('dragging');
+              setTimeout(() => delete icon.dataset.wasDragged, 140);
+              delayedRevoke(entry.path);
+            });
+            bindTouchIcon(icon, entry.path);
+            iconsLayer.append(icon);
+          });
+          syncDesktopSelection();
+        }
+
+        function selectOnlyDesktop(path) {
+          desktopSelection = new Set([path]);
+          syncDesktopSelection();
+        }
+
+        function toggleDesktopSelection(path) {
+          desktopSelection.has(path) ? desktopSelection.delete(path) : desktopSelection.add(path);
+          syncDesktopSelection();
+        }
+
+        function syncDesktopSelection() {
+          $$('.desktop-icon', iconsLayer).forEach(el => el.classList.toggle('selected', desktopSelection.has(el
+            .dataset.path)));
+        }
+        async function saveIconPosition(path, x, y) {
+          const rect = iconsLayer.getBoundingClientRect();
+          desktopLayout[path] = {
+            x: Math.max(0, Math.min(rect.width - 92, x)),
+            y: Math.max(0, Math.min(rect.height - 106, y))
+          };
+          await MetaStore.set('desktopLayout', desktopLayout);
+          const el = $(`.desktop-icon[data-path="${cssEscape(path)}"]`, iconsLayer);
+          if (el) {
+            el.style.left = desktopLayout[path].x + 'px';
+            el.style.top = desktopLayout[path].y + 'px';
+          }
+        }
+
+        function bindTouchIcon(icon, path) {
+          let touch = null,
+            moved = false,
+            timer = null;
+          icon.addEventListener('touchstart', e => {
+            const t = e.touches[0];
+            moved = false;
+            touch = {
+              sx: t.clientX,
+              sy: t.clientY,
+              left: icon.offsetLeft,
+              top: icon.offsetTop
+            };
+            timer = setTimeout(() => {
+              toggleDesktopSelection(path);
+              navigator.vibrate?.(12);
+            }, 520);
+          }, {
+            passive: true
+          });
+          icon.addEventListener('touchmove', e => {
+            if (!touch) return;
+            const t = e.touches[0];
+            const dx = t.clientX - touch.sx,
+              dy = t.clientY - touch.sy;
+            if (Math.abs(dx) + Math.abs(dy) > 8) {
+              moved = true;
+              clearTimeout(timer);
+              e.preventDefault();
+              icon.style.left = touch.left + dx + 'px';
+              icon.style.top = touch.top + dy + 'px';
+            }
+          }, {
+            passive: false
+          });
+          icon.addEventListener('touchend', async e => {
+            clearTimeout(timer);
+            if (!touch) return;
+            if (moved) await saveIconPosition(path, icon.offsetLeft, icon.offsetTop);
+            touch = null;
+          });
+        }
+
+        desktop.addEventListener('dragover', e => {
+          if (e.target.closest('.window')) return;
+          e.preventDefault();
+          desktop.classList.add('drop-glow');
+        });
+        desktop.addEventListener('dragleave', e => {
+          if (e.target === desktop) desktop.classList.remove('drop-glow');
+        });
+        desktop.addEventListener('drop', async e => {
+          if (e.target.closest('.window')) return;
+          e.preventDefault();
+          desktop.classList.remove('drop-glow');
+          const targetIcon = e.target.closest('.desktop-icon');
+          let targetDir = '/Desktop';
+          if (targetIcon) {
+            try {
+              const st = await fs.stat(targetIcon.dataset.path);
+              if (st.type === 'directory') targetDir = targetIcon.dataset.path;
+            } catch {}
+          }
+          const internalPaths = transferPaths(e.dataTransfer);
+          if (internalPaths.length) {
+            const first = internalPaths[0];
+            if (targetDir !== '/Desktop')
+              for (const path of internalPaths) await movePathToDir(path, targetDir);
+            else if (internalPaths.length === 1 && dirname(first) === '/Desktop') {
+              const rect = iconsLayer.getBoundingClientRect();
+              await saveIconPosition(first, e.clientX - rect.left - 46, e.clientY - rect.top - 42);
+            } else
+              for (const path of internalPaths) await movePathToDir(path, '/Desktop');
+          } else await importDataTransfer(e.dataTransfer, targetDir);
+          await renderDesktop();
+          refreshExplorers();
+        });
+
+        function bindSelectionBox(container, getItems, onDone) {
+          let start = null;
+          container.addEventListener('pointerdown', e => {
+            if (e.button !== 0 || e.target.closest(
+                'button, input, textarea, tr, .desktop-icon, .window, #taskbar, #startMenu')) return;
+            start = {
+              x: e.clientX,
+              y: e.clientY
+            };
+            selectionBox.style.display = 'block';
+            selectionBox.style.left = start.x + 'px';
+            selectionBox.style.top = start.y + 'px';
+            selectionBox.style.width = '0px';
+            selectionBox.style.height = '0px';
+            container.setPointerCapture?.(e.pointerId);
+          });
+          container.addEventListener('pointermove', e => {
+            if (!start) return;
+            const x = Math.min(start.x, e.clientX),
+              y = Math.min(start.y, e.clientY),
+              w = Math.abs(start.x - e.clientX),
+              h = Math.abs(start.y - e.clientY);
+            Object.assign(selectionBox.style, {
+              left: x + 'px',
+              top: y + 'px',
+              width: w + 'px',
+              height: h + 'px'
+            });
+          });
+          container.addEventListener('pointerup', e => {
+            if (!start) return;
+            const box = selectionBox.getBoundingClientRect();
+            selectionBox.style.display = 'none';
+            const selected = getItems().filter(el => intersects(box, el.getBoundingClientRect())).map(el => el
+              .dataset.path);
+            onDone(selected, e);
+            start = null;
+          });
+        }
+
+        function intersects(a, b) {
+          return !(b.left > a.right || b.right < a.left || b.top > a.bottom || b.bottom < a.top);
+        }
+        bindSelectionBox(desktop, () => $$('.desktop-icon', iconsLayer), selected => {
+          desktopSelection = new Set(selected);
+          syncDesktopSelection();
+        });
+
+        async function importDataTransfer(dt, dir) {
+          const items = Array.from(dt.items || []);
+          let usedEntry = false;
+          for (const item of items) {
+            const entry = item.webkitGetAsEntry?.();
+            if (entry) {
+              usedEntry = true;
+              await importEntry(entry, dir);
+            }
+          }
+          if (!usedEntry)
+            for (const file of Array.from(dt.files || [])) await importFileObject(file, dir);
+          toast('导入完成');
+        }
+        async function importEntry(entry, dir) {
+          if (entry.isFile) {
+            const file = await new Promise((resolve, reject) => entry.file(resolve, reject));
+            await importFileObject(file, dir);
+          } else if (entry.isDirectory) {
+            const folder = await uniquePath(dir, entry.name);
+            await fs.mkdir(folder);
+            const reader = entry.createReader();
+            while (true) {
+              const batch = await new Promise((resolve, reject) => reader.readEntries(resolve, reject));
+              if (!batch.length) break;
+              for (const child of batch) await importEntry(child, folder);
+            }
+          }
+        }
+        async function importFileObject(file, dir) {
+          const path = await uniquePath(dir, file.name);
+          await fs.writeFile(path, await file.arrayBuffer());
+          return path;
+        }
+        async function movePathToDir(path, dir) {
+          if (normalizePath(path) === normalizePath(dir) || normalizePath(dir).startsWith(normalizePath(path) +
+            '/')) return toast('不能移动到自身内部');
+          if (dirname(path) === normalizePath(dir)) return;
+          const target = await uniquePath(dir, basename(path));
+          await fs.rename(path, target);
+          if (desktopLayout[path]) {
+            desktopLayout[target] = desktopLayout[path];
+            delete desktopLayout[path];
+            await MetaStore.set('desktopLayout', desktopLayout);
+          }
+        }
+        async function downloadPath(path) {
+          const st = await fs.stat(path);
+          if (st.type === 'directory') {
+            if (!window.JSZip) return toast('JSZip 未加载，无法打包文件夹');
+            const zip = new JSZip();
+            await addDirToZip(zip, path, basename(path));
+            const blob = await zip.generateAsync({
+              type: 'blob'
+            });
+            triggerDownload(blob, basename(path) + '.zip');
+          } else triggerDownload(await fs.readFile(path, 'blob'), basename(path));
+        }
+
+        function triggerDownload(blob, name) {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = name;
+          a.click();
+          setTimeout(() => URL.revokeObjectURL(url), 5500);
+        }
+        async function addDirToZip(zip, path, rootName) {
+          for (const child of await fs.readdir(path)) {
+            const rel = rootName ? rootName + '/' + child.name : child.name;
+            if (child.type === 'directory') {
+              zip.folder(rel);
+              await addDirToZip(zip, child.path, rel);
+            } else zip.file(rel, await fs.readFile(child.path, 'blob'));
+          }
+        }
+
+        function showDesktopMenu(x, y) {
+          showContextMenu(x, y, [{
+              label: '刷新桌面',
+              action: renderDesktop
+            },
+            {
+              label: '新建文件夹',
+              action: () => createFolder('/Desktop')
+            },
+            {
+              label: '新建文本文件',
+              action: () => createTextFile('/Desktop')
+            },
+            'hr',
+            {
+              label: '上传文件到桌面',
+              action: () => pickFiles('/Desktop', false)
+            },
+            {
+              label: '上传文件夹到桌面',
+              action: () => pickFiles('/Desktop', true)
+            },
+            {
+              label: '挂载真实本地文件夹',
+              action: mountFolderAction
+            },
+            'hr',
+            {
+              label: '更换自定义壁纸',
+              action: pickWallpaper
+            },
+            {
+              label: '进入全屏模式',
+              action: () => document.documentElement.requestFullscreen?.()
+            },
+            {
+              label: '打开设置',
+              action: openSettings
+            }
+          ]);
+        }
+        desktop.addEventListener('contextmenu', e => {
+          if (e.target.closest('.desktop-icon, .window, #taskbar, #startMenu, #contextMenu')) return;
+          e.preventDefault();
+          showDesktopMenu(e.clientX, e.clientY);
+        });
+        async function showPathMenu(x, y, path, cwd = dirname(path), selectionPaths = null) {
+          const st = await fs.stat(path).catch(() => null);
+          const chosen = selectionPaths && selectionPaths.length ? selectionPaths : Array.from(desktopSelection
+            .size ? desktopSelection : [path]);
+          const items = [{
+              label: '打开',
+              action: () => openPath(path)
+            },
+            {
+              label: '复制',
+              action: () => {
+                clipboard = {
+                  action: 'copy',
+                  paths: chosen
+                };
+                toast('已复制到剪贴板');
+              }
+            },
+            {
+              label: '剪切',
+              action: () => {
+                clipboard = {
+                  action: 'cut',
+                  paths: chosen
+                };
+                toast('已剪切到剪贴板');
+              }
+            },
+            {
+              label: '重命名',
+              action: () => renamePath(path)
+            },
+            {
+              label: '导出或下载',
+              action: () => downloadPath(path)
+            }
+          ];
+          if (st?.type === 'directory') items.push({
+            label: '粘贴到此文件夹',
+            action: () => pasteInto(path)
+          });
+          if (isArchivePath(path)) items.push({
+            label: '解压到当前目录',
+            action: () => extractArchive(path, cwd)
+          });
+          items.push('hr', {
+            label: '删除',
+            danger: true,
+            action: () => deletePaths(chosen)
+          });
+          showContextMenu(x, y, items);
+        }
+        async function createFolder(dir) {
+          const name = prompt('文件夹名称', '新建文件夹');
+          if (!name) return;
+          await fs.mkdir(await uniquePath(dir, name));
+          await renderDesktop();
+          refreshExplorers();
+        }
+        async function createTextFile(dir) {
+          const name = prompt('文件名', 'untitled.txt');
+          if (!name) return;
+          const path = await uniquePath(dir, name);
+          await fs.writeFile(path, '');
+          await renderDesktop();
+          refreshExplorers();
+          openEditor(path);
+        }
+        async function renamePath(path) {
+          const name = prompt('新名称', basename(path));
+          if (!name || name === basename(path)) return;
+          const target = await uniquePath(dirname(path), name);
+          await fs.rename(path, target);
+          if (desktopLayout[path]) {
+            desktopLayout[target] = desktopLayout[path];
+            delete desktopLayout[path];
+            await MetaStore.set('desktopLayout', desktopLayout);
+          }
+          await renderDesktop();
+          refreshExplorers();
+        }
+        async function deletePaths(paths) {
+          if (!paths.length || !confirm(`删除 ${paths.length} 个项目？`)) return;
+          for (const path of paths) {
+            await fs.delete(path).catch(err => toast(err.message));
+            delete desktopLayout[path];
+          }
+          await MetaStore.set('desktopLayout', desktopLayout);
+          desktopSelection.clear();
+          await renderDesktop();
+          refreshExplorers();
+        }
+        async function pasteInto(dir) {
+          if (!clipboard?.paths?.length) return toast('剪贴板为空');
+          for (const src of clipboard.paths) {
+            const target = await uniquePath(dir, basename(src));
+            if (clipboard.action === 'cut') await fs.rename(src, target);
+            else await fs.copyPath(src, target);
+          }
+          if (clipboard.action === 'cut') clipboard = null;
+          await renderDesktop();
+          refreshExplorers();
+        }
+        async function pickFiles(dir, folderMode = false) {
+          currentDropDir = dir;
+          const input = folderMode ? $('#fileImport') : $('#plainImport');
+          input.value = '';
+          input.onchange = async () => {
+            for (const file of Array.from(input.files || [])) {
+              const rel = folderMode && file.webkitRelativePath ? file.webkitRelativePath : file.name;
+              const parts = rel.split('/').filter(Boolean).map(safeName);
+              const fname = parts.pop();
+              let targetDir = dir;
+              for (const part of parts) {
+                targetDir = joinPath(targetDir, part);
+                await fs.mkdir(targetDir);
+              }
+              await fs.writeFile(await uniquePath(targetDir, fname), await file.arrayBuffer());
+            }
+            toast('上传完成');
+            await renderDesktop();
+            refreshExplorers();
+          };
+          input.click();
+        }
+
+        const explorerInstances = new Set();
+
+        function refreshExplorers() {
+          explorerInstances.forEach(fn => fn());
+        }
+
+        function openExplorer(path = '/') {
+          explorerApp(path);
+        }
+
+        function explorerApp(initialPath = '/') {
+          const state = {
+            cwd: normalizePath(initialPath),
+            sortKey: 'name',
+            sortDir: 1,
+            query: '',
+            selected: new Set()
+          };
+          const root = document.createElement('div');
+          root.className = 'app-shell split explorer-app';
+          root.innerHTML =
+            `<aside class="sidebar"></aside><main class="main-pane"><div class="toolbar explorer-toolbar"></div><div class="file-table-wrap"><table class="file-table"><thead><tr><th data-sort="name">名称</th><th data-sort="mtime">修改日期</th><th data-sort="type">类型</th><th data-sort="size">大小</th></tr></thead><tbody></tbody></table></div></main>`;
+          const sidebar = $('.sidebar', root),
+            toolbar = $('.explorer-toolbar', root),
+            tbody = $('tbody', root),
+            wrap = $('.file-table-wrap', root);
+          const id = WindowManager.open('folder', '文件资源管理器', root, {
+            width: 940,
+            height: 610,
+            icon: 'folder',
+            onClose: () => explorerInstances.delete(render)
+          });
+          explorerInstances.add(render);
+          async function render() {
+            sidebar.innerHTML = '';
+            const quick = ['/', '/Desktop', '/Documents', '/Pictures', '/Music', '/Videos', '/Downloads',
+              '/mnt/local'
+            ];
+            for (const p of quick) addSide(p, p === '/' ? '根目录' : basename(p), state.cwd === p);
+            const mounts = fs.listMounts();
+            if (mounts.length) {
+              const title = document.createElement('div');
+              title.className = 'mono muted mt-3 mb-2';
+              title.textContent = '挂载点';
+              sidebar.append(title);
+              mounts.forEach(m => addSide(m.path, m.name, state.cwd.startsWith(m.path), true));
+            }
+            toolbar.innerHTML = '';
+            toolbar.append(tool('上一级', () => navigate(dirname(state.cwd))), tool('新建文件夹', () => createFolder(state
+                .cwd)), tool('新建文本', () => createTextFile(state.cwd)), tool('上传文件', () => pickFiles(state.cwd,
+                false)), tool('上传文件夹', () => pickFiles(state.cwd, true)), tool('粘贴', () => pasteInto(state.cwd)),
+              tool('导出选中', async () => {
+                const chosen = Array.from(state.selected);
+                if (!chosen.length) return downloadPath(state.cwd);
+                for (const path of chosen) await downloadPath(path);
+              }), tool('挂载文件夹', mountFolderAction));
+            const crumbs = document.createElement('div');
+            crumbs.className = 'breadcrumbs';
+            crumbs.append(...crumbNodes(state.cwd, navigate));
+            toolbar.append(crumbs);
+            const search = document.createElement('input');
+            search.className = 'field mono';
+            search.placeholder = '搜索';
+            search.value = state.query;
+            search.style.maxWidth = '190px';
+            search.addEventListener('input', () => {
+              state.query = search.value;
+              render();
+            });
+            toolbar.append(search);
+            let rows = await fs.readdir(state.cwd).catch(err => {
+              toast(err.message);
+              return [];
+            });
+            if (state.query) rows = rows.filter(r => r.name.toLowerCase().includes(state.query.toLowerCase()));
+            rows.sort((a, b) => compareEntry(a, b, state.sortKey) * state.sortDir);
+            tbody.innerHTML = '';
+            for (const row of rows) {
+              const tr = document.createElement('tr');
+              tr.draggable = true;
+              tr.dataset.path = row.path;
+              tr.innerHTML =
+                `<td><div class="name-cell">${iconForEntry(row)}<span></span></div></td><td>${formatDate(row.mtime)}</td><td>${row.type === 'directory' ? '文件夹' : (row.mime || mimeFromPath(row.path))}</td><td>${row.type === 'directory' ? '' : formatSize(row.size)}</td>`;
+              $('.name-cell span', tr).textContent = row.name;
+              tr.classList.toggle('selected', state.selected.has(row.path));
+              tr.addEventListener('click', ev => {
+                if (ev.ctrlKey || ev.metaKey || ev.shiftKey) toggle(row.path);
+                else {
+                  state.selected = new Set([row.path]);
+                  renderSelection();
+                }
+              });
+              tr.addEventListener('dblclick', () => openPath(row.path));
+              tr.addEventListener('contextmenu', ev => {
+                ev.preventDefault();
+                state.selected.add(row.path);
+                renderSelection();
+                showPathMenu(ev.clientX, ev.clientY, row.path, state.cwd, Array.from(state.selected));
+              });
+              tr.addEventListener('mouseenter', () => preloadDragPayload(row.path));
+              tr.addEventListener('mousedown', () => preloadDragPayload(row.path));
+              tr.addEventListener('dragstart', ev => applyDragData(ev, row.path, state.selected.has(row.path) ?
+                Array.from(state.selected) : [row.path]));
+              tr.addEventListener('dragend', () => delayedRevoke(row.path));
+              tr.addEventListener('dragover', ev => {
+                if (row.type === 'directory') {
+                  ev.preventDefault();
+                  ev.stopPropagation();
+                }
+              });
+              tr.addEventListener('drop', async ev => {
+                ev.preventDefault();
+                ev.stopPropagation();
+                const paths = transferPaths(ev.dataTransfer);
+                if (paths.length && row.type === 'directory')
+                  for (const path of paths) await movePathToDir(path, row.path);
+                else if (row.type === 'directory') await importDataTransfer(ev.dataTransfer, row.path);
+                await renderDesktop();
+                refreshExplorers();
+              });
+              tbody.append(tr);
+            }
+          }
+
+          function addSide(path, label, active, canUnmount = false) {
+            const btn = document.createElement('button');
+            btn.className = 'side-link' + (active ? ' active' : '');
+            btn.innerHTML = `${iconForEntry(path, 'directory')}<span></span>`;
+            $('span', btn).textContent = label;
+            btn.addEventListener('click', () => navigate(path));
+            sidebar.append(btn);
+            if (canUnmount) {
+              const u = document.createElement('button');
+              u.className = 'side-link danger mono';
+              u.textContent = '卸载 ' + label;
+              u.addEventListener('click', async () => {
+                await fs.unmount(path);
+                await render();
+                toast('已卸载');
+              });
+              sidebar.append(u);
+            }
+          }
+
+          function tool(label, action) {
+            const b = document.createElement('button');
+            b.className = 'tool-btn';
+            b.textContent = label;
+            b.addEventListener('click', action);
+            return b;
+          }
+
+          function navigate(path) {
+            state.cwd = normalizePath(path);
+            state.selected.clear();
+            render();
+          }
+
+          function toggle(path) {
+            state.selected.has(path) ? state.selected.delete(path) : state.selected.add(path);
+            renderSelection();
+          }
+
+          function renderSelection() {
+            $$('tr', tbody).forEach(tr => tr.classList.toggle('selected', state.selected.has(tr.dataset.path)));
+          }
+          $('thead', root).addEventListener('click', e => {
+            const th = e.target.closest('th[data-sort]');
+            if (!th) return;
+            const key = th.dataset.sort;
+            if (state.sortKey === key) state.sortDir *= -1;
+            else {
+              state.sortKey = key;
+              state.sortDir = 1;
+            }
+            render();
+          });
+          wrap.addEventListener('dragover', e => {
+            e.preventDefault();
+            e.stopPropagation();
+            wrap.classList.add('drop-glow');
+          });
+          wrap.addEventListener('dragleave', () => wrap.classList.remove('drop-glow'));
+          wrap.addEventListener('drop', async e => {
+            e.preventDefault();
+            e.stopPropagation();
+            wrap.classList.remove('drop-glow');
+            const paths = transferPaths(e.dataTransfer);
+            if (paths.length)
+              for (const path of paths) await movePathToDir(path, state.cwd);
+            else await importDataTransfer(e.dataTransfer, state.cwd);
+            await renderDesktop();
+            refreshExplorers();
+          });
+          wrap.addEventListener('contextmenu', e => {
+            if (e.target.closest('tr')) return;
+            e.preventDefault();
+            showContextMenu(e.clientX, e.clientY, [{
+                label: '新建文件夹',
+                action: () => createFolder(state.cwd)
+              },
+              {
+                label: '新建文本文件',
+                action: () => createTextFile(state.cwd)
+              },
+              {
+                label: '上传文件',
+                action: () => pickFiles(state.cwd, false)
+              },
+              {
+                label: '粘贴',
+                action: () => pasteInto(state.cwd)
+              },
+              {
+                label: '刷新',
+                action: render
+              }
+            ]);
+          });
+          bindSelectionBox(wrap, () => $$('tbody tr', root), selected => {
+            state.selected = new Set(selected);
+            renderSelection();
+          });
+          render();
+          return id;
+        }
+
+        function compareEntry(a, b, key) {
+          if (a.type !== b.type) return a.type === 'directory' ? -1 : 1;
+          if (key === 'size' || key === 'mtime') return (a[key] || 0) - (b[key] || 0);
+          if (key === 'type') return (a.mime || '').localeCompare(b.mime || '', 'zh-CN');
+          return a.name.localeCompare(b.name, 'zh-CN');
+        }
+
+        function crumbNodes(path, cb) {
+          const nodes = [];
+          let acc = '/';
+          const root = document.createElement('button');
+          root.className = 'crumb';
+          root.textContent = '根';
+          root.addEventListener('click', () => cb('/'));
+          nodes.push(root);
+          for (const part of pathParts(path)) {
+            const sep = document.createElement('span');
+            sep.className = 'muted';
+            sep.textContent = '/';
+            nodes.push(sep);
+            acc = joinPath(acc, part);
+            const b = document.createElement('button');
+            b.className = 'crumb';
+            b.textContent = part;
+            b.addEventListener('click', () => cb(acc));
+            nodes.push(b);
+          }
+          return nodes;
+        }
+        async function mountFolderAction() {
+          try {
+            const p = await fs.mountPickedFolder();
+            toast('已挂载到 ' + p);
+            refreshExplorers();
+          } catch (err) {
+            toast(err.message || '挂载失败');
+          }
+        }
+
+        function modeForPath(path) {
+          const ext = extname(path);
+          if (ext === '.html' || ext === '.htm') return 'htmlmixed';
+          if (ext === '.css') return 'css';
+          if (ext === '.js' || ext === '.json' || ext === '.mjs') return 'javascript';
+          if (ext === '.xml' || ext === '.svg') return 'xml';
+          if (ext === '.md' || ext === '.markdown') return 'markdown';
+          return null;
+        }
+        async function openEditor(path) {
+          const text = await fs.readFile(path, 'text').catch(() => '');
+          const ext = extname(path);
+          const root = document.createElement('div');
+          root.className = 'editor-grid';
+          const isHtml = ext === '.html' || ext === '.htm';
+          const isSheet = ext === '.csv' || ext === '.tsv';
+          root.innerHTML = `<div class="toolbar"></div><div class="editor-main ${isHtml ? 'html' : ''}"></div>`;
+          const toolbar = $('.toolbar', root),
+            main = $('.editor-main', root);
+          let getValue, setValue, editor, previewUrl;
+          let updatePreview = () => {};
+          const textarea = document.createElement('textarea');
+          textarea.value = text;
+          main.append(textarea);
+          if (window.CodeMirror) {
+            editor = CodeMirror.fromTextArea(textarea, {
+              mode: modeForPath(path),
+              theme: 'material-darker',
+              lineNumbers: true,
+              lineWrapping: true,
+              tabSize: 2
+            });
+            getValue = () => editor.getValue();
+            setValue = v => editor.setValue(v);
+            setTimeout(() => editor.refresh(), 80);
+          } else {
+            getValue = () => textarea.value;
+            setValue = v => {
+              textarea.value = v;
+            };
+            toast('CodeMirror CDN 未加载，已使用原生文本框');
+          }
+          const save = async () => {
+            await fs.writeFile(path, getValue());
+            toast('已保存 ' + basename(path));
+            if (isHtml) updatePreview();
+            refreshExplorers();
+          };
+          toolbar.append(toolBtn('保存', save), toolBtn('另存到桌面', async () => {
+            const p = await uniquePath('/Desktop', basename(path));
+            await fs.writeFile(p, getValue());
+            await renderDesktop();
+            toast('已另存');
+          }));
+          if (isHtml) toolbar.append(toolBtn('在系统浏览器中打开', async () => openBrowser(await blobUrlForPath(path))),
+            toolBtn('刷新实时预览', () => updatePreview()));
+          if (isSheet) {
+            const textBtn = toolBtn('文本视图', () => {
+              main.innerHTML = '';
+              main.append(editor ? editor.getWrapperElement() : textarea);
+              if (editor) editor.refresh();
+            });
+            const tableBtn = toolBtn('表格视图', () => showTablePreview());
+            toolbar.append(textBtn, tableBtn);
+          }
+          if (isHtml) {
+            const frame = document.createElement('iframe');
+            frame.className = 'preview-frame';
+            main.append(frame);
+            const update = () => updatePreview();
+            if (editor) editor.on('change', debounce(update, 250));
+            else textarea.addEventListener('input', debounce(update, 250));
+            updatePreview = function() {
+              if (previewUrl) URL.revokeObjectURL(previewUrl);
+              previewUrl = URL.createObjectURL(new Blob([getValue()], {
+                type: 'text/html'
+              }));
+              objectUrls.add(previewUrl);
+              frame.src = previewUrl;
+            };
+            updatePreview();
+          }
+
+          function showTablePreview() {
+            const wrap = document.createElement('div');
+            wrap.className = 'table-preview';
+            const rows = parseDelimited(getValue(), ext === '.tsv' ? '\t' : ',');
+            const table = document.createElement('table');
+            rows.forEach((row, i) => {
+              const tr = document.createElement('tr');
+              row.forEach(cell => {
+                const el = document.createElement(i ? 'td' : 'th');
+                el.textContent = cell;
+                tr.append(el);
+              });
+              table.append(tr);
+            });
+            wrap.append(table);
+            main.innerHTML = '';
+            main.append(wrap);
+          }
+          WindowManager.open(isHtml ? 'code' : isSheet ? 'table' : 'code', (isHtml ? 'HTML 工作台: ' : '编辑: ') +
+            basename(path), root, {
+              width: isHtml ? 1120 : 820,
+              height: 650,
+              icon: isHtml ? 'browser' : isSheet ? 'table' : 'code',
+              onClose: () => {
+                if (previewUrl) URL.revokeObjectURL(previewUrl);
+              }
+            });
+
+          function toolBtn(label, action) {
+            const b = document.createElement('button');
+            b.className = 'tool-btn';
+            b.textContent = label;
+            b.addEventListener('click', action);
+            return b;
+          }
+        }
+
+        function debounce(fn, ms) {
+          let t;
+          return (...args) => {
+            clearTimeout(t);
+            t = setTimeout(() => fn(...args), ms);
+          };
+        }
+
+        function parseDelimited(text, delim) {
+          const rows = [];
+          let row = [],
+            cell = '',
+            quoted = false;
+          for (let i = 0; i < text.length; i++) {
+            const c = text[i];
+            if (c === '"') {
+              if (quoted && text[i + 1] === '"') {
+                cell += '"';
+                i++;
+              } else quoted = !quoted;
+            } else if (c === delim && !quoted) {
+              row.push(cell);
+              cell = '';
+            } else if ((c === '\n' || c === '\r') && !quoted) {
+              if (c === '\r' && text[i + 1] === '\n') i++;
+              row.push(cell);
+              rows.push(row);
+              row = [];
+              cell = '';
+            } else cell += c;
+          }
+          row.push(cell);
+          rows.push(row);
+          return rows;
+        }
+
+        async function blobUrlForPath(path) {
+          const st = await fs.stat(path);
+          const blob = await fs.readFile(path, 'blob');
+          const url = URL.createObjectURL(new Blob([blob], {
+            type: st.mime || mimeFromPath(path)
+          }));
+          objectUrls.add(url);
+          return url;
+        }
+
+        function openBrowser(url = 'about:blank') {
+          const root = document.createElement('div');
+          root.className = 'viewer';
+          root.innerHTML =
+            `<div class="toolbar"><button class="tool-btn back">后退</button><button class="tool-btn forward">前进</button><button class="tool-btn reload">刷新</button><input class="field mono address" placeholder="输入 URL 或 VFS 路径"></div><iframe class="browser-frame" sandbox="allow-scripts allow-forms allow-modals allow-same-origin allow-downloads"></iframe>`;
+          const frame = $('.browser-frame', root),
+            address = $('.address', root);
+          let history = [],
+            idx = -1;
+          async function go(input, push = true) {
+            try {
+              let src = input || address.value || 'about:blank';
+              address.value = src;
+              if (src.startsWith('/')) src = await blobUrlForPath(src);
+              else if (!/^(https?:|blob:|data:|about:)/i.test(src)) src = 'https://' + src;
+              frame.src = src;
+              if (push) {
+                history = history.slice(0, idx + 1);
+                history.push(address.value);
+                idx = history.length - 1;
+              }
+            } catch (err) {
+              toast(err.message);
+            }
+          }
+          address.addEventListener('keydown', e => {
+            if (e.key === 'Enter') go(address.value);
+          });
+          $('.back', root).addEventListener('click', () => {
+            if (idx > 0) go(history[--idx], false);
+          });
+          $('.forward', root).addEventListener('click', () => {
+            if (idx < history.length - 1) go(history[++idx], false);
+          });
+          $('.reload', root).addEventListener('click', () => frame.contentWindow?.location.reload());
+          WindowManager.open('browser', '网页浏览器', root, {
+            width: 980,
+            height: 650,
+            icon: 'browser'
+          });
+          go(url);
+        }
+        async function openImage(path) {
+          const url = await blobUrlForPath(path);
+          const root = document.createElement('div');
+          root.className = 'viewer';
+          root.innerHTML =
+            `<div class="toolbar"><span class="mono muted">缩放</span><input type="range" min="25" max="300" value="100"><button class="tool-btn">下载</button></div><div class="viewer-stage"><img></div>`;
+          const img = $('img', root),
+            range = $('input', root);
+          img.src = url;
+          range.addEventListener('input', () => img.style.transform = `scale(${range.value / 100})`);
+          $('button', root).addEventListener('click', () => downloadPath(path));
+          WindowManager.open('image', basename(path), root, {
+            width: 900,
+            height: 650,
+            icon: 'image',
+            onClose: () => URL.revokeObjectURL(url)
+          });
+        }
+        async function openMedia(path, kind) {
+          const url = await blobUrlForPath(path);
+          const root = document.createElement('div');
+          root.className = 'viewer';
+          root.innerHTML =
+            `<div class="toolbar"><button class="tool-btn">下载</button><span class="mono muted">${basename(path)}</span></div><div class="viewer-stage"><div class="media-stage">${kind === 'video' ? '<video controls></video>' : '<audio controls></audio>'}</div></div>`;
+          $(kind, root).src = url;
+          $('button', root).addEventListener('click', () => downloadPath(path));
+          WindowManager.open(kind, basename(path), root, {
+            width: kind === 'video' ? 900 : 620,
+            height: kind === 'video' ? 610 : 360,
+            icon: kind === 'video' ? 'video' : 'audio',
+            onClose: () => URL.revokeObjectURL(url)
+          });
+        }
+        async function openPdf(path) {
+          const url = await blobUrlForPath(path);
+          const root = document.createElement('div');
+          root.className = 'viewer';
+          root.innerHTML =
+            `<div class="toolbar"><button class="tool-btn">下载</button><span class="mono muted">浏览器内置 PDF 查看器</span></div><iframe class="pdf-frame"></iframe>`;
+          $('.pdf-frame', root).src = url;
+          $('button', root).addEventListener('click', () => downloadPath(path));
+          WindowManager.open('pdf', basename(path), root, {
+            width: 900,
+            height: 650,
+            icon: 'pdf',
+            onClose: () => URL.revokeObjectURL(url)
+          });
+        }
+        async function openArchiveViewer(path) {
+          const root = document.createElement('div');
+          root.className = 'settings';
+          root.innerHTML =
+            `<div><h2 class="brand" style="font-size:34px">压缩包</h2><p class="mono muted">${basename(path)}</p></div><div class="settings-section"><button class="tool-btn extract">解压到同名文件夹</button> <button class="tool-btn download">下载原文件</button></div><div class="settings-section mono status">支持 ZIP、GZ、TAR、TAR.GZ、TGZ。7z-wasm 已接入，若引擎可用会显示在状态中。</div>`;
+          $('.extract', root).addEventListener('click', () => extractArchive(path, dirname(path)));
+          $('.download', root).addEventListener('click', () => downloadPath(path));
+          $('.status', root).textContent += window.SevenZip ? ' 7z 引擎已加载。' : ' 7z 引擎未加载，仍可处理原生路径。';
+          WindowManager.open('archive', '压缩包: ' + basename(path), root, {
+            width: 560,
+            height: 390,
+            icon: 'archive'
+          });
+        }
+
+        async function extractArchive(path, targetBase = dirname(path)) {
+          try {
+            const lower = path.toLowerCase();
+            const outDir = await uniquePath(targetBase, stripExt(stripExt(basename(path))));
+            await fs.mkdir(outDir);
+            if (lower.endsWith('.zip')) await extractZip(path, outDir);
+            else if (lower.endsWith('.tar')) await extractTar(await fs.readFile(path), outDir);
+            else if (lower.endsWith('.tar.gz') || lower.endsWith('.tgz')) await extractTar(await ungzip(await fs
+              .readFile(path, 'blob')), outDir);
+            else if (lower.endsWith('.gz')) await fs.writeFile(joinPath(outDir, stripExt(basename(path))),
+              await ungzip(await fs.readFile(path, 'blob')));
+            else return toast('此压缩格式需要浏览器端引擎支持，当前不可解压');
+            toast('解压完成: ' + outDir);
+            await renderDesktop();
+            refreshExplorers();
+          } catch (err) {
+            toast('解压失败: ' + err.message);
+          }
+        }
+        async function extractZip(path, outDir) {
+          if (!window.JSZip) throw new Error('JSZip CDN 未加载');
+          const zip = await JSZip.loadAsync(await fs.readFile(path, 'blob'));
+          const jobs = [];
+          zip.forEach((name, file) => {
+            const safe = archiveSafePath(name);
+            if (!safe) return;
+            const target = joinPath(outDir, safe);
+            if (file.dir) jobs.push(fs.mkdir(target));
+            else jobs.push((async () => {
+              await fs.mkdir(dirname(target));
+              await fs.writeFile(target, await file.async('arraybuffer'));
+            })());
+          });
+          await Promise.all(jobs);
+        }
+        async function ungzip(blob) {
+          if (!('DecompressionStream' in window)) throw new Error('当前浏览器不支持 DecompressionStream');
+          return streamToArrayBuffer(blob.stream().pipeThrough(new DecompressionStream('gzip')));
+        }
+
+        function archiveSafePath(name) {
+          const parts = String(name).split('/').filter(Boolean).map(safeName).filter(p => p !== '..');
+          return parts.length ? parts.join('/') : null;
+        }
+        async function extractTar(buffer, outDir) {
+          const bytes = new Uint8Array(buffer);
+          let offset = 0;
+          while (offset + 512 <= bytes.length) {
+            const name = readTarString(bytes, offset, 100);
+            if (!name) break;
+            const sizeText = readTarString(bytes, offset + 124, 12).trim();
+            const size = parseInt(sizeText || '0', 8) || 0;
+            const typeflag = String.fromCharCode(bytes[offset + 156] || 48);
+            const target = joinPath(outDir, archiveSafePath(name) || 'file');
+            if (typeflag === '5') await fs.mkdir(target);
+            else {
+              await fs.mkdir(dirname(target));
+              await fs.writeFile(target, bytes.slice(offset + 512, offset + 512 + size));
+            }
+            offset += 512 + Math.ceil(size / 512) * 512;
+          }
+        }
+
+        function readTarString(bytes, start, len) {
+          let end = start;
+          while (end < start + len && bytes[end] !== 0) end++;
+          return dec.decode(bytes.slice(start, end));
+        }
+
+        async function openPath(path) {
+          path = normalizePath(path);
+          const st = await fs.stat(path);
+          if (st.type === 'directory') return openExplorer(path);
+          if (extname(path) === '.html' || extname(path) === '.htm') return openEditor(path);
+          if (isImagePath(path)) return openImage(path);
+          if (isAudioPath(path)) return openMedia(path, 'audio');
+          if (isVideoPath(path)) return openMedia(path, 'video');
+          if (extname(path) === '.pdf') return openPdf(path);
+          if (isArchivePath(path)) return openArchiveViewer(path);
+          if (isTextPath(path) || st.mime.startsWith('text/') || st.mime.includes('json') || st.mime.includes(
+            'xml')) return openEditor(path);
+          try {
+            await openEditor(path);
+          } catch {
+            await downloadPath(path);
+          }
+        }
+
+        function openCalculator() {
+          const root = document.createElement('div');
+          root.className = 'calc';
+          root.innerHTML =
+            `<div class="calc-display"><div class="expr muted mono"></div><div class="result mono">0</div></div><div class="calc-keys"></div>`;
+          const keys = ['C', '(', ')', '/', '7', '8', '9', '*', '4', '5', '6', '-', '1', '2', '3', '+', '0', '.',
+            'DEL', '='
+          ];
+          let expr = '';
+          const keyWrap = $('.calc-keys', root);
+          keys.forEach(k => {
+            const b = document.createElement('button');
+            b.textContent = k;
+            if ('/*-+='.includes(k)) b.className = 'op';
+            b.addEventListener('click', () => press(k));
+            keyWrap.append(b);
+          });
+
+          function press(k) {
+            if (k === 'C') expr = '';
+            else if (k === 'DEL') expr = expr.slice(0, -1);
+            else if (k === '=') calc();
+            else expr += k;
+            $('.expr', root).textContent = expr;
+          }
+
+          function calc() {
+            if (!/^[0-9+\-*/().\s]+$/.test(expr)) return;
+            try {
+              $('.result', root).textContent = String(Function('return (' + expr + ')')());
+            } catch {
+              $('.result', root).textContent = '错误';
+            }
+          }
+          WindowManager.open('calc', '计算器', root, {
+            width: 360,
+            height: 520,
+            icon: 'calc'
+          });
+        }
+
+        function openPaint() {
+          const root = document.createElement('div');
+          root.className = 'paint';
+          root.innerHTML =
+            `<div class="toolbar"><label class="mono muted">颜色 <input type="color" value="#101817"></label><label class="mono muted">笔触 <input type="range" min="1" max="48" value="7"></label><button class="tool-btn clear">清空</button><button class="tool-btn save">保存到图片</button></div><div class="paint-canvas-wrap"><canvas class="paint-canvas" width="1280" height="820"></canvas></div>`;
+          const canvas = $('canvas', root),
+            ctx = canvas.getContext('2d');
+          ctx.fillStyle = '#f6f0df';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
+          let drawing = false,
+            last = null;
+
+          function pos(e) {
+            const r = canvas.getBoundingClientRect();
+            return {
+              x: (e.clientX - r.left) * canvas.width / r.width,
+              y: (e.clientY - r.top) * canvas.height / r.height
+            };
+          }
+          canvas.addEventListener('pointerdown', e => {
+            drawing = true;
+            last = pos(e);
+            canvas.setPointerCapture(e.pointerId);
+          });
+          canvas.addEventListener('pointermove', e => {
+            if (!drawing) return;
+            const p = pos(e);
+            ctx.strokeStyle = $('input[type=color]', root).value;
+            ctx.lineWidth = $('input[type=range]', root).value;
+            ctx.beginPath();
+            ctx.moveTo(last.x, last.y);
+            ctx.lineTo(p.x, p.y);
+            ctx.stroke();
+            last = p;
+          });
+          canvas.addEventListener('pointerup', () => drawing = false);
+          $('.clear', root).addEventListener('click', () => {
+            ctx.fillStyle = '#f6f0df';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+          });
+          $('.save', root).addEventListener('click', async () => {
+            const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
+            const p = await uniquePath('/Pictures', `paint-${Date.now()}.png`);
+            await fs.writeFile(p, blob);
+            toast('已保存 ' + p);
+            refreshExplorers();
+          });
+          WindowManager.open('paint', '画板', root, {
+            width: 920,
+            height: 650,
+            icon: 'paint'
+          });
+        }
+
+        async function openSettings() {
+          const root = document.createElement('div');
+          root.className = 'settings';
+          root.innerHTML =
+            `<div><div class="brand" style="font-size:42px">系统设置</div><p class="mono muted">存储、壁纸、本地文件夹挂载与重置。</p></div><section class="settings-section storage"></section><section class="settings-section walls"></section><section class="settings-section mounts"></section><section class="settings-section"><button class="tool-btn danger reset">一键重置 OPFS/VFS</button></section>`;
+          WindowManager.open('settings', '设置', root, {
+            width: 760,
+            height: 620,
+            icon: 'settings'
+          });
+          async function renderSettings() {
+            const estimate = await navigator.storage?.estimate?.().catch(() => null);
+            const usage = estimate?.usage || await scanSize('/');
+            const quota = estimate?.quota || Math.max(usage, 1);
+            $('.storage', root).innerHTML =
+              `<h3 class="text-xl mb-2">存储占用</h3><div class="meter"><span style="width:${Math.min(100, usage / quota * 100)}%"></span></div><p class="mono muted mt-2">已用 ${formatSize(usage)} / 可用配额 ${formatSize(quota)}，占用率 ${(usage / quota * 100).toFixed(2)}%</p><div class="mono mt-3 usage-list">正在扫描目录...</div>`;
+            const list = await Promise.all(['/Desktop', '/Documents', '/Pictures', '/Music', '/Videos',
+              '/Downloads', '/mnt'
+            ].map(async p => [p, await scanSize(p).catch(() => 0)]));
+            $('.usage-list', root).innerHTML = list.map(([p, s]) => `<div>${p}: ${formatSize(s)}</div>`).join('');
+            $('.walls', root).innerHTML =
+              `<h3 class="text-xl mb-2">壁纸</h3><div class="wall-grid"><button class="wall-tile wallpaper-lacquer" data-wall="lacquer"></button><button class="wall-tile wallpaper-blueprint" data-wall="blueprint"></button><button class="wall-tile wallpaper-paper" data-wall="paper"></button></div><button class="tool-btn mt-3 upload-wall">上传自定义壁纸</button>`;
+            $$('.wall-tile', root).forEach(b => b.addEventListener('click', () => setWallpaper({
+              type: 'preset',
+              id: b.dataset.wall
+            })));
+            $('.upload-wall', root).addEventListener('click', pickWallpaper);
+            const mounts = fs.listMounts();
+            $('.mounts', root).innerHTML =
+              `<h3 class="text-xl mb-2">本地文件夹挂载</h3><button class="tool-btn mount">挂载真实本地文件夹</button><div class="mono mt-3">${mounts.length ? mounts.map(m => `<div>${m.path} <button class="small-btn" data-unmount="${m.path}">卸载</button></div>`).join('') : '暂无活动挂载。刷新后若权限失效，请重新挂载。'}</div>`;
+            $('.mount', root).addEventListener('click', async () => {
+              await mountFolderAction();
+              renderSettings();
+            });
+            $$('[data-unmount]', root).forEach(b => b.addEventListener('click', async () => {
+              await fs.unmount(b.dataset.unmount);
+              renderSettings();
+              refreshExplorers();
+            }));
+          }
+          $('.reset', root).addEventListener('click', async () => {
+            if (!confirm('这会清除 OPFS 虚拟文件系统、桌面布局和挂载记录。继续？')) return;
+            await fs.reset();
+            await MetaStore.remove('desktopLayout');
+            await MetaStore.remove('wallpaper');
+            await seedFileSystem(true);
+            await applyWallpaper();
+            await renderDesktop();
+            refreshExplorers();
+            renderSettings();
+            toast('系统已重置');
+          });
+          renderSettings();
+        }
+        async function scanSize(path) {
+          const st = await fs.stat(path);
+          if (st.type === 'file') return st.size || 0;
+          let total = 0;
+          for (const child of await fs.readdir(path)) total += await scanSize(child.path).catch(() => 0);
+          return total;
+        }
+        async function pickWallpaper() {
+          const input = $('#wallpaperInput');
+          input.value = '';
+          input.onchange = async () => {
+            const file = input.files?.[0];
+            if (!file) return;
+            const path = await uniquePath('/System/Wallpapers', file.name);
+            await fs.writeFile(path, await file.arrayBuffer());
+            await setWallpaper({
+              type: 'file',
+              path
+            });
+          };
+          input.click();
+        }
+        async function setWallpaper(wp) {
+          await MetaStore.set('wallpaper', wp);
+          await applyWallpaper();
+        }
+        async function applyWallpaper() {
+          const wp = await MetaStore.get('wallpaper', {
+            type: 'preset',
+            id: 'lacquer'
+          });
+          desktop.classList.remove('wallpaper-lacquer', 'wallpaper-blueprint', 'wallpaper-paper');
+          desktop.style.backgroundImage = '';
+          if (wp.type === 'file') {
+            try {
+              const url = await blobUrlForPath(wp.path);
+              desktop.style.backgroundImage = `url(${url})`;
+              return;
+            } catch {
+              toast('壁纸文件不可用，已切换默认壁纸');
+            }
+          }
+          desktop.classList.add('wallpaper-' + (wp.id || 'lacquer'));
+        }
+
+        const apps = [{
+            id: 'explorer',
+            name: '文件资源管理器',
+            desc: '浏览 OPFS 与挂载目录',
+            icon: 'folder',
+            run: () => openExplorer('/')
+          },
+          {
+            id: 'editor',
+            name: '记事本',
+            desc: '新建或编辑文本',
+            icon: 'code',
+            run: () => createTextFile('/Documents')
+          },
+          {
+            id: 'browser',
+            name: '网页浏览器',
+            desc: 'iframe 预览 HTML 与网址',
+            icon: 'browser',
+            run: () => openBrowser('about:blank')
+          },
+          {
+            id: 'calc',
+            name: '计算器',
+            desc: '基础表达式计算',
+            icon: 'calc',
+            run: openCalculator
+          },
+          {
+            id: 'paint',
+            name: '画板',
+            desc: '绘制并保存 PNG',
+            icon: 'paint',
+            run: openPaint
+          },
+          {
+            id: 'settings',
+            name: '设置',
+            desc: '存储、壁纸、重置',
+            icon: 'settings',
+            run: openSettings
+          }
+        ];
+
+        function renderStartApps(filter = '') {
+          const wrap = $('#startApps');
+          wrap.innerHTML = '';
+          const q = filter.trim().toLowerCase();
+          if (filter.startsWith('/')) {
+            const btn = document.createElement('button');
+            btn.className = 'menu-btn';
+            btn.innerHTML =
+              `${svg('folder')}<div><div class="menu-title"></div><div class="menu-desc">打开路径</div></div>`;
+            $('.menu-title', btn).textContent = filter;
+            btn.addEventListener('click', () => {
+              openPath(filter);
+              startMenu.classList.remove('open');
+            });
+            wrap.append(btn);
+            return;
+          }
+          apps.filter(a => !q || a.name.toLowerCase().includes(q) || a.desc.toLowerCase().includes(q)).forEach(
+          app => {
+            const btn = document.createElement('button');
+            btn.className = 'menu-btn';
+            btn.innerHTML =
+              `${svg(app.icon)}<div><div class="menu-title"></div><div class="menu-desc"></div></div>`;
+            $('.menu-title', btn).textContent = app.name;
+            $('.menu-desc', btn).textContent = app.desc;
+            btn.addEventListener('click', () => {
+              app.run();
+              startMenu.classList.remove('open');
+            });
+            wrap.append(btn);
+          });
+        }
+        $('#startBtn').innerHTML = `${svg('start')}<span class="label">开始</span>`;
+        $('#desktopBtn').innerHTML = `${svg('desktop')}<span class="label">桌面</span>`;
+        $('#startBtn').addEventListener('click', e => {
+          e.stopPropagation();
+          startMenu.classList.toggle('open');
+          renderStartApps($('#startSearch').value);
+        });
+        $('#desktopBtn').addEventListener('click', () => {
+          for (const rec of WindowManager.windows.values()) WindowManager.minimize(rec.id);
+        });
+        $('#startSearch').addEventListener('input', e => renderStartApps(e.target.value));
+        setInterval(() => {
+          $('#clock').textContent = new Date().toLocaleTimeString('zh-CN', {
+            hour12: false
+          });
+        }, 1000);
+
+        async function seedFileSystem(force = false) {
+          for (const dir of ['/Desktop', '/Documents', '/Pictures', '/Music', '/Videos', '/Downloads', '/System',
+              '/System/Wallpapers', '/mnt', '/mnt/local'
+            ]) await fs.mkdir(dir).catch(() => {});
+          async function writeOnce(path, text) {
+            if (force || !await fs.exists(path)) await fs.writeFile(path, text);
+          }
+          await writeOnce('/Desktop/欢迎使用.txt',
+            'Obsidian VFS Web OS\n\n这是一个单文件浏览器桌面系统。文件写入 OPFS，刷新后仍会保留。\n\n提示：\n1. 右键桌面可新建、上传、挂载真实本地文件夹。\n2. 桌面图标使用原生 Drag and Drop，拖出浏览器可下载文件。\n3. HTML 文件会打开带实时预览的工作台。\n'
+            );
+          await writeOnce('/Desktop/演示页面.html',
+            '<!DOCTYPE html>\n<html lang="zh-CN"><head><meta charset="UTF-8"><title>VFS HTML</title><style>body{font-family:serif;background:#0b1412;color:#e7dec1;padding:40px}h1{color:#c8ff44}</style></head><body><h1>来自 OPFS 的页面</h1><p>修改源码后保存，再用系统浏览器打开。</p></body></html>'
+            );
+          await writeOnce('/Documents/账目.csv', '项目,金额,日期\n墨水,42,2026-01-18\n纸张,16,2026-01-19\n');
+          await writeOnce('/Documents/readme.md', '# Obsidian VFS\n\n所有应用都通过同一套 fs API 访问 OPFS 与挂载文件夹。\n');
+          await writeOnce('/Documents/theme.css',
+            ':root { color-scheme: dark; }\nbody { background: #08100f; color: #e7dec1; }\n');
+        }
+        async function boot() {
+          try {
+            let primary;
+            try {
+              primary = new OPFSBackend();
+              await primary.init();
+            } catch (err) {
+              primary = new IndexedDBBackend();
+              await primary.init();
+              toast('OPFS 不可用，已降级到 IndexedDB: ' + err.message, 5200);
+            }
+            fs = new MountableFS(primary);
+            await fs.init();
+            window.fs = fs;
+            await seedFileSystem(false);
+            await applyWallpaper();
+            const restored = await fs.tryRestoreHandles();
+            const reminders = await MetaStore.get('mountReminders', []);
+            if (reminders.length && !restored.length) toast('检测到上次的本地文件夹挂载记录。请在开始菜单或文件管理器中重新挂载以恢复权限。', 7000);
+            await renderDesktop();
+            renderStartApps();
+            $('#boot').classList.add('ready');
+          } catch (err) {
+            console.error(err);
+            toast('启动失败: ' + err.message, 10000);
+            $('#boot .boot-sub').textContent = '启动失败: ' + err.message;
+          }
+        }
+        window.addEventListener('beforeunload', () => {
+          for (const url of objectUrls) URL.revokeObjectURL(url);
+        });
+        window.addEventListener('resize', () => renderDesktop());
+        boot();
+      })();
+
+    </script>
+  </body>
+
+</html>

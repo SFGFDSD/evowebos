@@ -1,0 +1,2682 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>EMBER OS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300..800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<!-- JSZip 解压缩库 -->
+<script src="https://unpkg.com/jszip@3.10.1/dist/jszip.min.js"></script>
+<!-- V86 虚拟机模拟器 -->
+<script src="https://cdn.jsdelivr.net/npm/v86@0.5.319/build/libv86.js" defer></script>
+<style>
+:root{
+  --bg:#13131a; --panel:#1c1c26; --panel2:#23232f; --panel3:#2a2a38;
+  --line:#33334230; --line2:#3d3d4f; --ink:#e8e2d0; --dim:#8e8a9e; --faint:#5b5870;
+  --ember:#ff9e64; --ember-deep:#e8743c; --rose:#e46876; --teal:#7aa89f; --blue:#7e9cd8; --gold:#e6c384;
+  --shadow:0 24px 64px -16px rgba(0,0,0,.65), 0 4px 16px rgba(0,0,0,.4);
+  --rad:12px; --tb-h:46px;
+  --ease:cubic-bezier(.32,.72,.22,1);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden}
+body{
+  font-family:'Bricolage Grotesque','PingFang SC','Microsoft YaHei',sans-serif;
+  background:var(--bg); color:var(--ink); user-select:none; -webkit-user-select:none;
+}
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-thumb{background:#3a3a4c;border-radius:6px;border:2px solid transparent;background-clip:content-box}
+::-webkit-scrollbar-thumb:hover{background:#4c4c62;border:2px solid transparent;background-clip:content-box}
+::-webkit-scrollbar-track{background:transparent}
+svg{display:block}
+button{font-family:inherit;color:inherit;background:none;border:none;cursor:pointer}
+input,textarea,select{font-family:inherit;color:var(--ink);outline:none}
+.mono{font-family:'IBM Plex Mono',monospace}
+
+/* ===== 启动画面 ===== */
+#boot{position:fixed;inset:0;z-index:9000;background:#0e0e14;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;transition:opacity .7s var(--ease),visibility .7s}
+#boot.gone{opacity:0;visibility:hidden}
+#boot .blogo{animation:bpulse 2.2s ease-in-out infinite}
+@keyframes bpulse{0%,100%{filter:drop-shadow(0 0 6px #ff9e6440)}50%{filter:drop-shadow(0 0 26px #ff9e64a0)}}
+#boot .bname{font-size:30px;font-weight:700;letter-spacing:.42em;margin-left:.42em;color:var(--ink)}
+#boot .bname b{color:var(--ember);font-weight:700}
+#boot .bbar{width:200px;height:3px;background:#26262f;border-radius:3px;overflow:hidden}
+#boot .bbar i{display:block;height:100%;width:40%;background:linear-gradient(90deg,var(--ember-deep),var(--ember));border-radius:3px;animation:bslide 1.1s var(--ease) infinite}
+@keyframes bslide{0%{transform:translateX(-110%)}100%{transform:translateX(520%)}}
+#boot .bmsg{font-size:11px;letter-spacing:.2em;color:var(--faint);font-family:'IBM Plex Mono',monospace}
+
+/* ===== 壁纸 ===== */
+#wallpaper{position:fixed;inset:0;z-index:0;background-size:cover;background-position:center;transition:background .6s var(--ease)}
+#wallpaper::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 120%, rgba(0,0,0,.34), transparent 60%);pointer-events:none}
+
+/* ===== 桌面 ===== */
+#desktop{position:fixed;inset:0;bottom:var(--tb-h);z-index:1;overflow:hidden;touch-action:none}
+.dicon{
+  position:absolute;width:86px;padding:10px 4px 8px;border-radius:10px;
+  display:flex;flex-direction:column;align-items:center;gap:7px;cursor:default;
+  transition:left .3s var(--ease),top .3s var(--ease),background .15s,box-shadow .15s;
+  border:1px solid transparent;
+}
+.dicon:hover{background:#ffffff10}
+.dicon.sel{background:#ff9e6422;border-color:#ff9e6452;box-shadow:0 0 0 1px #ff9e6420 inset}
+.dicon.dropt{background:#7aa89f33;border-color:#7aa89f88;transform:scale(1.05)}
+.dicon .dic-img{width:46px;height:46px;display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 4px 8px rgba(0,0,0,.5))}
+.dicon .dic-name{font-size:11.5px;line-height:1.25;text-align:center;max-width:82px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-all;text-shadow:0 1px 3px rgba(0,0,0,.9),0 0 8px rgba(0,0,0,.5);font-weight:500}
+.dicon.dragging{opacity:.35}
+#marquee{position:absolute;display:none;border:1px solid var(--ember);background:#ff9e641a;border-radius:3px;z-index:50;pointer-events:none}
+.touch-ghost{position:fixed;z-index:8000;pointer-events:none;opacity:.85;transform:scale(1.05);filter:drop-shadow(0 10px 24px rgba(0,0,0,.6))}
+
+/* ===== 拖入遮罩 ===== */
+#dropveil{position:fixed;inset:10px;bottom:calc(var(--tb-h) + 10px);z-index:7000;border:2px dashed var(--ember);border-radius:18px;background:#13131acc;backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;flex-direction:column;gap:14px;pointer-events:none}
+#dropveil.on{display:flex}
+#dropveil .dv-t{font-size:20px;font-weight:600;letter-spacing:.1em}
+#dropveil .dv-s{font-size:12px;color:var(--dim);font-family:'IBM Plex Mono',monospace}
+
+/* ===== 窗口 ===== */
+.win{
+  position:absolute;min-width:280px;min-height:160px;border-radius:var(--rad);
+  background:color-mix(in srgb,var(--panel) 88%, transparent);backdrop-filter:blur(22px) saturate(1.3);
+  border:1px solid var(--line2);box-shadow:var(--shadow);
+  display:flex;flex-direction:column;overflow:hidden;
+  animation:winin .26s var(--ease);
+}
+@keyframes winin{from{opacity:0;transform:scale(.94) translateY(14px)}to{opacity:1;transform:none}}
+.win.closing{animation:winout .2s var(--ease) forwards}
+@keyframes winout{to{opacity:0;transform:scale(.94) translateY(10px)}}
+.win.focus{border-color:#54546d}
+.win.max{border-radius:0;border:none}
+.win-tit{
+  height:38px;flex:none;display:flex;align-items:center;gap:9px;padding:0 6px 0 13px;
+  background:linear-gradient(180deg,#ffffff09,transparent);border-bottom:1px solid var(--line);
+  cursor:grab;touch-action:none;
+}
+.win-tit:active{cursor:grabbing}
+.win-tit .wt-ico{width:17px;height:17px;flex:none;opacity:.9}
+.win-tit .wt-name{font-size:12.5px;font-weight:600;letter-spacing:.04em;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
+.win.focus .wt-name{color:var(--ink)}
+.wbtn{width:34px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;color:var(--dim);transition:.14s}
+.wbtn:hover{background:#ffffff14;color:var(--ink)}
+.wbtn.wb-x:hover{background:var(--rose);color:#1a1018}
+.win-body{flex:1;overflow:hidden;position:relative;display:flex;flex-direction:column}
+.rs{position:absolute;z-index:5}
+.rs-n{top:-4px;left:8px;right:8px;height:8px;cursor:ns-resize}.rs-s{bottom:-4px;left:8px;right:8px;height:8px;cursor:ns-resize}
+.rs-e{right:-4px;top:8px;bottom:8px;width:8px;cursor:ew-resize}.rs-w{left:-4px;top:8px;bottom:8px;width:8px;cursor:ew-resize}
+.rs-ne{top:-5px;right:-5px;width:14px;height:14px;cursor:nesw-resize}.rs-sw{bottom:-5px;left:-5px;width:14px;height:14px;cursor:nesw-resize}
+.rs-nw{top:-5px;left:-5px;width:14px;height:14px;cursor:nwse-resize}.rs-se{bottom:-5px;right:-5px;width:14px;height:14px;cursor:nwse-resize}
+
+/* ===== 任务栏 ===== */
+#taskbar{
+  position:fixed;left:0;right:0;bottom:0;height:var(--tb-h);z-index:6000;
+  display:flex;align-items:center;gap:6px;padding:0 10px;
+  background:#16161df0;backdrop-filter:blur(24px);border-top:1px solid #2e2e3c;
+}
+#startbtn{width:38px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;transition:.16s}
+#startbtn:hover{background:#ff9e641f}
+#startbtn.on{background:#ff9e642e;box-shadow:0 0 0 1px #ff9e6444 inset}
+#tasks{flex:1;display:flex;gap:5px;overflow-x:auto;scrollbar-width:none;padding:0 2px}
+#tasks::-webkit-scrollbar{display:none}
+.task{
+  height:33px;border-radius:8px;display:flex;align-items:center;gap:8px;padding:0 11px;
+  font-size:12px;font-weight:500;color:var(--dim);max-width:170px;flex:none;
+  border:1px solid transparent;transition:.15s;position:relative;
+}
+.task svg{width:15px;height:15px;flex:none}
+.task span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.task:hover{background:#ffffff0e;color:var(--ink)}
+.task.on{background:#ffffff12;color:var(--ink);border-color:#ffffff14}
+.task.on::after{content:'';position:absolute;bottom:1px;left:50%;transform:translateX(-50%);width:16px;height:2px;border-radius:2px;background:var(--ember)}
+.task.min{opacity:.55}
+#tray{display:flex;align-items:center;gap:4px}
+.tray-btn{height:34px;border-radius:8px;padding:0 10px;display:flex;align-items:center;gap:7px;color:var(--dim);transition:.15s}
+.tray-btn:hover{background:#ffffff0e;color:var(--ink)}
+#clock{font-family:'IBM Plex Mono',monospace;font-size:12px;text-align:right;line-height:1.3;color:var(--ink)}
+#clock small{display:block;font-size:9.5px;color:var(--dim)}
+
+/* ===== 开始菜单 ===== */
+#startmenu{
+  position:fixed;left:10px;bottom:calc(var(--tb-h) + 10px);z-index:6500;width:420px;max-width:calc(100vw - 20px);
+  background:#1a1a23f2;backdrop-filter:blur(28px);border:1px solid var(--line2);border-radius:16px;
+  box-shadow:var(--shadow);padding:18px;
+  transform-origin:bottom left;transition:.22s var(--ease);
+}
+#startmenu.hide{opacity:0;transform:scale(.92) translateY(14px);pointer-events:none}
+#startmenu .sm-head{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+#startmenu .sm-head .smh-t{font-size:16px;font-weight:700;letter-spacing:.18em}
+#startmenu .sm-head .smh-t b{color:var(--ember)}
+#startmenu .sm-head .smh-s{font-size:10.5px;color:var(--faint);font-family:'IBM Plex Mono',monospace;letter-spacing:.1em}
+#sm-apps{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.sm-app{display:flex;flex-direction:column;align-items:center;gap:8px;padding:13px 4px 11px;border-radius:12px;transition:.15s;cursor:pointer}
+.sm-app:hover{background:#ffffff0f;transform:translateY(-2px)}
+.sm-app .sma-i{width:38px;height:38px;display:flex;align-items:center;justify-content:center}
+.sm-app .sma-n{font-size:11px;color:var(--dim);font-weight:500}
+.sm-app:hover .sma-n{color:var(--ink)}
+#startmenu .sm-foot{margin-top:14px;padding-top:12px;border-top:1px solid var(--line);display:flex;gap:8px}
+.sm-fbtn{flex:1;height:34px;border-radius:9px;background:#ffffff08;display:flex;align-items:center;justify-content:center;gap:8px;font-size:11.5px;color:var(--dim);transition:.15s;border:1px solid transparent}
+.sm-fbtn:hover{background:#ffffff10;color:var(--ink);border-color:#ffffff18}
+
+/* ===== 右键菜单 ===== */
+#ctxmenu{
+  position:fixed;z-index:8500;min-width:208px;padding:6px;
+  background:#1e1e29f5;backdrop-filter:blur(20px);border:1px solid var(--line2);border-radius:12px;
+  box-shadow:var(--shadow);display:none;animation:ctxin .14s var(--ease);
+}
+@keyframes ctxin{from{opacity:0;transform:scale(.96) translateY(4px)}to{opacity:1;transform:none}}
+.ctx-it{display:flex;align-items:center;gap:11px;padding:8px 11px;border-radius:8px;font-size:12.5px;cursor:pointer;color:var(--ink);transition:.1s}
+.ctx-it svg{width:15px;height:15px;color:var(--dim)}
+.ctx-it:hover{background:#ff9e6426}
+.ctx-it:hover svg{color:var(--ember)}
+.ctx-it.danger:hover{background:#e4687626}
+.ctx-it.danger:hover svg{color:var(--rose)}
+.ctx-it.dis{opacity:.35;pointer-events:none}
+.ctx-sep{height:1px;background:var(--line2);margin:5px 9px;opacity:.6}
+
+/* ===== Toast ===== */
+#toasts{position:fixed;right:14px;bottom:calc(var(--tb-h) + 14px);z-index:8800;display:flex;flex-direction:column;gap:9px;align-items:flex-end;pointer-events:none}
+.toast{
+  max-width:320px;padding:11px 15px;border-radius:11px;display:flex;gap:10px;align-items:center;
+  background:#22222ef2;backdrop-filter:blur(16px);border:1px solid var(--line2);box-shadow:var(--shadow);
+  font-size:12.5px;animation:tin .3s var(--ease);pointer-events:auto;
+}
+.toast svg{width:16px;height:16px;flex:none;color:var(--ember)}
+.toast.err svg{color:var(--rose)}
+.toast button{color:var(--ember);font-weight:600;font-size:12px;margin-left:4px;white-space:nowrap}
+@keyframes tin{from{opacity:0;transform:translateX(30px)}to{opacity:1;transform:none}}
+.toast.out{animation:tout .3s var(--ease) forwards}
+@keyframes tout{to{opacity:0;transform:translateX(30px)}}
+
+/* ===== 通用控件 ===== */
+.btn{height:30px;padding:0 13px;border-radius:8px;background:#ffffff0c;border:1px solid #ffffff14;font-size:12px;font-weight:500;display:inline-flex;align-items:center;gap:7px;transition:.14s;white-space:nowrap}
+.btn:hover{background:#ffffff16;border-color:#ffffff22}
+.btn svg{width:14px;height:14px}
+.btn.pri{background:#ff9e6426;border-color:#ff9e644d;color:var(--ember)}
+.btn.pri:hover{background:#ff9e643a}
+.btn.dgr{background:#e4687620;border-color:#e4687644;color:var(--rose)}
+.btn.dgr:hover{background:#e4687636}
+.tfield{height:30px;padding:0 11px;border-radius:8px;background:#00000038;border:1px solid var(--line2);font-size:12.5px;transition:.15s}
+.tfield:focus{border-color:var(--ember)}
+
+/* ===== 资源管理器 ===== */
+.fx{display:flex;flex:1;overflow:hidden}
+.fx-side{width:190px;flex:none;border-right:1px solid var(--line);padding:10px 8px;overflow-y:auto;background:#00000022}
+.fx-side .fxs-h{font-size:9.5px;letter-spacing:.22em;color:var(--faint);padding:8px 9px 5px;font-family:'IBM Plex Mono',monospace}
+.fxs-it{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:8px;font-size:12.5px;cursor:pointer;color:var(--dim);transition:.12s;font-weight:500}
+.fxs-it svg{width:15px;height:15px;flex:none}
+.fxs-it:hover{background:#ffffff0c;color:var(--ink)}
+.fxs-it.on{background:#ff9e6420;color:var(--ember)}
+.fxs-it .fxs-x{margin-left:auto;opacity:0;width:18px;height:18px;border-radius:5px;display:flex;align-items:center;justify-content:center}
+.fxs-it:hover .fxs-x{opacity:.7}
+.fxs-it .fxs-x:hover{background:#e4687630;opacity:1}
+.fxs-x svg{width:12px;height:12px}
+.wbtn svg,.fx-nav svg{width:16px;height:16px}
+.tray-btn>svg{width:17px;height:17px}
+.sm-fbtn svg{width:15px;height:15px}
+.wt-ico svg,.dic-img svg,.sma-i svg{width:100%;height:100%}
+.fx-main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.fx-bar{flex:none;display:flex;align-items:center;gap:7px;padding:8px 10px;border-bottom:1px solid var(--line)}
+.fx-nav{width:29px;height:29px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--dim);transition:.13s}
+.fx-nav:hover{background:#ffffff10;color:var(--ink)}
+.fx-nav.dis{opacity:.3;pointer-events:none}
+.fx-crumbs{flex:1;display:flex;align-items:center;gap:2px;overflow-x:auto;scrollbar-width:none;background:#00000030;border:1px solid var(--line);border-radius:8px;height:30px;padding:0 8px}
+.fx-crumbs::-webkit-scrollbar{display:none}
+.crumb{font-size:12px;color:var(--dim);padding:3px 6px;border-radius:6px;cursor:pointer;white-space:nowrap;font-weight:500}
+.crumb:hover{background:#ffffff10;color:var(--ink)}
+.crumb.last{color:var(--ember)}
+.crumb-sep{color:var(--faint);font-size:10px}
+.fx-search{width:150px}
+.fx-tools{flex:none;display:flex;gap:6px;padding:7px 10px;border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none}
+.fx-tools::-webkit-scrollbar{display:none}
+.fx-head{flex:none;display:grid;grid-template-columns:1fr 132px 92px 76px;gap:8px;padding:7px 14px;border-bottom:1px solid var(--line);font-size:10.5px;color:var(--faint);letter-spacing:.08em;font-family:'IBM Plex Mono',monospace}
+.fx-head .fxh{cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap}
+.fx-head .fxh:hover{color:var(--ink)}
+.fx-head .fxh.on{color:var(--ember)}
+.fx-list{flex:1;overflow-y:auto;position:relative;padding:4px 6px 30px}
+.frow{
+  display:grid;grid-template-columns:1fr 132px 92px 76px;gap:8px;align-items:center;
+  padding:6px 8px;border-radius:8px;cursor:default;border:1px solid transparent;transition:background .1s;
+}
+.frow:hover{background:#ffffff0a}
+.frow.sel{background:#ff9e641e;border-color:#ff9e6440}
+.frow.dropt{background:#7aa89f30;border-color:#7aa89f80}
+.frow .fr-name{display:flex;align-items:center;gap:10px;overflow:hidden;font-size:12.5px;font-weight:500}
+.frow .fr-name svg{width:18px;height:18px;flex:none}
+.frow .fr-name span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.frow .fr-meta{font-size:11px;color:var(--dim);font-family:'IBM Plex Mono',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fx-empty{display:flex;flex-direction:column;align-items:center;gap:12px;padding:60px 20px;color:var(--faint)}
+.fx-empty svg{width:44px;height:44px;opacity:.4}
+.fx-empty div{font-size:12px;letter-spacing:.1em}
+.fx-status{flex:none;padding:6px 14px;border-top:1px solid var(--line);font-size:10.5px;color:var(--faint);font-family:'IBM Plex Mono',monospace;display:flex;gap:16px}
+
+/* ===== 应用通用 ===== */
+.app-bar{flex:none;display:flex;align-items:center;gap:7px;padding:8px 10px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.app-status{flex:none;padding:5px 13px;border-top:1px solid var(--line);font-size:10.5px;color:var(--faint);font-family:'IBM Plex Mono',monospace;display:flex;gap:14px;align-items:center}
+.np-text{flex:1;width:100%;background:transparent;border:none;resize:none;padding:16px 18px;font-family:'IBM Plex Mono',monospace;font-size:13px;line-height:1.7;color:var(--ink);white-space:pre;overflow:auto}
+.np-text.wrap{white-space:pre-wrap}
+
+/* 表格 */
+.tbl-wrap{flex:1;overflow:auto}
+.tbl-wrap table{border-collapse:collapse;font-size:12px;font-family:'IBM Plex Mono',monospace;min-width:100%}
+.tbl-wrap th{position:sticky;top:0;background:var(--panel2);color:var(--ember);padding:8px 13px;text-align:left;border-bottom:2px solid var(--line2);font-weight:600;white-space:nowrap}
+.tbl-wrap td{padding:6px 13px;border-bottom:1px solid var(--line);color:var(--ink);white-space:nowrap}
+.tbl-wrap tr:hover td{background:#ffffff06}
+.tbl-wrap td:first-child,.tbl-wrap th:first-child{color:var(--faint);background:var(--panel2);position:sticky;left:0}
+
+/* 浏览器 */
+.bw-frame{flex:1;background:#fff;border:none;width:100%}
+.bw-home{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:radial-gradient(ellipse at 50% 30%,#23232f,var(--bg))}
+
+/* 计算器 */
+.calc{flex:1;display:flex;flex-direction:column;padding:14px;gap:12px}
+.calc-d{flex:none;background:#00000040;border:1px solid var(--line2);border-radius:12px;padding:14px 16px;text-align:right}
+.calc-d .cd-expr{font-size:12px;color:var(--dim);min-height:17px;font-family:'IBM Plex Mono',monospace;word-break:break-all}
+.calc-d .cd-val{font-size:32px;font-weight:600;font-family:'IBM Plex Mono',monospace;color:var(--ink);word-break:break-all;line-height:1.2}
+.calc-g{flex:1;display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.calc-b{border-radius:11px;background:#ffffff0a;border:1px solid #ffffff10;font-size:17px;font-weight:500;font-family:'IBM Plex Mono',monospace;transition:.12s;display:flex;align-items:center;justify-content:center;min-height:42px}
+.calc-b:hover{background:#ffffff14}
+.calc-b:active{transform:scale(.94)}
+.calc-b.op{color:var(--ember);background:#ff9e6414}
+.calc-b.eq{background:var(--ember);color:#1a120c;font-weight:700;grid-row:span 2}
+.calc-b.eq:hover{background:#ffb585}
+.calc-b.fn{color:var(--teal);font-size:14px}
+
+/* 画板 */
+.pt-canvas-wrap{flex:1;overflow:hidden;position:relative;background:repeating-conic-gradient(#1a1a23 0 25%,#1f1f29 0 50%) 0 0/22px 22px}
+.pt-canvas-wrap canvas{position:absolute;inset:0;touch-action:none;cursor:crosshair}
+.pt-sw{width:24px;height:24px;border-radius:7px;border:2px solid transparent;cursor:pointer;transition:.12s;flex:none}
+.pt-sw.on{border-color:#fff;transform:scale(1.12)}
+
+/* 设置 */
+.st{display:flex;flex:1;overflow:hidden}
+.st-side{width:170px;flex:none;border-right:1px solid var(--line);padding:12px 8px;background:#00000022}
+.st-main{flex:1;overflow-y:auto;padding:22px 26px}
+.st-h1{font-size:19px;font-weight:700;margin-bottom:4px;letter-spacing:.02em}
+.st-sub{font-size:12px;color:var(--dim);margin-bottom:22px}
+.st-sec{margin-bottom:28px}
+.st-sec h3{font-size:11px;letter-spacing:.2em;color:var(--faint);margin-bottom:12px;font-family:'IBM Plex Mono',monospace}
+.wp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:10px}
+.wp-card{aspect-ratio:16/10;border-radius:11px;cursor:pointer;border:2px solid transparent;transition:.16s;background-size:cover;background-position:center;position:relative;overflow:hidden}
+.wp-card:hover{transform:translateY(-3px);box-shadow:0 10px 24px rgba(0,0,0,.4)}
+.wp-card.on{border-color:var(--ember);box-shadow:0 0 0 3px #ff9e6433}
+.wp-card .wp-name{position:absolute;left:0;right:0;bottom:0;padding:14px 9px 6px;font-size:10px;background:linear-gradient(transparent,#000a);letter-spacing:.06em}
+.meter{height:14px;border-radius:8px;background:#00000050;border:1px solid var(--line2);overflow:hidden;display:flex}
+.meter i{height:100%;transition:width .6s var(--ease)}
+.legend{display:flex;flex-wrap:wrap;gap:10px 18px;margin-top:11px}
+.legend .lg{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--dim);font-family:'IBM Plex Mono',monospace}
+.legend .lg i{width:10px;height:10px;border-radius:3px}
+
+/* 媒体查看 */
+.iv-stage{flex:1;overflow:hidden;display:flex;align-items:center;justify-content:center;background:repeating-conic-gradient(#16161d 0 25%,#1b1b24 0 50%) 0 0/24px 24px;position:relative;touch-action:none}
+.iv-stage img{max-width:none;transition:transform .15s ease-out;transform-origin:center;cursor:grab}
+.media-stage{flex:1;display:flex;align-items:center;justify-content:center;background:#0c0c11;padding:18px}
+.media-stage video{max-width:100%;max-height:100%;border-radius:8px}
+.audio-card{display:flex;flex-direction:column;align-items:center;gap:22px;padding:30px}
+.audio-card .ac-disc{width:120px;height:120px;border-radius:50%;background:conic-gradient(from 0deg,var(--ember-deep),var(--rose),var(--blue),var(--teal),var(--ember-deep));display:flex;align-items:center;justify-content:center;animation:spin 9s linear infinite;box-shadow:0 0 50px #ff9e6430}
+.audio-card .ac-disc::after{content:'';width:34px;height:34px;border-radius:50%;background:var(--bg);border:5px solid #00000060}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* 代码编辑器 */
+.ce-split{flex:1;display:flex;overflow:hidden}
+.ce-pane{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.ce-pane + .ce-pane{border-left:1px solid var(--line2)}
+.ce-pane .cep-h{flex:none;padding:5px 12px;font-size:10px;letter-spacing:.2em;color:var(--faint);background:#00000028;font-family:'IBM Plex Mono',monospace;border-bottom:1px solid var(--line)}
+.ce-edit{flex:1;overflow:hidden;position:relative}
+.ce-edit .CodeMirror{height:100%;font-family:'IBM Plex Mono',monospace;font-size:12.5px;background:#16161d;color:var(--ink)}
+.ce-frame{flex:1;border:none;background:#fff;width:100%}
+
+/* VM */
+#screen_container{background:#000;flex:1;overflow:auto;display:flex;align-items:flex-start;justify-content:center;padding:4px}
+
+/* 对话框 */
+.dlg-veil{position:fixed;inset:0;z-index:8700;background:#0009;backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;animation:fadein .18s}
+@keyframes fadein{from{opacity:0}}
+.dlg{width:340px;max-width:92vw;background:#1f1f2af6;border:1px solid var(--line2);border-radius:15px;box-shadow:var(--shadow);padding:20px;animation:winin .22s var(--ease)}
+.dlg h3{font-size:15px;font-weight:700;margin-bottom:6px}
+.dlg p{font-size:12px;color:var(--dim);margin-bottom:14px;line-height:1.6}
+.dlg .dlg-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+
+/* ===== 移动端适配 ===== */
+@media (max-width:768px), (pointer:coarse) and (max-width:1024px){
+  :root{--tb-h:58px}
+  .win{inset:0 !important;width:auto !important;height:auto !important;bottom:var(--tb-h) !important;border-radius:0;border:none;min-width:0}
+  .rs{display:none}
+  .win-tit{height:44px}
+  .wbtn{width:42px;height:36px}
+  .fx-side{position:absolute;z-index:20;top:0;bottom:0;left:0;transform:translateX(-100%);transition:.25s var(--ease);background:#1b1b24fa;width:210px;box-shadow:var(--shadow)}
+  .fx-side.open{transform:none}
+  .fx-head{grid-template-columns:1fr 86px}
+  .fx-head .fxh:nth-child(2),.fx-head .fxh:nth-child(3){display:none}
+  .frow{grid-template-columns:1fr 86px;padding:10px 8px}
+  .frow .fr-meta.m-date,.frow .fr-meta.m-type{display:none}
+  .dicon{width:78px}
+  #startmenu{left:8px;right:8px;width:auto;bottom:calc(var(--tb-h) + 8px)}
+  #sm-apps{grid-template-columns:repeat(4,1fr)}
+  .task{padding:0 9px;max-width:46px}
+  .task span{display:none}
+  .task svg{width:18px;height:18px}
+  #startbtn{width:46px;height:42px}
+  .tray-btn{height:42px}
+  .ce-split{flex-direction:column}
+  .ce-pane + .ce-pane{border-left:none;border-top:1px solid var(--line2)}
+  .st-side{width:54px}
+  .st-side .fxs-it span{display:none}
+  .st-side .fxs-it{justify-content:center}
+  .fx-search{width:104px}
+}
+</style>
+</head>
+<body>
+
+<div id="boot">
+  <svg class="blogo" width="64" height="64" viewBox="0 0 64 64" fill="none">
+    <path d="M32 6 L54 22 L46 54 L18 54 L10 22 Z" stroke="#ff9e64" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="M32 18 L43 27 L39 44 L25 44 L21 27 Z" fill="#ff9e6428" stroke="#e46876" stroke-width="1.6" stroke-linejoin="round"/>
+    <circle cx="32" cy="33" r="4" fill="#ff9e64"/>
+  </svg>
+  <div class="bname">EMBER<b>·OS</b></div>
+  <div class="bbar"><i></i></div>
+  <div class="bmsg" id="bootmsg">MOUNTING OPFS VOLUME…</div>
+</div>
+
+<div id="wallpaper"></div>
+<div id="desktop"><div id="marquee"></div></div>
+<div id="windows"></div>
+
+<div id="dropveil">
+  <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#ff9e64" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-4.5-4.5M12 15l4.5-4.5"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+  <div class="dv-t">释放以导入文件</div>
+  <div class="dv-s">FILES WILL BE WRITTEN TO OPFS</div>
+</div>
+
+<div id="taskbar">
+  <button id="startbtn" title="开始">
+    <svg width="22" height="22" viewBox="0 0 64 64" fill="none"><path d="M32 6 L54 22 L46 54 L18 54 L10 22 Z" stroke="#ff9e64" stroke-width="3.4" stroke-linejoin="round"/><circle cx="32" cy="33" r="6" fill="#ff9e64"/></svg>
+  </button>
+  <div id="tasks"></div>
+  <div id="tray">
+    <button class="tray-btn" id="fsbtn" title="全屏"></button>
+    <button class="tray-btn" id="clockbtn"><div id="clock">--:--<small>----/--/--</small></div></button>
+  </div>
+</div>
+
+<div id="startmenu" class="hide">
+  <div class="sm-head">
+    <svg width="30" height="30" viewBox="0 0 64 64" fill="none"><path d="M32 6 L54 22 L46 54 L18 54 L10 22 Z" stroke="#ff9e64" stroke-width="3" stroke-linejoin="round"/><circle cx="32" cy="33" r="5.4" fill="#ff9e64"/></svg>
+    <div>
+      <div class="smh-t">EMBER<b>·OS</b></div>
+      <div class="smh-s" id="sm-stat">OPFS READY</div>
+    </div>
+  </div>
+  <div id="sm-apps"></div>
+  <div class="sm-foot">
+    <button class="sm-fbtn" id="sm-mount"></button>
+    <button class="sm-fbtn" id="sm-reload"></button>
+  </div>
+</div>
+
+<div id="ctxmenu"></div>
+<div id="toasts"></div>
+<input type="file" id="pick-import" multiple style="display:none">
+<input type="file" id="pick-wall" accept="image/*" style="display:none">
+
+<script>
+'use strict';
+/* =====================================================================
+   EMBER OS — 单文件 Web 操作系统
+   存储: OPFS 主后端 · IndexedDB 降级 · localStorage 配置 · Cookie 引导标记
+===================================================================== */
+
+/* ============================ 工具函数 ============================ */
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const elBuild = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
+const IS_TOUCH = matchMedia('(pointer:coarse)').matches;
+const IS_MOBILE = () => innerWidth <= 768 || (IS_TOUCH && innerWidth <= 1024);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const uid = () => Math.random().toString(36).slice(2, 9);
+
+function normPath(p) {
+  if (!p) return '/';
+  const out = [];
+  for (const seg of String(p).split('/')) {
+    if (!seg || seg === '.') continue;
+    if (seg === '..') out.pop(); else out.push(seg);
+  }
+  return '/' + out.join('/');
+}
+const joinPath = (...a) => normPath(a.join('/'));
+const basename = p => normPath(p).split('/').pop() || '/';
+const dirname = p => { const s = normPath(p).split('/'); s.pop(); return '/' + s.filter(Boolean).join('/'); };
+const extOf = n => { const m = /\.([a-z0-9]+)$/i.exec(n || ''); return m ? m[1].toLowerCase() : ''; };
+
+function fmtSize(b) {
+  if (b == null || isNaN(b)) return '—';
+  if (b < 1024) return b + ' B';
+  const u = ['KB','MB','GB','TB']; let i = -1;
+  do { b /= 1024; i++; } while (b >= 1024 && i < u.length - 1);
+  return b.toFixed(b >= 100 ? 0 : 1) + ' ' + u[i];
+}
+function fmtDate(t) {
+  if (!t) return '—';
+  const d = new Date(t), p = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}/${p(d.getMonth()+1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+const MIME = { png:'image/png', jpg:'image/jpeg', jpeg:'image/jpeg', gif:'image/gif', svg:'image/svg+xml', webp:'image/webp', bmp:'image/bmp', ico:'image/x-icon', avif:'image/avif',
+  mp3:'audio/mpeg', wav:'audio/wav', ogg:'audio/ogg', flac:'audio/flac', aac:'audio/aac', m4a:'audio/mp4', opus:'audio/opus',
+  mp4:'video/mp4', webm:'video/webm', ogv:'video/ogg', mov:'video/quicktime', mkv:'video/x-matroska',
+  txt:'text/plain', html:'text/html', htm:'text/html', css:'text/css', js:'text/javascript', mjs:'text/javascript', json:'application/json', xml:'text/xml', md:'text/markdown', yaml:'text/yaml', yml:'text/yaml', log:'text/plain', ini:'text/plain', conf:'text/plain', sh:'text/plain', py:'text/plain', ts:'text/plain', csv:'text/csv', tsv:'text/tab-separated-values',
+  pdf:'application/pdf', zip:'application/zip', gz:'application/gzip', tgz:'application/gzip', tar:'application/x-tar', '7z':'application/x-7z-compressed', iso:'application/octet-stream', img:'application/octet-stream' };
+const mimeOf = name => MIME[extOf(name)] || 'application/octet-stream';
+
+const K_IMG = ['png','jpg','jpeg','gif','svg','webp','bmp','ico','avif'];
+const K_AUD = ['mp3','wav','ogg','flac','aac','m4a','opus'];
+const K_VID = ['mp4','webm','ogv','mov','mkv'];
+const K_TXT = ['txt','css','js','mjs','json','xml','md','yaml','yml','log','ini','conf','sh','py','ts','c','cpp','h','java','rs','go','rb','php','sql','toml','bat','vue','jsx','tsx'];
+const K_TBL = ['csv','tsv'];
+const K_ARC = ['zip','gz','tgz','tar','7z','rar','xz'];
+function kindOf(name) {
+  const e = extOf(name);
+  if (K_IMG.includes(e)) return 'image';
+  if (K_AUD.includes(e)) return 'audio';
+  if (K_VID.includes(e)) return 'video';
+  if (e === 'html' || e === 'htm') return 'html';
+  if (e === 'pdf') return 'pdf';
+  if (K_TBL.includes(e)) return 'table';
+  if (K_ARC.includes(e)) return 'archive';
+  if (e === 'iso' || e === 'img') return 'disk';
+  if (K_TXT.includes(e)) return 'text';
+  return 'other';
+}
+function typeName(name, isDir) {
+  if (isDir) return '文件夹';
+  const e = extOf(name);
+  const map = { image:'图片', audio:'音频', video:'视频', html:'网页', pdf:'PDF 文档', table:'表格数据', archive:'压缩包', text:'文本', disk:'磁盘镜像', other:'文件' };
+  return (e ? e.toUpperCase() + ' ' : '') + map[kindOf(name)];
+}
+
+/* ============================ SVG 图标库 ============================ */
+const IC = {
+  folder: c => `<svg viewBox="0 0 48 48" fill="none"><path d="M5 12a3 3 0 0 1 3-3h10l4 5h18a3 3 0 0 1 3 3v19a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3V12z" fill="${c||'#e6c384'}"/><path d="M5 19h38v17a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3V19z" fill="${c||'#e6c384'}" style="filter:brightness(1.22)"/><path d="M5 19h38" stroke="#00000030"/></svg>`,
+  folderMnt: () => `<svg viewBox="0 0 48 48" fill="none"><path d="M5 12a3 3 0 0 1 3-3h10l4 5h18a3 3 0 0 1 3 3v19a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3V12z" fill="#7aa89f"/><path d="M5 19h38v17a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3V19z" fill="#8fc1b5"/><circle cx="36" cy="34" r="8" fill="#16161d"/><path d="M36 30v5m0 0 2.4-2.4M36 35l-2.4-2.4" stroke="#7aa89f" stroke-width="1.8" stroke-linecap="round"/></svg>`,
+  fileGeneric: (tint, label) => `<svg viewBox="0 0 48 48" fill="none"><path d="M10 7a3 3 0 0 1 3-3h16l9 9v28a3 3 0 0 1-3 3H13a3 3 0 0 1-3-3V7z" fill="#2c2c3a"/><path d="M29 4l9 9h-7a2 2 0 0 1-2-2V4z" fill="#43435a"/><rect x="10" y="28" width="28" height="11" rx="2" fill="${tint}"/><text x="24" y="36.4" font-family="IBM Plex Mono,monospace" font-size="7.4" font-weight="700" fill="#16161d" text-anchor="middle">${label}</text></svg>`,
+  app: (bg, inner) => `<svg viewBox="0 0 48 48" fill="none"><rect x="4" y="4" width="40" height="40" rx="11" fill="${bg}"/>${inner}</svg>`,
+};
+function fileIconSvg(name, isDir, mounted) {
+  if (isDir) return mounted ? IC.folderMnt() : IC.folder();
+  const e = extOf(name), k = kindOf(name);
+  const tints = { image:'#7e9cd8', audio:'#e46876', video:'#957fb8', html:'#ff9e64', pdf:'#e46876', table:'#7aa89f', archive:'#e6c384', text:'#9cabca', disk:'#938aa9', other:'#717c7c' };
+  return IC.fileGeneric(tints[k], (e || 'BIN').toUpperCase().slice(0, 4));
+}
+const APPICON = {
+  explorer: IC.app('#e6c384', `<path d="M11 17a2 2 0 0 1 2-2h7l3 4h12a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H13a2 2 0 0 1-2-2V17z" fill="#16161d"/><path d="M11 23h26" stroke="#e6c384" stroke-width="1.6"/>`),
+  notepad: IC.app('#9cabca', `<rect x="13" y="10" width="22" height="28" rx="3" fill="#16161d"/><path d="M18 18h12M18 24h12M18 30h7" stroke="#9cabca" stroke-width="2" stroke-linecap="round"/>`),
+  code: IC.app('#ff9e64', `<path d="M19 17l-7 7 7 7M29 17l7 7-7 7" stroke="#16161d" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>`),
+  browser: IC.app('#7e9cd8', `<circle cx="24" cy="24" r="13" stroke="#16161d" stroke-width="2.6"/><ellipse cx="24" cy="24" rx="6" ry="13" stroke="#16161d" stroke-width="2.2"/><path d="M11.5 24h25" stroke="#16161d" stroke-width="2.2"/>`),
+  calc: IC.app('#7aa89f', `<rect x="14" y="10" width="20" height="28" rx="3" fill="#16161d"/><rect x="17.5" y="14" width="13" height="6" rx="1.4" fill="#7aa89f"/><circle cx="20" cy="26" r="1.8" fill="#7aa89f"/><circle cx="28" cy="26" r="1.8" fill="#7aa89f"/><circle cx="20" cy="32" r="1.8" fill="#7aa89f"/><circle cx="28" cy="32" r="1.8" fill="#7aa89f"/>`),
+  paint: IC.app('#e46876', `<path d="M24 11c-7.7 0-14 5.4-14 12.5C10 30 15 35 21 35c2 0 2.6-1.2 2.6-2.6 0-1.3-1-2.2-1-3.6 0-1.8 1.5-3 3.5-3h3.4c4.7 0 8.5-3.3 8.5-7.8C38 14.6 31.7 11 24 11z" fill="#16161d"/><circle cx="18" cy="20" r="2.1" fill="#e46876"/><circle cx="25" cy="16.7" r="2.1" fill="#e6c384"/><circle cx="31.6" cy="20" r="2.1" fill="#7aa89f"/>`),
+  settings: IC.app('#938aa9', `<circle cx="24" cy="24" r="5" fill="#16161d"/><path d="M24 11v5M24 32v5M37 24h-5M16 24h-5M33.2 14.8l-3.5 3.5M18.3 29.7l-3.5 3.5M33.2 33.2l-3.5-3.5M18.3 18.3l-3.5-3.5" stroke="#16161d" stroke-width="3" stroke-linecap="round"/>`),
+  vm: IC.app('#2a2a38', `<rect x="11" y="13" width="26" height="17" rx="2.4" stroke="#7aa89f" stroke-width="2.2"/><path d="M17 35h14M24 30v5" stroke="#7aa89f" stroke-width="2.2" stroke-linecap="round"/><path d="M15.5 19l3 2.6-3 2.6M22 25h6" stroke="#ff9e64" stroke-width="1.9" stroke-linecap="round"/>`),
+  table: IC.app('#7aa89f', `<rect x="11" y="12" width="26" height="24" rx="2.6" fill="#16161d"/><path d="M11 19.5h26M11 27h26M20 12v24M29 12v24" stroke="#7aa89f" stroke-width="1.8"/>`),
+  viewer: IC.app('#7e9cd8', `<rect x="10" y="13" width="28" height="22" rx="3" fill="#16161d"/><circle cx="18.5" cy="20" r="2.6" fill="#e6c384"/><path d="M13 32l8-8 5 5 5.5-6 6.5 9H13z" fill="#7e9cd8"/>`),
+  player: IC.app('#957fb8', `<circle cx="24" cy="24" r="14" fill="#16161d"/><path d="M20.5 17.8v12.4L31 24l-10.5-6.2z" fill="#957fb8"/>`),
+};
+const UI = {
+  x: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>`,
+  min: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 17h14"/></svg>`,
+  max: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>`,
+  restore: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="9" width="10" height="10" rx="2"/><path d="M9 5h8a2 2 0 0 1 2 2v8"/></svg>`,
+  back: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6l-6 6 6 6"/></svg>`,
+  fwd: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 6l6 6-6 6"/></svg>`,
+  up: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 18V6m0 0l-5 5m5-5l5 5"/></svg>`,
+  refresh: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v5h-5"/></svg>`,
+  plus: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>`,
+  folderP: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/><path d="M12 11v5m-2.5-2.5h5"/></svg>`,
+  upload: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>`,
+  download: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v12m0 0l-4.5-4.5M12 16l4.5-4.5"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>`,
+  trash: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m3 0l-.8 12a2 2 0 0 1-2 1.9H8.8a2 2 0 0 1-2-1.9L6 7"/><path d="M10 11v6m4-6v6"/></svg>`,
+  rename: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 4.5l3 3L8 19l-4 1 1-4L16.5 4.5z"/></svg>`,
+  copy: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>`,
+  cut: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="6.5" cy="17.5" r="2.5"/><path d="M8.6 8.4L20 19M8.6 15.6L20 5"/></svg>`,
+  paste: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 4h6v3H9zM15 5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2"/></svg>`,
+  open: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M20 4L11 13"/><path d="M9 5H6a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-3"/></svg>`,
+  search: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21"/></svg>`,
+  expand: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 15v5h-5M4 4l6 6M20 20l-6-6"/></svg>`,
+  check: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4.5 4.5L19 7"/></svg>`,
+  warn: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 4L2.5 20h19L12 4z" stroke-linejoin="round"/><path d="M12 10v5"/><circle cx="12" cy="17.6" r=".4" fill="currentColor"/></svg>`,
+  save: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h11l4 4v11a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z"/><path d="M8 4v5h7V4M8 20v-6h8v6"/></svg>`,
+  zip: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M12 3v2m0 2v2m0 2v2m-1.5 2h3v3h-3z"/></svg>`,
+  wall: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M5 17l5-5 3 3 3.5-4 2.5 3.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  hd: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="8" width="18" height="9" rx="2"/><circle cx="17" cy="12.5" r="1" fill="currentColor"/><path d="M6 12.5h6"/></svg>`,
+  power: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 4v7"/><path d="M7 7a7.5 7.5 0 1 0 10 0"/></svg>`,
+  mount: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/><path d="M12 16v-5m0 5l-2.2-2.2M12 16l2.2-2.2"/></svg>`,
+  eject: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6l7 8H5l7-8z"/><path d="M5 18h14"/></svg>`,
+  menu: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>`,
+  sortUp: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" width="9" height="9"><path d="M6 14l6-6 6 6"/></svg>`,
+  sortDn: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" width="9" height="9"><path d="M6 10l6 6 6-6"/></svg>`,
+  home: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11l8-7 8 7v8a2 2 0 0 1-2 2h-4v-6h-4v6H6a2 2 0 0 1-2-2v-8z"/></svg>`,
+  doc: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 3h9l4 4v14H6V3z" stroke-linejoin="round"/><path d="M9 11h6M9 15h6"/></svg>`,
+  img: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M5 17l5-5 3 3 3.5-4 2.5 3.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  music: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/></svg>`,
+};
+
+/* ============================ 文件系统核心 ============================ */
+/* HandleFS — 基于 FileSystemDirectoryHandle（OPFS 根 或 FSA 挂载目录均适用） */
+class HandleFS {
+  constructor(rootHandle) { this.root = rootHandle; }
+  _segs(p) { return normPath(p).split('/').filter(Boolean); }
+  async _dir(p, create = false) {
+    let d = this.root;
+    for (const s of this._segs(p)) d = await d.getDirectoryHandle(s, { create });
+    return d;
+  }
+  async _fileHandle(p, create = false) {
+    const segs = this._segs(p); const name = segs.pop();
+    let d = this.root;
+    for (const s of segs) d = await d.getDirectoryHandle(s, { create });
+    return d.getFileHandle(name, { create });
+  }
+  async readdir(p) {
+    const d = await this._dir(p); const out = [];
+    for await (const [name, h] of d.entries()) out.push({ name, kind: h.kind });
+    return out;
+  }
+  async stat(p, ...rest) {
+    if (normPath(p) === '/') return { kind: 'directory', size: 0, mtime: null };
+    try { const fh = await this._fileHandle(p); const f = await fh.getFile(); return { kind: 'file', size: f.size, mtime: f.lastModified }; }
+    catch (e) { await this._dir(p); return { kind: 'directory', size: 0, mtime: null }; }
+  }
+  async readFile(p, as = 'arrayBuffer', ...rest) {
+    const fh = await this._fileHandle(p); const f = await fh.getFile();
+    if (as === 'blob') return new Blob([await f.arrayBuffer()], { type: mimeOf(p) });
+    if (as === 'text') return f.text();
+    if (as === 'file') return f;
+    return f.arrayBuffer();
+  }
+  async writeFile(p, data, ...rest) {
+    const fh = await this._fileHandle(p, true);
+    const w = await fh.createWritable();
+    await w.write(data); await w.close();
+  }
+  async mkdir(p, ...rest) { await this._dir(p, true); }
+  async rm(p, ...rest) {
+    const segs = this._segs(p); const name = segs.pop();
+    const d = await this._dir('/' + segs.join('/'));
+    await d.removeEntry(name, { recursive: true });
+  }
+  async exists(p) { try { await this.stat(p); return true; } catch { return false; } }
+}
+
+/* IDBFS — IndexedDB 降级后端（OPFS 不可用时） */
+class IDBFS {
+  constructor(dbName = 'ember-fallback-fs') {
+    this.ready = new Promise((res, rej) => {
+      const rq = indexedDB.open(dbName, 1);
+      rq.onupgradeneeded = () => rq.result.createObjectStore('files', { keyPath: 'path' });
+      rq.onsuccess = () => res(rq.result);
+      rq.onerror = () => rej(rq.error);
+    });
+  }
+  async _tx(mode) { const db = await this.ready; return db.transaction('files', mode).objectStore('files'); }
+  _req(r) { return new Promise((res, rej) => { r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); }
+  async _get(p) { return this._req((await this._tx('readonly')).get(normPath(p))); }
+  async readdir(p) {
+    p = normPath(p); const pre = p === '/' ? '/' : p + '/';
+    const all = await this._req((await this._tx('readonly')).getAllKeys());
+    const seen = new Map();
+    for (const k of all) {
+      if (!k.startsWith(pre) || k === p) continue;
+      const rest = k.slice(pre.length); const top = rest.split('/')[0];
+      if (!seen.has(top)) seen.set(top, rest.includes('/') ? 'directory' : null);
+    }
+    const out = [];
+    for (const [name] of seen) {
+      const rec = await this._get(pre + name);
+      out.push({ name, kind: rec && rec.kind === 'file' ? 'file' : 'directory' });
+    }
+    return out;
+  }
+  async stat(p, ...rest) {
+    p = normPath(p);
+    if (p === '/') return { kind: 'directory', size: 0, mtime: null };
+    const rec = await this._get(p);
+    if (rec) return rec.kind === 'file' ? { kind: 'file', size: rec.data.byteLength, mtime: rec.mtime } : { kind: 'directory', size: 0, mtime: rec.mtime };
+    const kids = await this.readdir(p);
+    if (kids.length) return { kind: 'directory', size: 0, mtime: null };
+    throw new Error('ENOENT: ' + p);
+  }
+  async readFile(p, as = 'arrayBuffer', ...rest) {
+    const rec = await this._get(p);
+    if (!rec || rec.kind !== 'file') throw new Error('ENOENT: ' + p);
+    const buf = rec.data;
+    if (as === 'text') return new TextDecoder().decode(buf);
+    if (as === 'blob' || as === 'file') return new Blob([buf], { type: mimeOf(p) });
+    return buf.slice(0);
+  }
+  async writeFile(p, data, ...rest) {
+    let buf;
+    if (data instanceof ArrayBuffer) buf = data;
+    else if (data instanceof Blob) buf = await data.arrayBuffer();
+    else if (ArrayBuffer.isView(data)) buf = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength);
+    else buf = new TextEncoder().encode(String(data)).buffer;
+    await this._req((await this._tx('readwrite')).put({ path: normPath(p), kind: 'file', data: buf, mtime: Date.now() }));
+  }
+  async mkdir(p, ...rest) { await this._req((await this._tx('readwrite')).put({ path: normPath(p), kind: 'directory', mtime: Date.now() })); }
+  async rm(p, ...rest) {
+    p = normPath(p); const pre = p + '/';
+    const all = await this._req((await this._tx('readonly')).getAllKeys());
+    const st = await this._tx('readwrite');
+    for (const k of all) if (k === p || k.startsWith(pre)) st.delete(k);
+    return new Promise((res, rej) => { st.transaction.oncomplete = res; st.transaction.onerror = () => rej(st.transaction.error); });
+  }
+  async exists(p) { try { await this.stat(p); return true; } catch { return false; } }
+}
+
+/* fs — 统一路由层：所有 App 唯一入口，挂载路由对上层完全透明 */
+const fs = {
+  rootBackend: null,
+  backendType: 'opfs',
+  mounts: [],           // { prefix, backend, handle }
+  async init() {
+    try {
+      if (!navigator.storage || !navigator.storage.getDirectory) throw 0;
+      const root = await navigator.storage.getDirectory();
+      // 探测 createWritable 支持
+      const t = await root.getFileHandle('.probe', { create: true });
+      if (!t.createWritable) throw 0;
+      const w = await t.createWritable(); await w.close();
+      await root.removeEntry('.probe').catch(() => {});
+      this.rootBackend = new HandleFS(root);
+      this.backendType = 'opfs';
+    } catch (e) {
+      this.rootBackend = new IDBFS();
+      this.backendType = 'idb';
+    }
+    if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+  },
+  route(p) {
+    p = normPath(p);
+    const ms = [...this.mounts].sort((a, b) => b.prefix.length - a.prefix.length);
+    for (const m of ms) {
+      if (p === m.prefix) return { b: m.backend, rel: '/' };
+      if (p.startsWith(m.prefix + '/')) return { b: m.backend, rel: p.slice(m.prefix.length) || '/' };
+    }
+    return { b: this.rootBackend, rel: p };
+  },
+  async readdir(p) {
+    p = normPath(p);
+    const { b, rel } = this.route(p);
+    let out = [];
+    try { out = await b.readdir(rel); } catch (e) { if (!this.mounts.some(m => dirname(m.prefix) === p)) throw e; }
+    for (const m of this.mounts) {
+      if (dirname(m.prefix) === p && !out.some(x => x.name === basename(m.prefix)))
+        out.push({ name: basename(m.prefix), kind: 'directory', mounted: true });
+    }
+    return out;
+  },
+  async stat(p, ...rest) { const { b, rel } = this.route(p); return b.stat(rel, ...rest); },
+  async readFile(p, as, ...rest) { const { b, rel } = this.route(p); return b.readFile(rel, as, ...rest); },
+  async writeFile(p, data, ...rest) { const { b, rel } = this.route(p); return b.writeFile(rel, data, ...rest); },
+  async mkdir(p, ...rest) { const { b, rel } = this.route(p); return b.mkdir(rel, ...rest); },
+  async rm(p, ...rest) {
+    if (this.isMountRoot(p)) { this.unmount(normPath(p)); return; }
+    const { b, rel } = this.route(p); return b.rm(rel, ...rest);
+  },
+  async exists(p) { const { b, rel } = this.route(p); return b.exists(rel); },
+  async blobURL(p) { const blob = await this.readFile(p, 'blob'); return URL.createObjectURL(blob); },
+  async uniqueName(dir, name) {
+    if (!await this.exists(joinPath(dir, name))) return name;
+    const e = extOf(name); const base = e ? name.slice(0, -(e.length + 1)) : name;
+    for (let i = 2; i < 999; i++) {
+      const n = e ? `${base} (${i}).${e}` : `${base} (${i})`;
+      if (!await this.exists(joinPath(dir, n))) return n;
+    }
+    return name + '-' + uid();
+  },
+  async copyTree(src, dst) {
+    const st = await this.stat(src);
+    if (st.kind === 'directory') {
+      await this.mkdir(dst);
+      for (const ent of await this.readdir(src)) await this.copyTree(joinPath(src, ent.name), joinPath(dst, ent.name));
+    } else {
+      await this.writeFile(dst, await this.readFile(src, 'arrayBuffer'));
+    }
+  },
+  async move(src, dst) {
+    if (normPath(src) === normPath(dst)) return;
+    if (normPath(dst).startsWith(normPath(src) + '/')) throw new Error('不能移动到自身内部');
+    await this.copyTree(src, dst);
+    await this.rm(src);
+  },
+  async dirSize(p) {
+    let total = 0;
+    try {
+      const st = await this.stat(p);
+      if (st.kind === 'file') return st.size;
+      for (const ent of await this.readdir(p)) total += await this.dirSize(joinPath(p, ent.name));
+    } catch {}
+    return total;
+  },
+  /* ---- 本地文件夹挂载 (File System Access API) ---- */
+  async mountLocal() {
+    if (!window.showDirectoryPicker) { toast('当前浏览器不支持 File System Access API', 'err'); return null; }
+    try {
+      const handle = await showDirectoryPicker({ mode: 'readwrite' });
+      return this.mountHandle(handle);
+    } catch (e) { if (e.name !== 'AbortError') toast('挂载失败: ' + e.message, 'err'); return null; }
+  },
+  async mountHandle(handle) {
+    await this.mkdir('/mnt/local').catch(() => {});
+    let name = handle.name, prefix = '/mnt/local/' + name, i = 2;
+    while (this.mounts.some(m => m.prefix === prefix)) prefix = '/mnt/local/' + name + '-' + (i++);
+    this.mounts.push({ prefix, backend: new HandleFS(handle), handle });
+    await mountStore.save(handle).catch(() => {});
+    toast(`已挂载本地文件夹 → ${prefix}`);
+    bus.emit('fs-changed', '/mnt/local');
+    return prefix;
+  },
+  unmount(prefix) {
+    const i = this.mounts.findIndex(m => m.prefix === prefix);
+    if (i >= 0) {
+      const m = this.mounts.splice(i, 1)[0];
+      mountStore.remove(m.handle).catch(() => {});
+      toast('已卸载 ' + prefix);
+      bus.emit('fs-changed', '/mnt/local');
+    }
+  },
+  isMountRoot(p) { return this.mounts.some(m => m.prefix === normPath(p)); }
+};
+window.fs = fs;
+
+/* 挂载句柄持久化（IndexedDB 存 FileSystemHandle，刷新后提示重新授权） */
+const mountStore = {
+  ready: new Promise((res, rej) => {
+    const rq = indexedDB.open('ember-mounts', 1);
+    rq.onupgradeneeded = () => rq.result.createObjectStore('handles', { autoIncrement: true });
+    rq.onsuccess = () => res(rq.result); rq.onerror = () => rej(rq.error);
+  }),
+  async save(handle) {
+    const db = await this.ready;
+    const all = await this.list();
+    for (const { key, handle: h } of all) if (await h.isSameEntry(handle).catch(() => false)) return;
+    db.transaction('handles', 'readwrite').objectStore('handles').add(handle);
+  },
+  async list() {
+    const db = await this.ready;
+    return new Promise(res => {
+      const out = []; const cur = db.transaction('handles').objectStore('handles').openCursor();
+      cur.onsuccess = () => { const c = cur.result; if (c) { out.push({ key: c.key, handle: c.value }); c.continue(); } else res(out); };
+      cur.onerror = () => res([]);
+    });
+  },
+  async remove(handle) {
+    const db = await this.ready;
+    for (const { key, handle: h } of await this.list())
+      if (await h.isSameEntry(handle).catch(() => false))
+        db.transaction('handles', 'readwrite').objectStore('handles').delete(key);
+  },
+  async clear() { const db = await this.ready; db.transaction('handles', 'readwrite').objectStore('handles').clear(); }
+};
+
+/* 事件总线 */
+const bus = {
+  m: new Map(),
+  on(ev, fn) { (this.m.get(ev) || this.m.set(ev, []).get(ev)).push(fn); },
+  emit(ev, ...a) { (this.m.get(ev) || []).forEach(fn => { try { fn(...a); } catch (e) { console.warn(e); } }); }
+};
+
+/* 配置（localStorage + Cookie 协同） */
+const conf = {
+  get(k, d) { try { const v = localStorage.getItem('ember.' + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem('ember.' + k, JSON.stringify(v)); } catch {} }
+};
+const setCookie = (k, v) => document.cookie = `${k}=${v};max-age=31536000;path=/;SameSite=Lax`;
+const getCookie = k => (document.cookie.match(new RegExp('(?:^|; )' + k + '=([^;]*)')) || [])[1];
+
+/* ============================ Toast & 对话框 ============================ */
+function toast(msg, type = 'ok', actLabel, actFn) {
+  const t = elBuild('div', 'toast' + (type === 'err' ? ' err' : ''),
+    `${type === 'err' ? UI.warn : UI.check}<span>${esc(msg)}</span>`);
+  if (actLabel) { const b = elBuild('button', '', esc(actLabel)); b.onclick = () => { actFn && actFn(); kill(); }; t.appendChild(b); }
+  $('#toasts').appendChild(t);
+  let killed = false;
+  const kill = () => { if (killed) return; killed = true; t.classList.add('out'); setTimeout(() => t.remove(), 320); };
+  setTimeout(kill, actLabel ? 9000 : 3600);
+  t.addEventListener('click', e => { if (e.target.tagName !== 'BUTTON') kill(); });
+}
+function dialog({ title, body, okText = '确定', cancelText = '取消', input = null, danger = false }) {
+  return new Promise(res => {
+    const veil = elBuild('div', 'dlg-veil');
+    veil.innerHTML = `<div class="dlg"><h3>${esc(title)}</h3><p>${body || ''}</p>
+      ${input != null ? `<input class="tfield" style="width:100%" value="${esc(input)}">` : ''}
+      <div class="dlg-btns"><button class="btn" data-a="c">${esc(cancelText)}</button><button class="btn ${danger ? 'dgr' : 'pri'}" data-a="o">${esc(okText)}</button></div></div>`;
+    document.body.appendChild(veil);
+    const inp = veil.querySelector('input');
+    if (inp) { inp.focus(); const dot = inp.value.lastIndexOf('.'); inp.setSelectionRange(0, dot > 0 ? dot : inp.value.length); }
+    const done = v => { veil.remove(); res(v); };
+    veil.querySelector('[data-a="o"]').onclick = () => done(inp ? inp.value.trim() : true);
+    veil.querySelector('[data-a="c"]').onclick = () => done(null);
+    veil.addEventListener('keydown', e => { if (e.key === 'Enter') done(inp ? inp.value.trim() : true); if (e.key === 'Escape') done(null); });
+    veil.addEventListener('pointerdown', e => { if (e.target === veil) done(null); });
+  });
+}
+
+/* ============================ 右键菜单 ============================ */
+const Ctx = {
+  el: $('#ctxmenu'),
+  show(items, x, y) {
+    this.el.innerHTML = '';
+    for (const it of items) {
+      if (!it) continue;
+      if (it.sep) { this.el.appendChild(elBuild('div', 'ctx-sep')); continue; }
+      const d = elBuild('div', 'ctx-it' + (it.danger ? ' danger' : '') + (it.dis ? ' dis' : ''), `${it.icon || ''}<span>${esc(it.label)}</span>`);
+      d.onclick = () => { this.hide(); it.action && it.action(); };
+      this.el.appendChild(d);
+    }
+    this.el.style.display = 'block';
+    const r = this.el.getBoundingClientRect();
+    this.el.style.left = Math.min(x, innerWidth - r.width - 8) + 'px';
+    this.el.style.top = Math.min(y, innerHeight - r.height - 8) + 'px';
+  },
+  hide() { this.el.style.display = 'none'; }
+};
+addEventListener('pointerdown', e => { if (!Ctx.el.contains(e.target)) Ctx.hide(); }, true);
+addEventListener('blur', () => Ctx.hide());
+
+/* 触摸长按 → 右键菜单 */
+function bindLongPress(el, fn) {
+  let timer = null, sx = 0, sy = 0;
+  el.addEventListener('touchstart', e => {
+    if (e.touches.length !== 1) return;
+    sx = e.touches[0].clientX; sy = e.touches[0].clientY;
+    timer = setTimeout(() => { timer = null; fn(sx, sy, e); }, 520);
+  }, { passive: true });
+  const cancel = () => { if (timer) { clearTimeout(timer); timer = null; } };
+  el.addEventListener('touchmove', e => {
+    if (timer && (Math.abs(e.touches[0].clientX - sx) > 12 || Math.abs(e.touches[0].clientY - sy) > 12)) cancel();
+  }, { passive: true });
+  el.addEventListener('touchend', cancel);
+  el.addEventListener('touchcancel', cancel);
+}
+
+/* ============================ 窗口管理器 ============================ */
+const WM = {
+  wins: [], zTop: 100, cascade: 0,
+  create({ app, title, icon, w = 760, h = 520, x, y, single = false }) {
+    if (single) { const ex = this.wins.find(v => v.app === app); if (ex) { this.focus(ex); ex.restore(); return ex; } }
+    const id = uid();
+    const mob = IS_MOBILE();
+    const vw = innerWidth, vh = innerHeight - 46;
+    w = Math.min(w, vw - 20); h = Math.min(h, vh - 20);
+    if (x == null) { x = Math.max(10, (vw - w) / 2 + (this.cascade % 6) * 26 - 60); y = Math.max(8, (vh - h) / 2 + (this.cascade % 6) * 22 - 50); this.cascade++; }
+    const el = elBuild('div', 'win');
+    el.style.cssText = `left:${x}px;top:${y}px;width:${w}px;height:${h}px;z-index:${++this.zTop}`;
+    el.innerHTML = `
+      <div class="win-tit">
+        <div class="wt-ico">${icon || APPICON.explorer}</div>
+        <div class="wt-name">${esc(title)}</div>
+        <button class="wbtn wb-m" title="最小化">${UI.min}</button>
+        <button class="wbtn wb-z" title="最大化">${UI.max}</button>
+        <button class="wbtn wb-x" title="关闭">${UI.x}</button>
+      </div>
+      <div class="win-body"></div>
+      ${['n','s','e','w','ne','nw','se','sw'].map(d => `<div class="rs rs-${d}" data-d="${d}"></div>`).join('')}`;
+    $('#windows').appendChild(el);
+    const win = {
+      id, app, el, title, icon, minimized: false, maximized: false, prev: null, onClose: null,
+      body: el.querySelector('.win-body'),
+      setTitle(t) { this.title = t; el.querySelector('.wt-name').textContent = t; this.task.querySelector('span').textContent = t; },
+      focus() { WM.focus(this); },
+      close() {
+        if (this.onClose && this.onClose() === false) return;
+        el.classList.add('closing');
+        setTimeout(() => { el.remove(); this.task.remove(); }, 200);
+        WM.wins = WM.wins.filter(v => v !== this);
+        bus.emit('win-closed', this);
+      },
+      minimize() { this.minimized = true; el.style.display = 'none'; this.task.classList.add('min'); this.task.classList.remove('on'); },
+      restore() { this.minimized = false; el.style.display = 'flex'; this.task.classList.remove('min'); WM.focus(this); },
+      toggleMax() {
+        if (IS_MOBILE()) return;
+        if (!this.maximized) {
+          this.prev = { l: el.style.left, t: el.style.top, w: el.style.width, h: el.style.height };
+          el.classList.add('max');
+          el.style.left = '0'; el.style.top = '0'; el.style.width = '100vw'; el.style.height = `calc(100vh - var(--tb-h))`;
+          this.maximized = true;
+          el.querySelector('.wb-z').innerHTML = UI.restore;
+        } else {
+          el.classList.remove('max');
+          Object.assign(el.style, { left: this.prev.l, top: this.prev.t, width: this.prev.w, height: this.prev.h });
+          this.maximized = false;
+          el.querySelector('.wb-z').innerHTML = UI.max;
+        }
+      }
+    };
+    // 任务栏
+    const task = elBuild('button', 'task', `${icon || ''}<span>${esc(title)}</span>`);
+    task.onclick = () => { if (win.minimized) win.restore(); else if (el.classList.contains('focus-on')) win.minimize(); else { if (WM.top() === win) win.minimize(); else win.focus(); } };
+    $('#tasks').appendChild(task);
+    win.task = task;
+
+    el.addEventListener('pointerdown', () => WM.focus(win), true);
+    el.querySelector('.wb-x').onclick = e => { e.stopPropagation(); win.close(); };
+    el.querySelector('.wb-m').onclick = e => { e.stopPropagation(); win.minimize(); };
+    el.querySelector('.wb-z').onclick = e => { e.stopPropagation(); win.toggleMax(); };
+    const tit = el.querySelector('.win-tit');
+    tit.addEventListener('dblclick', e => { if (!e.target.closest('.wbtn')) win.toggleMax(); });
+    // 拖动
+    tit.addEventListener('pointerdown', e => {
+      if (e.target.closest('.wbtn') || win.maximized || IS_MOBILE()) return;
+      const sx = e.clientX, sy = e.clientY, ol = el.offsetLeft, ot = el.offsetTop;
+      tit.setPointerCapture(e.pointerId);
+      const mv = ev => {
+        el.style.left = Math.max(-el.offsetWidth + 80, Math.min(ol + ev.clientX - sx, innerWidth - 60)) + 'px';
+        el.style.top = Math.max(0, Math.min(ot + ev.clientY - sy, innerHeight - 90)) + 'px';
+      };
+      const up = () => { tit.removeEventListener('pointermove', mv); tit.removeEventListener('pointerup', up); };
+      tit.addEventListener('pointermove', mv); tit.addEventListener('pointerup', up);
+    });
+    // 八向 resize
+    el.querySelectorAll('.rs').forEach(hd => {
+      hd.addEventListener('pointerdown', e => {
+        if (win.maximized || IS_MOBILE()) return;
+        e.preventDefault(); e.stopPropagation();
+        const d = hd.dataset.d, sx = e.clientX, sy = e.clientY;
+        const r = { l: el.offsetLeft, t: el.offsetTop, w: el.offsetWidth, h: el.offsetHeight };
+        hd.setPointerCapture(e.pointerId);
+        const mv = ev => {
+          const dx = ev.clientX - sx, dy = ev.clientY - sy;
+          let { l, t, w: ww, h: hh } = r;
+          if (d.includes('e')) ww = Math.max(280, r.w + dx);
+          if (d.includes('s')) hh = Math.max(160, r.h + dy);
+          if (d.includes('w')) { ww = Math.max(280, r.w - dx); l = r.l + r.w - ww; }
+          if (d.includes('n')) { hh = Math.max(160, r.h - dy); t = Math.max(0, r.t + r.h - hh); hh = r.t + r.h - t; }
+          Object.assign(el.style, { left: l + 'px', top: t + 'px', width: ww + 'px', height: hh + 'px' });
+        };
+        const up = () => { hd.removeEventListener('pointermove', mv); hd.removeEventListener('pointerup', up); };
+        hd.addEventListener('pointermove', mv); hd.addEventListener('pointerup', up);
+      });
+    });
+    this.wins.push(win);
+    this.focus(win);
+    return win;
+  },
+  focus(win) {
+    if (win.minimized) return;
+    win.el.style.zIndex = ++this.zTop;
+    this.wins.forEach(v => { v.el.classList.toggle('focus', v === win); v.task.classList.toggle('on', v === win && !v.minimized); });
+  },
+  top() { return this.wins.filter(w => !w.minimized).sort((a, b) => b.el.style.zIndex - a.el.style.zIndex)[0]; }
+};
+
+/* ============================ 开始菜单 & 任务栏 ============================ */
+function toggleStart(force) {
+  const sm = $('#startmenu');
+  const show = force != null ? force : sm.classList.contains('hide');
+  sm.classList.toggle('hide', !show);
+  $('#startbtn').classList.toggle('on', show);
+}
+$('#startbtn').onclick = e => { e.stopPropagation(); toggleStart(); };
+addEventListener('pointerdown', e => {
+  if (!$('#startmenu').contains(e.target) && !$('#startbtn').contains(e.target)) toggleStart(false);
+});
+$('#fsbtn').innerHTML = UI.expand;
+$('#fsbtn').onclick = () => document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen().catch(() => toast('无法进入全屏', 'err'));
+function tickClock() {
+  const d = new Date(), p = n => String(n).padStart(2, '0');
+  $('#clock').innerHTML = `${p(d.getHours())}:${p(d.getMinutes())}<small>${d.getFullYear()}/${p(d.getMonth()+1)}/${p(d.getDate())} 周${'日一二三四五六'[d.getDay()]}</small>`;
+}
+setInterval(tickClock, 5000); tickClock();
+
+function buildStartMenu() {
+  const grid = $('#sm-apps');
+  grid.innerHTML = '';
+  for (const id of ['explorer','notepad','code','table','browser','calc','paint','viewer','player','vm','settings']) {
+    const a = Apps[id]; if (!a) continue;
+    const d = elBuild('div', 'sm-app', `<div class="sma-i">${a.icon}</div><div class="sma-n">${esc(a.name)}</div>`);
+    d.onclick = () => { toggleStart(false); a.launch(); };
+    grid.appendChild(d);
+  }
+  $('#sm-mount').innerHTML = `${UI.mount}<span>挂载本地文件夹</span>`;
+  $('#sm-mount').onclick = async () => { toggleStart(false); const p = await fs.mountLocal(); if (p) Apps.explorer.launch(p); };
+  $('#sm-reload').innerHTML = `${UI.power}<span>重启系统</span>`;
+  $('#sm-reload').onclick = () => location.reload();
+  $('#sm-stat').textContent = fs.backendType === 'opfs' ? 'OPFS VOLUME · PERSISTENT' : 'INDEXEDDB FALLBACK MODE';
+}
+
+/* ============================ 壁纸系统 ============================ */
+const WALLPAPERS = [
+  { id: 'ember-dusk', name: '余烬黄昏', css: `linear-gradient(160deg,#1a1423 0%,#2d1b2e 34%,#52333f 62%,#9e5a48 86%,#e8743c 110%), radial-gradient(circle at 78% 18%, #ff9e6428, transparent 42%)` },
+  { id: 'kanagawa', name: '沧海墨蓝', css: `radial-gradient(ellipse at 20% 110%, #223249 0%, transparent 55%), radial-gradient(ellipse at 85% -10%, #2d4f67 0%, transparent 50%), linear-gradient(180deg,#16161d,#1f1f28 60%,#181822)` },
+  { id: 'moss', name: '苔原微光', css: `radial-gradient(circle at 30% 25%, #2b3328 0%, transparent 52%), radial-gradient(circle at 80% 80%, #7aa89f22, transparent 45%), linear-gradient(150deg,#14171a,#1c2420 70%,#16201c)` },
+  { id: 'ink-grid', name: '墨格织线', css: `repeating-linear-gradient(0deg,transparent 0 47px,#ffffff07 47px 48px), repeating-linear-gradient(90deg,transparent 0 47px,#ffffff07 47px 48px), radial-gradient(circle at 60% 35%, #2a2a3a, #14141b 75%)` },
+  { id: 'aurora', name: '绯色极光', css: `radial-gradient(ellipse 90% 55% at 50% -12%, #e4687638, transparent 60%), radial-gradient(ellipse 75% 45% at 78% 8%, #7e9cd830, transparent 55%), radial-gradient(ellipse 60% 40% at 22% 4%, #ff9e6426, transparent 52%), linear-gradient(180deg,#15151e,#101016)` },
+];
+async function applyWallpaper(w, save = true) {
+  const wp = $('#wallpaper');
+  if (typeof w === 'string' && w.startsWith('/')) {
+    try {
+      const url = await fs.blobURL(w);
+      wp.style.background = `url(${url}) center/cover no-repeat, #14141b`;
+      if (save) conf.set('wall', w);
+      return;
+    } catch { toast('壁纸文件读取失败，已恢复默认', 'err'); w = WALLPAPERS[0].id; }
+  }
+  const def = WALLPAPERS.find(x => x.id === w) || WALLPAPERS[0];
+  wp.style.background = def.css + ', #14141b';
+  if (save) conf.set('wall', def.id);
+}
+
+/* ============================ 桌面图标系统 ============================ */
+const DESKTOP_APPS = ['explorer', 'browser', 'notepad', 'paint', 'settings'];
+const dragCache = new Map();   // path -> File（dragstart 同步读取，必须预加载）
+const pendingURLs = [];
+
+const Desktop = {
+  el: $('#desktop'),
+  cellW: 96, cellH: 106, pad: 10,
+  items: [],            // { key, name, kind, path?, appId? }
+  pos: conf.get('iconpos', {}),
+  sel: new Set(),
+  cols() { return Math.max(1, Math.floor((this.el.clientWidth - this.pad * 2) / this.cellW)); },
+  rows() { return Math.max(1, Math.floor((this.el.clientHeight - this.pad * 2) / this.cellH)); },
+  cellAt(x, y) {
+    const r = this.el.getBoundingClientRect();
+    return {
+      c: Math.max(0, Math.min(this.cols() - 1, Math.round((x - r.left - this.pad - this.cellW / 2 + 43) / this.cellW))),
+      r: Math.max(0, Math.min(this.rows() - 1, Math.round((y - r.top - this.pad - 20) / this.cellH)))
+    };
+  },
+  xyOf(c, r) { return { x: this.pad + c * this.cellW + (this.cellW - 86) / 2, y: this.pad + r * this.cellH }; },
+  freeCell(taken) {
+    const rows = this.rows();
+    for (let c = 0; c < 50; c++) for (let r = 0; r < rows; r++) {
+      const k = c + ',' + r;
+      if (!taken.has(k)) { taken.add(k); return { c, r }; }
+    }
+    return { c: 0, r: 0 };
+  },
+  async refresh() {
+    this.items = DESKTOP_APPS.map(id => ({ key: 'app:' + id, name: Apps[id].name, kind: 'app', appId: id }));
+    try {
+      const ents = await fs.readdir('/Desktop');
+      ents.sort((a, b) => (b.kind === 'directory') - (a.kind === 'directory') || a.name.localeCompare(b.name, 'zh'));
+      for (const e of ents) this.items.push({ key: 'fs:' + e.name, name: e.name, kind: e.kind, path: '/Desktop/' + e.name, mounted: e.mounted });
+    } catch {}
+    this.render();
+  },
+  render() {
+    this.el.querySelectorAll('.dicon').forEach(n => n.remove());
+    const taken = new Set();
+    for (const k in this.pos) if (this.items.some(it => it.key === k)) taken.add(this.pos[k].c + ',' + this.pos[k].r);
+    for (const it of this.items) {
+      let p = this.pos[it.key];
+      if (!p || p.c >= 60) { p = this.freeCell(taken); this.pos[it.key] = p; }
+      const { x, y } = this.xyOf(p.c, p.r);
+      const d = elBuild('div', 'dicon');
+      d.dataset.key = it.key;
+      d.style.left = x + 'px'; d.style.top = y + 'px';
+      const svg = it.kind === 'app' ? Apps[it.appId].icon : fileIconSvg(it.name, it.kind === 'directory', it.mounted);
+      d.innerHTML = `<div class="dic-img">${svg}</div><div class="dic-name">${esc(it.name)}</div>`;
+      if (this.sel.has(it.key)) d.classList.add('sel');
+      this.bindIcon(d, it);
+      this.el.appendChild(d);
+    }
+    conf.set('iconpos', this.pos);
+  },
+  iconEl(key) { return this.el.querySelector(`.dicon[data-key="${CSS.escape(key)}"]`); },
+  setSel(keys) {
+    this.sel = new Set(keys);
+    this.el.querySelectorAll('.dicon').forEach(n => n.classList.toggle('sel', this.sel.has(n.dataset.key)));
+  },
+  selPaths() { return this.items.filter(i => this.sel.has(i.key) && i.path).map(i => i.path); },
+  openItem(it) { it.kind === 'app' ? Apps[it.appId].launch() : openPath(it.path); },
+
+  bindIcon(d, it) {
+    // 单击选中 / 双击(单击移动端)打开
+    let lastTap = 0;
+    d.addEventListener('pointerdown', e => {
+      if (e.button === 2) { if (!this.sel.has(it.key)) this.setSel([it.key]); return; }
+      if (e.ctrlKey || e.metaKey) {
+        const s = new Set(this.sel); s.has(it.key) ? s.delete(it.key) : s.add(it.key); this.setSel([...s]);
+      } else if (!this.sel.has(it.key)) this.setSel([it.key]);
+      // 预加载拖出数据
+      preloadDragData(this.selPaths());
+    });
+    d.addEventListener('click', () => { if (IS_TOUCH) this.openItem(it); });
+    d.addEventListener('dblclick', () => { if (!IS_TOUCH) this.openItem(it); });
+    d.addEventListener('contextmenu', e => { e.preventDefault(); this.iconMenu(it, e.clientX, e.clientY); });
+    bindLongPress(d, (x, y) => { if (!this.sel.has(it.key)) this.setSel([it.key]); this.iconMenu(it, x, y); });
+
+    /* —— HTML5 原生拖拽（统一通道：内部移动 + 拖出下载）—— */
+    d.draggable = true;
+    d.addEventListener('dragstart', e => {        // 严禁 async！
+      if (!this.sel.has(it.key)) this.setSel([it.key]);
+      d.classList.add('dragging');
+      const keys = [...this.sel];
+      e.dataTransfer.effectAllowed = 'copyMove';
+      e.dataTransfer.setData('application/x-ember', JSON.stringify({ src: 'desktop', keys, paths: this.selPaths() }));
+      // 拖出浏览器（单文件，同步读缓存）
+      if (keys.length === 1 && it.path) {
+        const f = dragCache.get(it.path);
+        if (f) {
+          try { e.dataTransfer.items.add(f); } catch {}
+          const url = URL.createObjectURL(f);
+          pendingURLs.push(url);
+          try { e.dataTransfer.setData('DownloadURL', `${f.type || 'application/octet-stream'}:${f.name}:${url}`); } catch {}
+        }
+      }
+      const r = d.getBoundingClientRect();
+      Desktop._dragOff = keys.map(k => {
+        const n = this.iconEl(k); const rr = n ? n.getBoundingClientRect() : r;
+        return { key: k, dx: rr.left - r.left, dy: rr.top - r.top };
+      });
+      Desktop._grabX = e.clientX - r.left; Desktop._grabY = e.clientY - r.top;
+    });
+    d.addEventListener('dragend', () => {
+      d.classList.remove('dragging');
+      setTimeout(() => { while (pendingURLs.length) URL.revokeObjectURL(pendingURLs.pop()); }, 6000);
+    });
+    // 文件夹作为放置目标
+    if (it.kind === 'directory' || (it.kind === 'app' && it.appId === 'explorer')) {
+      d.addEventListener('dragover', e => { e.preventDefault(); e.stopPropagation(); d.classList.add('dropt'); e.dataTransfer.dropEffect = 'move'; });
+      d.addEventListener('dragleave', () => d.classList.remove('dropt'));
+      d.addEventListener('drop', async e => {
+        e.preventDefault(); e.stopPropagation(); d.classList.remove('dropt');
+        const dst = it.path || '/';
+        const meta = e.dataTransfer.getData('application/x-ember');
+        if (meta) {
+          const { paths } = JSON.parse(meta);
+          for (const p of paths || []) {
+            if (p === dst || dst.startsWith(p + '/')) continue;
+            try { await fs.move(p, joinPath(dst, await fs.uniqueName(dst, basename(p)))); } catch (err) { toast(err.message, 'err'); }
+          }
+          bus.emit('fs-changed', '/Desktop'); bus.emit('fs-changed', dst);
+        } else if (e.dataTransfer.items && e.dataTransfer.items.length) {
+          await importDataTransfer(e.dataTransfer, dst);
+        }
+      });
+    }
+    // 触摸拖拽（原生 DnD 移动端不可用 → touch 自定义）
+    this.bindTouchDrag(d, it);
+  },
+
+  bindTouchDrag(d, it) {
+    let ghost = null, moving = false, sx = 0, sy = 0, raf = 0;
+    d.addEventListener('touchstart', e => {
+      if (e.touches.length !== 1) return;
+      sx = e.touches[0].clientX; sy = e.touches[0].clientY; moving = false;
+    }, { passive: true });
+    d.addEventListener('touchmove', e => {
+      const t = e.touches[0];
+      if (!moving && Math.hypot(t.clientX - sx, t.clientY - sy) > 14) {
+        moving = true;
+        if (!this.sel.has(it.key)) this.setSel([it.key]);
+        ghost = d.cloneNode(true); ghost.className = 'dicon touch-ghost';
+        ghost.style.width = '86px'; document.body.appendChild(ghost);
+        d.classList.add('dragging');
+      }
+      if (moving) {
+        e.preventDefault();
+        cancelAnimationFrame(raf);
+        raf = requestAnimationFrame(() => {
+          if (ghost) { ghost.style.left = (t.clientX - 43) + 'px'; ghost.style.top = (t.clientY - 40) + 'px'; }
+          this.el.querySelectorAll('.dicon').forEach(n => {
+            const r = n.getBoundingClientRect();
+            const over = n !== d && t.clientX > r.left && t.clientX < r.right && t.clientY > r.top && t.clientY < r.bottom;
+            n.classList.toggle('dropt', over && this.items.find(i => i.key === n.dataset.key)?.kind === 'directory');
+          });
+        });
+      }
+    }, { passive: false });
+    d.addEventListener('touchend', async e => {
+      if (!moving) return;
+      const t = e.changedTouches[0];
+      if (ghost) ghost.remove(); ghost = null;
+      d.classList.remove('dragging');
+      const overEl = [...this.el.querySelectorAll('.dicon.dropt')][0];
+      this.el.querySelectorAll('.dropt').forEach(n => n.classList.remove('dropt'));
+      if (overEl) {
+        const target = this.items.find(i => i.key === overEl.dataset.key);
+        if (target && target.path && it.path && target.path !== it.path) {
+          try { await fs.move(it.path, joinPath(target.path, await fs.uniqueName(target.path, it.name))); bus.emit('fs-changed', '/Desktop'); } catch (err) { toast(err.message, 'err'); }
+          return;
+        }
+      }
+      this.placeSelection(t.clientX, t.clientY);
+    });
+  },
+
+  placeSelection(cx, cy) {
+    const keys = [...this.sel];
+    const base = this.cellAt(cx, cy);
+    const taken = new Set();
+    for (const k in this.pos) if (!this.sel.has(k) && this.items.some(i => i.key === k)) taken.add(this.pos[k].c + ',' + this.pos[k].r);
+    const anchor = this.pos[keys[0]] || base;
+    keys.forEach(k => {
+      const old = this.pos[k] || anchor;
+      let c = base.c + (old.c - anchor.c), r = base.r + (old.r - anchor.r);
+      c = Math.max(0, Math.min(this.cols() - 1, c)); r = Math.max(0, Math.min(this.rows() - 1, r));
+      while (taken.has(c + ',' + r)) { r++; if (r >= this.rows()) { r = 0; c++; } }
+      taken.add(c + ',' + r);
+      this.pos[k] = { c, r };
+      const n = this.iconEl(k);
+      if (n) { const { x, y } = this.xyOf(c, r); n.style.left = x + 'px'; n.style.top = y + 'px'; }
+    });
+    conf.set('iconpos', this.pos);
+  },
+
+  iconMenu(it, x, y) {
+    const multi = this.sel.size > 1;
+    const items = [];
+    if (it.kind === 'app') {
+      items.push({ label: '打开', icon: UI.open, action: () => Apps[it.appId].launch() });
+    } else {
+      items.push({ label: '打开', icon: UI.open, action: () => openPath(it.path) });
+      if (kindOf(it.name) === 'html') items.push({ label: '在浏览器中打开', icon: UI.fwd, action: () => Apps.browser.launch(it.path) });
+      if (kindOf(it.name) === 'archive') items.push({ label: '解压到当前目录', icon: UI.zip, action: () => extractArchive(it.path) });
+      items.push({ sep: 1 });
+      items.push({ label: multi ? `导出 ${this.sel.size} 项` : '导出 / 下载', icon: UI.download, action: () => this.selPaths().forEach(exportPath) });
+      items.push({ label: '复制', icon: UI.copy, action: () => { clipboard.set('copy', this.selPaths()); } });
+      items.push({ label: '剪切', icon: UI.cut, action: () => { clipboard.set('cut', this.selPaths()); } });
+      items.push({ label: '重命名', icon: UI.rename, dis: multi, action: async () => {
+        const n = await dialog({ title: '重命名', input: it.name });
+        if (n && n !== it.name) { try { await fs.move(it.path, '/Desktop/' + n); bus.emit('fs-changed', '/Desktop'); } catch (e) { toast(e.message, 'err'); } }
+      }});
+      items.push({ sep: 1 });
+      items.push({ label: multi ? `删除 ${this.sel.size} 项` : '删除', icon: UI.trash, danger: true, action: async () => {
+        if (await dialog({ title: '确认删除', body: `将永久删除选中的 ${this.sel.size} 个项目，此操作不可撤销。`, okText: '删除', danger: true })) {
+          for (const p of this.selPaths()) await fs.rm(p).catch(e => toast(e.message, 'err'));
+          bus.emit('fs-changed', '/Desktop');
+        }
+      }});
+    }
+    Ctx.show(items, x, y);
+  },
+
+  deskMenu(x, y) {
+    Ctx.show([
+      { label: '刷新', icon: UI.refresh, action: () => this.refresh() },
+      { label: '排列图标', icon: UI.menu, action: () => { this.pos = {}; this.sel.clear(); this.render(); this.refresh(); } },
+      { sep: 1 },
+      { label: '新建文件夹', icon: UI.folderP, action: () => newFolderIn('/Desktop') },
+      { label: '新建文本文件', icon: UI.doc, action: () => newFileIn('/Desktop') },
+      { label: '上传文件到桌面', icon: UI.upload, action: () => pickImport('/Desktop') },
+      { label: '粘贴', icon: UI.paste, dis: !clipboard.paths.length, action: () => clipboard.pasteTo('/Desktop') },
+      { sep: 1 },
+      { label: '挂载本地文件夹', icon: UI.mount, action: async () => { const p = await fs.mountLocal(); if (p) Apps.explorer.launch(p); } },
+      { label: document.fullscreenElement ? '退出全屏' : '全屏模式', icon: UI.expand, action: () => $('#fsbtn').click() },
+      { label: '更换壁纸', icon: UI.wall, action: () => Apps.settings.launch('wallpaper') },
+    ], x, y);
+  }
+};
+
+$('#desktop').addEventListener('contextmenu', e => {
+  if (e.target.closest('.dicon')) return;
+  e.preventDefault(); Desktop.deskMenu(e.clientX, e.clientY);
+});
+bindLongPress($('#desktop'), (x, y, e) => { if (!e.target.closest('.dicon')) Desktop.deskMenu(x, y); });
+
+/* 桌面框选 */
+(() => {
+  const mq = $('#marquee'); let sx = 0, sy = 0, on = false;
+  Desktop.el.addEventListener('pointerdown', e => {
+    if (e.button !== 0 || e.target.closest('.dicon')) return;
+    on = true; sx = e.clientX; sy = e.clientY;
+    if (!e.ctrlKey && !e.metaKey) Desktop.setSel([]);
+    Desktop.el.setPointerCapture(e.pointerId);
+  });
+  Desktop.el.addEventListener('pointermove', e => {
+    if (!on) return;
+    const x = Math.min(sx, e.clientX), y = Math.min(sy, e.clientY), w = Math.abs(e.clientX - sx), h = Math.abs(e.clientY - sy);
+    if (w + h < 6) return;
+    const dr = Desktop.el.getBoundingClientRect();
+    Object.assign(mq.style, { display: 'block', left: x - dr.left + 'px', top: y - dr.top + 'px', width: w + 'px', height: h + 'px' });
+    const hit = [];
+    Desktop.el.querySelectorAll('.dicon').forEach(n => {
+      const r = n.getBoundingClientRect();
+      if (r.left < x + w && r.right > x && r.top < y + h && r.bottom > y) hit.push(n.dataset.key);
+    });
+    Desktop.setSel(hit);
+  });
+  const end = () => { on = false; mq.style.display = 'none'; };
+  Desktop.el.addEventListener('pointerup', end);
+  Desktop.el.addEventListener('pointercancel', end);
+})();
+
+/* 桌面空白区域：内部图标重排 + 外部文件拖入 */
+Desktop.el.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect = e.dataTransfer.types.includes('application/x-ember') ? 'move' : 'copy'; });
+Desktop.el.addEventListener('drop', async e => {
+  e.preventDefault();
+  $('#dropveil').classList.remove('on');
+  const meta = e.dataTransfer.getData('application/x-ember');
+  if (meta) {
+    const m = JSON.parse(meta);
+    if (m.src === 'desktop') { Desktop.placeSelection(e.clientX, e.clientY); }
+    else if (m.paths && m.paths.length) {   // 来自资源管理器 → 移动到桌面
+      for (const p of m.paths) {
+        if (dirname(p) === '/Desktop') continue;
+        try { await fs.move(p, joinPath('/Desktop', await fs.uniqueName('/Desktop', basename(p)))); } catch (err) { toast(err.message, 'err'); }
+      }
+      bus.emit('fs-changed', '/Desktop');
+    }
+    return;
+  }
+  if (e.dataTransfer.items && e.dataTransfer.items.length) await importDataTransfer(e.dataTransfer, '/Desktop');
+});
+
+/* 物理桌面 → 虚拟桌面：递归导入（webkitGetAsEntry + readEntries 循环） */
+async function importDataTransfer(dt, destDir) {
+  const entries = [];
+  for (const item of dt.items) {
+    if (item.kind !== 'file') continue;
+    const ent = item.webkitGetAsEntry ? item.webkitGetAsEntry() : null;
+    entries.push(ent || item.getAsFile());
+  }
+  let count = 0;
+  const readAll = dirReader => new Promise((res, rej) => {
+    const all = [];
+    const step = () => dirReader.readEntries(batch => {
+      if (!batch.length) return res(all);
+      all.push(...batch); step();           // readEntries 每次最多 100 条，必须循环
+    }, rej);
+    step();
+  });
+  async function walk(ent, dir) {
+    if (!ent) return;
+    if (ent instanceof File) {
+      await fs.writeFile(joinPath(dir, await fs.uniqueName(dir, ent.name)), await ent.arrayBuffer()); count++; return;
+    }
+    if (ent.isFile) {
+      const f = await new Promise((res, rej) => ent.file(res, rej));
+      await fs.writeFile(joinPath(dir, await fs.uniqueName(dir, ent.name)), await f.arrayBuffer()); count++;
+    } else if (ent.isDirectory) {
+      const sub = joinPath(dir, await fs.uniqueName(dir, ent.name));
+      await fs.mkdir(sub);
+      for (const child of await readAll(ent.createReader())) await walk(child, sub);
+    }
+  }
+  toast('正在导入…');
+  for (const ent of entries) { try { await walk(ent, destDir); } catch (err) { toast('导入失败: ' + err.message, 'err'); } }
+  toast(`已导入 ${count} 个文件 → ${destDir}`);
+  bus.emit('fs-changed', destDir);
+}
+
+/* 全局拖入遮罩 */
+let dragDepth = 0;
+addEventListener('dragenter', e => { if (e.dataTransfer.types.includes('Files') && !e.dataTransfer.types.includes('application/x-ember')) { dragDepth++; $('#dropveil').classList.add('on'); } });
+addEventListener('dragleave', () => { if (--dragDepth <= 0) { dragDepth = 0; $('#dropveil').classList.remove('on'); } });
+addEventListener('drop', () => { dragDepth = 0; $('#dropveil').classList.remove('on'); });
+addEventListener('dragover', e => e.preventDefault());
+
+/* 拖出预加载：pointerdown 时异步填充缓存，dragstart 同步读取 */
+async function preloadDragData(paths) {
+  for (const p of paths.slice(0, 6)) {
+    if (dragCache.has(p)) continue;
+    try {
+      const st = await fs.stat(p);
+      if (st.kind !== 'file' || st.size > 200 * 1024 * 1024) continue;
+      const buf = await fs.readFile(p, 'arrayBuffer');
+      dragCache.set(p, new File([buf], basename(p), { type: mimeOf(p) }));
+      if (dragCache.size > 24) dragCache.delete(dragCache.keys().next().value);
+    } catch {}
+  }
+}
+
+/* 导出到物理机（触摸/通用降级：<a download>） */
+async function exportPath(p) {
+  try {
+    const st = await fs.stat(p);
+    if (st.kind === 'directory') {
+      if (!window.JSZip) { toast('JSZip 未加载，无法打包文件夹', 'err'); return; }
+      const zip = new JSZip();
+      async function add(dir, zf) {
+        for (const e of await fs.readdir(dir)) {
+          if (e.kind === 'directory') await add(joinPath(dir, e.name), zf.folder(e.name));
+          else zf.file(e.name, await fs.readFile(joinPath(dir, e.name), 'arrayBuffer'));
+        }
+      }
+      await add(p, zip);
+      triggerDownload(await zip.generateAsync({ type: 'blob' }), basename(p) + '.zip');
+    } else {
+      triggerDownload(await fs.readFile(p, 'blob'), basename(p));
+    }
+  } catch (e) { toast('导出失败: ' + e.message, 'err'); }
+}
+function triggerDownload(blob, name) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 8000);
+  toast('已导出 ' + name);
+}
+
+/* 通用新建/上传 */
+async function newFolderIn(dir) {
+  const n = await dialog({ title: '新建文件夹', input: '新建文件夹' });
+  if (!n) return;
+  try { await fs.mkdir(joinPath(dir, await fs.uniqueName(dir, n))); bus.emit('fs-changed', dir); } catch (e) { toast(e.message, 'err'); }
+}
+async function newFileIn(dir) {
+  const n = await dialog({ title: '新建文件', input: '未命名.txt' });
+  if (!n) return;
+  try { await fs.writeFile(joinPath(dir, await fs.uniqueName(dir, n)), ''); bus.emit('fs-changed', dir); } catch (e) { toast(e.message, 'err'); }
+}
+function pickImport(dir) {
+  const inp = $('#pick-import');
+  inp.onchange = async () => {
+    for (const f of inp.files) {
+      try { await fs.writeFile(joinPath(dir, await fs.uniqueName(dir, f.name)), await f.arrayBuffer()); } catch (e) { toast(e.message, 'err'); }
+    }
+    toast(`已导入 ${inp.files.length} 个文件`);
+    bus.emit('fs-changed', dir); inp.value = '';
+  };
+  inp.click();
+}
+
+/* 全局剪贴板 */
+const clipboard = {
+  mode: 'copy', paths: [],
+  set(mode, paths) { this.mode = mode; this.paths = [...paths]; toast(`已${mode === 'cut' ? '剪切' : '复制'} ${paths.length} 项`); },
+  async pasteTo(dir) {
+    for (const p of this.paths) {
+      try {
+        const name = await fs.uniqueName(dir, basename(p));
+        if (this.mode === 'cut') await fs.move(p, joinPath(dir, name));
+        else await fs.copyTree(p, joinPath(dir, name));
+      } catch (e) { toast(e.message, 'err'); }
+    }
+    const dirs = new Set([dir, ...this.paths.map(dirname)]);
+    if (this.mode === 'cut') this.paths = [];
+    dirs.forEach(d => bus.emit('fs-changed', d));
+  }
+};
+
+bus.on('fs-changed', p => { if (normPath(p) === '/Desktop') Desktop.refresh(); });
+
+/* ============================ 打开调度器（智能分派） ============================ */
+async function openPath(path) {
+  path = normPath(path);
+  let st;
+  try { st = await fs.stat(path); } catch (e) { toast('无法访问: ' + path, 'err'); return; }
+  if (st.kind === 'directory') { Apps.explorer.launch(path); return; }
+  const k = kindOf(path);
+  if (k === 'image') Apps.viewer.launch(path);
+  else if (k === 'audio' || k === 'video') Apps.player.launch(path);
+  else if (k === 'pdf') Apps.pdfview.launch(path);
+  else if (k === 'html') Apps.code.launch(path);
+  else if (k === 'table') Apps.table.launch(path);
+  else if (k === 'archive') {
+    Ctx.hide();
+    if (await dialog({ title: '压缩包', body: `<b>${esc(basename(path))}</b><br>要解压到当前目录吗？`, okText: '解压', cancelText: '取消' })) extractArchive(path);
+  }
+  else if (k === 'disk') Apps.vm.launch(path);
+  else Apps.notepad.launch(path);   // text + 未知格式 → 纯文本兜底
+}
+
+/* ============================ 解压引擎 ZIP/GZ/TAR/TGZ/7Z ============================ */
+async function extractArchive(path) {
+  const dir = dirname(path), name = basename(path), e = extOf(name);
+  const outBase = joinPath(dir, await fs.uniqueName(dir, name.replace(/\.(zip|gz|tgz|tar|7z)$/i, '') + '_解压'));
+  toast('正在解压 ' + name + ' …');
+  try {
+    const buf = await fs.readFile(path, 'arrayBuffer');
+    let count = 0;
+    if (e === 'zip') {
+      if (!window.JSZip) throw new Error('JSZip 库未加载（离线？）');
+      const zip = await JSZip.loadAsync(buf);
+      await fs.mkdir(outBase);
+      for (const [rel, zf] of Object.entries(zip.files)) {
+        const target = joinPath(outBase, rel);
+        if (zf.dir) await fs.mkdir(target);
+        else { await fs.mkdir(dirname(target)).catch(() => {}); await fs.writeFile(target, await zf.async('arraybuffer')); count++; }
+      }
+    } else if (e === 'gz' || e === 'tgz' || (e === 'tar')) {
+      let data = buf;
+      const isGz = e === 'gz' || e === 'tgz' || /\.tar\.gz$/i.test(name);
+      if (isGz) {
+        if (!window.DecompressionStream) throw new Error('浏览器不支持 DecompressionStream');
+        data = await new Response(new Blob([buf]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();
+      }
+      const isTar = e === 'tar' || e === 'tgz' || /\.tar\.gz$/i.test(name);
+      if (isTar) { count = await untar(data, outBase); }
+      else { await fs.writeFile(joinPath(dir, await fs.uniqueName(dir, name.replace(/\.gz$/i, ''))), data); count = 1; }
+    } else if (e === '7z') {
+      const mod = await import('https://cdn.jsdelivr.net/npm/7z-wasm@1.2.0/7zz.es6.min.js');
+      const sz = await mod.default({ print: () => {}, printErr: () => {} });
+      sz.FS.writeFile('/in.7z', new Uint8Array(buf));
+      sz.FS.mkdir('/out');
+      sz.callMain(['x', '/in.7z', '-o/out', '-y']);
+      await fs.mkdir(outBase);
+      async function walk7z(vp, rp) {
+        for (const n of sz.FS.readdir(vp)) {
+          if (n === '.' || n === '..') continue;
+          const full = vp + '/' + n;
+          const stat = sz.FS.stat(full);
+          if (sz.FS.isDir(stat.mode)) { await fs.mkdir(joinPath(rp, n)); await walk7z(full, joinPath(rp, n)); }
+          else { await fs.writeFile(joinPath(rp, n), sz.FS.readFile(full).buffer); count++; }
+        }
+      }
+      await walk7z('/out', outBase);
+    } else throw new Error('不支持的压缩格式: ' + e);
+    toast(`解压完成，共 ${count} 个文件`);
+    bus.emit('fs-changed', dir);
+  } catch (err) { toast('解压失败: ' + err.message, 'err'); }
+}
+async function untar(buf, outBase) {
+  const u8 = new Uint8Array(buf); const td = new TextDecoder(); let off = 0, count = 0;
+  await fs.mkdir(outBase);
+  while (off + 512 <= u8.length) {
+    const block = u8.subarray(off, off + 512);
+    if (block.every(b => b === 0)) break;
+    let fname = td.decode(block.subarray(0, 100)).replace(/\0.*$/, '');
+    const prefix = td.decode(block.subarray(345, 500)).replace(/\0.*$/, '');
+    if (prefix) fname = prefix + '/' + fname;
+    const size = parseInt(td.decode(block.subarray(124, 136)).replace(/\0.*$/, '').trim() || '0', 8) || 0;
+    const type = String.fromCharCode(block[156]);
+    off += 512;
+    if (fname) {
+      const target = joinPath(outBase, fname);
+      if (type === '5' || fname.endsWith('/')) await fs.mkdir(target);
+      else if (type === '0' || type === '\0' || type === '') {
+        await fs.mkdir(dirname(target)).catch(() => {});
+        await fs.writeFile(target, buf.slice(off, off + size)); count++;
+      }
+    }
+    off += Math.ceil(size / 512) * 512;
+  }
+  return count;
+}
+
+/* ============================ Apps 注册表 ============================ */
+const Apps = {};
+
+/* ---------------- 文件资源管理器 ---------------- */
+Apps.explorer = {
+  name: '文件管理', icon: APPICON.explorer,
+  launch(startPath = '/') {
+    const win = WM.create({ app: 'explorer', title: '文件管理', icon: this.icon, w: 860, h: 560 });
+    const S = { cwd: null, hist: [], hi: -1, sort: 'name', asc: true, sel: new Set(), entries: [], query: '', searching: false };
+    win.body.innerHTML = `
+      <div class="fx">
+        <div class="fx-side">
+          <div class="fxs-h">快速访问</div>
+          ${[['/', '根目录', UI.hd], ['/Desktop', '桌面', UI.home], ['/Documents', '文档', UI.doc], ['/Pictures', '图片', UI.img], ['/Music', '音乐', UI.music], ['/Downloads', '下载', UI.download]].map(([p, n, ic]) =>
+            `<div class="fxs-it" data-p="${p}">${ic}<span>${n}</span></div>`).join('')}
+          <div class="fxs-h">本地挂载</div>
+          <div class="fxs-mounts"></div>
+          <div class="fxs-it" data-act="mount" style="color:var(--teal)">${UI.mount}<span>挂载文件夹…</span></div>
+        </div>
+        <div class="fx-main">
+          <div class="fx-bar">
+            <button class="fx-nav m-side" style="display:none">${UI.menu}</button>
+            <button class="fx-nav nv-b">${UI.back}</button>
+            <button class="fx-nav nv-f">${UI.fwd}</button>
+            <button class="fx-nav nv-u">${UI.up}</button>
+            <button class="fx-nav nv-r">${UI.refresh}</button>
+            <div class="fx-crumbs"></div>
+            <input class="tfield fx-search" placeholder="搜索…">
+          </div>
+          <div class="fx-tools">
+            <button class="btn tb-new">${UI.folderP}新建文件夹</button>
+            <button class="btn tb-nf">${UI.plus}新建文件</button>
+            <button class="btn tb-up">${UI.upload}上传</button>
+            <button class="btn tb-dl">${UI.download}导出</button>
+            <button class="btn tb-del dgr">${UI.trash}删除</button>
+          </div>
+          <div class="fx-head">
+            <div class="fxh" data-k="name">名称 <i class="si"></i></div>
+            <div class="fxh" data-k="mtime">修改日期 <i class="si"></i></div>
+            <div class="fxh" data-k="type">类型 <i class="si"></i></div>
+            <div class="fxh" data-k="size">大小 <i class="si"></i></div>
+          </div>
+          <div class="fx-list"></div>
+          <div class="fx-status"><span class="st-n"></span><span class="st-s"></span></div>
+        </div>
+      </div>`;
+    const Q = s => win.body.querySelector(s);
+    const list = Q('.fx-list');
+    if (IS_MOBILE()) { Q('.m-side').style.display = 'flex'; Q('.m-side').onclick = () => Q('.fx-side').classList.toggle('open'); }
+
+    const renderSide = () => {
+      win.body.querySelectorAll('.fxs-it[data-p]').forEach(n => {
+        n.classList.toggle('on', n.dataset.p === S.cwd);
+        n.onclick = () => { nav(n.dataset.p); Q('.fx-side').classList.remove('open'); };
+      });
+      const mn = Q('.fxs-mounts'); mn.innerHTML = '';
+      for (const m of fs.mounts) {
+        const d = elBuild('div', 'fxs-it' + (S.cwd === m.prefix ? ' on' : ''),
+          `${UI.hd}<span>${esc(basename(m.prefix))}</span><span class="fxs-x" title="卸载">${UI.eject}</span>`);
+        d.onclick = e => { if (e.target.closest('.fxs-x')) { fs.unmount(m.prefix); if (S.cwd.startsWith(m.prefix)) nav('/mnt/local'); renderSide(); } else { nav(m.prefix); Q('.fx-side').classList.remove('open'); } };
+        mn.appendChild(d);
+      }
+      if (!fs.mounts.length) mn.innerHTML = `<div style="padding:4px 10px;font-size:10.5px;color:var(--faint)">未挂载</div>`;
+      Q('[data-act="mount"]').onclick = async () => { const p = await fs.mountLocal(); if (p) nav(p); renderSide(); };
+    };
+
+    async function nav(p, pushHist = true) {
+      p = normPath(p);
+      try { const st = await fs.stat(p); if (st.kind !== 'directory') { openPath(p); return; } } catch (e) { toast('无法打开 ' + p, 'err'); return; }
+      if (pushHist) { S.hist = S.hist.slice(0, S.hi + 1); S.hist.push(p); S.hi++; }
+      S.cwd = p; S.sel.clear(); S.query = ''; Q('.fx-search').value = '';
+      win.setTitle(p === '/' ? '文件管理' : basename(p) + ' — 文件管理');
+      await load();
+    }
+    async function load() {
+      S.searching = false;
+      try {
+        const ents = await fs.readdir(S.cwd);
+        S.entries = await Promise.all(ents.map(async e => {
+          const full = joinPath(S.cwd, e.name);
+          let st = { size: null, mtime: null };
+          try { st = await fs.stat(full); } catch {}
+          return { name: e.name, kind: e.kind, path: full, size: e.kind === 'directory' ? null : st.size, mtime: st.mtime, type: typeName(e.name, e.kind === 'directory'), mounted: e.mounted };
+        }));
+      } catch (e) { S.entries = []; toast(e.message, 'err'); }
+      render();
+    }
+    function sortEntries(arr) {
+      const dir = S.asc ? 1 : -1;
+      return [...arr].sort((a, b) => {
+        if ((a.kind === 'directory') !== (b.kind === 'directory')) return a.kind === 'directory' ? -1 : 1;
+        let r = 0;
+        if (S.sort === 'name') r = a.name.localeCompare(b.name, 'zh');
+        else if (S.sort === 'mtime') r = (a.mtime || 0) - (b.mtime || 0);
+        else if (S.sort === 'size') r = (a.size || 0) - (b.size || 0);
+        else if (S.sort === 'type') r = a.type.localeCompare(b.type, 'zh');
+        return r * dir || a.name.localeCompare(b.name, 'zh');
+      });
+    }
+    function render() {
+      // 面包屑
+      const cr = Q('.fx-crumbs'); cr.innerHTML = '';
+      const segs = S.cwd === '/' ? [] : S.cwd.slice(1).split('/');
+      const rootC = elBuild('span', 'crumb' + (segs.length ? '' : ' last'), 'EMBER');
+      rootC.onclick = () => nav('/'); cr.appendChild(rootC);
+      let acc = '';
+      segs.forEach((s, i) => {
+        cr.appendChild(elBuild('span', 'crumb-sep', '/'));
+        acc += '/' + s;
+        const c = elBuild('span', 'crumb' + (i === segs.length - 1 ? ' last' : ''), esc(s));
+        const pp = acc; c.onclick = () => nav(pp);
+        cr.appendChild(c);
+      });
+      // 排序指示
+      win.body.querySelectorAll('.fxh').forEach(h => {
+        h.classList.toggle('on', h.dataset.k === S.sort);
+        h.querySelector('.si').innerHTML = h.dataset.k === S.sort ? (S.asc ? UI.sortUp : UI.sortDn) : '';
+      });
+      Q('.nv-b').classList.toggle('dis', S.hi <= 0);
+      Q('.nv-f').classList.toggle('dis', S.hi >= S.hist.length - 1);
+      Q('.nv-u').classList.toggle('dis', S.cwd === '/');
+      renderSide();
+      // 列表
+      list.innerHTML = '';
+      const shown = sortEntries(S.searching ? S.entries : S.entries.filter(x => !S.query || x.name.toLowerCase().includes(S.query)));
+      if (!shown.length) {
+        list.innerHTML = `<div class="fx-empty">${IC.folder('#3a3a4c')}<div>${S.searching ? '没有匹配的结果' : '此文件夹为空 · 拖入文件以导入'}</div></div>`;
+      }
+      for (const ent of shown) {
+        const row = elBuild('div', 'frow');
+        row.dataset.path = ent.path;
+        row.innerHTML = `
+          <div class="fr-name">${fileIconSvg(ent.name, ent.kind === 'directory', ent.mounted)}<span title="${esc(ent.path)}">${esc(S.searching ? ent.path : ent.name)}</span></div>
+          <div class="fr-meta m-date">${fmtDate(ent.mtime)}</div>
+          <div class="fr-meta m-type">${esc(ent.type)}</div>
+          <div class="fr-meta">${ent.kind === 'directory' ? '—' : fmtSize(ent.size)}</div>`;
+        if (S.sel.has(ent.path)) row.classList.add('sel');
+        bindRow(row, ent);
+        list.appendChild(row);
+      }
+      const files = S.entries.filter(x => x.kind !== 'directory');
+      Q('.st-n').textContent = `${S.entries.length} 项 · ${S.sel.size} 选中`;
+      Q('.st-s').textContent = fmtSize(files.reduce((a, b) => a + (b.size || 0), 0));
+    }
+    function selPaths() { return [...S.sel]; }
+    function setSel(paths) { S.sel = new Set(paths); list.querySelectorAll('.frow').forEach(r => r.classList.toggle('sel', S.sel.has(r.dataset.path))); Q('.st-n').textContent = `${S.entries.length} 项 · ${S.sel.size} 选中`; }
+
+    function bindRow(row, ent) {
+      let lastTap = 0;
+      row.addEventListener('pointerdown', e => {
+        if (e.button === 2) { if (!S.sel.has(ent.path)) setSel([ent.path]); return; }
+        if (e.ctrlKey || e.metaKey) { const s = new Set(S.sel); s.has(ent.path) ? s.delete(ent.path) : s.add(ent.path); setSel([...s]); }
+        else if (e.shiftKey && S.sel.size) {
+          const rows = [...list.querySelectorAll('.frow')].map(r => r.dataset.path);
+          const a = rows.indexOf([...S.sel][0]), b = rows.indexOf(ent.path);
+          setSel(rows.slice(Math.min(a, b), Math.max(a, b) + 1));
+        }
+        else if (!S.sel.has(ent.path)) setSel([ent.path]);
+        preloadDragData(selPaths());
+      });
+      row.addEventListener('click', () => { if (IS_TOUCH) ent.kind === 'directory' ? nav(ent.path) : openPath(ent.path); });
+      row.addEventListener('dblclick', () => { if (!IS_TOUCH) ent.kind === 'directory' ? nav(ent.path) : openPath(ent.path); });
+      row.addEventListener('contextmenu', e => { e.preventDefault(); rowMenu(ent, e.clientX, e.clientY); });
+      bindLongPress(row, (x, y) => { if (!S.sel.has(ent.path)) setSel([ent.path]); rowMenu(ent, x, y); });
+      // 拖拽
+      row.draggable = true;
+      row.addEventListener('dragstart', e => {
+        if (!S.sel.has(ent.path)) setSel([ent.path]);
+        e.dataTransfer.effectAllowed = 'copyMove';
+        e.dataTransfer.setData('application/x-ember', JSON.stringify({ src: 'explorer', paths: selPaths() }));
+        if (S.sel.size === 1 && ent.kind === 'file') {
+          const f = dragCache.get(ent.path);
+          if (f) {
+            try { e.dataTransfer.items.add(f); } catch {}
+            const url = URL.createObjectURL(f); pendingURLs.push(url);
+            try { e.dataTransfer.setData('DownloadURL', `${f.type || 'application/octet-stream'}:${f.name}:${url}`); } catch {}
+          }
+        }
+      });
+      row.addEventListener('dragend', () => setTimeout(() => { while (pendingURLs.length) URL.revokeObjectURL(pendingURLs.pop()); }, 6000));
+      if (ent.kind === 'directory') {
+        row.addEventListener('dragover', e => { e.preventDefault(); e.stopPropagation(); row.classList.add('dropt'); });
+        row.addEventListener('dragleave', () => row.classList.remove('dropt'));
+        row.addEventListener('drop', async e => {
+          e.preventDefault(); e.stopPropagation(); row.classList.remove('dropt');
+          const meta = e.dataTransfer.getData('application/x-ember');
+          if (meta) {
+            const { paths } = JSON.parse(meta);
+            for (const p of paths || []) {
+              if (p === ent.path || ent.path.startsWith(p + '/')) continue;
+              try { await fs.move(p, joinPath(ent.path, await fs.uniqueName(ent.path, basename(p)))); } catch (err) { toast(err.message, 'err'); }
+            }
+            bus.emit('fs-changed', S.cwd); bus.emit('fs-changed', '/Desktop');
+          } else await importDataTransfer(e.dataTransfer, ent.path);
+          load();
+        });
+      }
+    }
+
+    function rowMenu(ent, x, y) {
+      const multi = S.sel.size > 1, k = kindOf(ent.name);
+      Ctx.show([
+        { label: '打开', icon: UI.open, action: () => ent.kind === 'directory' ? nav(ent.path) : openPath(ent.path) },
+        ent.kind === 'file' && k === 'html' ? { label: '在浏览器中打开', icon: UI.fwd, action: () => Apps.browser.launch(ent.path) } : null,
+        ent.kind === 'file' && k === 'archive' ? { label: '解压到当前目录', icon: UI.zip, action: async () => { await extractArchive(ent.path); load(); } } : null,
+        ent.kind === 'file' && !['text','table','html'].includes(k) ? { label: '以纯文本打开', icon: UI.doc, action: () => Apps.notepad.launch(ent.path) } : null,
+        fs.isMountRoot(ent.path) ? { label: '卸载挂载', icon: UI.eject, action: () => { fs.unmount(ent.path); load(); } } : null,
+        { sep: 1 },
+        { label: multi ? `导出 ${S.sel.size} 项` : '导出 / 下载', icon: UI.download, action: () => selPaths().forEach(exportPath) },
+        { label: '复制', icon: UI.copy, action: () => clipboard.set('copy', selPaths()) },
+        { label: '剪切', icon: UI.cut, action: () => clipboard.set('cut', selPaths()) },
+        { label: '重命名', icon: UI.rename, dis: multi, action: async () => {
+          const n = await dialog({ title: '重命名', input: ent.name });
+          if (n && n !== ent.name) { try { await fs.move(ent.path, joinPath(S.cwd, n)); bus.emit('fs-changed', S.cwd); load(); } catch (e) { toast(e.message, 'err'); } }
+        }},
+        { sep: 1 },
+        { label: multi ? `删除 ${S.sel.size} 项` : '删除', icon: UI.trash, danger: true, action: async () => {
+          if (await dialog({ title: '确认删除', body: `将永久删除 ${S.sel.size} 个项目。`, okText: '删除', danger: true })) {
+            for (const p of selPaths()) await fs.rm(p).catch(e => toast(e.message, 'err'));
+            bus.emit('fs-changed', S.cwd); load();
+          }
+        }},
+      ], x, y);
+    }
+
+    // 空白区域右键 / 框选 / 拖入
+    list.addEventListener('contextmenu', e => {
+      if (e.target.closest('.frow')) return;
+      e.preventDefault();
+      Ctx.show([
+        { label: '刷新', icon: UI.refresh, action: load },
+        { label: '新建文件夹', icon: UI.folderP, action: async () => { await newFolderIn(S.cwd); load(); } },
+        { label: '新建文件', icon: UI.doc, action: async () => { await newFileIn(S.cwd); load(); } },
+        { label: '上传文件', icon: UI.upload, action: () => pickImport(S.cwd) },
+        { label: '粘贴', icon: UI.paste, dis: !clipboard.paths.length, action: async () => { await clipboard.pasteTo(S.cwd); load(); } },
+      ], e.clientX, e.clientY);
+    });
+    list.addEventListener('dragover', e => { e.preventDefault(); });
+    list.addEventListener('drop', async e => {
+      e.preventDefault();
+      const meta = e.dataTransfer.getData('application/x-ember');
+      if (meta) {
+        const { paths } = JSON.parse(meta);
+        for (const p of paths || []) {
+          if (dirname(p) === S.cwd || p === S.cwd) continue;
+          try { await fs.move(p, joinPath(S.cwd, await fs.uniqueName(S.cwd, basename(p)))); } catch (err) { toast(err.message, 'err'); }
+        }
+        bus.emit('fs-changed', '/Desktop');
+      } else if (e.dataTransfer.items.length) await importDataTransfer(e.dataTransfer, S.cwd);
+      load();
+    });
+    // 框选
+    (() => {
+      let mq = null, sx = 0, sy = 0, on = false;
+      list.addEventListener('pointerdown', e => {
+        if (e.button !== 0 || e.target.closest('.frow') || IS_TOUCH) return;
+        on = true; sx = e.clientX; sy = e.clientY;
+        if (!e.ctrlKey) setSel([]);
+      });
+      addEventListener('pointermove', e => {
+        if (!on) return;
+        if (!mq) { mq = elBuild('div'); mq.style.cssText = 'position:fixed;border:1px solid var(--ember);background:#ff9e641a;z-index:9999;pointer-events:none;border-radius:3px'; document.body.appendChild(mq); }
+        const x = Math.min(sx, e.clientX), y = Math.min(sy, e.clientY), w = Math.abs(e.clientX - sx), h = Math.abs(e.clientY - sy);
+        Object.assign(mq.style, { left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px' });
+        const hit = [];
+        list.querySelectorAll('.frow').forEach(r => {
+          const b = r.getBoundingClientRect();
+          if (b.left < x + w && b.right > x && b.top < y + h && b.bottom > y) hit.push(r.dataset.path);
+        });
+        setSel(hit);
+      });
+      addEventListener('pointerup', () => { on = false; if (mq) { mq.remove(); mq = null; } });
+    })();
+
+    // 工具栏 & 导航
+    Q('.nv-b').onclick = () => { if (S.hi > 0) nav(S.hist[--S.hi], false); };
+    Q('.nv-f').onclick = () => { if (S.hi < S.hist.length - 1) nav(S.hist[++S.hi], false); };
+    Q('.nv-u').onclick = () => nav(dirname(S.cwd));
+    Q('.nv-r').onclick = load;
+    Q('.tb-new').onclick = async () => { await newFolderIn(S.cwd); load(); };
+    Q('.tb-nf').onclick = async () => { await newFileIn(S.cwd); load(); };
+    Q('.tb-up').onclick = () => pickImport(S.cwd);
+    Q('.tb-dl').onclick = () => S.sel.size ? selPaths().forEach(exportPath) : toast('请先选中项目', 'err');
+    Q('.tb-del').onclick = async () => {
+      if (!S.sel.size) return toast('请先选中项目', 'err');
+      if (await dialog({ title: '确认删除', body: `将永久删除 ${S.sel.size} 个项目。`, okText: '删除', danger: true })) {
+        for (const p of selPaths()) await fs.rm(p).catch(e => toast(e.message, 'err'));
+        bus.emit('fs-changed', S.cwd); load();
+      }
+    };
+    win.body.querySelectorAll('.fxh').forEach(h => h.onclick = () => {
+      if (S.sort === h.dataset.k) S.asc = !S.asc; else { S.sort = h.dataset.k; S.asc = true; }
+      render();
+    });
+    // 搜索：即时过滤 + Enter 深度递归搜索
+    const searchBox = Q('.fx-search');
+    searchBox.addEventListener('input', () => { S.query = searchBox.value.trim().toLowerCase(); if (!S.query) { load(); } else { S.searching = false; render(); } });
+    searchBox.addEventListener('keydown', async e => {
+      if (e.key !== 'Enter' || !searchBox.value.trim()) return;
+      const q = searchBox.value.trim().toLowerCase();
+      toast('深度搜索中…');
+      const results = []; let visited = 0;
+      async function walk(dir) {
+        if (results.length > 300 || visited > 800) return;
+        visited++;
+        let ents = []; try { ents = await fs.readdir(dir); } catch { return; }
+        for (const en of ents) {
+          const full = joinPath(dir, en.name);
+          if (en.name.toLowerCase().includes(q)) {
+            let st = { size: null, mtime: null }; try { st = await fs.stat(full); } catch {}
+            results.push({ name: en.name, kind: en.kind, path: full, size: en.kind === 'directory' ? null : st.size, mtime: st.mtime, type: typeName(en.name, en.kind === 'directory') });
+          }
+          if (en.kind === 'directory') await walk(full);
+        }
+      }
+      await walk(S.cwd);
+      S.entries = results; S.searching = true; render();
+      toast(`找到 ${results.length} 个结果`);
+    });
+
+    const refreshIfCwd = p => { if (win.el.isConnected && S.cwd && (normPath(p) === S.cwd)) load(); };
+    bus.on('fs-changed', refreshIfCwd);
+    nav(startPath);
+    return win;
+  }
+};
+
+/* ---------------- 记事本 ---------------- */
+Apps.notepad = {
+  name: '记事本', icon: APPICON.notepad,
+  async launch(path = null) {
+    const win = WM.create({ app: 'notepad', title: path ? basename(path) : '无标题 — 记事本', icon: this.icon, w: 680, h: 500 });
+    win.body.innerHTML = `
+      <div class="app-bar">
+        <button class="btn pri np-save">${UI.save}保存</button>
+        <button class="btn np-saveas">${UI.copy}另存为</button>
+        <button class="btn np-wrap">自动换行</button>
+        <button class="btn np-dl">${UI.download}导出</button>
+      </div>
+      <textarea class="np-text wrap" spellcheck="false" placeholder="在此输入…"></textarea>
+      <div class="app-status"><span class="np-path">${esc(path || '未保存')}</span><span class="np-info"></span></div>`;
+    const Q = s => win.body.querySelector(s);
+    const ta = Q('.np-text');
+    let cur = path, dirty = false;
+    const info = () => Q('.np-info').textContent = `${ta.value.length} 字符 · ${ta.value.split('\n').length} 行${dirty ? ' · 未保存*' : ''}`;
+    if (path) {
+      try { ta.value = await fs.readFile(path, 'text'); } catch (e) { toast('读取失败: ' + e.message, 'err'); }
+    }
+    info();
+    ta.addEventListener('input', () => { dirty = true; info(); });
+    const save = async (as = false) => {
+      let target = cur;
+      if (!target || as) {
+        const n = await dialog({ title: '保存到 /Documents', input: cur ? basename(cur) : '未命名.txt' });
+        if (!n) return;
+        target = joinPath('/Documents', n);
+      }
+      try {
+        await fs.writeFile(target, ta.value);
+        cur = target; dirty = false;
+        Q('.np-path').textContent = cur; win.setTitle(basename(cur) + ' — 记事本');
+        toast('已保存 ' + basename(cur)); info();
+        bus.emit('fs-changed', dirname(cur));
+      } catch (e) { toast('保存失败: ' + e.message, 'err'); }
+    };
+    Q('.np-save').onclick = () => save();
+    Q('.np-saveas').onclick = () => save(true);
+    Q('.np-wrap').onclick = () => ta.classList.toggle('wrap');
+    Q('.np-dl').onclick = () => triggerDownload(new Blob([ta.value], { type: 'text/plain' }), cur ? basename(cur) : '未命名.txt');
+    ta.addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); save(); } });
+    win.onClose = () => { if (dirty && !confirm('有未保存的修改，确定关闭？')) return false; };
+    return win;
+  }
+};
+
+/* ---------------- 表格 (CSV/TSV 双视图) ---------------- */
+function parseDSV(text, sep) {
+  const rows = []; let row = [], cell = '', inQ = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inQ) {
+      if (ch === '"') { if (text[i + 1] === '"') { cell += '"'; i++; } else inQ = false; }
+      else cell += ch;
+    } else if (ch === '"') inQ = true;
+    else if (ch === sep) { row.push(cell); cell = ''; }
+    else if (ch === '\n') { row.push(cell); rows.push(row); row = []; cell = ''; }
+    else if (ch !== '\r') cell += ch;
+  }
+  if (cell || row.length) { row.push(cell); rows.push(row); }
+  return rows;
+}
+Apps.table = {
+  name: '表格', icon: APPICON.table,
+  async launch(path = null) {
+    const win = WM.create({ app: 'table', title: path ? basename(path) : '表格', icon: this.icon, w: 780, h: 520 });
+    win.body.innerHTML = `
+      <div class="app-bar">
+        <button class="btn pri tb-view">表格视图</button>
+        <button class="btn tb-text">文本视图</button>
+        <span style="flex:1"></span>
+        <button class="btn pri tb-save">${UI.save}保存</button>
+      </div>
+      <div class="tbl-wrap" style="display:flex;flex-direction:column"><div style="flex:1;overflow:auto" class="tbl-box"></div></div>
+      <textarea class="np-text" style="display:none" spellcheck="false"></textarea>
+      <div class="app-status"><span class="tb-path">${esc(path || '未打开文件')}</span><span class="tb-dim"></span></div>`;
+    const Q = s => win.body.querySelector(s);
+    const ta = Q('.np-text'), box = Q('.tbl-box');
+    let text = '', mode = 'table';
+    const sep = path && extOf(path) === 'tsv' ? '\t' : ',';
+    if (path) { try { text = await fs.readFile(path, 'text'); } catch (e) { toast(e.message, 'err'); } }
+    else text = '列A,列B,列C\n1,2,3';
+    ta.value = text;
+    function renderTable() {
+      const rows = parseDSV(ta.value, sep).slice(0, 3000);
+      if (!rows.length) { box.innerHTML = '<div class="fx-empty"><div>空表格</div></div>'; return; }
+      let h = '<table><thead><tr><th>#</th>' + rows[0].map(c => `<th>${esc(c)}</th>`).join('') + '</tr></thead><tbody>';
+      for (let i = 1; i < rows.length; i++) h += `<tr><td>${i}</td>` + rows[i].map(c => `<td>${esc(c)}</td>`).join('') + '</tr>';
+      box.innerHTML = h + '</tbody></table>';
+      Q('.tb-dim').textContent = `${rows.length} 行 × ${rows[0].length} 列`;
+    }
+    function setMode(m) {
+      mode = m;
+      Q('.tbl-wrap').style.display = m === 'table' ? 'flex' : 'none';
+      ta.style.display = m === 'text' ? 'block' : 'none';
+      Q('.tb-view').classList.toggle('pri', m === 'table');
+      Q('.tb-text').classList.toggle('pri', m === 'text');
+      if (m === 'table') renderTable();
+    }
+    Q('.tb-view').onclick = () => setMode('table');
+    Q('.tb-text').onclick = () => setMode('text');
+    Q('.tb-save').onclick = async () => {
+      let target = path;
+      if (!target) { const n = await dialog({ title: '保存到 /Documents', input: '数据.csv' }); if (!n) return; target = joinPath('/Documents', n); path = target; }
+      try { await fs.writeFile(target, ta.value); toast('已保存 ' + basename(target)); Q('.tb-path').textContent = target; bus.emit('fs-changed', dirname(target)); } catch (e) { toast(e.message, 'err'); }
+    };
+    renderTable();
+    return win;
+  }
+};
+
+/* ---------------- 代码编辑器 (CodeMirror + HTML 实时预览) ---------------- */
+let cmLoading = null;
+function loadCodeMirror() {
+  if (window.CodeMirror) return Promise.resolve(true);
+  if (cmLoading) return cmLoading;
+  cmLoading = new Promise(res => {
+    const css = document.createElement('link');
+    css.rel = 'stylesheet'; css.href = 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css';
+    document.head.appendChild(css);
+    const css2 = document.createElement('link');
+    css2.rel = 'stylesheet'; css2.href = 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material-darker.min.css';
+    document.head.appendChild(css2);
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js';
+    s.onload = () => {
+      let left = 4;
+      const done = () => { if (--left === 0) res(true); };
+      for (const m of ['xml/xml', 'javascript/javascript', 'css/css', 'htmlmixed/htmlmixed']) {
+        const ms = document.createElement('script');
+        ms.src = `https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/${m}.min.js`;
+        ms.onload = done; ms.onerror = done;
+        document.head.appendChild(ms);
+      }
+    };
+    s.onerror = () => res(false);   // 离线降级 → textarea
+    document.head.appendChild(s);
+    setTimeout(() => res(!!window.CodeMirror), 8000);
+  });
+  return cmLoading;
+}
+Apps.code = {
+  name: '代码编辑', icon: APPICON.code,
+  async launch(path = null) {
+    const win = WM.create({ app: 'code', title: path ? basename(path) : '代码编辑器', icon: this.icon, w: 980, h: 600 });
+    const isHtml = path && kindOf(path) === 'html';
+    win.body.innerHTML = `
+      <div class="app-bar">
+        <button class="btn pri ce-save">${UI.save}保存</button>
+        ${isHtml ? `<button class="btn ce-open">${UI.fwd}在浏览器中打开</button><button class="btn ce-rf">${UI.refresh}刷新预览</button><button class="btn ce-tg">${UI.expand}预览开关</button>` : ''}
+        <span class="np-info" style="margin-left:auto;font-size:10.5px;color:var(--faint);font-family:'IBM Plex Mono',monospace"></span>
+      </div>
+      <div class="ce-split">
+        <div class="ce-pane"><div class="cep-h">SOURCE — ${esc(path ? basename(path) : 'untitled')}</div><div class="ce-edit"><textarea class="np-text" spellcheck="false" style="position:absolute;inset:0;height:100%"></textarea></div></div>
+        ${isHtml ? `<div class="ce-pane ce-pv"><div class="cep-h">LIVE PREVIEW</div><iframe class="ce-frame" sandbox="allow-scripts allow-same-origin allow-modals"></iframe></div>` : ''}
+      </div>`;
+    const Q = s => win.body.querySelector(s);
+    const ta = Q('.np-text');
+    let content = '', dirty = false, cm = null;
+    if (path) { try { content = await fs.readFile(path, 'text'); } catch (e) { toast(e.message, 'err'); } }
+    ta.value = content;
+    const getVal = () => cm ? cm.getValue() : ta.value;
+    const markDirty = () => { dirty = true; Q('.np-info').textContent = '未保存*'; };
+    // CodeMirror 加载（失败降级 textarea）
+    const ok = await loadCodeMirror();
+    if (ok && window.CodeMirror && win.el.isConnected) {
+      const modeMap = { html: 'htmlmixed', htm: 'htmlmixed', js: 'javascript', mjs: 'javascript', json: { name: 'javascript', json: true }, css: 'css', xml: 'xml', svg: 'xml' };
+      cm = CodeMirror.fromTextArea(ta, { mode: modeMap[extOf(path || '')] || 'htmlmixed', theme: 'material-darker', lineNumbers: true, lineWrapping: false, tabSize: 2 });
+      cm.setSize('100%', '100%');
+      cm.on('change', () => { markDirty(); schedulePv(); });
+    } else {
+      ta.addEventListener('input', () => { markDirty(); schedulePv(); });
+    }
+    // 实时预览
+    let pvTimer = null;
+    const renderPv = () => { const f = Q('.ce-frame'); if (f) f.srcdoc = getVal(); };
+    const schedulePv = () => { if (!isHtml) return; clearTimeout(pvTimer); pvTimer = setTimeout(renderPv, 600); };
+    if (isHtml) {
+      renderPv();
+      Q('.ce-rf').onclick = renderPv;
+      Q('.ce-tg').onclick = () => { const pv = Q('.ce-pv'); pv.style.display = pv.style.display === 'none' ? 'flex' : 'none'; };
+      Q('.ce-open').onclick = async () => { await saveNow(true); Apps.browser.launch(path); };
+    }
+    async function saveNow(silent = false) {
+      let target = path;
+      if (!target) { const n = await dialog({ title: '保存到 /Documents', input: '新页面.html' }); if (!n) return; target = joinPath('/Documents', n); path = target; }
+      try {
+        await fs.writeFile(target, getVal());
+        dirty = false; Q('.np-info').textContent = '已保存';
+        if (!silent) toast('已保存 ' + basename(target));
+        bus.emit('fs-changed', dirname(target));
+      } catch (e) { toast(e.message, 'err'); }
+    }
+    Q('.ce-save').onclick = () => saveNow();
+    win.body.addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); saveNow(); } });
+    win.onClose = () => { if (dirty && !confirm('有未保存的修改，确定关闭？')) return false; };
+    return win;
+  }
+};
+
+/* ---------------- 网页浏览器 ---------------- */
+Apps.browser = {
+  name: '浏览器', icon: APPICON.browser,
+  async launch(target = null) {
+    const win = WM.create({ app: 'browser', title: '浏览器', icon: this.icon, w: 920, h: 600 });
+    win.body.innerHTML = `
+      <div class="app-bar" style="flex-wrap:nowrap">
+        <button class="fx-nav bw-b">${UI.back}</button>
+        <button class="fx-nav bw-f">${UI.fwd}</button>
+        <button class="fx-nav bw-r">${UI.refresh}</button>
+        <button class="fx-nav bw-h">${UI.home}</button>
+        <input class="tfield mono" style="flex:1;min-width:0" placeholder="输入网址 或 /虚拟文件路径.html">
+      </div>
+      <div class="bw-view" style="flex:1;display:flex;overflow:hidden"></div>`;
+    const Q = s => win.body.querySelector(s);
+    const addr = Q('input'), view = Q('.bw-view');
+    const hist = []; let hi = -1;
+    const homeHTML = `
+      <div class="bw-home">
+        <svg width="74" height="74" viewBox="0 0 64 64" fill="none"><path d="M32 6 L54 22 L46 54 L18 54 L10 22 Z" stroke="#ff9e64" stroke-width="2.5" stroke-linejoin="round"/><circle cx="32" cy="33" r="5" fill="#ff9e64"/></svg>
+        <div style="font-size:22px;font-weight:700;letter-spacing:.3em;margin-left:.3em">EMBER<span style="color:var(--ember)">·NET</span></div>
+        <div style="font-size:12px;color:var(--dim);max-width:380px;text-align:center;line-height:1.8">在地址栏输入 URL 访问外部网站（受目标站点 X-Frame-Options 限制），<br>或输入虚拟文件路径（如 <span class="mono" style="color:var(--ember)">/Documents/欢迎.html</span>）渲染 OPFS 中的网页。</div>
+      </div>`;
+    async function go(u, push = true) {
+      u = (u || '').trim();
+      view.innerHTML = '';
+      if (!u || u === 'ember://home') { view.innerHTML = homeHTML; addr.value = u || 'ember://home'; }
+      else {
+        let src = u;
+        if (u.startsWith('/')) {
+          try { src = await fs.blobURL(u); } catch (e) { toast('文件不存在: ' + u, 'err'); view.innerHTML = homeHTML; return; }
+        } else if (!/^https?:|^blob:|^data:/.test(u)) src = 'https://' + u;
+        const f = elBuild('iframe', 'bw-frame');
+        f.src = src;
+        f.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-popups allow-modals');
+        view.appendChild(f);
+        addr.value = u;
+        win.setTitle((u.startsWith('/') ? basename(u) : u.replace(/^https?:\/\//, '').split('/')[0]) + ' — 浏览器');
+      }
+      if (push) { hist.splice(hi + 1); hist.push(u || 'ember://home'); hi = hist.length - 1; }
+    }
+    Q('.bw-b').onclick = () => { if (hi > 0) go(hist[--hi], false); };
+    Q('.bw-f').onclick = () => { if (hi < hist.length - 1) go(hist[++hi], false); };
+    Q('.bw-r').onclick = () => go(addr.value, false);
+    Q('.bw-h').onclick = () => go('ember://home');
+    addr.addEventListener('keydown', e => { if (e.key === 'Enter') go(addr.value); });
+    go(target || 'ember://home');
+    return win;
+  }
+};
+
+/* ---------------- 图片查看器 ---------------- */
+Apps.viewer = {
+  name: '图片查看', icon: APPICON.viewer,
+  async launch(path = null) {
+    const win = WM.create({ app: 'viewer', title: path ? basename(path) : '图片查看', icon: this.icon, w: 760, h: 560 });
+    win.body.innerHTML = `
+      <div class="app-bar">
+        <button class="btn iv-out">−</button>
+        <button class="btn iv-in">+</button>
+        <button class="btn iv-fit">适应窗口</button>
+        <button class="btn iv-100">100%</button>
+        <span class="iv-z mono" style="font-size:11px;color:var(--dim)"></span>
+        <span style="flex:1"></span>
+        <button class="btn iv-dl">${UI.download}导出</button>
+      </div>
+      <div class="iv-stage"><div class="fx-empty">${UI.img}<div>未选择图片 — 从文件管理器中双击图片打开</div></div></div>
+      <div class="app-status"><span class="iv-path"></span><span class="iv-dim"></span></div>`;
+    const Q = s => win.body.querySelector(s);
+    const stage = Q('.iv-stage');
+    let img = null, scale = 1, tx = 0, ty = 0, url = null;
+    const apply = () => { if (img) { img.style.transform = `translate(${tx}px,${ty}px) scale(${scale})`; Q('.iv-z').textContent = Math.round(scale * 100) + '%'; } };
+    const fit = () => {
+      if (!img || !img.naturalWidth) return;
+      scale = Math.min(stage.clientWidth / img.naturalWidth, stage.clientHeight / img.naturalHeight, 1) * 0.96;
+      tx = ty = 0; apply();
+    };
+    if (path) {
+      try {
+        url = await fs.blobURL(path);
+        img = new Image(); img.src = url; img.draggable = false;
+        img.onload = () => { stage.innerHTML = ''; stage.appendChild(img); fit(); Q('.iv-dim').textContent = `${img.naturalWidth} × ${img.naturalHeight}`; };
+        Q('.iv-path').textContent = path;
+        const st = await fs.stat(path);
+        Q('.iv-path').textContent = `${path} · ${fmtSize(st.size)}`;
+      } catch (e) { toast(e.message, 'err'); }
+    }
+    stage.addEventListener('wheel', e => { e.preventDefault(); scale = Math.max(.05, Math.min(20, scale * (e.deltaY < 0 ? 1.15 : 0.87))); apply(); }, { passive: false });
+    // 拖移 + 双指缩放
+    let pts = new Map(), lastDist = 0;
+    stage.addEventListener('pointerdown', e => { pts.set(e.pointerId, e); stage.setPointerCapture(e.pointerId); });
+    stage.addEventListener('pointermove', e => {
+      if (!pts.has(e.pointerId)) return;
+      const prev = pts.get(e.pointerId); pts.set(e.pointerId, e);
+      if (pts.size === 1) { tx += e.clientX - prev.clientX; ty += e.clientY - prev.clientY; apply(); }
+      else if (pts.size === 2) {
+        const [a, b] = [...pts.values()];
+        const d = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+        if (lastDist) { scale = Math.max(.05, Math.min(20, scale * d / lastDist)); apply(); }
+        lastDist = d;
+      }
+    });
+    const lift = e => { pts.delete(e.pointerId); lastDist = 0; };
+    stage.addEventListener('pointerup', lift); stage.addEventListener('pointercancel', lift);
+    Q('.iv-in').onclick = () => { scale = Math.min(20, scale * 1.25); apply(); };
+    Q('.iv-out').onclick = () => { scale = Math.max(.05, scale * .8); apply(); };
+    Q('.iv-fit').onclick = fit;
+    Q('.iv-100').onclick = () => { scale = 1; tx = ty = 0; apply(); };
+    Q('.iv-dl').onclick = () => path && exportPath(path);
+    win.onClose = () => { if (url) setTimeout(() => URL.revokeObjectURL(url), 1000); };
+    return win;
+  }
+};
+
+/* ---------------- 媒体播放器 ---------------- */
+Apps.player = {
+  name: '播放器', icon: APPICON.player,
+  async launch(path = null) {
+    const win = WM.create({ app: 'player', title: path ? basename(path) : '播放器', icon: this.icon, w: 700, h: 480 });
+    if (!path) {
+      win.body.innerHTML = `<div class="fx-empty" style="flex:1;justify-content:center">${UI.music}<div>从文件管理器双击音视频文件即可播放</div></div>`;
+      return win;
+    }
+    let url;
+    try { url = await fs.blobURL(path); } catch (e) { toast(e.message, 'err'); return win; }
+    const isAudio = kindOf(path) === 'audio';
+    if (isAudio) {
+      win.body.innerHTML = `
+        <div class="media-stage" style="flex-direction:column;gap:0">
+          <div class="audio-card">
+            <div class="ac-disc"></div>
+            <div style="font-size:15px;font-weight:600">${esc(basename(path))}</div>
+            <audio controls autoplay style="width:min(420px,80vw)"></audio>
+          </div>
+        </div>`;
+      win.body.querySelector('audio').src = url;
+    } else {
+      win.body.innerHTML = `<div class="media-stage"><video controls autoplay></video></div>`;
+      win.body.querySelector('video').src = url;
+    }
+    win.onClose = () => { const m = win.body.querySelector('audio,video'); if (m) m.pause(); setTimeout(() => URL.revokeObjectURL(url), 1000); };
+    return win;
+  }
+};
+
+/* ---------------- PDF ---------------- */
+Apps.pdfview = {
+  name: 'PDF', icon: APPICON.viewer,
+  async launch(path) {
+    const win = WM.create({ app: 'pdf', title: basename(path) + ' — PDF', icon: this.icon, w: 820, h: 620 });
+    try {
+      const url = await fs.blobURL(path);
+      win.body.innerHTML = `<iframe style="flex:1;border:none;width:100%" src="${url}"></iframe>`;
+      win.onClose = () => setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (e) { toast(e.message, 'err'); }
+    return win;
+  }
+};
+
+/* ---------------- 计算器 ---------------- */
+Apps.calc = {
+  name: '计算器', icon: APPICON.calc,
+  launch() {
+    const win = WM.create({ app: 'calc', title: '计算器', icon: this.icon, w: 320, h: 470, single: true });
+    win.body.innerHTML = `
+      <div class="calc">
+        <div class="calc-d"><div class="cd-expr"></div><div class="cd-val">0</div></div>
+        <div class="calc-g">
+          ${['C','( )','%','÷','7','8','9','×','4','5','6','−','1','2','3','+','±','0','.','='].map(b => {
+            const cls = b === '=' ? 'eq' : ['÷','×','−','+'].includes(b) ? 'op' : ['C','( )','%','±'].includes(b) ? 'fn' : '';
+            return `<button class="calc-b ${cls}" data-b="${b}">${b}</button>`;
+          }).join('')}
+        </div>
+      </div>`;
+    // 修正 = 按钮跨行布局
+    const eq = win.body.querySelector('.eq'); eq.style.gridRow = 'auto';
+    let expr = '';
+    const exprEl = win.body.querySelector('.cd-expr'), valEl = win.body.querySelector('.cd-val');
+    const evalExpr = s => {
+      const js = s.replace(/÷/g, '/').replace(/×/g, '*').replace(/−/g, '-');
+      if (!/^[0-9+\-*/().%\s]*$/.test(js) || !js.trim()) return null;
+      try { const v = Function('"use strict";return(' + js.replace(/%/g, '/100') + ')')(); return Number.isFinite(v) ? v : null; } catch { return null; }
+    };
+    const update = () => {
+      exprEl.textContent = expr;
+      const v = evalExpr(expr);
+      valEl.textContent = v == null ? (expr ? '…' : '0') : String(Math.round(v * 1e10) / 1e10);
+    };
+    win.body.querySelectorAll('.calc-b').forEach(b => b.onclick = () => {
+      const k = b.dataset.b;
+      if (k === 'C') expr = '';
+      else if (k === '=') { const v = evalExpr(expr); if (v != null) expr = String(Math.round(v * 1e10) / 1e10); }
+      else if (k === '( )') { const o = (expr.match(/\(/g) || []).length, c = (expr.match(/\)/g) || []).length; expr += o > c ? ')' : '('; }
+      else if (k === '±') { const v = evalExpr(expr); if (v != null) expr = String(-v); }
+      else expr += k;
+      update();
+    });
+    win.body.addEventListener('keydown', e => {
+      if (/[0-9+\-*/().%]/.test(e.key)) { expr += e.key.replace('*', '×').replace('/', '÷').replace('-', '−'); update(); }
+      else if (e.key === 'Enter') { const v = evalExpr(expr); if (v != null) { expr = String(v); update(); } }
+      else if (e.key === 'Backspace') { expr = expr.slice(0, -1); update(); }
+      else if (e.key === 'Escape') { expr = ''; update(); }
+    });
+    win.body.tabIndex = 0; win.body.focus();
+    return win;
+  }
+};
+
+/* ---------------- 画板 ---------------- */
+Apps.paint = {
+  name: '画板', icon: APPICON.paint,
+  launch() {
+    const win = WM.create({ app: 'paint', title: '画板', icon: this.icon, w: 780, h: 560 });
+    const colors = ['#e8e2d0','#ff9e64','#e46876','#e6c384','#7aa89f','#7e9cd8','#957fb8','#16161d'];
+    win.body.innerHTML = `
+      <div class="app-bar">
+        ${colors.map((c, i) => `<div class="pt-sw ${i === 1 ? 'on' : ''}" data-c="${c}" style="background:${c}"></div>`).join('')}
+        <input type="range" min="1" max="48" value="5" class="pt-size" style="width:90px">
+        <span class="pt-sz mono" style="font-size:11px;color:var(--dim)">5px</span>
+        <button class="btn pt-eraser">橡皮</button>
+        <button class="btn pt-clear">清空</button>
+        <span style="flex:1"></span>
+        <button class="btn pri pt-save">${UI.save}保存到 /Pictures</button>
+      </div>
+      <div class="pt-canvas-wrap"><canvas></canvas></div>`;
+    const Q = s => win.body.querySelector(s);
+    const wrap = Q('.pt-canvas-wrap'), cv = Q('canvas'), ctx = cv.getContext('2d');
+    let color = colors[1], size = 5, eraser = false, drawing = false, last = null;
+    function resize() {
+      const w = wrap.clientWidth, h = wrap.clientHeight;
+      if (w <= 0 || (cv.width === w && cv.height === h)) return;
+      const old = cv.width ? ctx.getImageData(0, 0, cv.width, cv.height) : null;
+      cv.width = w; cv.height = h;
+      ctx.fillStyle = '#1f1f28'; ctx.fillRect(0, 0, w, h);
+      if (old) ctx.putImageData(old, 0, 0);
+      ctx.lineCap = ctx.lineJoin = 'round';
+    }
+    new ResizeObserver(resize).observe(wrap);
+    setTimeout(resize, 60);
+    const pos = e => { const r = cv.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
+    cv.addEventListener('pointerdown', e => { drawing = true; last = pos(e); cv.setPointerCapture(e.pointerId); });
+    cv.addEventListener('pointermove', e => {
+      if (!drawing) return;
+      const p = pos(e);
+      ctx.strokeStyle = eraser ? '#1f1f28' : color;
+      ctx.lineWidth = eraser ? size * 2.5 : size;
+      ctx.beginPath(); ctx.moveTo(last.x, last.y); ctx.lineTo(p.x, p.y); ctx.stroke();
+      last = p;
+    });
+    cv.addEventListener('pointerup', () => drawing = false);
+    win.body.querySelectorAll('.pt-sw').forEach(sw => sw.onclick = () => {
+      win.body.querySelectorAll('.pt-sw').forEach(s => s.classList.remove('on'));
+      sw.classList.add('on'); color = sw.dataset.c; eraser = false; Q('.pt-eraser').classList.remove('pri');
+    });
+    Q('.pt-size').oninput = e => { size = +e.target.value; Q('.pt-sz').textContent = size + 'px'; };
+    Q('.pt-eraser').onclick = () => { eraser = !eraser; Q('.pt-eraser').classList.toggle('pri', eraser); };
+    Q('.pt-clear').onclick = () => { ctx.fillStyle = '#1f1f28'; ctx.fillRect(0, 0, cv.width, cv.height); };
+    Q('.pt-save').onclick = () => cv.toBlob(async blob => {
+      const name = await fs.uniqueName('/Pictures', '绘画-' + new Date().toISOString().slice(0, 10) + '.png');
+      await fs.writeFile('/Pictures/' + name, blob);
+      toast('已保存 /Pictures/' + name);
+      bus.emit('fs-changed', '/Pictures');
+    }, 'image/png');
+    return win;
+  }
+};
+
+/* ---------------- 虚拟机 (V86) ---------------- */
+Apps.vm = {
+  name: '虚拟机', icon: APPICON.vm,
+  async launch(vfsIso = null) {
+    const win = WM.create({ app: 'vm', title: '虚拟机 — V86', icon: this.icon, w: 820, h: 620, single: true });
+    win.body.innerHTML = `
+      <div class="app-bar">
+        <label class="btn pri" style="cursor:pointer">${UI.upload}选择本地 ISO/IMG 镜像<input type="file" id="os_image" accept=".iso,.img,.bin" style="display:none"></label>
+        ${vfsIso ? `<button class="btn vm-vfs">${UI.hd}启动 ${esc(basename(vfsIso))}</button>` : ''}
+        <button class="btn vm-stop dgr" style="display:none">停止</button>
+        <span style="font-size:10.5px;color:var(--faint);font-family:'IBM Plex Mono',monospace">x86 EMULATOR · 镜像仅从本地/OPFS 读取，避免跨域</span>
+      </div>
+      <div id="screen_container">
+        <div style="white-space: pre; font: 14px monospace; line-height: 14px"></div>
+        <canvas style="display: none"></canvas>
+      </div>`;
+    let emulator = null;
+    const boot = (source) => {
+      if (typeof V86 === 'undefined') { toast('libv86 尚未加载完成，请稍候再试', 'err'); return; }
+      if (emulator) { try { emulator.destroy(); } catch {} }
+      emulator = new V86({
+        wasm_path: "https://cdn.jsdelivr.net/npm/v86@latest/build/v86.wasm",
+        bios: { url: "https://cdn.jsdelivr.net/npm/v86@latest/bios/seabios.bin" },
+        vga_bios: { url: "https://cdn.jsdelivr.net/npm/v86@latest/bios/vgabios.bin" },
+        screen_container: win.body.querySelector('#screen_container'),
+        memory_size: 64 * 1024 * 1024,
+        vga_memory_size: 4 * 1024 * 1024,
+        cdrom: { buffer: source },
+        autostart: true,
+      });
+      win.body.querySelector('.vm-stop').style.display = 'inline-flex';
+      toast('虚拟机启动中…');
+    };
+    win.body.querySelector('#os_image').addEventListener('change', function (e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      boot(file);
+    });
+    const vb = win.body.querySelector('.vm-vfs');
+    if (vb) vb.onclick = async () => {
+      try { boot(await fs.readFile(vfsIso, 'arrayBuffer')); } catch (e) { toast(e.message, 'err'); }
+    };
+    win.body.querySelector('.vm-stop').onclick = () => { if (emulator) { try { emulator.destroy(); } catch {} emulator = null; toast('虚拟机已停止'); } };
+    win.onClose = () => { if (emulator) { try { emulator.destroy(); } catch {} } };
+    return win;
+  }
+};
+
+/* ---------------- 设置 ---------------- */
+Apps.settings = {
+  name: '设置', icon: APPICON.settings,
+  async launch(section = 'wallpaper') {
+    const win = WM.create({ app: 'settings', title: '设置', icon: this.icon, w: 780, h: 560, single: true });
+    win.body.innerHTML = `
+      <div class="st">
+        <div class="st-side">
+          <div class="fxs-it" data-s="wallpaper">${UI.wall}<span>个性化</span></div>
+          <div class="fxs-it" data-s="storage">${UI.hd}<span>存储</span></div>
+          <div class="fxs-it" data-s="about">${UI.warn}<span>关于</span></div>
+        </div>
+        <div class="st-main"></div>
+      </div>`;
+    const Q = s => win.body.querySelector(s);
+    const main = Q('.st-main');
+    const tabs = win.body.querySelectorAll('.fxs-it');
+    tabs.forEach(t => t.onclick = () => show(t.dataset.s));
+    async function show(sec) {
+      tabs.forEach(t => t.classList.toggle('on', t.dataset.s === sec));
+      if (sec === 'wallpaper') {
+        const cur = conf.get('wall', WALLPAPERS[0].id);
+        let customs = [];
+        try { customs = (await fs.readdir('/System/wallpapers')).filter(e => e.kind === 'file'); } catch {}
+        main.innerHTML = `
+          <div class="st-h1">个性化</div><div class="st-sub">壁纸保存在 OPFS 的 /System/wallpapers，刷新后保留。</div>
+          <div class="st-sec"><h3>内置壁纸</h3><div class="wp-grid wp-builtin"></div></div>
+          <div class="st-sec"><h3>自定义壁纸</h3>
+            <div class="wp-grid wp-custom"></div>
+            <button class="btn pri" style="margin-top:12px" id="wp-up">${UI.upload}上传本地图片为壁纸</button>
+          </div>`;
+        const bg = main.querySelector('.wp-builtin');
+        for (const w of WALLPAPERS) {
+          const c = elBuild('div', 'wp-card' + (cur === w.id ? ' on' : ''), `<div class="wp-name">${esc(w.name)}</div>`);
+          c.style.background = w.css;
+          c.onclick = () => { applyWallpaper(w.id); show('wallpaper'); };
+          bg.appendChild(c);
+        }
+        const cg = main.querySelector('.wp-custom');
+        if (!customs.length) cg.innerHTML = `<div style="font-size:11px;color:var(--faint);grid-column:1/-1">尚未上传自定义壁纸</div>`;
+        for (const e of customs) {
+          const p = '/System/wallpapers/' + e.name;
+          const c = elBuild('div', 'wp-card' + (cur === p ? ' on' : ''), `<div class="wp-name">${esc(e.name)}</div>`);
+          fs.blobURL(p).then(u => c.style.background = `url(${u}) center/cover`);
+          c.onclick = () => { applyWallpaper(p); setTimeout(() => show('wallpaper'), 100); };
+          c.oncontextmenu = ev => { ev.preventDefault(); Ctx.show([{ label: '删除壁纸', icon: UI.trash, danger: true, action: async () => { await fs.rm(p); show('wallpaper'); } }], ev.clientX, ev.clientY); };
+          cg.appendChild(c);
+        }
+        main.querySelector('#wp-up').onclick = () => {
+          const inp = $('#pick-wall');
+          inp.onchange = async () => {
+            const f = inp.files[0]; if (!f) return;
+            await fs.mkdir('/System/wallpapers').catch(() => {});
+            const name = await fs.uniqueName('/System/wallpapers', f.name);
+            await fs.writeFile('/System/wallpapers/' + name, await f.arrayBuffer());
+            applyWallpaper('/System/wallpapers/' + name);
+            toast('壁纸已应用并保存到 OPFS');
+            inp.value = ''; show('wallpaper');
+          };
+          inp.click();
+        };
+      } else if (sec === 'storage') {
+        main.innerHTML = `<div class="st-h1">存储</div><div class="st-sub">后端: ${fs.backendType === 'opfs' ? 'OPFS（浏览器原生私有文件系统）' : 'IndexedDB 降级模式'} · 计算中…</div>
+          <div class="st-sec"><h3>容量占用</h3><div class="meter" id="st-meter"></div><div class="legend" id="st-legend"></div></div>
+          <div class="st-sec"><h3>目录明细</h3><div id="st-rows" class="mono" style="font-size:12px;color:var(--dim);display:flex;flex-direction:column;gap:7px"></div></div>
+          <div class="st-sec"><h3>危险区</h3>
+            <p style="font-size:12px;color:var(--dim);margin-bottom:10px;line-height:1.7">一键重置将清空 OPFS 中全部文件、IndexedDB 记录与本地配置，恢复出厂状态。</p>
+            <button class="btn dgr" id="st-reset">${UI.trash}一键重置系统</button>
+          </div>`;
+        main.querySelector('#st-reset').onclick = async () => {
+          if (!await dialog({ title: '重置系统', body: '所有文件与设置将被<b style="color:var(--rose)">永久删除</b>，确定继续？', okText: '重置', danger: true })) return;
+          try {
+            if (fs.backendType === 'opfs') {
+              const root = await navigator.storage.getDirectory();
+              for await (const [name] of root.entries()) await root.removeEntry(name, { recursive: true }).catch(() => {});
+            }
+            indexedDB.deleteDatabase('ember-fallback-fs');
+            await mountStore.clear();
+            localStorage.clear();
+            document.cookie = 'ember_seeded=;max-age=0;path=/';
+            toast('已重置，正在重启…');
+            setTimeout(() => location.reload(), 900);
+          } catch (e) { toast(e.message, 'err'); }
+        };
+        // 占用统计
+        const est = navigator.storage && navigator.storage.estimate ? await navigator.storage.estimate() : { usage: 0, quota: 0 };
+        const colors = ['#ff9e64','#7aa89f','#7e9cd8','#e46876','#e6c384','#957fb8','#8e8a9e'];
+        let tops = [];
+        try {
+          const ents = (await fs.rootBackend.readdir('/'));
+          for (const e of ents) tops.push({ name: '/' + e.name, size: await fs.dirSize('/' + e.name) });
+        } catch {}
+        tops.sort((a, b) => b.size - a.size);
+        const totalUsed = Math.max(est.usage || 0, tops.reduce((a, b) => a + b.size, 0), 1);
+        const meter = main.querySelector('#st-meter'), legend = main.querySelector('#st-legend'), rows = main.querySelector('#st-rows');
+        main.querySelector('.st-sub').innerHTML = `后端: ${fs.backendType === 'opfs' ? 'OPFS（持久化私有文件系统）' : 'IndexedDB 降级模式'} · 已用 <b style="color:var(--ember)">${fmtSize(est.usage)}</b> / 配额 ${fmtSize(est.quota)}（占 ${est.quota ? (est.usage / est.quota * 100).toFixed(2) : '?'}%）`;
+        tops.forEach((t, i) => {
+          const pct = Math.max(0.5, t.size / totalUsed * 100);
+          const bar = elBuild('i'); bar.style.cssText = `width:${pct}%;background:${colors[i % colors.length]}`;
+          if (t.size > 0) meter.appendChild(bar);
+          legend.appendChild(elBuild('div', 'lg', `<i style="background:${colors[i % colors.length]}"></i>${esc(t.name)} · ${fmtSize(t.size)}`));
+          rows.appendChild(elBuild('div', '', `<span style="color:var(--ink)">${esc(t.name)}</span> — ${fmtSize(t.size)}`));
+        });
+        if (est.quota) {
+          const free = elBuild('i'); free.style.cssText = `flex:1;background:#26262f`; meter.appendChild(free);
+        }
+      } else {
+        main.innerHTML = `<div class="st-h1">EMBER · OS</div><div class="st-sub">单文件 Web 操作系统 — 运行于浏览器沙箱</div>
+          <div class="st-sec mono" style="font-size:12px;line-height:2.2;color:var(--dim)">
+            存储后端 · <b style="color:var(--ember)">${fs.backendType.toUpperCase()}</b><br>
+            File System Access API · ${window.showDirectoryPicker ? '<b style="color:var(--teal)">支持本地挂载</b>' : '不支持'}<br>
+            DecompressionStream · ${window.DecompressionStream ? '<b style="color:var(--teal)">可用 (GZ/TGZ)</b>' : '不可用'}<br>
+            JSZip · ${window.JSZip ? '<b style="color:var(--teal)">已加载</b>' : '未加载（离线）'}<br>
+            V86 · ${typeof V86 !== 'undefined' ? '<b style="color:var(--teal)">已加载</b>' : '加载中 / 未加载'}<br>
+            已挂载本地文件夹 · ${fs.mounts.length} 个
+          </div>`;
+      }
+    }
+    show(section);
+    return win;
+  }
+};
+
+/* ============================ 启动引导 ============================ */
+async function seedDefaults() {
+  const seeded = getCookie('ember_seeded') || conf.get('seeded', false);
+  for (const d of ['/Desktop', '/Documents', '/Pictures', '/Music', '/Downloads', '/System/wallpapers', '/mnt/local'])
+    await fs.mkdir(d).catch(() => {});
+  if (seeded) return;
+  try {
+    await fs.writeFile('/Desktop/欢迎使用.md',
+`# 欢迎使用 EMBER · OS
+
+这是一台完全运行在浏览器中的「单文件操作系统」。
+你的所有文件都保存在 **OPFS**（浏览器原生私有文件系统）中，刷新页面后依然存在。
+
+## 可以试试
+- 把电脑上的文件直接 **拖进桌面** —— 它们会被写入 OPFS
+- 把桌面上的文件 **拖出到电脑桌面** —— 双向拖拽
+- 右键桌面 → 新建文件夹 / 上传 / 更换壁纸
+- 开始菜单 → 「挂载本地文件夹」把真实磁盘目录接入 /mnt/local
+- 双击 .html 文件 → 边写代码边看实时预览
+- 设置 → 存储：查看 OPFS 占用率可视化
+
+> 框选、多选、触摸长按菜单、移动端 Dock 全部可用。`);
+    await fs.writeFile('/Desktop/示例页面.html',
+`<!DOCTYPE html>
+<html lang="zh">
+<head><meta charset="utf-8"><title>余烬示例页</title>
+<style>
+  body{margin:0;height:100vh;display:grid;place-items:center;background:#16161d;font-family:sans-serif}
+  .card{padding:48px 64px;border:1px solid #ff9e6455;border-radius:18px;text-align:center;
+        background:radial-gradient(circle at 30% 0%,#ff9e641a,transparent 70%)}
+  h1{color:#ff9e64;letter-spacing:.3em;margin:0 0 12px}
+  p{color:#9a96ab;font-size:14px} b{color:#7aa89f}
+</style></head>
+<body><div class="card"><h1>EMBER</h1><p>这个页面由 <b>OPFS</b> 中的 HTML 文件渲染。<br>用「代码编辑」修改我，预览会实时更新。</p></div></body>
+</html>`);
+    await fs.writeFile('/Documents/销售数据.csv',
+`季度,产品,销量,营收(万元),同比
+Q1,余烬终端,1280,512.0,+12%
+Q1,墨格键盘,3420,205.2,+8%
+Q2,余烬终端,1525,610.0,+19%
+Q2,墨格键盘,2980,178.8,-13%
+Q3,余烬终端,1890,756.0,+24%
+Q3,苔原鼠标,5120,153.6,+41%
+Q4,余烬终端,2210,884.0,+17%
+Q4,苔原鼠标,6035,181.1,+18%`);
+    await fs.writeFile('/Documents/README.txt',
+`EMBER OS 文件系统说明
+=====================
+/Desktop     桌面（图标即文件）
+/Documents   文档
+/Pictures    图片（画板作品保存于此）
+/Music       音乐
+/Downloads   下载
+/System      系统数据（壁纸等）
+/mnt/local   本地挂载点（File System Access API）
+
+所有写入均持久化到 OPFS；OPFS 不可用时自动降级 IndexedDB。`);
+  } catch (e) { console.warn('seed', e); }
+  setCookie('ember_seeded', '1');
+  conf.set('seeded', true);
+}
+
+async function restoreMounts() {
+  let saved = [];
+  try { saved = await mountStore.list(); } catch { return; }
+  if (!saved.length) return;
+  toast(`检测到 ${saved.length} 个之前挂载的本地文件夹`, 'ok', '重新挂载', async () => {
+    let okCount = 0;
+    for (const { handle } of saved) {
+      try {
+        let perm = await handle.queryPermission({ mode: 'readwrite' });
+        if (perm !== 'granted') perm = await handle.requestPermission({ mode: 'readwrite' });
+        if (perm === 'granted') {
+          await fs.mkdir('/mnt/local').catch(() => {});
+          let name = handle.name, prefix = '/mnt/local/' + name, i = 2;
+          while (fs.mounts.some(m => m.prefix === prefix)) prefix = '/mnt/local/' + name + '-' + (i++);
+          fs.mounts.push({ prefix, backend: new HandleFS(handle), handle });
+          okCount++;
+        }
+      } catch (e) { console.warn(e); }
+    }
+    toast(okCount ? `已恢复 ${okCount} 个挂载` : '未能恢复挂载（权限被拒绝）', okCount ? 'ok' : 'err');
+    bus.emit('fs-changed', '/mnt/local');
+  });
+}
+
+addEventListener('resize', () => { Desktop.render(); });
+addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'a' && e.target === document.body) {
+    e.preventDefault();
+    Desktop.setSel(Desktop.items.map(i => i.key));
+  }
+  if (e.key === 'Delete' && e.target === document.body && Desktop.sel.size) {
+    const paths = Desktop.selPaths();
+    if (paths.length) dialog({ title: '确认删除', body: `删除 ${paths.length} 个项目？`, okText: '删除', danger: true })
+      .then(async ok => { if (ok) { for (const p of paths) await fs.rm(p).catch(() => {}); bus.emit('fs-changed', '/Desktop'); } });
+  }
+});
+
+(async function boot() {
+  const msg = t => { const m = $('#bootmsg'); if (m) m.textContent = t; };
+  try {
+    msg('MOUNTING OPFS VOLUME…');
+    await fs.init();
+    msg(fs.backendType === 'opfs' ? 'OPFS READY · SEEDING…' : 'FALLBACK: INDEXEDDB · SEEDING…');
+    await seedDefaults();
+    msg('LOADING DESKTOP…');
+    await applyWallpaper(conf.get('wall', WALLPAPERS[0].id), false);
+    buildStartMenu();
+    await Desktop.refresh();
+    if (fs.backendType !== 'opfs') toast('OPFS 不可用，已自动降级为 IndexedDB 存储', 'err');
+    restoreMounts();
+  } catch (e) {
+    console.error(e);
+    msg('BOOT ERROR: ' + e.message);
+    toast('启动异常: ' + e.message, 'err');
+  }
+  await sleep(500);
+  $('#boot').classList.add('gone');
+  setTimeout(() => $('#boot').remove(), 900);
+})();
+
+</script>
+</body>
+</html>

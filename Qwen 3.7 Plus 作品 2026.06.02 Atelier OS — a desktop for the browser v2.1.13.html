@@ -1,0 +1,3259 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"/>
+<title>Atelier OS — a desktop for the browser</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Bricolage+Grotesque:opsz,wght@12..96,300..800&family=JetBrains+Mono:wght@300;400;500;600&family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/jszip@3.10.1/dist/jszip.min.js" defer onerror="window.__nojszip=1"></script>
+<style>
+/* ============================================================
+   Atelier OS — editorial warmth meets terminal precision
+   ============================================================ */
+:root{
+  --ink:        #15110d;
+  --ink-soft:   #2b2520;
+  --ink-mid:    #4a413a;
+  --cream:      #f1e8d6;
+  --paper:      #ece0c8;
+  --paper-2:    #e3d5b8;
+  --rust:       #d14a1f;
+  --rust-dim:   #a8381a;
+  --moss:       #6a7a3a;
+  --ochre:      #c49132;
+  --glass:      rgba(241,232,214,.78);
+  --glass-edge: rgba(21,17,13,.22);
+  --shadow:     0 30px 60px -20px rgba(21,17,13,.45), 0 8px 20px -8px rgba(21,17,13,.35);
+  --grid:       rgba(21,17,13,.08);
+  --serif:      'Instrument Serif', 'Fraunces', Georgia, serif;
+  --sans:       'Bricolage Grotesque', system-ui, sans-serif;
+  --mono:       'JetBrains Mono', ui-monospace, monospace;
+  --radius:     14px;
+  --radius-sm:  8px;
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:var(--ink)}
+body{
+  font-family:var(--sans);
+  color:var(--ink);
+  -webkit-font-smoothing:antialiased;
+  font-feature-settings:"ss01","ss02";
+  letter-spacing:-.01em;
+  overscroll-behavior:none;
+  user-select:none;
+}
+button,input,textarea,select{font:inherit;color:inherit;user-select:text}
+button{cursor:pointer;border:none;background:none}
+a{color:inherit}
+::selection{background:var(--rust);color:var(--cream)}
+
+/* ---------- BOOT SCREEN ---------- */
+#boot{
+  position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:var(--ink);color:var(--cream);gap:28px;
+  transition:opacity .9s ease, visibility .9s ease;
+}
+#boot.off{opacity:0;visibility:hidden}
+#boot .mark{font-family:var(--serif);font-style:italic;font-size:clamp(54px,10vw,120px);letter-spacing:-.04em;line-height:.9}
+#boot .mark em{color:var(--rust);font-style:italic}
+#boot .sub{font-family:var(--mono);font-size:11px;letter-spacing:.32em;text-transform:uppercase;color:var(--paper-2);opacity:.7}
+#boot .bar{width:240px;height:2px;background:rgba(241,232,214,.1);overflow:hidden;border-radius:2px}
+#boot .bar::after{content:"";display:block;height:100%;width:30%;background:var(--rust);animation:slide 1.4s ease-in-out infinite}
+@keyframes slide{0%{transform:translateX(-120%)}100%{transform:translateX(420%)}}
+
+/* ---------- DESKTOP ---------- */
+#desktop{
+  position:fixed;inset:0;overflow:hidden;
+  background:
+    radial-gradient(1200px 700px at 75% -10%, rgba(209,74,31,.18), transparent 60%),
+    radial-gradient(900px 600px at -10% 110%, rgba(106,122,58,.22), transparent 60%),
+    linear-gradient(180deg, #1c1713 0%, #15110d 60%, #0e0b08 100%);
+  background-size:cover;
+  background-position:center;
+}
+#desktop.custom-bg{background-size:cover;background-position:center}
+#desktop.custom-bg::before{
+  content:"";position:absolute;inset:0;background:rgba(21,17,13,.25);backdrop-filter:blur(1px) saturate(1.05);pointer-events:none;
+}
+/* paper grain overlay */
+#grain{
+  position:fixed;inset:0;pointer-events:none;z-index:1;opacity:.06;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' seed='7'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .8 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+/* faint grid */
+#grid{
+  position:fixed;inset:0;pointer-events:none;z-index:1;opacity:.35;
+  background-image:
+    linear-gradient(to right, rgba(241,232,214,.035) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(241,232,214,.035) 1px, transparent 1px);
+  background-size:80px 80px;
+  mask-image:radial-gradient(ellipse at center, black 40%, transparent 80%);
+}
+
+/* ---------- CORNER WATERMARK ---------- */
+#brand{
+  position:fixed;top:18px;left:22px;z-index:5;display:flex;align-items:baseline;gap:10px;color:var(--cream);
+  font-family:var(--serif);font-style:italic;pointer-events:none;
+}
+#brand .big{font-size:26px;letter-spacing:-.02em;line-height:1}
+#brand .small{font-family:var(--mono);font-size:9px;letter-spacing:.28em;text-transform:uppercase;opacity:.6;font-style:normal}
+
+/* ---------- CLOCK ---------- */
+#clock{
+  position:fixed;top:18px;right:22px;z-index:5;color:var(--cream);text-align:right;pointer-events:none;
+  font-family:var(--serif);font-style:italic;
+}
+#clock .t{font-size:30px;line-height:1;letter-spacing:-.02em}
+#clock .d{font-family:var(--mono);font-size:9px;letter-spacing:.24em;text-transform:uppercase;opacity:.6;margin-top:4px;font-style:normal}
+
+/* ---------- DESKTOP ICONS ---------- */
+#desk{position:absolute;inset:0;z-index:2;overflow:hidden}
+.dicon{
+  position:absolute;width:92px;padding:10px 6px;border-radius:10px;
+  display:flex;flex-direction:column;align-items:center;gap:6px;
+  color:var(--cream);text-align:center;cursor:default;
+  transition:background .15s ease, transform .15s ease, outline-color .15s ease;
+  outline:1px solid transparent;
+}
+.dicon:hover{background:rgba(241,232,214,.08);outline-color:rgba(241,232,214,.12)}
+.dicon.selected{background:rgba(209,74,31,.18);outline:1px solid rgba(209,74,31,.55)}
+.dicon .ico{width:44px;height:44px;display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 2px 4px rgba(0,0,0,.4))}
+.dicon .ico svg{width:100%;height:100%}
+.dicon .lbl{
+  font-size:11.5px;line-height:1.25;max-width:86px;word-wrap:break-word;
+  text-shadow:0 1px 3px rgba(0,0,0,.6), 0 0 1px rgba(0,0,0,.9);
+}
+.dicon.dragging{opacity:.35}
+.dicon.drop-target{outline:2px dashed var(--rust);outline-offset:2px}
+
+/* marquee / lasso */
+#lasso{position:absolute;border:1px solid var(--rust);background:rgba(209,74,31,.12);pointer-events:none;z-index:3;display:none}
+
+/* ---------- TASKBAR / DOCK ---------- */
+#dock{
+  position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:50;
+  display:flex;align-items:center;gap:4px;padding:6px;
+  background:rgba(28,23,19,.72);backdrop-filter:blur(18px) saturate(1.4);
+  border:1px solid rgba(241,232,214,.12);
+  border-radius:18px;box-shadow:var(--shadow);
+  max-width:calc(100vw - 28px);
+}
+.dock-btn{
+  width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;
+  color:var(--cream);position:relative;transition:background .18s ease, transform .18s ease;
+}
+.dock-btn:hover{background:rgba(241,232,214,.08);transform:translateY(-2px)}
+.dock-btn:active{transform:translateY(0)}
+.dock-btn svg{width:22px;height:22px}
+.dock-btn .pip{
+  position:absolute;bottom:2px;left:50%;transform:translateX(-50%);
+  width:4px;height:4px;border-radius:50%;background:var(--rust);opacity:0;transition:opacity .2s;
+}
+.dock-btn.open .pip{opacity:1}
+.dock-sep{width:1px;height:28px;background:rgba(241,232,214,.14);margin:0 4px}
+.dock-btn .tip{
+  position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);
+  background:var(--ink);color:var(--cream);padding:5px 9px;border-radius:6px;
+  font-size:11px;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .15s;
+  border:1px solid rgba(241,232,214,.1);
+}
+.dock-btn:hover .tip{opacity:1}
+
+/* ---------- START MENU ---------- */
+#start{
+  position:fixed;left:14px;bottom:72px;z-index:60;width:340px;max-width:calc(100vw - 28px);
+  background:rgba(241,232,214,.96);backdrop-filter:blur(20px);
+  border:1px solid var(--glass-edge);border-radius:var(--radius);
+  box-shadow:var(--shadow);padding:16px;display:none;
+  animation:riseIn .22s cubic-bezier(.2,.8,.2,1);
+}
+#start.on{display:block}
+@keyframes riseIn{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:none}}
+#start h4{font-family:var(--serif);font-style:italic;font-weight:400;font-size:22px;color:var(--ink);margin-bottom:2px}
+#start .sub{font-family:var(--mono);font-size:9px;letter-spacing:.24em;text-transform:uppercase;color:var(--ink-mid);margin-bottom:14px}
+.start-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.start-item{
+  display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 6px;border-radius:10px;
+  color:var(--ink);cursor:default;transition:background .15s;
+  border:1px solid transparent;
+}
+.start-item:hover{background:rgba(21,17,13,.05);border-color:var(--grid)}
+.start-item svg{width:28px;height:28px;color:var(--ink)}
+.start-item .n{font-size:11px;font-weight:500;text-align:center;line-height:1.2}
+
+/* ---------- WINDOWS ---------- */
+#stage{position:absolute;inset:0;z-index:10;pointer-events:none}
+.win{
+  position:absolute;pointer-events:auto;min-width:280px;min-height:180px;
+  background:var(--cream);border:1px solid var(--glass-edge);
+  border-radius:var(--radius);box-shadow:var(--shadow);
+  display:flex;flex-direction:column;overflow:hidden;
+  animation:winIn .28s cubic-bezier(.2,.8,.2,1);
+}
+.win.dark{background:var(--ink);color:var(--cream)}
+@keyframes winIn{from{opacity:0;transform:translateY(14px) scale(.97)}to{opacity:1;transform:none}}
+.win.closing{animation:winOut .2s forwards}
+@keyframes winOut{to{opacity:0;transform:translateY(10px) scale(.96)}}
+.win.min{display:none}
+.win.max{border-radius:0}
+.win-head{
+  height:38px;display:flex;align-items:center;gap:10px;padding:0 12px;
+  background:linear-gradient(180deg, rgba(21,17,13,.04), rgba(21,17,13,.02));
+  border-bottom:1px solid rgba(21,17,13,.1);cursor:grab;flex-shrink:0;
+}
+.win.dark .win-head{background:rgba(241,232,214,.04);border-bottom-color:rgba(241,232,214,.1)}
+.win-head:active{cursor:grabbing}
+.win-title{
+  font-family:var(--serif);font-style:italic;font-size:17px;color:var(--ink);
+  flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.win.dark .win-title{color:var(--cream)}
+.win-title .path{font-family:var(--mono);font-size:10px;font-style:normal;color:var(--ink-mid);margin-left:8px;letter-spacing:.04em}
+.win.dark .win-title .path{color:var(--paper-2)}
+.win-ctrls{display:flex;gap:6px}
+.wc{
+  width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;
+  color:var(--ink);transition:background .15s;
+}
+.win.dark .wc{color:var(--cream)}
+.wc:hover{background:rgba(21,17,13,.08)}
+.win.dark .wc:hover{background:rgba(241,232,214,.12)}
+.wc svg{width:12px;height:12px}
+.wc.close:hover{background:var(--rust);color:var(--cream)}
+.win-body{flex:1;overflow:auto;position:relative;background:var(--cream)}
+.win.dark .win-body{background:var(--ink)}
+
+/* resize handles */
+.rh{position:absolute;z-index:5}
+.rh.n{top:-4px;left:6px;right:6px;height:8px;cursor:ns-resize}
+.rh.s{bottom:-4px;left:6px;right:6px;height:8px;cursor:ns-resize}
+.rh.e{right:-4px;top:6px;bottom:6px;width:8px;cursor:ew-resize}
+.rh.w{left:-4px;top:6px;bottom:6px;width:8px;cursor:ew-resize}
+.rh.ne{top:-4px;right:-4px;width:12px;height:12px;cursor:nesw-resize}
+.rh.nw{top:-4px;left:-4px;width:12px;height:12px;cursor:nwse-resize}
+.rh.se{bottom:-4px;right:-4px;width:12px;height:12px;cursor:nwse-resize}
+.rh.sw{bottom:-4px;left:-4px;width:12px;height:12px;cursor:nesw-resize}
+
+/* ---------- CONTEXT MENU ---------- */
+#ctx{
+  position:fixed;z-index:200;min-width:220px;
+  background:rgba(241,232,214,.98);backdrop-filter:blur(18px);
+  border:1px solid var(--glass-edge);border-radius:10px;
+  box-shadow:var(--shadow);padding:6px;display:none;
+  font-size:13px;
+}
+#ctx.on{display:block;animation:riseIn .15s ease}
+.ctx-item{
+  display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:6px;
+  cursor:default;transition:background .12s;
+}
+.ctx-item:hover{background:var(--ink);color:var(--cream)}
+.ctx-item:hover svg{color:var(--cream)}
+.ctx-item svg{width:14px;height:14px;color:var(--ink-mid)}
+.ctx-item.disabled{opacity:.35;pointer-events:none}
+.ctx-sep{height:1px;background:rgba(21,17,13,.1);margin:4px 2px}
+.ctx-kbd{margin-left:auto;font-family:var(--mono);font-size:10px;opacity:.55}
+
+/* ---------- FORM CONTROLS ---------- */
+.btn{
+  display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border-radius:8px;
+  background:var(--ink);color:var(--cream);font-size:12.5px;font-weight:500;
+  transition:background .15s, transform .1s;
+  border:1px solid var(--ink);
+}
+.btn:hover{background:var(--ink-soft)}
+.btn:active{transform:translateY(1px)}
+.btn.ghost{background:transparent;color:var(--ink);border-color:var(--glass-edge)}
+.win.dark .btn.ghost{color:var(--cream);border-color:rgba(241,232,214,.2)}
+.btn.ghost:hover{background:rgba(21,17,13,.06)}
+.win.dark .btn.ghost:hover{background:rgba(241,232,214,.08)}
+.btn.rust{background:var(--rust);border-color:var(--rust)}
+.btn.rust:hover{background:var(--rust-dim)}
+
+.input, textarea.input, select.input{
+  width:100%;padding:8px 11px;border-radius:8px;
+  background:rgba(255,255,255,.5);border:1px solid var(--glass-edge);
+  font-size:13px;color:var(--ink);outline:none;transition:border-color .15s, background .15s;
+}
+.input:focus{border-color:var(--rust);background:rgba(255,255,255,.8)}
+.win.dark .input{background:rgba(241,232,214,.06);border-color:rgba(241,232,214,.15);color:var(--cream)}
+
+/* ---------- FILE EXPLORER ---------- */
+.fx{display:grid;grid-template-columns:210px 1fr;height:100%;min-height:0}
+.fx-side{
+  background:linear-gradient(180deg, rgba(21,17,13,.03), transparent);
+  border-right:1px solid rgba(21,17,13,.1);padding:14px 10px;overflow:auto;
+}
+.fx-side h5{font-family:var(--mono);font-size:9px;letter-spacing:.24em;text-transform:uppercase;color:var(--ink-mid);margin:10px 8px 6px}
+.fx-side h5:first-child{margin-top:0}
+.fx-tree-item{
+  display:flex;align-items:center;gap:7px;padding:6px 9px;border-radius:6px;cursor:default;
+  font-size:12.5px;color:var(--ink-soft);
+}
+.fx-tree-item:hover{background:rgba(21,17,13,.05)}
+.fx-tree-item.active{background:var(--ink);color:var(--cream)}
+.fx-tree-item svg{width:14px;height:14px;flex-shrink:0}
+.fx-main{display:flex;flex-direction:column;min-width:0;min-height:0}
+.fx-toolbar{
+  display:flex;align-items:center;gap:6px;padding:8px 12px;
+  border-bottom:1px solid rgba(21,17,13,.1);flex-shrink:0;flex-wrap:wrap;
+}
+.fx-crumb{display:flex;align-items:center;gap:2px;flex:1;min-width:150px;font-size:12px;flex-wrap:wrap}
+.fx-crumb span{padding:4px 7px;border-radius:5px;cursor:default;transition:background .12s}
+.fx-crumb span:hover{background:rgba(21,17,13,.07)}
+.fx-crumb .sep{color:var(--ink-mid);padding:0;cursor:default}
+.fx-crumb .sep:hover{background:transparent}
+.fx-tool-btn{
+  width:30px;height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center;
+  color:var(--ink-mid);transition:background .12s, color .12s;
+}
+.fx-tool-btn:hover{background:rgba(21,17,13,.06);color:var(--ink)}
+.fx-tool-btn svg{width:15px;height:15px}
+.fx-search{
+  display:flex;align-items:center;gap:6px;padding:0 9px;height:30px;border-radius:7px;
+  background:rgba(255,255,255,.6);border:1px solid var(--glass-edge);min-width:140px;
+}
+.fx-search svg{width:13px;height:13px;color:var(--ink-mid);flex-shrink:0}
+.fx-search input{border:none;outline:none;background:transparent;font-size:12px;width:100%;padding:0}
+.fx-list{flex:1;overflow:auto;padding:6px}
+.fx-list table{width:100%;border-collapse:collapse;font-size:12.5px}
+.fx-list th{
+  text-align:left;font-weight:500;font-family:var(--mono);font-size:10px;
+  letter-spacing:.08em;text-transform:uppercase;color:var(--ink-mid);
+  padding:7px 10px;border-bottom:1px solid rgba(21,17,13,.12);cursor:default;
+  position:sticky;top:0;background:var(--cream);user-select:none;
+}
+.fx-list th:hover{color:var(--ink)}
+.fx-list th.sorted{color:var(--rust)}
+.fx-list th .arr{opacity:.5;margin-left:4px}
+.fx-list td{padding:7px 10px;border-bottom:1px solid rgba(21,17,13,.05)}
+.fx-row{cursor:default;transition:background .1s}
+.fx-row:hover{background:rgba(21,17,13,.035)}
+.fx-row.selected{background:rgba(209,74,31,.14)}
+.fx-row.selected:hover{background:rgba(209,74,31,.2)}
+.fx-row td.name{display:flex;align-items:center;gap:8px}
+.fx-row td.name svg{width:16px;height:16px;flex-shrink:0}
+.fx-row td.size, .fx-row td.date{font-family:var(--mono);font-size:11px;color:var(--ink-mid)}
+.fx-empty{padding:40px 20px;text-align:center;color:var(--ink-mid);font-size:13px}
+.fx-empty .big{font-family:var(--serif);font-style:italic;font-size:26px;color:var(--ink);margin-bottom:4px}
+
+/* grid view for icons in file manager */
+.fx-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:4px;padding:10px}
+.fx-grid .fx-g-item{
+  display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 6px;border-radius:8px;
+  cursor:default;transition:background .12s;text-align:center;
+}
+.fx-grid .fx-g-item:hover{background:rgba(21,17,13,.04)}
+.fx-grid .fx-g-item.selected{background:rgba(209,74,31,.14)}
+.fx-grid .fx-g-item svg{width:38px;height:38px}
+.fx-grid .fx-g-item .n{font-size:11.5px;line-height:1.25;max-width:90px;word-wrap:break-word}
+
+/* ---------- NOTEPAD / EDITOR ---------- */
+.ed{display:flex;flex-direction:column;height:100%}
+.ed-bar{
+  display:flex;align-items:center;gap:8px;padding:7px 12px;
+  border-bottom:1px solid rgba(21,17,13,.1);flex-shrink:0;flex-wrap:wrap;
+}
+.ed-bar .title{font-family:var(--mono);font-size:11px;color:var(--ink-mid);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ed-bar .dirty{color:var(--rust);font-family:var(--mono);font-size:10px;margin-left:4px}
+textarea.ed-ta{
+  flex:1;width:100%;border:none;outline:none;resize:none;padding:16px 20px;
+  background:var(--cream);color:var(--ink);
+  font-family:var(--mono);font-size:13px;line-height:1.65;
+  tab-size:2;
+}
+.ed-status{
+  padding:4px 12px;border-top:1px solid rgba(21,17,13,.1);
+  font-family:var(--mono);font-size:10px;color:var(--ink-mid);
+  display:flex;gap:14px;flex-shrink:0;
+}
+
+/* code view split */
+.code-split{display:grid;grid-template-columns:1fr 1fr;height:100%;min-height:0}
+.code-split .pane{display:flex;flex-direction:column;min-width:0;min-height:0}
+.code-split .pane + .pane{border-left:1px solid rgba(21,17,13,.1)}
+.code-split iframe{width:100%;height:100%;border:none;background:#fff}
+
+/* ---------- CALCULATOR ---------- */
+.calc{
+  display:flex;flex-direction:column;height:100%;padding:18px;gap:10px;
+  background:var(--ink);color:var(--cream);
+}
+.calc-disp{
+  font-family:var(--serif);font-size:56px;text-align:right;padding:18px 14px;
+  background:var(--paper);color:var(--ink);border-radius:10px;
+  min-height:100px;display:flex;flex-direction:column;justify-content:flex-end;
+  overflow:hidden;
+}
+.calc-disp .expr{font-family:var(--mono);font-size:12px;color:var(--ink-mid);min-height:16px;font-style:normal}
+.calc-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;flex:1}
+.calc-key{
+  background:var(--paper);color:var(--ink);border-radius:10px;
+  font-family:var(--serif);font-size:26px;
+  display:flex;align-items:center;justify-content:center;
+  transition:background .12s, transform .08s;
+}
+.calc-key:hover{background:var(--paper-2)}
+.calc-key:active{transform:translateY(1px)}
+.calc-key.op{background:var(--rust);color:var(--cream)}
+.calc-key.op:hover{background:var(--rust-dim)}
+.calc-key.fn{background:rgba(241,232,214,.08);color:var(--cream);font-family:var(--mono);font-size:16px}
+.calc-key.fn:hover{background:rgba(241,232,214,.14)}
+.calc-key.zero{grid-column:span 2}
+
+/* ---------- IMAGE VIEWER ---------- */
+.imgv{display:flex;align-items:center;justify-content:center;height:100%;background:#0e0b08;padding:20px;overflow:auto;position:relative}
+.imgv img{max-width:100%;max-height:100%;object-fit:contain;transition:transform .2s ease}
+.imgv-bar{
+  position:absolute;bottom:14px;left:50%;transform:translateX(-50%);
+  background:rgba(28,23,19,.85);backdrop-filter:blur(12px);
+  padding:6px;border-radius:10px;display:flex;gap:4px;align-items:center;
+  border:1px solid rgba(241,232,214,.12);
+}
+.imgv-bar button{width:32px;height:32px;border-radius:7px;color:var(--cream);display:flex;align-items:center;justify-content:center}
+.imgv-bar button:hover{background:rgba(241,232,214,.1)}
+.imgv-bar button svg{width:15px;height:15px}
+.imgv-bar .zoom{font-family:var(--mono);font-size:11px;color:var(--cream);padding:0 8px;min-width:50px;text-align:center}
+
+/* ---------- MEDIA PLAYER ---------- */
+.media{display:flex;align-items:center;justify-content:center;height:100%;background:#0e0b08;padding:20px}
+.media video, .media audio{max-width:100%;max-height:100%}
+.media audio{width:min(520px,100%)}
+
+/* ---------- SETTINGS ---------- */
+.sett{display:grid;grid-template-columns:200px 1fr;height:100%}
+.sett-side{background:rgba(21,17,13,.04);border-right:1px solid rgba(21,17,13,.1);padding:14px 10px}
+.sett-tab{
+  display:flex;align-items:center;gap:8px;padding:8px 11px;border-radius:7px;
+  cursor:default;font-size:13px;margin-bottom:2px;
+}
+.sett-tab:hover{background:rgba(21,17,13,.05)}
+.sett-tab.active{background:var(--ink);color:var(--cream)}
+.sett-tab svg{width:15px;height:15px}
+.sett-main{padding:22px 28px;overflow:auto}
+.sett-main h3{font-family:var(--serif);font-style:italic;font-size:30px;font-weight:400;margin-bottom:4px}
+.sett-main .kicker{font-family:var(--mono);font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:var(--ink-mid);margin-bottom:18px}
+.sett-section{margin-bottom:28px}
+.sett-section h4{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-mid);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid rgba(21,17,13,.1)}
+.wp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+.wp-tile{
+  aspect-ratio:16/10;border-radius:10px;overflow:hidden;cursor:default;position:relative;
+  border:2px solid transparent;transition:border-color .15s, transform .15s;
+}
+.wp-tile:hover{transform:translateY(-2px)}
+.wp-tile.active{border-color:var(--rust)}
+.wp-tile .lbl{position:absolute;bottom:6px;left:8px;font-family:var(--mono);font-size:10px;color:var(--cream);text-shadow:0 1px 2px rgba(0,0,0,.7)}
+
+.stor-bar{height:22px;background:rgba(21,17,13,.06);border-radius:11px;overflow:hidden;display:flex;margin-top:8px}
+.stor-bar > div{height:100%;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:10px;color:var(--cream)}
+.stor-legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:12px}
+.stor-legend span{display:flex;align-items:center;gap:6px}
+.stor-legend i{width:10px;height:10px;border-radius:3px;display:inline-block}
+
+/* ---------- BROWSER ---------- */
+.brw{display:flex;flex-direction:column;height:100%}
+.brw-bar{display:flex;gap:6px;padding:8px;border-bottom:1px solid rgba(21,17,13,.1);background:rgba(21,17,13,.02)}
+.brw-bar button{width:30px;height:30px;border-radius:7px;color:var(--ink-mid);display:flex;align-items:center;justify-content:center}
+.brw-bar button:hover{background:rgba(21,17,13,.06);color:var(--ink)}
+.brw-bar button svg{width:14px;height:14px}
+.brw-bar .url{flex:1;padding:0 11px;height:30px;border-radius:7px;background:rgba(255,255,255,.7);border:1px solid var(--glass-edge);font-family:var(--mono);font-size:12px;outline:none}
+.brw-bar .url:focus{border-color:var(--rust);background:#fff}
+.brw iframe{flex:1;border:none;background:#fff}
+
+/* ---------- TABLE / CSV ---------- */
+.tbl-wrap{display:flex;flex-direction:column;height:100%}
+.tbl-tabs{display:flex;gap:2px;padding:6px 8px;background:rgba(21,17,13,.04);border-bottom:1px solid rgba(21,17,13,.1)}
+.tbl-tab{padding:5px 12px;border-radius:6px;font-size:12px;cursor:default;font-family:var(--mono);font-size:11px}
+.tbl-tab:hover{background:rgba(21,17,13,.05)}
+.tbl-tab.active{background:var(--ink);color:var(--cream)}
+.tbl-scroll{flex:1;overflow:auto}
+.tbl-scroll table{border-collapse:collapse;font-size:12px;font-family:var(--mono);min-width:100%}
+.tbl-scroll th, .tbl-scroll td{padding:6px 10px;border:1px solid rgba(21,17,13,.1);text-align:left;white-space:nowrap}
+.tbl-scroll th{background:rgba(21,17,13,.05);font-weight:600;position:sticky;top:0;font-size:10px;text-transform:uppercase;letter-spacing:.05em}
+.tbl-scroll tr:nth-child(even) td{background:rgba(21,17,13,.02)}
+
+/* ---------- TOAST ---------- */
+#toasts{position:fixed;bottom:84px;right:18px;z-index:500;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{
+  background:var(--ink);color:var(--cream);padding:10px 14px;border-radius:10px;
+  font-size:12.5px;border:1px solid rgba(241,232,214,.12);
+  box-shadow:var(--shadow);max-width:320px;pointer-events:auto;
+  animation:riseIn .22s ease;
+}
+.toast.err{border-color:var(--rust)}
+.toast .t{font-family:var(--serif);font-style:italic;font-size:15px;margin-bottom:2px}
+.toast .m{font-family:var(--mono);font-size:10.5px;opacity:.7;letter-spacing:.02em}
+
+/* ---------- DIALOG ---------- */
+.dlg-mask{position:fixed;inset:0;background:rgba(21,17,13,.45);backdrop-filter:blur(4px);z-index:400;display:flex;align-items:center;justify-content:center;animation:fadeIn .15s}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.dlg{
+  background:var(--cream);border-radius:var(--radius);padding:22px;
+  width:min(420px, calc(100vw - 32px));box-shadow:var(--shadow);
+  border:1px solid var(--glass-edge);animation:riseIn .22s cubic-bezier(.2,.8,.2,1);
+}
+.dlg h3{font-family:var(--serif);font-style:italic;font-size:24px;font-weight:400;margin-bottom:4px}
+.dlg p{font-size:13px;color:var(--ink-mid);margin-bottom:14px;line-height:1.5}
+.dlg .row{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+
+/* ---------- PAINT ---------- */
+.paint{display:flex;flex-direction:column;height:100%}
+.paint-tools{display:flex;gap:6px;padding:8px;border-bottom:1px solid rgba(21,17,13,.1);align-items:center;flex-wrap:wrap}
+.paint-tools .swatch{width:22px;height:22px;border-radius:5px;border:2px solid transparent;cursor:default;transition:border-color .12s}
+.paint-tools .swatch.on{border-color:var(--ink)}
+.paint-tools button{padding:5px 9px;border-radius:6px;font-size:11.5px;background:rgba(21,17,13,.05)}
+.paint-tools button.on{background:var(--ink);color:var(--cream)}
+.paint-tools button:hover{background:rgba(21,17,13,.08)}
+.paint-tools button.on:hover{background:var(--ink-soft)}
+.paint-canvas-wrap{flex:1;overflow:auto;background:var(--paper-2);display:flex;align-items:center;justify-content:center;padding:20px}
+.paint canvas{background:#fff;box-shadow:var(--shadow);cursor:crosshair;border-radius:4px;touch-action:none}
+
+/* ---------- MOBILE ---------- */
+@media (max-width: 720px){
+  #brand{top:10px;left:14px}
+  #brand .big{font-size:20px}
+  #clock{top:10px;right:14px}
+  #clock .t{font-size:22px}
+  #clock .d{font-size:8px}
+  #dock{bottom:8px;padding:4px;gap:2px}
+  .dock-btn{width:40px;height:40px}
+  .dock-btn .tip{display:none}
+  #start{left:8px;right:8px;bottom:64px;width:auto}
+  .start-grid{grid-template-columns:repeat(3,1fr)}
+  .dicon{width:80px}
+  .dicon .ico{width:38px;height:38px}
+  .dicon .lbl{font-size:10.5px}
+  .fx{grid-template-columns:1fr}
+  .fx-side{display:none}
+  .fx-side.show{display:block;position:absolute;inset:0;z-index:5;background:var(--cream)}
+  .sett{grid-template-columns:1fr}
+  .sett-side{display:none}
+  .code-split{grid-template-columns:1fr;grid-auto-rows:1fr}
+  .code-split .pane + .pane{border-left:none;border-top:1px solid rgba(21,17,13,.1)}
+}
+
+/* scrollbar */
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(21,17,13,.18);border-radius:5px;border:2px solid transparent;background-clip:padding-box}
+::-webkit-scrollbar-thumb:hover{background:rgba(21,17,13,.32);background-clip:padding-box;border:2px solid transparent}
+.win.dark ::-webkit-scrollbar-thumb{background:rgba(241,232,214,.16);background-clip:padding-box;border:2px solid transparent}
+
+/* drag-out visual hint */
+.dicon[draggable=true]{cursor:grab}
+.dicon[draggable=true]:active{cursor:grabbing}
+.dicon.touch-drag{position:fixed !important;z-index:999;pointer-events:none;opacity:.85;transform:scale(1.05)}
+
+/* long-press hint on mobile */
+@media (hover: none) and (pointer: coarse){
+  .dicon{touch-action:none}
+}
+</style>
+</head>
+<body>
+
+<!-- BOOT -->
+<div id="boot">
+  <div class="mark">atelier<em>.</em></div>
+  <div class="sub">a desktop in your browser</div>
+  <div class="bar"></div>
+</div>
+
+<!-- DESKTOP -->
+<div id="desktop"></div>
+<div id="grid"></div>
+<div id="grain"></div>
+<div id="desk"></div>
+<div id="lasso"></div>
+
+<!-- BRAND / CLOCK -->
+<div id="brand"><span class="big">atelier<em style="color:var(--rust)">.</em></span><span class="small">vol. i — browser edition</span></div>
+<div id="clock"><div class="t" id="clk-t">—</div><div class="d" id="clk-d">—</div></div>
+
+<!-- STAGE -->
+<div id="stage"></div>
+
+<!-- DOCK -->
+<div id="dock" role="toolbar" aria-label="Dock"></div>
+
+<!-- START -->
+<div id="start" role="menu">
+  <h4>All things, at your fingertips.</h4>
+  <div class="sub">Launch an app</div>
+  <div class="start-grid" id="start-grid"></div>
+</div>
+
+<!-- CONTEXT -->
+<div id="ctx"></div>
+
+<!-- TOASTS -->
+<div id="toasts"></div>
+
+<!-- hidden inputs -->
+<input type="file" id="fileIn" multiple style="display:none"/>
+<input type="file" id="wpIn" accept="image/*" style="display:none"/>
+
+<script>
+/* ==========================================================================
+   Atelier OS — single-file browser desktop
+   ========================================================================== */
+
+/* ---------------- UTIL ---------------- */
+const $ = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => [...r.querySelectorAll(s)];
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const fmtSize = n => {
+  if (n == null) return '—';
+  if (n < 1024) return n + ' B';
+  if (n < 1024*1024) return (n/1024).toFixed(1) + ' KB';
+  if (n < 1024*1024*1024) return (n/1024/1024).toFixed(1) + ' MB';
+  return (n/1024/1024/1024).toFixed(2) + ' GB';
+};
+const fmtDate = d => {
+  if (!d) return '—';
+  const dt = d instanceof Date ? d : new Date(d);
+  return dt.toLocaleDateString(undefined, {year:'numeric',month:'short',day:'2-digit'}) + ' ' +
+         dt.toLocaleTimeString(undefined, {hour:'2-digit',minute:'2-digit'});
+};
+const ext = name => {
+  const i = name.lastIndexOf('.');
+  return i > 0 ? name.slice(i+1).toLowerCase() : '';
+};
+const basename = p => p.split('/').filter(Boolean).pop() || '';
+const dirname = p => { const s = p.split('/').filter(Boolean); s.pop(); return '/'+s.join('/'); };
+const normPath = p => {
+  const parts = p.split('/').filter(Boolean);
+  const out = [];
+  for (const x of parts) {
+    if (x === '.' || x === '') continue;
+    if (x === '..') out.pop();
+    else out.push(x);
+  }
+  return '/' + out.join('/');
+};
+const joinPath = (a, b) => normPath(a.replace(/\/+$/,'') + '/' + b.replace(/^\/+/,''));
+const uid = () => Math.random().toString(36).slice(2,10);
+function toast(title, msg, err){
+  const t = document.createElement('div');
+  t.className = 'toast' + (err?' err':'');
+  t.innerHTML = `<div class="t">${esc(title)}</div>${msg?`<div class="m">${esc(msg)}</div>`:''}`;
+  $('#toasts').appendChild(t);
+  setTimeout(() => { t.style.opacity='0'; t.style.transition='opacity .3s'; setTimeout(()=>t.remove(), 300); }, 3600);
+}
+
+/* ---------------- SVG ICONS ---------------- */
+const I = {
+  folder: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/></svg>`,
+  file: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>`,
+  txt: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/></svg>`,
+  img: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="m21 16-5-5-9 9"/></svg>`,
+  audio: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V6l10-2v12"/><circle cx="6" cy="18" r="3"/><circle cx="16" cy="16" r="3"/></svg>`,
+  video: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="14" height="12" rx="2"/><path d="m21 8-4 4 4 4V8z"/></svg>`,
+  code: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m8 8-5 4 5 4M16 8l5 4-5 4M14 4l-4 16"/></svg>`,
+  pdf: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 14h1.5a1.5 1.5 0 0 1 0 3H9v-3zM13 14v3h2a1.5 1.5 0 0 0 0-3h-2z"/></svg>`,
+  zip: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M12 7v2M12 11v2M12 15v4"/></svg>`,
+  home: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 12 3l9 8"/><path d="M5 10v10h14V10"/></svg>`,
+  docs: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h12l4 4v12H4z"/><path d="M8 12h8M8 16h6"/></svg>`,
+  pics: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="m21 17-6-6-10 10"/></svg>`,
+  music: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V6l10-2v12"/><circle cx="6" cy="18" r="3"/><circle cx="16" cy="16" r="3"/></svg>`,
+  down: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v14M6 11l6 6 6-6M5 21h14"/></svg>`,
+  trash: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>`,
+  plus: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>`,
+  folderPlus: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/><path d="M12 11v6M9 14h6"/></svg>`,
+  filePlus: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M12 11v6M9 14h6"/></svg>`,
+  refresh: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 1-15.4 6.4L3 16"/><path d="M3 12a9 9 0 0 1 15.4-6.4L21 8"/><path d="M21 3v5h-5M3 21v-5h5"/></svg>`,
+  upload: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21V7M6 13l6-6 6 6M5 3h14"/></svg>`,
+  fullscreen: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>`,
+  exit: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>`,
+  menu: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>`,
+  close: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>`,
+  min: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14"/></svg>`,
+  max: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="5" width="14" height="14" rx="1.5"/></svg>`,
+  restore: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="7" width="12" height="12" rx="1"/><path d="M7 7V5h12v2"/></svg>`,
+  search: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>`,
+  left: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m15 6-6 6 6 6"/></svg>`,
+  right: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>`,
+  up: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>`,
+  copy: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>`,
+  cut: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.5 15.5M14.5 11.5 20 20M8 9l6 6"/></svg>`,
+  paste: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="5" width="10" height="16" rx="2"/><path d="M9 5V3h6v2"/></svg>`,
+  rename: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10-10-4-4L4 16v4z"/><path d="M14 6l4 4"/></svg>`,
+  open: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19h14a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-6l-2-2H5a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2z"/></svg>`,
+  eye: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>`,
+  save: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>`,
+  play: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polygon points="6 4 20 12 6 20 6 4"/></svg>`,
+  settings: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`,
+  calc: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8M8 12h.01M12 12h.01M16 12h.01M8 16h.01M12 16h.01M16 16h.01"/></svg>`,
+  paint: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a5 5 0 0 0-5 5c0 1.5.8 2 1.5 2s1-.3 1-1.2c0-.7.5-1 1-1s1 .3 1 1c0 2.5-3 3-3 6s2 5 5 5 6-2 6-6c0-4-5-4-5-7a4 4 0 0 0-4.5-4.8z"/></svg>`,
+  browser: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>`,
+  files: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h6l2 2h8v14H4z"/></svg>`,
+  notepad: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h10l4 4v14H5z"/><path d="M15 3v4h4M8 12h8M8 16h6"/></svg>`,
+  zoomin: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5M8 11h6M11 8v6"/></svg>`,
+  zoomout: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5M8 11h6"/></svg>`,
+  reset: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>`,
+  mount: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16M6 16l6-10 6 10M9 16v4M15 16v4"/></svg>`,
+  info: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v5h1"/></svg>`,
+  grid: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>`,
+  list: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>`,
+};
+function fileIcon(name, isDir){
+  if (isDir) return I.folder;
+  const e = ext(name);
+  if (['png','jpg','jpeg','gif','svg','webp','bmp','ico'].includes(e)) return I.img;
+  if (['mp3','wav','ogg','flac','aac','m4a'].includes(e)) return I.audio;
+  if (['mp4','webm','ogv','mov','mkv'].includes(e)) return I.video;
+  if (['pdf'].includes(e)) return I.pdf;
+  if (['zip','gz','tar','tgz','rar','7z'].includes(e)) return I.zip;
+  if (['html','css','js','json','xml','md','yaml','yml','ts','tsx','jsx','py','c','cpp','h','rs','go','java','sh','sql','ini','toml','conf'].includes(e)) return I.code;
+  if (['txt','log','rtf'].includes(e)) return I.txt;
+  if (['csv','tsv'].includes(e)) return I.list;
+  return I.file;
+}
+
+/* ==========================================================================
+   FILESYSTEM — OPFS primary, IndexedDB fallback, localStorage for metadata
+   ========================================================================== */
+const FS = (() => {
+  let opfsRoot = null;
+  let useOPFS = false;
+  // cache for dir handles
+  const dirCache = new Map();
+
+  // IndexedDB fallback
+  const IDB = (() => {
+    const DB_NAME = 'atelier_fs';
+    const STORE = 'files';
+    let db = null;
+    function open(){
+      if (db) return Promise.resolve(db);
+      return new Promise((res, rej) => {
+        const r = indexedDB.open(DB_NAME, 1);
+        r.onupgradeneeded = e => {
+          const d = e.target.result;
+          if (!d.objectStoreNames.contains(STORE)) d.createObjectStore(STORE);
+        };
+        r.onsuccess = e => { db = e.target.result; res(db); };
+        r.onerror = e => rej(e);
+      });
+    }
+    async function tx(mode, fn){
+      const d = await open();
+      return new Promise((res, rej) => {
+        const t = d.transaction(STORE, mode);
+        const s = t.objectStore(STORE);
+        let result;
+        const req = fn(s);
+        req.onsuccess = () => res(req.result);
+        req.onerror = () => rej(req.error);
+      });
+    }
+    return {
+      get: k => tx('readonly', s => s.get(k)),
+      set: (k, v) => tx('readwrite', s => s.put(v, k)),
+      del: k => tx('readwrite', s => s.delete(k)),
+      allKeys: () => tx('readonly', s => s.getAllKeys()),
+      clear: () => tx('readwrite', s => s.clear()),
+    };
+  })();
+
+  // Meta store — tracks file type (file/dir), mtime, size
+  const META_KEY = 'atelier_meta_v1';
+  async function loadMeta(){
+    try { const s = localStorage.getItem(META_KEY); return s ? JSON.parse(s) : {}; }
+    catch { return {}; }
+  }
+  async function saveMeta(m){ try { localStorage.setItem(META_KEY, JSON.stringify(m)); } catch(e){} }
+  let META = {};
+
+  async function init(){
+    try {
+      if (navigator.storage && navigator.storage.getDirectory){
+        opfsRoot = await navigator.storage.getDirectory();
+        useOPFS = true;
+      }
+    } catch(e){ console.warn('OPFS unavailable', e); }
+    META = await loadMeta();
+    // Ensure root dirs
+    await ensureDir('/home');
+    await ensureDir('/home/user');
+    await ensureDir('/home/user/Desktop');
+    await ensureDir('/home/user/Documents');
+    await ensureDir('/home/user/Pictures');
+    await ensureDir('/home/user/Music');
+    await ensureDir('/home/user/Downloads');
+    await ensureDir('/mnt');
+    await ensureDir('/mnt/local');
+    await ensureDir('/tmp');
+    await seed();
+  }
+
+  async function seed(){
+    // Check if Desktop empty — seed a welcome note
+    const d = await readdir('/home/user/Desktop');
+    if (d.length === 0){
+      await writeFile('/home/user/Desktop/Welcome.txt',
+`Welcome to Atelier.
+
+A desktop that lives inside your browser.
+Files persist via OPFS — close the tab, come back tomorrow, everything is still here.
+
+Tips:
+  · Right-click the desktop for a menu (wallpaper, upload, new folder…)
+  · Drag files from your computer onto the desktop to import them
+  · Drag desktop icons to rearrange; drag them off the browser to download
+  · Long-press on mobile to open the context menu
+
+Write something beautiful today.
+
+— atelier
+`);
+      await writeFile('/home/user/Desktop/README.md',
+`# Atelier
+
+> A quiet workspace in your browser.
+
+Built as a single HTML file. Zero back-end. Your files, your device.
+`);
+    }
+  }
+
+  async function ensureDir(p){
+    p = normPath(p);
+    if (META[p] && META[p].type === 'dir') return;
+    META[p] = { type:'dir', mtime: Date.now() };
+    await saveMeta(META);
+    if (useOPFS){
+      try { await getDirHandle(p, true); } catch(e){}
+    }
+  }
+
+  async function getDirHandle(p, create=false){
+    if (dirCache.has(p)) return dirCache.get(p);
+    const parts = p.split('/').filter(Boolean);
+    let cur = opfsRoot;
+    for (const x of parts){
+      cur = await cur.getDirectoryHandle(x, { create });
+    }
+    dirCache.set(p, cur);
+    return cur;
+  }
+
+  async function stat(path){
+    path = normPath(path);
+    // mounted local?
+    const m = mountAt(path);
+    if (m) return m.backend.stat(m.rel);
+    const meta = META[path];
+    if (!meta) return null;
+    let size = meta.size;
+    if (meta.type === 'file' && size == null){
+      try {
+        if (useOPFS){
+          const dh = await getDirHandle(dirname(path));
+          const fh = await dh.getFileHandle(basename(path));
+          const f = await fh.getFile();
+          size = f.size;
+        } else {
+          const blob = await IDB.get('f:'+path);
+          size = blob ? blob.size : 0;
+        }
+        meta.size = size;
+        saveMeta(META);
+      } catch(e){ size = 0; }
+    }
+    return { type: meta.type, mtime: meta.mtime, size: size ?? 0, name: basename(path) || '/' };
+  }
+
+  async function exists(path){ return !!(await stat(path)); }
+
+  async function readdir(path){
+    path = normPath(path);
+    const m = mountAt(path);
+    if (m && m.rel === '/') return m.backend.readdir('/');
+    const meta = META[path];
+    if (!meta || meta.type !== 'dir') throw new Error('Not a directory: '+path);
+    const out = [];
+    const prefix = path === '/' ? '/' : path + '/';
+    for (const k of Object.keys(META)){
+      if (k === path) continue;
+      if (!k.startsWith(prefix)) continue;
+      const rest = k.slice(prefix.length);
+      if (!rest.includes('/')) {
+        const e = META[k];
+        out.push({ name: rest, type: e.type, mtime: e.mtime, size: e.size || 0 });
+      }
+    }
+    // merge mounted subdirs
+    if (path === '/mnt/local'){
+      for (const [name, ent] of Object.entries(MOUNTS)){
+        out.push({ name, type:'dir', mtime: Date.now(), size:0, mounted:true });
+      }
+    } else if (m){
+      const sub = await m.backend.readdir(m.rel);
+      for (const e of sub) out.push(e);
+    }
+    return out;
+  }
+
+  async function readFile(path, asText=true){
+    path = normPath(path);
+    const m = mountAt(path);
+    if (m) return m.backend.readFile(m.rel, asText);
+    const meta = META[path];
+    if (!meta || meta.type !== 'file') throw new Error('Not a file: '+path);
+    if (useOPFS){
+      const dh = await getDirHandle(dirname(path));
+      const fh = await dh.getFileHandle(basename(path));
+      const f = await fh.getFile();
+      return asText ? await f.text() : await f.arrayBuffer();
+    } else {
+      const blob = await IDB.get('f:'+path);
+      if (!blob) throw new Error('File missing in fallback');
+      return asText ? await blob.text() : await blob.arrayBuffer();
+    }
+  }
+
+  async function writeFile(path, data){
+    path = normPath(path);
+    const m = mountAt(path);
+    if (m) return m.backend.writeFile(m.rel, data);
+    // ensure parent dirs
+    await ensureDir(dirname(path));
+    let size = 0;
+    if (useOPFS){
+      const dh = await getDirHandle(dirname(path), true);
+      const fh = await dh.getFileHandle(basename(path), { create:true });
+      const w = await fh.createWritable();
+      let blob;
+      if (typeof data === 'string') blob = new Blob([data], {type:'text/plain'});
+      else if (data instanceof Blob) blob = data;
+      else if (data instanceof ArrayBuffer || ArrayBuffer.isView(data)) blob = new Blob([data]);
+      else blob = new Blob([data]);
+      size = blob.size;
+      await w.write(blob);
+      await w.close();
+    } else {
+      let blob;
+      if (typeof data === 'string') blob = new Blob([data]);
+      else if (data instanceof Blob) blob = data;
+      else blob = new Blob([data]);
+      size = blob.size;
+      await IDB.set('f:'+path, blob);
+    }
+    META[path] = { type:'file', mtime: Date.now(), size };
+    await saveMeta(META);
+  }
+
+  async function mkdir(path){
+    path = normPath(path);
+    if (META[path]) throw new Error('Already exists: '+path);
+    await ensureDir(dirname(path));
+    META[path] = { type:'dir', mtime: Date.now() };
+    await saveMeta(META);
+    if (useOPFS){ try { await getDirHandle(path, true); } catch(e){} }
+  }
+
+  async function unlink(path){
+    path = normPath(path);
+    const meta = META[path];
+    if (!meta) return;
+    if (meta.type === 'dir'){
+      // recursive
+      const prefix = path + '/';
+      for (const k of Object.keys(META)){
+        if (k === path || k.startsWith(prefix)) delete META[k];
+      }
+      if (useOPFS){
+        try {
+          const dh = await getDirHandle(dirname(path));
+          await dh.removeEntry(basename(path), { recursive:true });
+        } catch(e){}
+      }
+    } else {
+      delete META[path];
+      if (useOPFS){
+        try {
+          const dh = await getDirHandle(dirname(path));
+          await dh.removeEntry(basename(path));
+        } catch(e){}
+      } else {
+        await IDB.del('f:'+path);
+      }
+    }
+    await saveMeta(META);
+  }
+
+  async function rename(src, dst){
+    src = normPath(src); dst = normPath(dst);
+    const meta = META[src];
+    if (!meta) throw new Error('Not found');
+    if (META[dst]) throw new Error('Destination exists');
+    if (meta.type === 'dir'){
+      const prefix = src + '/';
+      const moves = [[src, dst]];
+      for (const k of Object.keys(META)){
+        if (k.startsWith(prefix)) moves.push([k, dst + k.slice(src.length)]);
+      }
+      for (const [a,b] of moves){
+        META[b] = META[a];
+        delete META[a];
+      }
+      // OPFS move: rewrite contents
+      if (useOPFS){
+        try {
+          // Move files within
+          for (const [a,b] of moves){
+            if (META[b]?.type === 'file'){
+              try {
+                const adh = await getDirHandle(dirname(a));
+                const af = await (await adh.getFileHandle(basename(a))).getFile();
+                await ensureDir(dirname(b));
+                const bdh = await getDirHandle(dirname(b), true);
+                const bfh = await bdh.getFileHandle(basename(b), {create:true});
+                const w = await bfh.createWritable();
+                await w.write(af); await w.close();
+                await adh.removeEntry(basename(a));
+              } catch(e){}
+            }
+          }
+          // Remove the original (now-empty) dir entry at top level
+          try {
+            const pdh = await getDirHandle(dirname(src));
+            await pdh.removeEntry(basename(src), {recursive:true});
+          } catch(e){}
+        } catch(e){}
+      }
+    } else {
+      META[dst] = meta;
+      delete META[src];
+      if (useOPFS){
+        try {
+          const adh = await getDirHandle(dirname(src));
+          const af = await (await adh.getFileHandle(basename(src))).getFile();
+          await ensureDir(dirname(dst));
+          const bdh = await getDirHandle(dirname(dst), true);
+          const bfh = await bdh.getFileHandle(basename(dst), {create:true});
+          const w = await bfh.createWritable();
+          await w.write(af); await w.close();
+          await adh.removeEntry(basename(src));
+        } catch(e){}
+      } else {
+        const blob = await IDB.get('f:'+src);
+        if (blob){ await IDB.set('f:'+dst, blob); await IDB.del('f:'+src); }
+      }
+    }
+    await saveMeta(META);
+  }
+
+  async function copy(src, dst){
+    src = normPath(src); dst = normPath(dst);
+    const meta = META[src];
+    if (!meta) throw new Error('Not found');
+    if (meta.type === 'dir'){
+      await mkdir(dst);
+      const kids = await readdir(src);
+      for (const k of kids) await copy(src + '/' + k.name, dst + '/' + k.name);
+    } else {
+      const data = await readFile(src, false);
+      await writeFile(dst, data);
+    }
+  }
+
+  // List full tree (for storage stats)
+  async function tree(){
+    const out = { files:0, dirs:0, bytes:0, byExt:{}, byDir:{} };
+    for (const [k,v] of Object.entries(META)){
+      if (v.type === 'dir'){ out.dirs++; continue; }
+      out.files++;
+      out.bytes += v.size || 0;
+      const e = ext(k) || 'none';
+      out.byExt[e] = (out.byExt[e]||0) + (v.size||0);
+      const d = dirname(k);
+      out.byDir[d] = (out.byDir[d]||0) + (v.size||0);
+    }
+    return out;
+  }
+
+  async function reset(){
+    if (useOPFS){
+      try {
+        for await (const name of opfsRoot.keys()){
+          try { await opfsRoot.removeEntry(name, {recursive:true}); } catch(e){}
+        }
+      } catch(e){}
+    }
+    try { await IDB.clear(); } catch(e){}
+    try { localStorage.removeItem(META_KEY); localStorage.removeItem('atelier_wp'); localStorage.removeItem('atelier_icons'); localStorage.removeItem('atelier_recent_mounts'); } catch(e){}
+    META = {};
+    dirCache.clear();
+    await init();
+  }
+
+  return { init, stat, exists, readdir, readFile, writeFile, mkdir, unlink, rename, copy, tree, reset, ensureDir,
+    get META(){ return META; }
+  };
+})();
+
+/* ==========================================================================
+   MOUNTS — File System Access API (local folder mounting)
+   ========================================================================== */
+const MOUNTS = {}; // name -> { handle, dirHandle }
+
+// A mount backend presents the same interface shape the FS API expects
+function makeLocalBackend(mountName, rootHandle){
+  const relCache = new Map(); // relative path -> FileSystemDirectoryHandle
+  async function dh(rel){
+    rel = normPath(rel);
+    if (rel === '/') return rootHandle;
+    if (relCache.has(rel)) return relCache.get(rel);
+    const parts = rel.split('/').filter(Boolean);
+    let cur = rootHandle;
+    for (const p of parts){
+      cur = await cur.getDirectoryHandle(p, { create:false });
+    }
+    relCache.set(rel, cur);
+    return cur;
+  }
+  async function stat(rel){
+    rel = normPath(rel);
+    if (rel === '/') return { type:'dir', mtime:Date.now(), size:0, name: mountName };
+    const parent = await dh(dirname(rel));
+    const name = basename(rel);
+    try {
+      const fh = await parent.getFileHandle(name, {create:false});
+      const f = await fh.getFile();
+      return { type:'file', mtime: f.lastModified, size: f.size, name };
+    } catch(e){}
+    try {
+      const d = await parent.getDirectoryHandle(name, {create:false});
+      return { type:'dir', mtime:Date.now(), size:0, name };
+    } catch(e){}
+    return null;
+  }
+  async function readdir(rel){
+    const d = await dh(rel);
+    const out = [];
+    for await (const [name, handle] of d.entries()){
+      out.push({ name, type: handle.kind === 'file' ? 'file' : 'dir', mtime: Date.now(), size: 0 });
+    }
+    return out;
+  }
+  async function readFile(rel, asText=true){
+    const p = await dh(dirname(rel));
+    const fh = await p.getFileHandle(basename(rel));
+    const f = await fh.getFile();
+    return asText ? await f.text() : await f.arrayBuffer();
+  }
+  async function writeFile(rel, data){
+    const p = await dh(dirname(rel));
+    const fh = await p.getFileHandle(basename(rel), {create:true});
+    const w = await fh.createWritable();
+    let blob;
+    if (typeof data === 'string') blob = new Blob([data]);
+    else if (data instanceof Blob) blob = data;
+    else blob = new Blob([data]);
+    await w.write(blob); await w.close();
+  }
+  async function mkdir(rel){
+    const p = await dh(dirname(rel));
+    await p.getDirectoryHandle(basename(rel), {create:true});
+    relCache.delete(normPath(rel));
+  }
+  async function unlink(rel){
+    const p = await dh(dirname(rel));
+    const name = basename(rel);
+    try { await p.removeEntry(name); } catch(e){
+      try { await p.removeEntry(name, {recursive:true}); } catch(e2){ throw e2; }
+    }
+  }
+  async function rename(s,d){
+    // Simple implementation: copy + delete
+    const sAbs = '/mnt/local/'+mountName+s;
+    const dAbs = '/mnt/local/'+mountName+d;
+    await FS.copy(sAbs, dAbs);
+    await FS.unlink(sAbs);
+  }
+  return { stat, readdir, readFile, writeFile, mkdir, unlink, rename };
+}
+
+function mountAt(path){
+  path = normPath(path);
+  const prefix = '/mnt/local/';
+  if (!path.startsWith(prefix)) return null;
+  const rest = path.slice(prefix.length);
+  const slash = rest.indexOf('/');
+  const name = slash < 0 ? rest : rest.slice(0, slash);
+  if (!MOUNTS[name]) return null;
+  const rel = slash < 0 ? '/' : rest.slice(slash);
+  return { name, backend: MOUNTS[name], rel: normPath(rel) };
+}
+
+async function mountLocalFolder(){
+  if (!window.showDirectoryPicker){
+    toast('Unavailable', 'Your browser does not support File System Access API.', true);
+    return null;
+  }
+  try {
+    const h = await window.showDirectoryPicker({ mode:'readwrite' });
+    const name = h.name;
+    if (MOUNTS[name]){ toast('Already mounted', name); return name; }
+    MOUNTS[name] = makeLocalBackend(name, h);
+    await FS.ensureDir('/mnt/local/'+name);
+    // persist names only (handle can't survive reload)
+    try {
+      const arr = JSON.parse(localStorage.getItem('atelier_recent_mounts')||'[]');
+      if (!arr.includes(name)){ arr.push(name); localStorage.setItem('atelier_recent_mounts', JSON.stringify(arr)); }
+    } catch(e){}
+    toast('Mounted', name);
+    return name;
+  } catch(e){ return null; }
+}
+
+function unmountLocal(name){
+  if (!MOUNTS[name]) return;
+  delete MOUNTS[name];
+  try {
+    const arr = JSON.parse(localStorage.getItem('atelier_recent_mounts')||'[]');
+    const i = arr.indexOf(name);
+    if (i >= 0){ arr.splice(i,1); localStorage.setItem('atelier_recent_mounts', JSON.stringify(arr)); }
+  } catch(e){}
+}
+
+/* ==========================================================================
+   WINDOW MANAGER
+   ========================================================================== */
+const WM = (() => {
+  const stage = $('#stage');
+  let zTop = 100;
+  const windows = new Map(); // id -> {el, app, state}
+
+  function create({ title, icon, width=640, height=440, x, y, dark=false, app, body }){
+    const id = 'w'+uid();
+    const el = document.createElement('div');
+    el.className = 'win' + (dark?' dark':'');
+    const W = Math.min(width, window.innerWidth - 24);
+    const H = Math.min(height, window.innerHeight - 100);
+    const X = x ?? Math.max(20, (window.innerWidth - W)/2 + (windows.size*20)%80 - 40);
+    const Y = y ?? Math.max(20, (window.innerHeight - H)/2 + (windows.size*20)%80 - 40);
+    el.style.left = X+'px'; el.style.top = Y+'px'; el.style.width = W+'px'; el.style.height = H+'px';
+    el.innerHTML = `
+      <div class="rh n"></div><div class="rh s"></div><div class="rh e"></div><div class="rh w"></div>
+      <div class="rh ne"></div><div class="rh nw"></div><div class="rh se"></div><div class="rh sw"></div>
+      <div class="win-head">
+        <div style="width:18px;height:18px;display:flex;align-items:center;justify-content:center;opacity:.75">${icon||''}</div>
+        <div class="win-title">${esc(title)}</div>
+        <div class="win-ctrls">
+          <button class="wc min" title="Minimize">${I.min}</button>
+          <button class="wc max" title="Maximize">${I.max}</button>
+          <button class="wc close" title="Close">${I.close}</button>
+        </div>
+      </div>
+      <div class="win-body"></div>
+    `;
+    stage.appendChild(el);
+    const winBody = el.querySelector('.win-body');
+    if (typeof body === 'string') winBody.innerHTML = body;
+    else if (body instanceof Node) winBody.appendChild(body);
+
+    const rec = { el, app, id, title, icon, state:{max:false,min:false,restore:null} };
+    windows.set(id, rec);
+
+    focus(id);
+    bindDrag(el, rec);
+    bindResize(el, rec);
+    el.querySelector('.wc.min').onclick = () => minimize(id);
+    el.querySelector('.wc.max').onclick = () => toggleMax(id);
+    el.querySelector('.wc.close').onclick = () => close(id);
+    el.addEventListener('pointerdown', () => focus(id), true);
+    el.querySelector('.win-head').addEventListener('dblclick', () => toggleMax(id));
+    Dock.render();
+    return { id, el, body: winBody, rec };
+  }
+
+  function focus(id){
+    const w = windows.get(id); if (!w) return;
+    zTop++;
+    w.el.style.zIndex = zTop;
+  }
+  function close(id){
+    const w = windows.get(id); if (!w) return;
+    w.el.classList.add('closing');
+    setTimeout(() => {
+      w.el.remove();
+      windows.delete(id);
+      Dock.render();
+    }, 180);
+  }
+  function minimize(id){
+    const w = windows.get(id); if (!w) return;
+    w.state.min = true;
+    w.el.classList.add('min');
+    Dock.render();
+  }
+  function restore(id){
+    const w = windows.get(id); if (!w) return;
+    w.state.min = false;
+    w.el.classList.remove('min');
+    focus(id);
+    Dock.render();
+  }
+  function toggleMax(id){
+    const w = windows.get(id); if (!w) return;
+    if (w.state.max){
+      const r = w.state.restore;
+      w.el.style.left = r.left; w.el.style.top = r.top;
+      w.el.style.width = r.width; w.el.style.height = r.height;
+      w.el.classList.remove('max');
+      w.state.max = false;
+      w.el.querySelector('.wc.max').innerHTML = I.max;
+    } else {
+      w.state.restore = { left:w.el.style.left, top:w.el.style.top, width:w.el.style.width, height:w.el.style.height };
+      w.el.style.left = '0'; w.el.style.top = '0';
+      w.el.style.width = '100vw'; w.el.style.height = '100vh';
+      w.el.classList.add('max');
+      w.state.max = true;
+      w.el.querySelector('.wc.max').innerHTML = I.restore;
+    }
+  }
+  function setTitle(id, html){
+    const w = windows.get(id); if (!w) return;
+    w.el.querySelector('.win-title').innerHTML = html;
+  }
+  function get(id){ return windows.get(id); }
+
+  /* ----- DRAG ----- */
+  function bindDrag(el, rec){
+    const head = el.querySelector('.win-head');
+    head.addEventListener('pointerdown', e => {
+      if (e.target.closest('.wc')) return;
+      if (rec.state.max) return;
+      el.setPointerCapture(e.pointerId);
+      const sx = e.clientX, sy = e.clientY;
+      const ox = el.offsetLeft, oy = el.offsetTop;
+      const onMove = ev => {
+        el.style.left = Math.max(-100, ox + ev.clientX - sx) + 'px';
+        el.style.top = Math.max(0, oy + ev.clientY - sy) + 'px';
+      };
+      const onUp = ev => {
+        el.releasePointerCapture(ev.pointerId);
+        el.removeEventListener('pointermove', onMove);
+        el.removeEventListener('pointerup', onUp);
+      };
+      el.addEventListener('pointermove', onMove);
+      el.addEventListener('pointerup', onUp);
+    });
+  }
+  /* ----- RESIZE ----- */
+  function bindResize(el, rec){
+    el.querySelectorAll('.rh').forEach(h => {
+      h.addEventListener('pointerdown', e => {
+        e.stopPropagation();
+        if (rec.state.max) return;
+        h.setPointerCapture(e.pointerId);
+        const sx = e.clientX, sy = e.clientY;
+        const ow = el.offsetWidth, oh = el.offsetHeight;
+        const ox = el.offsetLeft, oy = el.offsetTop;
+        const cls = [...h.classList].find(c => c.startsWith('rh ')&&c!=='rh');
+        const onMove = ev => {
+          const dx = ev.clientX - sx, dy = ev.clientY - sy;
+          let nw=ow, nh=oh, nx=ox, ny=oy;
+          if (cls.includes('e')) nw = Math.max(280, ow+dx);
+          if (cls.includes('s')) nh = Math.max(180, oh+dy);
+          if (cls.includes('w')){ nw = Math.max(280, ow-dx); nx = ox + (ow-nw); }
+          if (cls.includes('n')){ nh = Math.max(180, oh-dy); ny = oy + (oh-nh); }
+          el.style.width = nw+'px'; el.style.height = nh+'px';
+          el.style.left = nx+'px'; el.style.top = ny+'px';
+        };
+        const onUp = ev => {
+          h.releasePointerCapture(ev.pointerId);
+          h.removeEventListener('pointermove', onMove);
+          h.removeEventListener('pointerup', onUp);
+        };
+        h.addEventListener('pointermove', onMove);
+        h.addEventListener('pointerup', onUp);
+      });
+    });
+  }
+
+  function list(){ return [...windows.values()]; }
+
+  return { create, close, focus, minimize, restore, toggleMax, setTitle, get, list };
+})();
+
+/* ==========================================================================
+   DOCK
+   ========================================================================== */
+const Dock = (() => {
+  const dock = $('#dock');
+  const DOCK_ITEMS = [
+    { id:'start', icon:I.menu, tip:'Start', action: () => StartMenu.toggle() },
+    { id:'sep' },
+    { id:'files', icon:I.files, tip:'Files', action: () => APPS.files.open() },
+    { id:'notepad', icon:I.notepad, tip:'Notepad', action: () => APPS.notepad.open() },
+    { id:'calc', icon:I.calc, tip:'Calculator', action: () => APPS.calc.open() },
+    { id:'paint', icon:I.paint, tip:'Paint', action: () => APPS.paint.open() },
+    { id:'browser', icon:I.browser, tip:'Browser', action: () => APPS.browser.open() },
+    { id:'settings', icon:I.settings, tip:'Settings', action: () => APPS.settings.open() },
+  ];
+
+  function render(){
+    dock.innerHTML = '';
+    for (const it of DOCK_ITEMS){
+      if (it.id === 'sep'){ const s = document.createElement('div'); s.className='dock-sep'; dock.appendChild(s); continue; }
+      const b = document.createElement('button');
+      b.className = 'dock-btn';
+      b.innerHTML = `${it.icon}<span class="pip"></span><span class="tip">${esc(it.tip)}</span>`;
+      b.onclick = it.action;
+      // mark open windows for this app
+      if (it.id !== 'start'){
+        const open = WM.list().some(w => w.app === it.id);
+        if (open) b.classList.add('open');
+      }
+      dock.appendChild(b);
+    }
+    // Per-window dock items for running apps (show pip per open window)
+    const openApps = {};
+    for (const w of WM.list()){ if (w.app) openApps[w.app] = (openApps[w.app]||0)+1; }
+    // Already handled via .open class
+  }
+
+  return { render };
+})();
+
+/* ==========================================================================
+   START MENU
+   ========================================================================== */
+const StartMenu = (() => {
+  const el = $('#start');
+  const grid = $('#start-grid');
+  function build(){
+    grid.innerHTML = '';
+    const items = [
+      ['files', 'Files', I.files],
+      ['notepad', 'Notepad', I.notepad],
+      ['code', 'Code Editor', I.code],
+      ['calc', 'Calculator', I.calc],
+      ['paint', 'Paint', I.paint],
+      ['browser', 'Browser', I.browser],
+      ['settings', 'Settings', I.settings],
+    ];
+    for (const [id, name, icon] of items){
+      const b = document.createElement('div');
+      b.className = 'start-item';
+      b.innerHTML = `${icon}<div class="n">${esc(name)}</div>`;
+      b.onclick = () => { APPS[id].open(); toggle(false); };
+      grid.appendChild(b);
+    }
+  }
+  function toggle(force){
+    const on = force === undefined ? !el.classList.contains('on') : force;
+    el.classList.toggle('on', on);
+  }
+  document.addEventListener('click', e => {
+    if (!el.contains(e.target) && !e.target.closest('.dock-btn')) toggle(false);
+  });
+  build();
+  return { toggle };
+})();
+
+/* ==========================================================================
+   CLOCK
+   ========================================================================== */
+function tickClock(){
+  const d = new Date();
+  const h = d.getHours().toString().padStart(2,'0');
+  const m = d.getMinutes().toString().padStart(2,'0');
+  $('#clk-t').textContent = `${h}:${m}`;
+  $('#clk-d').textContent = d.toLocaleDateString(undefined, {weekday:'short', month:'short', day:'numeric'}).toUpperCase();
+}
+setInterval(tickClock, 10000); tickClock();
+
+/* ==========================================================================
+   DESKTOP ICONS
+   ========================================================================== */
+const Desktop = (() => {
+  const desk = $('#desk');
+  const lasso = $('#lasso');
+  const ICON_KEY = 'atelier_icons';
+  const GRID = 104; // vertical spacing
+  const COL = 108;
+  let selected = new Set();
+  // cache of preloaded blob URLs keyed by desktop path for native drag-out
+  const blobCache = new Map();
+
+  function loadPositions(){
+    try { return JSON.parse(localStorage.getItem(ICON_KEY) || '{}'); }
+    catch { return {}; }
+  }
+  function savePositions(p){ localStorage.setItem(ICON_KEY, JSON.stringify(p)); }
+
+  async function render(){
+    const positions = loadPositions();
+    desk.innerHTML = '';
+    const entries = await FS.readdir('/home/user/Desktop');
+    // Sort: folders first, then files
+    entries.sort((a,b) => (a.type==='dir'?0:1)-(b.type==='dir'?0:1) || a.name.localeCompare(b.name));
+
+    // auto-arrange unpositioned icons into columns
+    const taken = new Set();
+    for (const e of entries){
+      const k = '/home/user/Desktop/'+e.name;
+      if (!positions[k]){
+        // find first free slot starting from top-left column
+        let placed = false;
+        for (let col=0; col<30 && !placed; col++){
+          for (let row=0; row<20 && !placed; row++){
+            const x = 20 + col*COL;
+            const y = 20 + row*GRID;
+            const key = x+','+y;
+            if (!taken.has(key)){
+              positions[k] = {x, y};
+              taken.add(key);
+              placed = true;
+            }
+          }
+        }
+      } else {
+        taken.add(positions[k].x+','+positions[k].y);
+      }
+    }
+    savePositions(positions);
+
+    for (const e of entries){
+      const path = '/home/user/Desktop/'+e.name;
+      const pos = positions[path] || {x:20,y:20};
+      const el = document.createElement('div');
+      el.className = 'dicon';
+      el.dataset.path = path;
+      el.dataset.name = e.name;
+      el.dataset.type = e.type;
+      el.style.left = pos.x+'px';
+      el.style.top = pos.y+'px';
+      el.draggable = true;
+      el.innerHTML = `<div class="ico">${fileIcon(e.name, e.type==='dir')}</div><div class="lbl">${esc(e.name)}</div>`;
+      desk.appendChild(el);
+      bindIcon(el);
+    }
+  }
+
+  function bindIcon(el){
+    // Selection
+    el.addEventListener('pointerdown', e => {
+      if (e.button === 2) return;
+      const path = el.dataset.path;
+      if (e.shiftKey){
+        if (selected.has(path)) selected.delete(path); else selected.add(path);
+      } else if (!selected.has(path)){
+        selected.clear(); selected.add(path);
+      }
+      updateSel();
+    });
+    // Click / double-click
+    let clickTimer = null, clicks = 0;
+    el.addEventListener('click', e => {
+      clicks++;
+      if (clicks === 1){
+        clickTimer = setTimeout(() => { clicks = 0; }, 280);
+      } else {
+        clearTimeout(clickTimer); clicks = 0;
+        openDesktopPath(el.dataset.path);
+      }
+    });
+    // Context menu
+    el.addEventListener('contextmenu', e => {
+      e.preventDefault();
+      if (!selected.has(el.dataset.path)){ selected.clear(); selected.add(el.dataset.path); updateSel(); }
+      Context.show(e.clientX, e.clientY, Context.forIcon(el));
+    });
+
+    /* ----- Native HTML5 drag (for internal reposition + drag-out to OS) ----- */
+    el.addEventListener('mouseenter', preloadIcon);
+    el.addEventListener('dragstart', e => {
+      el.classList.add('dragging');
+      const path = el.dataset.path;
+      const name = el.dataset.name;
+      const isDir = el.dataset.type === 'dir';
+      // Internal metadata
+      e.dataTransfer.setData('application/x-atelier-path', path);
+      e.dataTransfer.setData('application/x-atelier-name', name);
+      e.dataTransfer.setData('application/x-atelier-type', isDir?'dir':'file');
+      e.dataTransfer.effectAllowed = 'move';
+      if (isDir) return;
+      // External: provide file items so OS accepts drag-out
+      const cached = blobCache.get(path);
+      if (cached){
+        try {
+          // Must be synchronous here — use cached File
+          e.dataTransfer.items.add(cached.file);
+          const url = cached.url;
+          e.dataTransfer.setData('DownloadURL', `${cached.file.type||'application/octet-stream'}:${cached.file.name}:${url}`);
+        } catch(err){ console.warn('drag setup', err); }
+      }
+    });
+    el.addEventListener('dragend', () => {
+      el.classList.remove('dragging');
+    });
+
+    /* ----- TOUCH drag for mobile (HTML5 drag doesn't work on touch) ----- */
+    let tLong = null, tDrag = null, tClone = null, tStart = null;
+    el.addEventListener('touchstart', e => {
+      if (e.touches.length !== 1) return;
+      const t = e.touches[0];
+      tStart = { x:t.clientX, y:t.clientY, time:Date.now() };
+      const r = el.getBoundingClientRect();
+      tDrag = { ox: t.clientX - r.left, oy: t.clientY - r.top, rect:r, path: el.dataset.path };
+      tLong = setTimeout(() => {
+        if (!tDrag) return;
+        // begin touch drag — clone follows finger
+        const clone = el.cloneNode(true);
+        clone.classList.add('touch-drag');
+        clone.style.left = (t.clientX - tDrag.ox) + 'px';
+        clone.style.top = (t.clientY - tDrag.oy) + 'px';
+        clone.style.width = r.width + 'px';
+        document.body.appendChild(clone);
+        tClone = clone;
+        el.classList.add('dragging');
+        if (navigator.vibrate) navigator.vibrate(20);
+      }, 380);
+    }, {passive:true});
+    el.addEventListener('touchmove', e => {
+      if (!tDrag) return;
+      const t = e.touches[0];
+      const dx = t.clientX - tStart.x, dy = t.clientY - tStart.y;
+      // if moved too much before long-press fires, cancel
+      if (!tClone && Math.hypot(dx,dy) > 12 && Date.now() - tStart.time < 380){
+        clearTimeout(tLong); tLong = null; tDrag = null; return;
+      }
+      if (tClone){
+        e.preventDefault();
+        tClone.style.left = (t.clientX - tDrag.ox) + 'px';
+        tClone.style.top = (t.clientY - tDrag.oy) + 'px';
+        // highlight drop targets — hide clone briefly to see through
+        document.querySelectorAll('.dicon.drop-target').forEach(x => x.classList.remove('drop-target'));
+        tClone.style.display = 'none';
+        const under = document.elementFromPoint(t.clientX, t.clientY);
+        tClone.style.display = '';
+        under?.closest('.dicon.drop-cand')?.classList.add('drop-target');
+      }
+    }, {passive:false});
+    const endTouch = async e => {
+      clearTimeout(tLong); tLong = null;
+      if (!tDrag) return;
+      const t = e.changedTouches?.[0];
+      const wasDrag = !!tClone;
+      if (tClone){
+        const dropEl = document.elementFromPoint(t.clientX, t.clientY)?.closest('.dicon');
+        if (dropEl && dropEl !== el && dropEl.dataset.type === 'dir'){
+          // move into folder
+          try {
+            await FS.rename(tDrag.path, joinPath(dropEl.dataset.path, basename(tDrag.path)));
+            Desktop.render();
+          } catch(err){ toast('Move failed', err.message, true); }
+        } else {
+          // internal reposition
+          const positions = JSON.parse(localStorage.getItem('atelier_icons')||'{}');
+          const deskRect = desk.getBoundingClientRect();
+          let x = t.clientX - deskRect.left - tDrag.ox;
+          let y = t.clientY - deskRect.top - tDrag.oy;
+          x = Math.max(8, Math.min(window.innerWidth - 100, x));
+          y = Math.max(8, Math.min(window.innerHeight - 160, y));
+          positions[tDrag.path] = { x, y };
+          localStorage.setItem('atelier_icons', JSON.stringify(positions));
+          Desktop.render();
+        }
+        tClone.remove(); tClone = null;
+        el.classList.remove('dragging');
+        document.querySelectorAll('.dicon.drop-target').forEach(x => x.classList.remove('drop-target'));
+      } else if (t && Math.hypot(t.clientX - tStart.x, t.clientY - tStart.y) < 8){
+        // It was a tap, not a drag — treat as click selection
+        selected.clear(); selected.add(el.dataset.path); updateSel();
+      }
+      tDrag = null; tStart = null;
+    };
+    el.addEventListener('touchend', endTouch);
+    el.addEventListener('touchcancel', endTouch);
+    // mark folder icons as valid drop candidates during touch drag
+    if (el.dataset.type === 'dir') el.classList.add('drop-cand');
+
+    // Drop target (file move into folder icon)
+    el.addEventListener('dragover', e => {
+      if (el.dataset.type !== 'dir') return;
+      const src = e.dataTransfer.types.includes('application/x-atelier-path');
+      if (!src && !e.dataTransfer.types.includes('Files')) return;
+      e.preventDefault();
+      el.classList.add('drop-target');
+    });
+    el.addEventListener('dragleave', () => el.classList.remove('drop-target'));
+    el.addEventListener('drop', async e => {
+      e.preventDefault();
+      el.classList.remove('drop-target');
+      const srcPath = e.dataTransfer.getData('application/x-atelier-path');
+      if (srcPath){
+        const srcName = e.dataTransfer.getData('application/x-atelier-name');
+        const dstDir = el.dataset.path;
+        if (dstDir !== dirname(srcPath)){
+          try {
+            await FS.rename(srcPath, joinPath(dstDir, srcName));
+            blobCache.delete(srcPath);
+            render();
+          } catch(err){ toast('Move failed', err.message, true); }
+        }
+        return;
+      }
+      // Files from OS dropped on folder icon
+      if (e.dataTransfer.files?.length){
+        const files = [...e.dataTransfer.files];
+        await importFiles(files, el.dataset.path);
+      }
+    });
+  }
+
+  async function preloadIcon(ev){
+    const el = ev.currentTarget;
+    if (el.dataset.type === 'dir') return;
+    const path = el.dataset.path;
+    if (blobCache.has(path)) return;
+    try {
+      const buf = await FS.readFile(path, false);
+      const ext_ = ext(el.dataset.name);
+      const mime = mimeFor(ext_) || 'application/octet-stream';
+      const file = new File([buf], el.dataset.name, { type: mime, lastModified: FS.META[path]?.mtime || Date.now() });
+      const url = URL.createObjectURL(file);
+      blobCache.set(path, { file, url });
+    } catch(e){}
+  }
+  // Cleanup blob URLs periodically
+  setInterval(() => {
+    const now = Date.now();
+    // (no timestamping currently; keep simple)
+  }, 60000);
+
+  function updateSel(){
+    $$('.dicon', desk).forEach(el => {
+      el.classList.toggle('selected', selected.has(el.dataset.path));
+    });
+  }
+
+  /* ---------- Lasso / multi-select on desktop ---------- */
+  desk.addEventListener('pointerdown', e => {
+    if (e.target !== desk && !e.target.closest('#desk')) return;
+    // click on blank -> deselect
+    if (e.target === desk){
+      if (!e.shiftKey) { selected.clear(); updateSel(); }
+      // lasso
+      if (e.button !== 0) return;
+      const rect = desk.getBoundingClientRect();
+      const x0 = e.clientX - rect.left, y0 = e.clientY - rect.top;
+      lasso.style.display = 'block';
+      lasso.style.left = x0+'px'; lasso.style.top = y0+'px'; lasso.style.width='0'; lasso.style.height='0';
+      const onMove = ev => {
+        const x1 = ev.clientX - rect.left, y1 = ev.clientY - rect.top;
+        const l = Math.min(x0,x1), t = Math.min(y0,y1);
+        const w = Math.abs(x1-x0), h = Math.abs(y1-y0);
+        lasso.style.left = l+'px'; lasso.style.top = t+'px'; lasso.style.width = w+'px'; lasso.style.height = h+'px';
+        selected.clear();
+        $$('.dicon', desk).forEach(el => {
+          const r = el.getBoundingClientRect();
+          const elX = r.left - rect.left, elY = r.top - rect.top;
+          if (elX + r.width > l && elX < l+w && elY + r.height > t && elY < t+h){
+            selected.add(el.dataset.path);
+          }
+        });
+        updateSel();
+      };
+      const onUp = () => {
+        lasso.style.display = 'none';
+        window.removeEventListener('pointermove', onMove);
+        window.removeEventListener('pointerup', onUp);
+      };
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', onUp);
+    }
+  });
+
+  /* ---------- Drop from OS on desktop blank area ---------- */
+  desk.addEventListener('dragover', e => {
+    if (e.dataTransfer.types.includes('Files') || e.dataTransfer.types.includes('application/x-atelier-path')){
+      e.preventDefault();
+    }
+  });
+  desk.addEventListener('drop', async e => {
+    e.preventDefault();
+    const srcPath = e.dataTransfer.getData('application/x-atelier-path');
+    if (srcPath){
+      // internal reposition
+      const positions = loadPositions();
+      const name = e.dataTransfer.getData('application/x-atelier-name');
+      const rect = desk.getBoundingClientRect();
+      let x = e.clientX - rect.left - 46;
+      let y = e.clientY - rect.top - 46;
+      x = Math.max(8, Math.min(window.innerWidth - 100, x));
+      y = Math.max(8, Math.min(window.innerHeight - 160, y));
+      positions[srcPath] = { x, y };
+      savePositions(positions);
+      render();
+      return;
+    }
+    if (e.dataTransfer.files?.length){
+      const files = [...e.dataTransfer.files];
+      const rect = desk.getBoundingClientRect();
+      await importFiles(files, '/home/user/Desktop', { startX: e.clientX - rect.left, startY: e.clientY - rect.top });
+    }
+  });
+
+  /* ---------- Desktop right-click ---------- */
+  desk.addEventListener('contextmenu', e => {
+    if (e.target !== desk) return;
+    e.preventDefault();
+    Context.show(e.clientX, e.clientY, Context.forDesktop());
+  });
+
+  return { render, reload: render };
+})();
+
+async function openDesktopPath(path){
+  const s = await FS.stat(path);
+  if (!s) return;
+  if (s.type === 'dir'){
+    APPS.files.open({ path });
+  } else {
+    openFile(path);
+  }
+}
+
+/* ==========================================================================
+   IMPORT / EXPORT
+   ========================================================================== */
+async function importFiles(fileList, destDir, opts={}){
+  await FS.ensureDir(destDir);
+  const positions = JSON.parse(localStorage.getItem('atelier_icons')||'{}');
+  const startX = opts.startX ?? 20, startY = opts.startY ?? 20;
+  let col = 0, row = 0;
+  for (const f of fileList){
+    const dest = joinPath(destDir, f.name);
+    try {
+      await FS.writeFile(dest, f);
+      if (destDir === '/home/user/Desktop'){
+        positions[dest] = { x: startX + col*108, y: startY + row*104 };
+        row++; if (row > 6){ row = 0; col++; }
+      }
+    } catch(err){ toast('Import failed', f.name+': '+err.message, true); }
+  }
+  if (destDir === '/home/user/Desktop'){
+    localStorage.setItem('atelier_icons', JSON.stringify(positions));
+  }
+  Desktop.render();
+  toast('Imported', `${fileList.length} file(s) → ${destDir}`);
+}
+
+function downloadFile(path){
+  (async () => {
+    try {
+      const buf = await FS.readFile(path, false);
+      const name = basename(path);
+      const blob = new Blob([buf]);
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = name;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+    } catch(e){ toast('Download failed', e.message, true); }
+  })();
+}
+
+/* ==========================================================================
+   FILE → APP DISPATCH (smart dispatch)
+   ========================================================================== */
+function mimeFor(e){
+  const m = {
+    png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',gif:'image/gif',webp:'image/webp',svg:'image/svg+xml',bmp:'image/bmp',ico:'image/x-icon',
+    mp3:'audio/mpeg',wav:'audio/wav',ogg:'audio/ogg',flac:'audio/flac',aac:'audio/aac',m4a:'audio/mp4',
+    mp4:'video/mp4',webm:'video/webm',ogv:'video/ogg',mov:'video/quicktime',mkv:'video/x-matroska',
+    pdf:'application/pdf',
+    zip:'application/zip',gz:'application/gzip',tgz:'application/gzip',tar:'application/x-tar',
+    json:'application/json',xml:'application/xml',
+    md:'text/markdown',
+    csv:'text/csv',tsv:'text/tab-separated-values',
+    html:'text/html',css:'text/css',js:'text/javascript',ts:'text/typescript',
+    txt:'text/plain',log:'text/plain',ini:'text/plain',yaml:'text/yaml',yml:'text/yaml',
+  };
+  return m[e];
+}
+
+async function openFile(path){
+  const s = await FS.stat(path);
+  if (!s) { toast('Not found', path, true); return; }
+  const e = ext(path);
+  // image
+  if (['png','jpg','jpeg','gif','webp','svg','bmp','ico'].includes(e)) return APPS.image.open({path});
+  if (['mp3','wav','ogg','flac','aac','m4a'].includes(e)) return APPS.media.open({path});
+  if (['mp4','webm','ogv','mov','mkv'].includes(e)) return APPS.media.open({path});
+  if (e === 'pdf') return APPS.pdf.open({path});
+  if (['zip','gz','tgz','tar'].includes(e)) return APPS.archive.open({path});
+  if (['csv','tsv'].includes(e)) return APPS.table.open({path});
+  if (['html','htm'].includes(e)) return APPS.code.open({path});
+  // default text
+  if (['txt','md','log','json','xml','yaml','yml','ini','conf','toml','js','ts','jsx','tsx','css','py','c','cpp','h','rs','go','java','sh','sql'].includes(e)){
+    return APPS.notepad.open({path});
+  }
+  // unknown — try as text first, offer download
+  try {
+    const txt = await FS.readFile(path, true);
+    if (/[\x00-\x08\x0E-\x1F]/.test(txt.slice(0,512))) {
+      // binary-ish
+      return APPS.binary.open({path});
+    }
+    return APPS.notepad.open({path});
+  } catch(err){
+    return APPS.binary.open({path});
+  }
+}
+
+/* ==========================================================================
+   CONTEXT MENU
+   ========================================================================== */
+const Context = (() => {
+  const el = $('#ctx');
+  function show(x, y, items){
+    el.innerHTML = '';
+    for (const it of items){
+      if (it === '-'){
+        const s = document.createElement('div'); s.className='ctx-sep'; el.appendChild(s); continue;
+      }
+      const d = document.createElement('div');
+      d.className = 'ctx-item' + (it.disabled?' disabled':'');
+      d.innerHTML = `${it.icon||''}<span>${esc(it.label)}</span>${it.kbd?`<span class="ctx-kbd">${esc(it.kbd)}</span>`:''}`;
+      if (!it.disabled) d.onclick = () => { hide(); it.action(); };
+      el.appendChild(d);
+    }
+    el.style.left = Math.min(x, window.innerWidth - 260)+'px';
+    el.style.top = Math.min(y, window.innerHeight - el.offsetHeight - 20)+'px';
+    el.classList.add('on');
+  }
+  function hide(){ el.classList.remove('on'); }
+  document.addEventListener('pointerdown', e => { if (!el.contains(e.target)) hide(); });
+  document.addEventListener('scroll', hide, true);
+  window.addEventListener('resize', hide);
+
+  function forDesktop(){
+    return [
+      { label:'New folder', icon:I.folderPlus, action: () => DesktopActions.newFolder('/home/user/Desktop') },
+      { label:'New text file', icon:I.filePlus, action: () => DesktopActions.newFile('/home/user/Desktop') },
+      '-',
+      { label:'Upload files…', icon:I.upload, action: () => DesktopActions.uploadTo('/home/user/Desktop') },
+      { label:'Mount local folder…', icon:I.mount, action: async () => { await mountLocalFolder(); Desktop.render(); } },
+      '-',
+      { label:'Change wallpaper', icon:I.pics, action: () => Wallpaper.prompt() },
+      { label:'Toggle fullscreen', icon:I.fullscreen, action: () => toggleFS() },
+      '-',
+      { label:'Refresh', icon:I.refresh, kbd:'F5', action: () => Desktop.render() },
+    ];
+  }
+  function forIcon(iconEl){
+    const paths = [...document.querySelectorAll('.dicon.selected')].map(e => e.dataset.path);
+    if (paths.length === 0) paths.push(iconEl.dataset.path);
+    const single = paths.length === 1;
+    const first = paths[0];
+    const isDir = iconEl.dataset.type === 'dir';
+    return [
+      { label: isDir?'Open folder':'Open', icon:I.open, action: () => openDesktopPath(first) },
+      ...(single && !isDir ? [{ label:'Download', icon:I.down, action: () => downloadFile(first) }] : []),
+      '-',
+      { label:'Rename', icon:I.rename, action: () => DesktopActions.rename(first) },
+      { label:'Copy', icon:I.copy, kbd:'⌘C', action: () => DesktopActions.copy(paths) },
+      { label:'Cut', icon:I.cut, kbd:'⌘X', action: () => DesktopActions.cut(paths) },
+      { label:'Paste', icon:I.paste, kbd:'⌘V', disabled: !Clipboard.has(), action: () => DesktopActions.paste('/home/user/Desktop') },
+      '-',
+      { label:'Delete', icon:I.trash, kbd:'⌫', action: () => DesktopActions.del(paths) },
+      '-',
+      { label:'Get info', icon:I.info, action: () => DesktopActions.info(first) },
+    ];
+  }
+  return { show, hide, forDesktop, forIcon };
+})();
+
+/* ==========================================================================
+   DESKTOP ACTIONS (rename / delete / clipboard / new folder / new file)
+   ========================================================================== */
+const Clipboard = { op:null, paths:[], has(){ return this.paths.length > 0; } };
+const DesktopActions = {
+  async rename(path){
+    const old = basename(path);
+    const neu = await promptDlg('Rename', old, 'Enter a new name:');
+    if (!neu || neu === old) return;
+    const newp = joinPath(dirname(path), neu);
+    try { await FS.rename(path, newp); Desktop.render(); }
+    catch(e){ toast('Rename failed', e.message, true); }
+  },
+  async del(paths){
+    const ok = await confirmDlg('Delete', `Delete ${paths.length} item(s)? This cannot be undone.`);
+    if (!ok) return;
+    for (const p of paths){
+      try { await FS.unlink(p); } catch(e){ toast('Delete failed', p, true); }
+    }
+    Desktop.render();
+  },
+  copy(paths){ Clipboard.op='copy'; Clipboard.paths = paths.slice(); toast('Copied', paths.length+' item(s)'); },
+  cut(paths){ Clipboard.op='cut'; Clipboard.paths = paths.slice(); toast('Cut', paths.length+' item(s)'); },
+  async paste(destDir){
+    if (!Clipboard.paths.length) return;
+    for (const p of Clipboard.paths){
+      const dst = joinPath(destDir, basename(p));
+      try {
+        if (Clipboard.op === 'cut'){
+          await FS.rename(p, dst);
+        } else {
+          await FS.copy(p, dst);
+        }
+      } catch(e){ toast('Paste failed', e.message, true); }
+    }
+    if (Clipboard.op === 'cut') Clipboard.paths = [];
+    Desktop.render();
+  },
+  async newFolder(dir){
+    const n = await promptDlg('New folder', 'Untitled folder', 'Folder name:');
+    if (!n) return;
+    try { await FS.mkdir(joinPath(dir, n)); Desktop.render(); }
+    catch(e){ toast('Failed', e.message, true); }
+  },
+  async newFile(dir){
+    const n = await promptDlg('New text file', 'untitled.txt', 'File name:');
+    if (!n) return;
+    try { await FS.writeFile(joinPath(dir, n), ''); Desktop.render(); }
+    catch(e){ toast('Failed', e.message, true); }
+  },
+  uploadTo(dir){
+    const inp = $('#fileIn');
+    inp.onchange = async () => {
+      if (inp.files?.length) await importFiles([...inp.files], dir);
+      inp.value = '';
+    };
+    inp.click();
+  },
+  async info(path){
+    const s = await FS.stat(path);
+    if (!s) return;
+    const msg = `Type: ${s.type}\nSize: ${fmtSize(s.size)}\nModified: ${fmtDate(s.mtime)}\nPath: ${path}`;
+    alertDlg(basename(path), msg);
+  }
+};
+function toggleFS(){
+  if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
+  else document.exitFullscreen?.();
+}
+
+/* ==========================================================================
+   DIALOGS
+   ========================================================================== */
+function dlgWrap(body){
+  const mask = document.createElement('div');
+  mask.className = 'dlg-mask';
+  mask.innerHTML = `<div class="dlg">${body}</div>`;
+  document.body.appendChild(mask);
+  return mask;
+}
+function promptDlg(title, def, label){
+  return new Promise(res => {
+    const m = dlgWrap(`
+      <h3>${esc(title)}</h3>
+      <p style="margin-bottom:8px">${esc(label)}</p>
+      <input class="input" id="_pi" value="${esc(def||'')}"/>
+      <div class="row"><button class="btn ghost" id="_pc">Cancel</button><button class="btn" id="_po">OK</button></div>
+    `);
+    const i = m.querySelector('#_pi'); i.focus(); i.select();
+    const close = v => { m.remove(); res(v); };
+    m.querySelector('#_pc').onclick = () => close(null);
+    m.querySelector('#_po').onclick = () => close(i.value.trim() || null);
+    i.addEventListener('keydown', e => { if (e.key==='Enter') close(i.value.trim()||null); if (e.key==='Escape') close(null); });
+    m.addEventListener('click', e => { if (e.target === m) close(null); });
+  });
+}
+function confirmDlg(title, msg){
+  return new Promise(res => {
+    const m = dlgWrap(`<h3>${esc(title)}</h3><p>${esc(msg)}</p><div class="row"><button class="btn ghost" id="_c">Cancel</button><button class="btn rust" id="_o">OK</button></div>`);
+    const close = v => { m.remove(); res(v); };
+    m.querySelector('#_c').onclick = () => close(false);
+    m.querySelector('#_o').onclick = () => close(true);
+    m.addEventListener('click', e => { if (e.target === m) close(false); });
+  });
+}
+function alertDlg(title, msg){
+  const m = dlgWrap(`<h3>${esc(title)}</h3><pre style="white-space:pre-wrap;font-family:var(--mono);font-size:12px;background:rgba(21,17,13,.05);padding:12px;border-radius:8px">${esc(msg)}</pre><div class="row"><button class="btn" id="_o">OK</button></div>`);
+  m.querySelector('#_o').onclick = () => m.remove();
+}
+
+/* ==========================================================================
+   WALLPAPER
+   ========================================================================== */
+const Wallpaper = (() => {
+  const KEY = 'atelier_wp';
+  const BUILTINS = [
+    { name:'Atelier dusk', css:`radial-gradient(1200px 700px at 75% -10%, rgba(209,74,31,.25), transparent 60%),radial-gradient(900px 600px at -10% 110%, rgba(106,122,58,.28), transparent 60%),linear-gradient(180deg,#2a1a12 0%,#15110d 60%,#0b0906 100%)` },
+    { name:'Cream paper', css:`linear-gradient(135deg,#ece0c8,#d9c89e)` },
+    { name:'Night ink', css:`radial-gradient(900px 600px at 20% 20%, rgba(196,145,50,.15), transparent 60%),linear-gradient(180deg,#0a0907,#14110d)` },
+    { name:'Moss study', css:`radial-gradient(900px 600px at 80% 90%, rgba(106,122,58,.35), transparent 60%),linear-gradient(180deg,#1e2416,#0e120a)` },
+    { name:'Rust field', css:`radial-gradient(800px 500px at 50% 50%, rgba(209,74,31,.35), transparent 60%),linear-gradient(180deg,#2b1208,#150804)` },
+    { name:'Graphite', css:`linear-gradient(180deg,#2a2622,#16130f)` },
+  ];
+  async function init(){
+    const data = JSON.parse(localStorage.getItem(KEY) || '{}');
+    if (data.type === 'builtin'){ applyCSS(BUILTINS[data.index||0].css); }
+    else if (data.type === 'custom'){
+      try {
+        const buf = await FS.readFile('/tmp/wallpaper.bin', false);
+        const blob = new Blob([buf], { type: data.mime || 'image/jpeg' });
+        applyBlob(blob);
+      } catch(e){ applyCSS(BUILTINS[0].css); }
+    } else {
+      applyCSS(BUILTINS[0].css);
+    }
+  }
+  function applyCSS(css){
+    const d = $('#desktop');
+    d.style.backgroundImage = css;
+    d.classList.remove('custom-bg');
+  }
+  function applyBlob(blob){
+    const url = URL.createObjectURL(blob);
+    const d = $('#desktop');
+    d.style.backgroundImage = `url("${url}")`;
+    d.classList.add('custom-bg');
+  }
+  function prompt(){
+    WallpaperUI.open();
+  }
+  async function setCustom(file){
+    const buf = await file.arrayBuffer();
+    await FS.writeFile('/tmp/wallpaper.bin', buf);
+    localStorage.setItem(KEY, JSON.stringify({ type:'custom', mime: file.type }));
+    applyBlob(new Blob([buf], { type: file.type }));
+  }
+  function setBuiltin(i){
+    localStorage.setItem(KEY, JSON.stringify({ type:'builtin', index:i }));
+    applyCSS(BUILTINS[i].css);
+  }
+  return { init, prompt, setCustom, setBuiltin, BUILTINS };
+})();
+
+const WallpaperUI = {
+  open(){
+    const body = document.createElement('div');
+    body.style.cssText = 'padding:22px;max-width:640px;margin:0 auto';
+    body.innerHTML = `
+      <div style="font-family:var(--mono);font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:var(--ink-mid);margin-bottom:4px">Appearance</div>
+      <h3 style="font-family:var(--serif);font-style:italic;font-size:30px;font-weight:400;margin-bottom:18px">Wallpaper</h3>
+      <div class="wp-grid" id="wp-grid"></div>
+      <div style="margin-top:16px"><button class="btn" id="wp-up">${I.upload} Upload image…</button></div>
+    `;
+    const w = WM.create({ title:'Wallpaper', icon:I.pics, width:680, height:520, body });
+    const grid = body.querySelector('#wp-grid');
+    Wallpaper.BUILTINS.forEach((b, i) => {
+      const t = document.createElement('div');
+      t.className = 'wp-tile';
+      t.style.background = b.css;
+      t.innerHTML = `<div class="lbl">${esc(b.name)}</div>`;
+      t.onclick = () => { Wallpaper.setBuiltin(i); };
+      grid.appendChild(t);
+    });
+    body.querySelector('#wp-up').onclick = () => {
+      const inp = $('#wpIn');
+      inp.onchange = async () => {
+        if (inp.files?.[0]){ await Wallpaper.setCustom(inp.files[0]); inp.value = ''; }
+      };
+      inp.click();
+    };
+  }
+};
+
+/* ==========================================================================
+   APPS REGISTRY
+   ========================================================================== */
+const APPS = {};
+
+/* ---------- FILES APP ---------- */
+APPS.files = {
+  open(opts={}){
+    const body = document.createElement('div');
+    body.className = 'fx';
+    body.innerHTML = `
+      <aside class="fx-side" id="fxs">
+        <h5>Quick access</h5>
+        <div class="fx-tree-item" data-p="/home/user">${I.home}<span>Home</span></div>
+        <div class="fx-tree-item" data-p="/home/user/Desktop">${I.files}<span>Desktop</span></div>
+        <div class="fx-tree-item" data-p="/home/user/Documents">${I.docs}<span>Documents</span></div>
+        <div class="fx-tree-item" data-p="/home/user/Pictures">${I.pics}<span>Pictures</span></div>
+        <div class="fx-tree-item" data-p="/home/user/Music">${I.music}<span>Music</span></div>
+        <div class="fx-tree-item" data-p="/home/user/Downloads">${I.down}<span>Downloads</span></div>
+        <h5>Mounted</h5>
+        <div id="fx-mounts"></div>
+      </aside>
+      <section class="fx-main">
+        <div class="fx-toolbar">
+          <button class="fx-tool-btn" data-act="back" title="Back">${I.left}</button>
+          <button class="fx-tool-btn" data-act="up" title="Up">${I.up}</button>
+          <button class="fx-tool-btn" data-act="fwd" title="Forward">${I.right}</button>
+          <div class="fx-crumb" id="crumb"></div>
+          <div class="fx-search">${I.search}<input placeholder="Search this folder"/></div>
+          <button class="fx-tool-btn" data-act="view" title="Toggle view">${I.grid}</button>
+          <button class="fx-tool-btn" data-act="upload" title="Upload">${I.upload}</button>
+          <button class="fx-tool-btn" data-act="newfolder" title="New folder">${I.folderPlus}</button>
+          <button class="fx-tool-btn" data-act="newfile" title="New file">${I.filePlus}</button>
+        </div>
+        <div class="fx-list" id="fxlist"></div>
+      </section>
+    `;
+    const win = WM.create({ title:'Files', icon:I.files, width:860, height:560, body, app:'files' });
+    const state = {
+      path: opts.path || '/home/user',
+      history: [opts.path || '/home/user'], hIndex: 0,
+      sort: { key:'name', dir:1 },
+      view: 'list',
+      selected: new Set(),
+      query: '',
+    };
+    const listEl = body.querySelector('#fxlist');
+    const crumbEl = body.querySelector('#crumb');
+
+    async function go(p, pushHistory=true){
+      p = normPath(p);
+      const s = await FS.stat(p);
+      if (!s) { toast('Not found', p, true); return; }
+      if (s.type === 'file'){ openFile(p); return; }
+      state.path = p;
+      if (pushHistory){ state.history = state.history.slice(0, state.hIndex+1); state.history.push(p); state.hIndex = state.history.length-1; }
+      WM.setTitle(win.id, `Files <span class="path">${esc(p)}</span>`);
+      await refresh();
+    }
+    async function refresh(){
+      // update side active
+      body.querySelectorAll('.fx-tree-item').forEach(e => e.classList.toggle('active', e.dataset.p === state.path));
+      // mounts
+      const mntEl = body.querySelector('#fx-mounts');
+      mntEl.innerHTML = '';
+      for (const n of Object.keys(MOUNTS)){
+        const d = document.createElement('div');
+        d.className = 'fx-tree-item';
+        d.dataset.p = '/mnt/local/'+n;
+        d.innerHTML = `${I.mount}<span>${esc(n)}</span>`;
+        d.onclick = () => go(d.dataset.p);
+        mntEl.appendChild(d);
+      }
+      // breadcrumbs
+      crumbEl.innerHTML = '';
+      const parts = state.path.split('/').filter(Boolean);
+      let acc = '';
+      const addCrumb = (label, p, last=false) => {
+        const s = document.createElement('span');
+        s.textContent = label;
+        s.onclick = () => go(p);
+        crumbEl.appendChild(s);
+        if (!last){ const sep = document.createElement('span'); sep.className='sep'; sep.textContent='/'; crumbEl.appendChild(sep); }
+      };
+      addCrumb('/', '/', parts.length===0);
+      parts.forEach((x, i) => {
+        acc += '/' + x;
+        addCrumb(x, acc, i === parts.length-1);
+      });
+
+      let entries = await FS.readdir(state.path);
+      if (state.query){
+        const q = state.query.toLowerCase();
+        entries = entries.filter(e => e.name.toLowerCase().includes(q));
+      }
+      // sort
+      const { key, dir } = state.sort;
+      entries.sort((a,b) => {
+        if ((a.type==='dir'?0:1) !== (b.type==='dir'?0:1)) return (a.type==='dir'?0:1)-(b.type==='dir'?0:1);
+        let va, vb;
+        if (key === 'name'){ va=a.name.toLowerCase(); vb=b.name.toLowerCase(); return va<vb?-dir:va>vb?dir:0; }
+        if (key === 'size'){ va=a.size||0; vb=b.size||0; }
+        if (key === 'date'){ va=a.mtime||0; vb=b.mtime||0; }
+        if (key === 'type'){ va=ext(a.name); vb=ext(b.name); return va<vb?-dir:va>vb?dir:0; }
+        return (va - vb) * dir;
+      });
+
+      state.selected.clear();
+
+      if (state.view === 'grid'){
+        listEl.innerHTML = '<div class="fx-grid"></div>';
+        const g = listEl.querySelector('.fx-grid');
+        if (!entries.length){
+          g.innerHTML = `<div class="fx-empty" style="grid-column:1/-1"><div class="big">Nothing here.</div><div>Right-click to create a file or folder.</div></div>`;
+        }
+        for (const e of entries){
+          const d = document.createElement('div');
+          d.className = 'fx-g-item';
+          d.dataset.path = joinPath(state.path, e.name);
+          d.dataset.type = e.type;
+          d.innerHTML = `<div>${fileIcon(e.name, e.type==='dir')}</div><div class="n">${esc(e.name)}</div>`;
+          bindFxRow(d, e, 'grid');
+          g.appendChild(d);
+        }
+      } else {
+        listEl.innerHTML = `
+          <table><thead><tr>
+            <th data-k="name" style="width:55%">Name <span class="arr"></span></th>
+            <th data-k="date" style="width:20%">Modified <span class="arr"></span></th>
+            <th data-k="type" style="width:10%">Type <span class="arr"></span></th>
+            <th data-k="size" style="width:15%">Size <span class="arr"></span></th>
+          </tr></thead><tbody></tbody></table>
+        `;
+        const tb = listEl.querySelector('tbody');
+        if (!entries.length){
+          listEl.innerHTML = `<div class="fx-empty"><div class="big">Nothing here.</div><div>Right-click to create a file or folder.</div></div>`;
+        }
+        for (const e of entries){
+          const tr = document.createElement('tr');
+          tr.className = 'fx-row';
+          tr.dataset.path = joinPath(state.path, e.name);
+          tr.dataset.type = e.type;
+          tr.innerHTML = `
+            <td class="name">${fileIcon(e.name, e.type==='dir')}<span>${esc(e.name)}</span></td>
+            <td class="date">${fmtDate(e.mtime)}</td>
+            <td class="type">${e.type==='dir'?'Folder':(ext(e.name).toUpperCase()||'File')}</td>
+            <td class="size">${e.type==='dir'?'—':fmtSize(e.size)}</td>
+          `;
+          bindFxRow(tr, e, 'list');
+          tb.appendChild(tr);
+        }
+        // sort header state
+        listEl.querySelectorAll('th').forEach(th => {
+          if (th.dataset.k === state.sort.key) th.classList.add('sorted');
+          const arr = th.querySelector('.arr');
+          if (th.dataset.k === state.sort.key) arr.textContent = state.sort.dir>0?'▲':'▼';
+          th.onclick = () => {
+            if (state.sort.key === th.dataset.k) state.sort.dir *= -1;
+            else { state.sort.key = th.dataset.k; state.sort.dir = 1; }
+            refresh();
+          };
+        });
+      }
+    }
+
+    function bindFxRow(el, entry, view){
+      el.addEventListener('click', e => {
+        if (e.shiftKey){
+          if (state.selected.has(el.dataset.path)) state.selected.delete(el.dataset.path);
+          else state.selected.add(el.dataset.path);
+        } else {
+          state.selected.clear();
+          state.selected.add(el.dataset.path);
+        }
+        [...listEl.querySelectorAll('.fx-row,.fx-g-item')].forEach(r => r.classList.toggle('selected', state.selected.has(r.dataset.path)));
+      });
+      el.addEventListener('dblclick', () => {
+        const p = el.dataset.path;
+        if (el.dataset.type === 'dir') go(p);
+        else openFile(p);
+      });
+      el.addEventListener('contextmenu', e => {
+        e.preventDefault();
+        if (!state.selected.has(el.dataset.path)){ state.selected.clear(); state.selected.add(el.dataset.path); [...listEl.querySelectorAll('.fx-row,.fx-g-item')].forEach(r => r.classList.toggle('selected', state.selected.has(r.dataset.path))); }
+        Context.show(e.clientX, e.clientY, fxContextFor(el, state));
+      });
+      // drag within
+      el.draggable = true;
+      el.addEventListener('dragstart', e => {
+        e.dataTransfer.setData('application/x-atelier-path', el.dataset.path);
+        e.dataTransfer.setData('application/x-atelier-name', entry.name);
+        e.dataTransfer.setData('application/x-atelier-type', el.dataset.type);
+      });
+      // allow drop on folder rows
+      if (el.dataset.type === 'dir'){
+        el.addEventListener('dragover', e => {
+          if (e.dataTransfer.types.includes('application/x-atelier-path') || e.dataTransfer.types.includes('Files')){
+            e.preventDefault(); el.style.outline = '2px dashed var(--rust)';
+          }
+        });
+        el.addEventListener('dragleave', () => { el.style.outline = ''; });
+        el.addEventListener('drop', async e => {
+          e.preventDefault(); el.style.outline = '';
+          const sp = e.dataTransfer.getData('application/x-atelier-path');
+          if (sp){
+            const sn = e.dataTransfer.getData('application/x-atelier-name');
+            if (dirname(sp) !== el.dataset.path){
+              try { await FS.rename(sp, joinPath(el.dataset.path, sn)); refresh(); }
+              catch(err){ toast('Move failed', err.message, true); }
+            }
+            return;
+          }
+          if (e.dataTransfer.files?.length){
+            await importFiles([...e.dataTransfer.files], el.dataset.path);
+            refresh();
+          }
+        });
+      }
+    }
+
+    function fxContextFor(el, st){
+      const paths = [...st.selected];
+      const isDir = el.dataset.type === 'dir';
+      return [
+        { label: isDir?'Open folder':'Open', icon:I.open, action: () => { if (isDir) go(el.dataset.path); else openFile(el.dataset.path); } },
+        ...(!isDir && paths.length===1 ? [{label:'Download', icon:I.down, action:()=>downloadFile(el.dataset.path)}] : []),
+        '-',
+        { label:'Rename', icon:I.rename, action:()=>DesktopActions.rename(el.dataset.path) },
+        { label:'Copy', icon:I.copy, action:()=>DesktopActions.copy(paths) },
+        { label:'Cut', icon:I.cut, action:()=>DesktopActions.cut(paths) },
+        { label:'Paste', icon:I.paste, disabled:!Clipboard.has(), action:async()=>{
+            for (const p of Clipboard.paths){
+              try {
+                if (Clipboard.op==='cut') await FS.rename(p, joinPath(st.path, basename(p)));
+                else await FS.copy(p, joinPath(st.path, basename(p)));
+              } catch(err){ toast('Paste failed', err.message, true); }
+            }
+            if (Clipboard.op==='cut') Clipboard.paths=[];
+            refresh();
+          }},
+        '-',
+        { label:'New folder', icon:I.folderPlus, action:()=>DesktopActions.newFolder(st.path).then(refresh) },
+        { label:'New file', icon:I.filePlus, action:()=>DesktopActions.newFile(st.path).then(refresh) },
+        '-',
+        { label:'Delete', icon:I.trash, action:()=>DesktopActions.del(paths).then(refresh) },
+        { label:'Get info', icon:I.info, action:()=>DesktopActions.info(el.dataset.path) },
+      ];
+    }
+
+    // side clicks
+    body.querySelectorAll('.fx-tree-item').forEach(t => t.onclick = () => go(t.dataset.p));
+
+    // toolbar
+    body.querySelector('[data-act=up]').onclick = () => { if (state.path !== '/') go(dirname(state.path)); };
+    body.querySelector('[data-act=back]').onclick = () => { if (state.hIndex>0){ state.hIndex--; const p=state.history[state.hIndex]; state.path=p; WM.setTitle(win.id, `Files <span class="path">${esc(p)}</span>`); refresh(); } };
+    body.querySelector('[data-act=fwd]').onclick = () => { if (state.hIndex<state.history.length-1){ state.hIndex++; const p=state.history[state.hIndex]; state.path=p; WM.setTitle(win.id, `Files <span class="path">${esc(p)}</span>`); refresh(); } };
+    body.querySelector('[data-act=view]').onclick = () => { state.view = state.view==='list'?'grid':'list'; body.querySelector('[data-act=view]').innerHTML = state.view==='list'?I.grid:I.list; refresh(); };
+    body.querySelector('[data-act=upload]').onclick = () => DesktopActions.uploadTo(state.path).then(refresh);
+    body.querySelector('[data-act=newfolder]').onclick = () => DesktopActions.newFolder(state.path).then(refresh);
+    body.querySelector('[data-act=newfile]').onclick = () => DesktopActions.newFile(state.path).then(refresh);
+    body.querySelector('.fx-search input').oninput = e => { state.query = e.target.value; refresh(); };
+
+    // blank-area drop for upload
+    listEl.addEventListener('dragover', e => {
+      if (e.dataTransfer.types.includes('Files') || e.dataTransfer.types.includes('application/x-atelier-path')) e.preventDefault();
+    });
+    listEl.addEventListener('drop', async e => {
+      e.preventDefault();
+      if (e.dataTransfer.files?.length){
+        await importFiles([...e.dataTransfer.files], state.path);
+        refresh();
+      }
+    });
+
+    // right-click on blank
+    listEl.addEventListener('contextmenu', e => {
+      if (e.target.closest('.fx-row,.fx-g-item')) return;
+      e.preventDefault();
+      Context.show(e.clientX, e.clientY, [
+        { label:'New folder', icon:I.folderPlus, action:()=>DesktopActions.newFolder(state.path).then(refresh) },
+        { label:'New file', icon:I.filePlus, action:()=>DesktopActions.newFile(state.path).then(refresh) },
+        '-',
+        { label:'Upload files…', icon:I.upload, action:()=>DesktopActions.uploadTo(state.path).then(refresh) },
+        '-',
+        { label:'Paste', icon:I.paste, disabled:!Clipboard.paths.length, action: async () => {
+            for (const p of Clipboard.paths){
+              try {
+                if (Clipboard.op==='cut') await FS.rename(p, joinPath(state.path, basename(p)));
+                else await FS.copy(p, joinPath(state.path, basename(p)));
+              } catch(err){ toast('Paste failed', err.message, true); }
+            }
+            if (Clipboard.op==='cut') Clipboard.paths=[];
+            refresh();
+        }},
+        '-',
+        { label:'Refresh', icon:I.refresh, action: refresh },
+      ]);
+    });
+
+    go(state.path, false);
+  }
+};
+
+/* ---------- NOTEPAD ---------- */
+APPS.notepad = {
+  open(opts={}){
+    const body = document.createElement('div');
+    body.className = 'ed';
+    body.innerHTML = `
+      <div class="ed-bar">
+        <button class="btn ghost" data-act="open">${I.open} Open</button>
+        <button class="btn ghost" data-act="save">${I.save} Save</button>
+        <button class="btn ghost" data-act="saveas">${I.down} Save as…</button>
+        <div class="title" id="et">— new document —</div>
+      </div>
+      <textarea class="ed-ta" spellcheck="false" placeholder="Write something beautiful…"></textarea>
+      <div class="ed-status"><span id="es-pos">Ln 1, Col 1</span><span id="es-len">0 chars</span><span id="es-saved">unsaved</span></div>
+    `;
+    const win = WM.create({ title:'Notepad', icon:I.notepad, width:720, height:520, body, app:'notepad' });
+    const ta = body.querySelector('textarea');
+    const ePath = { val: opts.path || null };
+    const origText = { val: '' };
+
+    async function load(p){
+      try {
+        const txt = await FS.readFile(p, true);
+        ta.value = txt; origText.val = txt;
+        ePath.val = p;
+        body.querySelector('#et').textContent = p;
+        body.querySelector('#es-saved').textContent = 'saved';
+        WM.setTitle(win.id, `Notepad <span class="path">${esc(basename(p))}</span>`);
+      } catch(e){ toast('Open failed', e.message, true); }
+    }
+    function markDirty(){
+      body.querySelector('#es-saved').textContent = ta.value !== origText.val ? 'modified' : 'saved';
+    }
+    function updStatus(){
+      const v = ta.value;
+      const pos = ta.selectionStart;
+      const pre = v.slice(0, pos);
+      const ln = pre.split('\n').length;
+      const col = pre.length - pre.lastIndexOf('\n');
+      body.querySelector('#es-pos').textContent = `Ln ${ln}, Col ${col}`;
+      body.querySelector('#es-len').textContent = `${v.length} chars`;
+    }
+    ta.addEventListener('input', () => { markDirty(); updStatus(); });
+    ta.addEventListener('keyup', updStatus);
+    ta.addEventListener('click', updStatus);
+    ta.addEventListener('keydown', e => {
+      if ((e.ctrlKey||e.metaKey) && e.key === 's'){ e.preventDefault(); save(); }
+    });
+
+    async function save(){
+      if (!ePath.val){ return saveAs(); }
+      try {
+        await FS.writeFile(ePath.val, ta.value);
+        origText.val = ta.value;
+        markDirty();
+        toast('Saved', ePath.val);
+      } catch(err){ toast('Save failed', err.message, true); }
+    }
+    async function saveAs(){
+      const n = await promptDlg('Save as', 'untitled.txt', 'File name (saved to /home/user/Documents):');
+      if (!n) return;
+      const p = '/home/user/Documents/'+n;
+      try {
+        await FS.writeFile(p, ta.value);
+        ePath.val = p; origText.val = ta.value;
+        body.querySelector('#et').textContent = p;
+        body.querySelector('#es-saved').textContent = 'saved';
+        WM.setTitle(win.id, `Notepad <span class="path">${esc(n)}</span>`);
+        Desktop.render();
+      } catch(err){ toast('Save failed', err.message, true); }
+    }
+
+    body.querySelector('[data-act=save]').onclick = save;
+    body.querySelector('[data-act=saveas]').onclick = saveAs;
+    body.querySelector('[data-act=open]').onclick = () => FilePicker.open('text').then(p => { if (p) load(p); });
+
+    if (opts.path) load(opts.path);
+    else updStatus();
+  }
+};
+
+/* Simple file picker for text files (modal dialog listing VFS) */
+const FilePicker = {
+  open(kind){
+    return new Promise(res => {
+      const body = document.createElement('div');
+      body.style.cssText = 'padding:16px;height:100%;display:flex;flex-direction:column;gap:10px';
+      body.innerHTML = `
+        <div style="font-family:var(--mono);font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-mid)">Open file</div>
+        <div class="fx-crumb" id="fp-crumb" style="background:rgba(21,17,13,.04);padding:6px;border-radius:7px"></div>
+        <div style="flex:1;overflow:auto" id="fp-list"></div>
+        <div style="display:flex;justify-content:flex-end;gap:8px"><button class="btn ghost" id="fp-c">Cancel</button></div>
+      `;
+      const w = WM.create({ title:'Open', icon:I.open, width:560, height:460, body });
+      const state = { path:'/home/user' };
+      const listEl = body.querySelector('#fp-list');
+      const crumbEl = body.querySelector('#fp-crumb');
+      async function draw(){
+        crumbEl.textContent = state.path;
+        const entries = await FS.readdir(state.path);
+        listEl.innerHTML = '';
+        if (state.path !== '/'){
+          const up = document.createElement('div');
+          up.className='fx-row'; up.style.cursor='default';
+          up.innerHTML = `<td class="name" colspan="4">${I.up}<span>..</span></td>`;
+          up.onclick = () => { state.path = dirname(state.path); draw(); };
+          listEl.appendChild(up);
+        }
+        for (const e of entries){
+          const row = document.createElement('div');
+          row.className = 'fx-row';
+          row.innerHTML = `<td class="name" style="display:flex;gap:8px;align-items:center">${fileIcon(e.name, e.type==='dir')}<span>${esc(e.name)}</span></td>`;
+          row.onclick = async () => {
+            const p = joinPath(state.path, e.name);
+            if (e.type === 'dir'){ state.path = p; draw(); }
+            else { res(p); WM.close(w.id); }
+          };
+          listEl.appendChild(row);
+        }
+        if (!entries.length){ listEl.innerHTML = '<div class="fx-empty">No files</div>'; }
+      }
+      body.querySelector('#fp-c').onclick = () => { res(null); WM.close(w.id); };
+      draw();
+    });
+  }
+};
+
+/* ---------- CODE EDITOR for .html ---------- */
+APPS.code = {
+  open(opts={}){
+    const body = document.createElement('div');
+    body.className = 'code-split';
+    body.innerHTML = `
+      <section class="pane">
+        <div class="ed-bar">
+          <button class="btn ghost" data-act="save">${I.save} Save</button>
+          <div class="title" id="ct">${esc(opts.path||'untitled.html')}</div>
+        </div>
+        <textarea class="ed-ta" spellcheck="false" style="font-size:12.5px"></textarea>
+      </section>
+      <section class="pane">
+        <div class="ed-bar">
+          <button class="btn ghost" data-act="reload">${I.refresh} Refresh preview</button>
+          <button class="btn ghost" data-act="ext">${I.eye} Open in browser</button>
+        </div>
+        <iframe id="cf" sandbox="allow-scripts allow-forms allow-popups allow-modals"></iframe>
+      </section>
+    `;
+    const win = WM.create({ title:'Code — '+(opts.path?basename(opts.path):'untitled.html'), icon:I.code, width:1020, height:640, body, app:'code' });
+    const ta = body.querySelector('textarea');
+    const iframe = body.querySelector('#cf');
+    let path = opts.path || null;
+    let blobUrl = null;
+
+    async function load(p){
+      try {
+        ta.value = await FS.readFile(p, true);
+        path = p;
+        body.querySelector('#ct').textContent = p;
+        updatePreview();
+      } catch(e){ toast('Open failed', e.message, true); }
+    }
+    function updatePreview(){
+      if (blobUrl) URL.revokeObjectURL(blobUrl);
+      const blob = new Blob([ta.value], { type:'text/html' });
+      blobUrl = URL.createObjectURL(blob);
+      iframe.src = blobUrl;
+    }
+    let timer=null;
+    ta.addEventListener('input', () => {
+      clearTimeout(timer); timer = setTimeout(updatePreview, 500);
+    });
+    body.querySelector('[data-act=save]').onclick = async () => {
+      if (!path){
+        const n = await promptDlg('Save as', 'untitled.html', 'File name (saved to /home/user/Documents):');
+        if (!n) return;
+        path = '/home/user/Documents/'+n;
+      }
+      try { await FS.writeFile(path, ta.value); toast('Saved', path); Desktop.render(); }
+      catch(e){ toast('Save failed', e.message, true); }
+    };
+    body.querySelector('[data-act=reload]').onclick = updatePreview;
+    body.querySelector('[data-act=ext]').onclick = () => {
+      // open in the in-app browser
+      if (!blobUrl) updatePreview();
+      APPS.browser.open({ url: blobUrl });
+    };
+    if (opts.path) load(opts.path);
+    else updatePreview();
+  }
+};
+
+/* ---------- CALCULATOR ---------- */
+APPS.calc = {
+  open(){
+    const body = document.createElement('div');
+    body.className = 'calc';
+    body.innerHTML = `
+      <div class="calc-disp"><div class="expr" id="ce">&nbsp;</div><div id="cd">0</div></div>
+      <div class="calc-grid">
+        <button class="calc-key fn" data-k="AC">AC</button>
+        <button class="calc-key fn" data-k="±">±</button>
+        <button class="calc-key fn" data-k="%">%</button>
+        <button class="calc-key op" data-k="÷">÷</button>
+        <button class="calc-key" data-k="7">7</button>
+        <button class="calc-key" data-k="8">8</button>
+        <button class="calc-key" data-k="9">9</button>
+        <button class="calc-key op" data-k="×">×</button>
+        <button class="calc-key" data-k="4">4</button>
+        <button class="calc-key" data-k="5">5</button>
+        <button class="calc-key" data-k="6">6</button>
+        <button class="calc-key op" data-k="-">−</button>
+        <button class="calc-key" data-k="1">1</button>
+        <button class="calc-key" data-k="2">2</button>
+        <button class="calc-key" data-k="3">3</button>
+        <button class="calc-key op" data-k="+">+</button>
+        <button class="calc-key zero" data-k="0">0</button>
+        <button class="calc-key" data-k=".">.</button>
+        <button class="calc-key op" data-k="=">=</button>
+      </div>
+    `;
+    WM.create({ title:'Calculator', icon:I.calc, width:320, height:480, body, app:'calc' });
+    const disp = body.querySelector('#cd');
+    const expr = body.querySelector('#ce');
+    let cur = '0', prev = null, op = null, justEq = false;
+    function render(){ disp.textContent = cur.length>12?parseFloat(cur).toExponential(6):cur; }
+    function input(k){
+      if (k === 'AC'){ cur='0'; prev=null; op=null; expr.innerHTML='&nbsp;'; }
+      else if (k === '±'){ cur = cur.startsWith('-')?cur.slice(1):'-'+cur; }
+      else if (k === '%'){ cur = String(parseFloat(cur)/100); }
+      else if ('0123456789'.includes(k)){ cur = (cur==='0'||justEq)?k:cur+k; justEq=false; }
+      else if (k === '.'){ if (!cur.includes('.')) cur += '.'; }
+      else if (['+','-','×','÷'].includes(k)){
+        if (prev!=null && op && !justEq){ compute(); }
+        prev = parseFloat(cur); op = k; justEq = true;
+        expr.textContent = `${prev} ${op}`;
+      }
+      else if (k === '='){ compute(); expr.textContent = `${prev ?? ''} ${op ?? ''} =`; prev=null; op=null; justEq=true; }
+      render();
+    }
+    function compute(){
+      if (prev == null || !op) return;
+      const b = parseFloat(cur);
+      let r = prev;
+      if (op === '+') r = prev + b;
+      if (op === '-') r = prev - b;
+      if (op === '×') r = prev * b;
+      if (op === '÷') r = b === 0 ? NaN : prev / b;
+      cur = String(+r.toFixed(10));
+    }
+    body.querySelectorAll('.calc-key').forEach(b => b.onclick = () => input(b.dataset.k));
+    window.addEventListener('keydown', e => {
+      if (!document.contains(body)) return;
+      const k = e.key;
+      if ('0123456789.'.includes(k)) input(k);
+      else if (k === '+') input('+');
+      else if (k === '-') input('-');
+      else if (k === '*') input('×');
+      else if (k === '/') { e.preventDefault(); input('÷'); }
+      else if (k === 'Enter' || k === '=') input('=');
+      else if (k === 'Escape') input('AC');
+      else if (k === 'Backspace'){ cur = cur.length>1?cur.slice(0,-1):'0'; render(); }
+    });
+  }
+};
+
+/* ---------- PAINT ---------- */
+APPS.paint = {
+  open(){
+    const body = document.createElement('div');
+    body.className = 'paint';
+    body.innerHTML = `
+      <div class="paint-tools">
+        <button data-t="pen" class="on">Pen</button>
+        <button data-t="eraser">Eraser</button>
+        <button data-t="line">Line</button>
+        <button data-t="rect">Rect</button>
+        <button data-t="circle">Circle</button>
+        <span style="width:1px;height:22px;background:rgba(21,17,13,.15);margin:0 4px"></span>
+        <span class="swatch on" data-c="#15110d" style="background:#15110d"></span>
+        <span class="swatch" data-c="#d14a1f" style="background:#d14a1f"></span>
+        <span class="swatch" data-c="#c49132" style="background:#c49132"></span>
+        <span class="swatch" data-c="#6a7a3a" style="background:#6a7a3a"></span>
+        <span class="swatch" data-c="#f1e8d6" style="background:#f1e8d6;border:1px solid rgba(21,17,13,.2)"></span>
+        <span style="width:1px;height:22px;background:rgba(21,17,13,.15);margin:0 4px"></span>
+        <label style="font-family:var(--mono);font-size:10.5px;color:var(--ink-mid);display:flex;align-items:center;gap:6px">Size
+          <input type="range" min="1" max="40" value="3" id="psz" style="width:90px"/>
+        </label>
+        <span style="flex:1"></span>
+        <button data-act="clear">Clear</button>
+        <button data-act="save">Save to Files</button>
+      </div>
+      <div class="paint-canvas-wrap"><canvas width="1200" height="800"></canvas></div>
+    `;
+    WM.create({ title:'Paint', icon:I.paint, width:880, height:620, body, app:'paint' });
+    const cvs = body.querySelector('canvas');
+    const ctx = cvs.getContext('2d');
+    ctx.fillStyle = '#fff'; ctx.fillRect(0,0,cvs.width,cvs.height);
+    ctx.lineCap='round'; ctx.lineJoin='round';
+    let tool='pen', color='#15110d', size=3, drawing=false, startPt=null, snap=null;
+
+    function pos(e){
+      const r = cvs.getBoundingClientRect();
+      return { x:(e.clientX-r.left)*(cvs.width/r.width), y:(e.clientY-r.top)*(cvs.height/r.height) };
+    }
+    cvs.addEventListener('pointerdown', e => {
+      cvs.setPointerCapture(e.pointerId);
+      drawing = true;
+      startPt = pos(e);
+      if (tool === 'pen' || tool === 'eraser'){
+        ctx.beginPath();
+        ctx.strokeStyle = tool==='eraser'?'#fff':color;
+        ctx.lineWidth = size;
+        ctx.moveTo(startPt.x, startPt.y);
+      } else {
+        snap = ctx.getImageData(0,0,cvs.width,cvs.height);
+      }
+    });
+    cvs.addEventListener('pointermove', e => {
+      if (!drawing) return;
+      const p = pos(e);
+      if (tool === 'pen' || tool === 'eraser'){
+        ctx.lineTo(p.x, p.y); ctx.stroke();
+      } else {
+        ctx.putImageData(snap, 0, 0);
+        ctx.strokeStyle = color; ctx.lineWidth = size;
+        ctx.beginPath();
+        if (tool === 'line'){ ctx.moveTo(startPt.x,startPt.y); ctx.lineTo(p.x,p.y); }
+        if (tool === 'rect'){ ctx.rect(startPt.x,startPt.y,p.x-startPt.x,p.y-startPt.y); }
+        if (tool === 'circle'){ const r = Math.hypot(p.x-startPt.x,p.y-startPt.y); ctx.arc(startPt.x,startPt.y,r,0,Math.PI*2); }
+        ctx.stroke();
+      }
+    });
+    cvs.addEventListener('pointerup', () => drawing = false);
+    body.querySelectorAll('[data-t]').forEach(b => b.onclick = () => {
+      tool = b.dataset.t;
+      body.querySelectorAll('[data-t]').forEach(x => x.classList.toggle('on', x===b));
+    });
+    body.querySelectorAll('.swatch').forEach(s => s.onclick = () => {
+      color = s.dataset.c;
+      body.querySelectorAll('.swatch').forEach(x => x.classList.toggle('on', x===s));
+    });
+    body.querySelector('#psz').oninput = e => size = +e.target.value;
+    body.querySelector('[data-act=clear]').onclick = () => { ctx.fillStyle='#fff'; ctx.fillRect(0,0,cvs.width,cvs.height); };
+    body.querySelector('[data-act=save]').onclick = async () => {
+      const n = await promptDlg('Save painting', 'painting.png', 'File name (saved to /home/user/Pictures):');
+      if (!n) return;
+      cvs.toBlob(async b => {
+        await FS.writeFile('/home/user/Pictures/'+n, b);
+        toast('Saved', '/home/user/Pictures/'+n);
+        Desktop.render();
+      });
+    };
+  }
+};
+
+/* ---------- IMAGE VIEWER ---------- */
+APPS.image = {
+  async open(opts){
+    const body = document.createElement('div');
+    body.className = 'imgv';
+    body.innerHTML = `<img id="im" alt=""/><div class="imgv-bar">
+      <button data-z="out">${I.zoomout}</button><div class="zoom" id="iz">100%</div><button data-z="in">${I.zoomin}</button>
+      <button data-z="fit">Fit</button>
+      <button data-z="dl">${I.down}</button>
+    </div>`;
+    const win = WM.create({ title:'Image — '+basename(opts.path), icon:I.img, width:780, height:560, body, app:'image' });
+    const img = body.querySelector('#im');
+    const zoom = body.querySelector('#iz');
+    let scale = 1;
+    try {
+      const buf = await FS.readFile(opts.path, false);
+      const s = await FS.stat(opts.path);
+      const mime = mimeFor(ext(opts.path)) || 'application/octet-stream';
+      const blob = new Blob([buf], { type: mime });
+      img.src = URL.createObjectURL(blob);
+    } catch(e){ toast('Load failed', e.message, true); }
+    function apply(){ img.style.transform = `scale(${scale})`; zoom.textContent = Math.round(scale*100)+'%'; }
+    body.querySelector('[data-z=in]').onclick = () => { scale = Math.min(5, scale*1.2); apply(); };
+    body.querySelector('[data-z=out]').onclick = () => { scale = Math.max(.1, scale/1.2); apply(); };
+    body.querySelector('[data-z=fit]').onclick = () => { scale = 1; apply(); };
+    body.querySelector('[data-z=dl]').onclick = () => downloadFile(opts.path);
+    img.addEventListener('wheel', e => { e.preventDefault(); scale *= e.deltaY<0?1.1:1/1.1; scale = Math.min(5, Math.max(.1, scale)); apply(); }, {passive:false});
+  }
+};
+
+/* ---------- MEDIA PLAYER ---------- */
+APPS.media = {
+  async open(opts){
+    const e = ext(opts.path);
+    const isVideo = ['mp4','webm','ogv','mov','mkv'].includes(e);
+    const body = document.createElement('div');
+    body.className = 'media';
+    let src;
+    try {
+      const buf = await FS.readFile(opts.path, false);
+      const blob = new Blob([buf], { type: mimeFor(e) || '' });
+      src = URL.createObjectURL(blob);
+    } catch(err){ toast('Load failed', err.message, true); }
+    if (isVideo) body.innerHTML = `<video src="${src}" controls autoplay></video>`;
+    else body.innerHTML = `<audio src="${src}" controls autoplay></audio>`;
+    WM.create({ title:basename(opts.path), icon:isVideo?I.video:I.audio, width:isVideo?780:480, height:isVideo?500:220, body, app:'media' });
+  }
+};
+
+/* ---------- PDF ---------- */
+APPS.pdf = {
+  async open(opts){
+    const body = document.createElement('div');
+    body.style.cssText = 'height:100%';
+    let src;
+    try {
+      const buf = await FS.readFile(opts.path, false);
+      const blob = new Blob([buf], { type:'application/pdf' });
+      src = URL.createObjectURL(blob);
+    } catch(err){ toast('Load failed', err.message, true); }
+    body.innerHTML = `<iframe src="${src}" style="width:100%;height:100%;border:none"></iframe>`;
+    WM.create({ title:basename(opts.path), icon:I.pdf, width:820, height:720, body, app:'pdf' });
+  }
+};
+
+/* ---------- ARCHIVE (zip at minimum) ---------- */
+APPS.archive = {
+  async open(opts){
+    const body = document.createElement('div');
+    body.style.cssText = 'padding:18px;overflow:auto;height:100%';
+    body.innerHTML = `<div style="font-family:var(--mono);font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-mid);margin-bottom:4px">Archive</div>
+      <h3 style="font-family:var(--serif);font-style:italic;font-size:28px;margin-bottom:10px">${esc(basename(opts.path))}</h3>
+      <p style="font-size:13px;color:var(--ink-mid);margin-bottom:14px">Choose a destination folder and extract.</p>
+      <div id="alist" style="font-family:var(--mono);font-size:12px;background:rgba(21,17,13,.04);padding:10px;border-radius:8px;max-height:320px;overflow:auto;margin-bottom:14px">Loading…</div>
+      <div style="display:flex;gap:8px;align-items:center"><span style="font-size:13px">Extract to:</span><input class="input" id="adest" style="max-width:260px" value="/home/user/Downloads"/>
+      <button class="btn rust" id="ago">Extract</button></div>`;
+    const win = WM.create({ title:'Archive — '+basename(opts.path), icon:I.zip, width:640, height:480, body, app:'archive' });
+    const list = body.querySelector('#alist');
+    const e = ext(opts.path);
+    let entries = [];
+    if (e === 'zip' && window.JSZip){
+      try {
+        const buf = await FS.readFile(opts.path, false);
+        const z = await JSZip.loadAsync(buf);
+        for (const [name, f] of Object.entries(z.files)){
+          entries.push({ name, dir: f.dir, size: f._data?.uncompressedSize || 0 });
+        }
+        list.innerHTML = entries.slice(0,400).map(x => `<div style="padding:3px 0">${x.dir?'▸ ':'· '}${esc(x.name)}</div>`).join('') || '<div>Empty archive.</div>';
+        body.querySelector('#ago').onclick = async () => {
+          const dest = body.querySelector('#adest').value.trim();
+          if (!dest) return;
+          await FS.ensureDir(dest);
+          for (const x of entries){
+            const full = joinPath(dest, x.name);
+            if (x.dir){ await FS.ensureDir(full); continue; }
+            const f = z.file(x.name);
+            if (!f) continue;
+            const ab = await f.async('arraybuffer');
+            await FS.writeFile(full, ab);
+          }
+          toast('Extracted', `${entries.length} items → ${dest}`);
+          Desktop.render();
+          WM.close(win.id);
+        };
+      } catch(err){ list.innerHTML = `Failed: ${esc(err.message)}`; }
+    } else if (e === 'gz' || e === 'tgz' || e === 'tar'){
+      list.innerHTML = `<div>This browser build supports <b>.zip</b> natively (via JSZip). For .gz/.tar/.7z, a WASM extractor is required. Use the in-browser file manager to download and extract externally, or upload a .zip.</div>`;
+    } else {
+      list.innerHTML = 'Unsupported archive format.';
+    }
+  }
+};
+
+/* ---------- TABLE (CSV/TSV) ---------- */
+APPS.table = {
+  async open(opts){
+    const body = document.createElement('div');
+    body.className = 'tbl-wrap';
+    body.innerHTML = `
+      <div class="tbl-tabs">
+        <div class="tbl-tab active" data-v="grid">Table</div>
+        <div class="tbl-tab" data-v="text">Text</div>
+        <span style="flex:1"></span>
+        <button class="btn ghost" data-act="save" style="padding:4px 10px;font-size:11.5px">${I.save} Save</button>
+      </div>
+      <div class="tbl-scroll" id="tg"></div>
+      <textarea class="ed-ta" id="tt" style="display:none"></textarea>
+    `;
+    const win = WM.create({ title:basename(opts.path), icon:I.list, width:820, height:560, body, app:'table' });
+    const tg = body.querySelector('#tg');
+    const tt = body.querySelector('#tt');
+    let text = '', sep = opts.path.endsWith('.tsv')?'\t':',';
+    try { text = await FS.readFile(opts.path, true); tt.value = text; }
+    catch(e){ toast('Open failed', e.message, true); }
+    function parse(t){
+      const lines = t.replace(/\r/g,'').split('\n');
+      return lines.filter(l => l.length).map(l => {
+        const out = []; let cur = '', q = false;
+        for (let i=0;i<l.length;i++){
+          const c = l[i];
+          if (c === '"'){ if (q && l[i+1] === '"'){ cur+='"'; i++; } else q = !q; }
+          else if (c === sep && !q){ out.push(cur); cur=''; }
+          else cur += c;
+        }
+        out.push(cur);
+        return out;
+      });
+    }
+    function drawGrid(){
+      const rows = parse(text);
+      if (!rows.length){ tg.innerHTML = '<div class="fx-empty">Empty</div>'; return; }
+      let h = '<table><thead><tr>';
+      rows[0].forEach((c,i) => h += `<th>${esc(c)||'#'+(i+1)}</th>`);
+      h += '</tr></thead><tbody>';
+      for (let r=1;r<rows.length;r++){
+        h += '<tr>';
+        rows[r].forEach(c => h += `<td>${esc(c)}</td>`);
+        h += '</tr>';
+      }
+      h += '</tbody></table>';
+      tg.innerHTML = h;
+    }
+    body.querySelectorAll('.tbl-tab').forEach(t => t.onclick = () => {
+      body.querySelectorAll('.tbl-tab').forEach(x => x.classList.toggle('active', x===t));
+      if (t.dataset.v === 'grid'){ tg.style.display=''; tt.style.display='none'; drawGrid(); }
+      else { tg.style.display='none'; tt.style.display=''; text = tt.value; }
+    });
+    tt.addEventListener('input', () => text = tt.value);
+    body.querySelector('[data-act=save]').onclick = async () => {
+      if (tt.style.display !== 'none') text = tt.value;
+      try { await FS.writeFile(opts.path, text); toast('Saved', opts.path); }
+      catch(e){ toast('Save failed', e.message, true); }
+    };
+    drawGrid();
+  }
+};
+
+/* ---------- BROWSER ---------- */
+APPS.browser = {
+  open(opts={}){
+    const body = document.createElement('div');
+    body.className = 'brw';
+    body.innerHTML = `
+      <div class="brw-bar">
+        <button data-act="back">${I.left}</button>
+        <button data-act="fwd">${I.right}</button>
+        <button data-act="reload">${I.refresh}</button>
+        <input class="url" value="${esc(opts.url||'https://example.com')}"/>
+        <button data-act="go">Go</button>
+      </div>
+      <iframe sandbox="allow-forms allow-scripts allow-same-origin allow-popups"></iframe>
+    `;
+    const win = WM.create({ title:'Browser', icon:I.browser, width:900, height:640, body, app:'browser', dark:true });
+    const url = body.querySelector('.url');
+    const frame = body.querySelector('iframe');
+    const hist = [opts.url || 'https://example.com'];
+    let idx = 0;
+    function go(u, push=true){
+      u = u.trim();
+      if (!/^([a-z]+:)?\/\//i.test(u) && !u.startsWith('blob:')) u = 'https://' + u;
+      url.value = u;
+      frame.src = u;
+      if (push){ hist.splice(idx+1); hist.push(u); idx = hist.length-1; }
+    }
+    body.querySelector('[data-act=go]').onclick = () => go(url.value);
+    url.addEventListener('keydown', e => { if (e.key==='Enter') go(url.value); });
+    body.querySelector('[data-act=back]').onclick = () => { if (idx>0){ idx--; go(hist[idx], false); } };
+    body.querySelector('[data-act=fwd]').onclick = () => { if (idx<hist.length-1){ idx++; go(hist[idx], false); } };
+    body.querySelector('[data-act=reload]').onclick = () => { frame.src = frame.src; };
+    go(hist[0], false);
+  }
+};
+
+/* ---------- BINARY fallback ---------- */
+APPS.binary = {
+  async open(opts){
+    const s = await FS.stat(opts.path);
+    const body = document.createElement('div');
+    body.style.cssText = 'padding:20px;height:100%;overflow:auto';
+    body.innerHTML = `
+      <div style="font-family:var(--mono);font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-mid)">Binary file</div>
+      <h3 style="font-family:var(--serif);font-style:italic;font-size:28px;margin:6px 0 10px">${esc(basename(opts.path))}</h3>
+      <p style="font-size:13px;color:var(--ink-mid);margin-bottom:16px">Size: ${fmtSize(s.size)}. This file type has no native viewer. You can download it, or try opening as text.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn" data-a="dl">${I.down} Download</button>
+        <button class="btn ghost" data-a="txt">${I.txt} Open as text</button>
+      </div>
+    `;
+    WM.create({ title:basename(opts.path), icon:I.file, width:520, height:320, body });
+    body.querySelector('[data-a=dl]').onclick = () => downloadFile(opts.path);
+    body.querySelector('[data-a=txt]').onclick = () => APPS.notepad.open({ path: opts.path });
+  }
+};
+
+/* ---------- SETTINGS ---------- */
+APPS.settings = {
+  async open(){
+    const body = document.createElement('div');
+    body.className = 'sett';
+    body.innerHTML = `
+      <aside class="sett-side">
+        <div class="sett-tab active" data-t="appearance">${I.pics}<span>Appearance</span></div>
+        <div class="sett-tab" data-t="storage">${I.files}<span>Storage</span></div>
+        <div class="sett-tab" data-t="mounts">${I.mount}<span>Mounts</span></div>
+        <div class="sett-tab" data-t="about">${I.info}<span>About</span></div>
+      </aside>
+      <section class="sett-main" id="smain"></section>
+    `;
+    const win = WM.create({ title:'Settings', icon:I.settings, width:760, height:540, body, app:'settings' });
+    const main = body.querySelector('#smain');
+
+    const pages = {
+      appearance(){
+        main.innerHTML = `
+          <div class="kicker">Appearance</div>
+          <h3>Wallpaper</h3>
+          <div class="sett-section">
+            <h4>Themes</h4>
+            <div class="wp-grid" id="wp2"></div>
+            <div style="margin-top:14px"><button class="btn" id="up2">${I.upload} Upload image…</button></div>
+          </div>
+        `;
+        const g = main.querySelector('#wp2');
+        Wallpaper.BUILTINS.forEach((b,i) => {
+          const t = document.createElement('div');
+          t.className='wp-tile'; t.style.background=b.css;
+          t.innerHTML = `<div class="lbl">${esc(b.name)}</div>`;
+          t.onclick = () => Wallpaper.setBuiltin(i);
+          g.appendChild(t);
+        });
+        main.querySelector('#up2').onclick = () => {
+          const inp = $('#wpIn');
+          inp.onchange = async () => { if (inp.files?.[0]){ await Wallpaper.setCustom(inp.files[0]); inp.value=''; } };
+          inp.click();
+        };
+      },
+      async storage(){
+        const t = await FS.tree();
+        // estimate OPFS quota
+        let quota = null, usage = null;
+        try { const e = await navigator.storage.estimate(); quota = e.quota; usage = e.usage; } catch(e){}
+        const topExts = Object.entries(t.byExt).sort((a,b)=>b[1]-a[1]).slice(0,8);
+        const topDirs = Object.entries(t.byDir).sort((a,b)=>b[1]-a[1]).slice(0,8);
+        main.innerHTML = `
+          <div class="kicker">Storage</div>
+          <h3>Your files, persisted.</h3>
+          <p style="color:var(--ink-mid);font-size:13px;margin-bottom:16px">Atelier stores everything in the browser's private storage. Clearing site data removes it.</p>
+          <div class="sett-section">
+            <h4>Usage summary</h4>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:4px">
+              <div style="background:rgba(21,17,13,.04);padding:14px;border-radius:10px">
+                <div style="font-family:var(--mono);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-mid)">Files</div>
+                <div style="font-family:var(--serif);font-style:italic;font-size:32px">${t.files}</div>
+              </div>
+              <div style="background:rgba(21,17,13,.04);padding:14px;border-radius:10px">
+                <div style="font-family:var(--mono);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-mid)">Folders</div>
+                <div style="font-family:var(--serif);font-style:italic;font-size:32px">${t.dirs}</div>
+              </div>
+              <div style="background:rgba(21,17,13,.04);padding:14px;border-radius:10px">
+                <div style="font-family:var(--mono);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-mid)">Total size</div>
+                <div style="font-family:var(--serif);font-style:italic;font-size:32px">${fmtSize(t.bytes)}</div>
+              </div>
+            </div>
+          </div>
+          <div class="sett-section">
+            <h4>Origin quota${quota? ' / '+fmtSize(quota):''}</h4>
+            ${usage!=null ? `<div class="stor-bar">
+              <div style="width:${Math.min(100, usage/quota*100).toFixed(2)}%;background:var(--rust)">${(usage/quota*100).toFixed(1)}%</div>
+              <div style="flex:1;background:rgba(21,17,13,.08);color:var(--ink-mid)">${fmtSize(usage)} used</div>
+            </div>` : '<div style="font-size:13px;color:var(--ink-mid)">Quota information unavailable.</div>'}
+          </div>
+          ${topExts.length ? `<div class="sett-section"><h4>By file type</h4>
+            <div class="stor-bar">${topExts.map((e,i)=>{
+              const colors = ['#d14a1f','#c49132','#6a7a3a','#15110d','#4a413a','#2b2520','#8a6a3a','#3a4a5a'];
+              return `<div style="width:${Math.max(6, e[1]/t.bytes*100).toFixed(2)}%;background:${colors[i%colors.length]}" title="${esc(e[0])}: ${fmtSize(e[1])}"></div>`;
+            }).join('')}</div>
+            <div class="stor-legend">${topExts.map((e,i)=>{
+              const colors = ['#d14a1f','#c49132','#6a7a3a','#15110d','#4a413a','#2b2520','#8a6a3a','#3a4a5a'];
+              return `<span><i style="background:${colors[i%colors.length]}"></i>.${esc(e[0])} · ${fmtSize(e[1])}</span>`;
+            }).join('')}</div>
+          </div>` : ''}
+          ${topDirs.length ? `<div class="sett-section"><h4>By folder</h4>
+            <table style="width:100%;font-size:12.5px;border-collapse:collapse">
+            ${topDirs.map(([d,s])=>`<tr><td style="padding:6px 8px;border-bottom:1px solid rgba(21,17,13,.08);font-family:var(--mono);font-size:11.5px">${esc(d)}</td><td style="padding:6px 8px;text-align:right;border-bottom:1px solid rgba(21,17,13,.08);font-family:var(--mono);font-size:11.5px;color:var(--ink-mid)">${fmtSize(s)}</td></tr>`).join('')}
+            </table>
+          </div>` : ''}
+          <div class="sett-section">
+            <h4>Reset</h4>
+            <p style="font-size:13px;color:var(--ink-mid);margin-bottom:10px">Erase every file and folder in the virtual file system. This cannot be undone.</p>
+            <button class="btn rust" id="rst">${I.reset} Reset file system</button>
+          </div>
+        `;
+        main.querySelector('#rst').onclick = async () => {
+          const ok = await confirmDlg('Reset file system', 'All virtual files and folders will be erased. Continue?');
+          if (!ok) return;
+          await FS.reset();
+          await Wallpaper.init();
+          await Desktop.render();
+          toast('Reset', 'File system cleared.');
+        };
+      },
+      mounts(){
+        const names = Object.keys(MOUNTS);
+        main.innerHTML = `
+          <div class="kicker">Local folders</div>
+          <h3>Mount real folders</h3>
+          <p style="font-size:13px;color:var(--ink-mid);margin-bottom:14px">Grant a local folder and it appears at <code style="font-family:var(--mono);background:rgba(21,17,13,.06);padding:2px 6px;border-radius:4px">/mnt/local/…</code>, fully editable.</p>
+          <button class="btn" id="mnt">${I.mount} Mount a folder…</button>
+          <div style="margin-top:18px">
+            <h4 style="font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-mid);margin-bottom:8px">Mounted</h4>
+            ${names.length === 0 ? '<div style="color:var(--ink-mid);font-size:13px">Nothing mounted yet.</div>' :
+              `<table style="width:100%;font-size:13px;border-collapse:collapse">
+              ${names.map(n => `<tr>
+                <td style="padding:8px;border-bottom:1px solid rgba(21,17,13,.1)">${I.mount} <b>${esc(n)}</b> <span style="color:var(--ink-mid);font-family:var(--mono);font-size:11px">/mnt/local/${esc(n)}</span></td>
+                <td style="padding:8px;text-align:right;border-bottom:1px solid rgba(21,17,13,.1)"><button class="btn ghost" data-un="${esc(n)}">Unmount</button></td>
+              </tr>`).join('')}
+              </table>`
+            }
+          </div>
+        `;
+        main.querySelector('#mnt').onclick = async () => { await mountLocalFolder(); pages.mounts(); Desktop.render(); };
+        main.querySelectorAll('[data-un]').forEach(b => b.onclick = () => { unmountLocal(b.dataset.un); pages.mounts(); });
+      },
+      about(){
+        main.innerHTML = `
+          <div class="kicker">About</div>
+          <h3 style="font-size:48px">atelier<em style="color:var(--rust)">.</em></h3>
+          <p style="font-family:var(--serif);font-style:italic;font-size:18px;color:var(--ink-mid);margin-bottom:18px">A desktop in your browser, made in a single file.</p>
+          <div class="sett-section">
+            <h4>Stack</h4>
+            <ul style="font-size:13px;line-height:1.8;padding-left:18px;color:var(--ink-soft)">
+              <li>Pure HTML + CSS + JS · zero build</li>
+              <li>OPFS primary storage · IndexedDB fallback · localStorage metadata</li>
+              <li>File System Access API for local folder mounting</li>
+              <li>JSZip for .zip extraction</li>
+              <li>Icons drawn as inline SVG (no emoji)</li>
+            </ul>
+          </div>
+          <div class="sett-section">
+            <h4>Tip</h4>
+            <p style="font-size:13px;color:var(--ink-soft);line-height:1.6">Right-click anywhere on the desktop to change the wallpaper, upload files, or create folders. Drag files from your computer onto the desktop to import them.</p>
+          </div>
+        `;
+      }
+    };
+
+    body.querySelectorAll('.sett-tab').forEach(t => t.onclick = () => {
+      body.querySelectorAll('.sett-tab').forEach(x => x.classList.toggle('active', x===t));
+      pages[t.dataset.t]?.();
+    });
+    pages.appearance();
+  }
+};
+
+/* ==========================================================================
+   KEYBOARD SHORTCUTS
+   ========================================================================== */
+document.addEventListener('keydown', e => {
+  const mod = e.ctrlKey || e.metaKey;
+  if (mod && e.key === 'k'){ e.preventDefault(); /* could add spotlight */ }
+  if (e.key === 'F5'){ e.preventDefault(); Desktop.render(); }
+});
+
+/* ==========================================================================
+   BOOT
+   ========================================================================== */
+(async function boot(){
+  try {
+    await FS.init();
+    await Wallpaper.init();
+    await Desktop.render();
+    Dock.render();
+    // Recent mounts reminder
+    try {
+      const arr = JSON.parse(localStorage.getItem('atelier_recent_mounts')||'[]');
+      if (arr.length){
+        toast('Local folders', `${arr.length} mounted folder(s) need re-mount after reload.`);
+      }
+    } catch(e){}
+  } catch(e){
+    console.error(e);
+    toast('Boot failed', e.message, true);
+  }
+  setTimeout(() => $('#boot').classList.add('off'), 650);
+})();
+
+</script>
+</body>
+</html>
