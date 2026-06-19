@@ -1,0 +1,1817 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>NOVA OS — 浏览器桌面系统</title>
+
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Outfit:wght@300;400;500;600;700&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<!-- JSZip -->
+<script src="https://unpkg.com/jszip@3.10.1/dist/jszip.min.js"></script>
+<!-- v86 virtual machine (optional) -->
+<script src="https://cdn.jsdelivr.net/npm/v86@0.5.319/build/libv86.js"></script>
+
+<!-- CodeMirror -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material-darker.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/fold/foldgutter.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/xml/xml.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/css/css.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/htmlmixed/htmlmixed.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/markdown/markdown.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closebrackets.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closetag.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchtags.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/trailingspace.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/selection/active-line.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/fold/foldcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/fold/foldgutter.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/fold/xml-fold.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/fold/brace-fold.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/fold/comment-fold.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/fold/indent-fold.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/search/searchcursor.min.js"></script>
+
+<!-- js-beautify -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/js-beautify/1.15.1/beautify.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/js-beautify/1.15.1/beautify-css.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/js-beautify/1.15.1/beautify-html.min.js"></script>
+
+<style>
+:root{
+  --bg:#10131a;
+  --ink:#e9eef7;
+  --ink-soft:#9aa6bd;
+  --panel:rgba(22,27,38,.72);
+  --panel-solid:#161b26;
+  --line:rgba(255,255,255,.09);
+  --accent:#ff7a59;
+  --accent-2:#3dd7c2;
+  --gold:#f4c66a;
+  --danger:#ff5d6c;
+  --radius:16px;
+  --shadow:0 24px 60px -20px rgba(0,0,0,.7), 0 4px 14px rgba(0,0,0,.35);
+  --font-ui:'Outfit',system-ui,sans-serif;
+  --font-display:'Bricolage Grotesque',serif;
+  --font-mono:'Spline Sans Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{
+  font-family:var(--font-ui);
+  color:var(--ink);
+  background:var(--bg);
+  -webkit-tap-highlight-color:transparent;
+  user-select:none;
+}
+button{font-family:inherit;cursor:pointer;color:inherit}
+input,textarea{font-family:inherit}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:20px}
+::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.28)}
+::-webkit-scrollbar-track{background:transparent}
+
+/* ===== Desktop ===== */
+#desktop{
+  position:fixed;inset:0;
+  background-size:cover;background-position:center;
+  transition:background-image .5s ease;
+  overflow:hidden;
+}
+#desktop::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(8,10,16,.12),rgba(8,10,16,.42));pointer-events:none}
+#icon-layer{position:absolute;inset:0;bottom:60px;z-index:1}
+
+.dicon{
+  position:absolute;width:92px;padding:10px 6px;border-radius:14px;
+  display:flex;flex-direction:column;align-items:center;gap:7px;
+  text-align:center;cursor:pointer;transition:background .15s,transform .12s;
+  z-index:2;
+}
+.dicon:hover{background:rgba(255,255,255,.08)}
+.dicon.selected{background:rgba(61,215,194,.22);outline:1px solid rgba(61,215,194,.5)}
+.dicon .ic{width:46px;height:46px;display:grid;place-items:center;filter:drop-shadow(0 4px 8px rgba(0,0,0,.45))}
+.dicon .ic svg{width:46px;height:46px}
+.dicon .lbl{
+  font-size:12.5px;line-height:1.25;max-width:88px;word-break:break-word;
+  color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.85);
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+}
+
+/* selection box */
+#sel-box{position:absolute;border:1px solid var(--accent-2);background:rgba(61,215,194,.14);z-index:3;display:none;pointer-events:none;border-radius:4px}
+
+/* ===== Taskbar ===== */
+#taskbar{
+  position:fixed;left:0;right:0;bottom:0;height:56px;z-index:9000;
+  display:flex;align-items:center;gap:8px;padding:0 12px;
+  background:var(--panel);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);
+  border-top:1px solid var(--line);
+}
+#start-btn{
+  display:flex;align-items:center;gap:9px;height:40px;padding:0 16px;border:none;border-radius:11px;
+  background:linear-gradient(135deg,var(--accent),#ff5d6c);font-weight:600;font-size:14px;
+  box-shadow:0 6px 18px -6px rgba(255,122,89,.6);flex-shrink:0;
+}
+#start-btn:active{transform:scale(.96)}
+#task-list{display:flex;gap:6px;flex:1;overflow-x:auto;height:100%;align-items:center;scrollbar-width:none}
+#task-list::-webkit-scrollbar{display:none}
+.task-item{
+  display:flex;align-items:center;gap:7px;height:40px;padding:0 12px;border-radius:10px;
+  background:rgba(255,255,255,.06);border:1px solid transparent;font-size:13px;max-width:170px;flex-shrink:0;
+}
+.task-item svg{width:18px;height:18px;flex-shrink:0}
+.task-item .t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.task-item.active{border-color:var(--accent-2);background:rgba(61,215,194,.14)}
+.task-item.min{opacity:.55}
+#clock{font-family:var(--font-mono);font-size:13px;text-align:right;line-height:1.15;flex-shrink:0;padding:0 6px;color:var(--ink-soft)}
+#clock b{color:var(--ink);font-weight:500}
+
+/* ===== Start menu ===== */
+#start-menu{
+  position:fixed;left:12px;bottom:64px;width:360px;max-width:calc(100vw - 24px);max-height:70vh;z-index:9500;
+  background:var(--panel);backdrop-filter:blur(26px);-webkit-backdrop-filter:blur(26px);
+  border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow);
+  padding:18px;display:none;flex-direction:column;
+  transform-origin:bottom left;animation:pop .18s ease;
+}
+@keyframes pop{from{opacity:0;transform:translateY(12px) scale(.96)}to{opacity:1;transform:none}}
+#start-menu h3{font-family:var(--font-display);font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:12px}
+#sm-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;overflow:auto}
+.sm-app{display:flex;flex-direction:column;align-items:center;gap:7px;padding:12px 4px;border-radius:13px;background:transparent;border:none;font-size:11.5px;color:var(--ink)}
+.sm-app:hover{background:rgba(255,255,255,.08)}
+.sm-app svg{width:34px;height:34px}
+#sm-foot{display:flex;justify-content:space-between;align-items:center;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+#sm-user{display:flex;align-items:center;gap:10px;font-size:13px}
+#sm-user .av{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--accent-2),#2b9c8b);display:grid;place-items:center;font-family:var(--font-display);font-weight:700;color:#06241f}
+
+/* ===== Context menu ===== */
+.ctx-menu{
+  position:fixed;z-index:10000;min-width:200px;
+  background:var(--panel-solid);border:1px solid var(--line);border-radius:12px;
+  box-shadow:var(--shadow);padding:6px;display:none;animation:pop .12s ease;
+}
+.ctx-menu .item{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:8px;font-size:13.5px;white-space:nowrap}
+.ctx-menu .item:hover{background:rgba(61,215,194,.16)}
+.ctx-menu .item.danger:hover{background:rgba(255,93,108,.18)}
+.ctx-menu .item svg{width:17px;height:17px;opacity:.85;flex-shrink:0}
+.ctx-menu .sep{height:1px;background:var(--line);margin:5px 4px}
+.ctx-menu .item.dis{opacity:.35;pointer-events:none}
+
+/* ===== Windows ===== */
+.win{
+  position:fixed;display:flex;flex-direction:column;min-width:280px;min-height:180px;
+  background:var(--panel-solid);border:1px solid var(--line);border-radius:var(--radius);
+  box-shadow:var(--shadow);overflow:hidden;z-index:100;animation:winin .2s cubic-bezier(.2,.9,.3,1);
+}
+@keyframes winin{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:none}}
+.win.min{display:none}
+.win.max{border-radius:0!important}
+.win-head{
+  height:42px;flex-shrink:0;display:flex;align-items:center;gap:9px;padding:0 8px 0 14px;
+  background:linear-gradient(180deg,rgba(255,255,255,.05),transparent);
+  border-bottom:1px solid var(--line);cursor:grab;user-select:none;
+}
+.win-head .wt{flex:1;font-size:13.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:8px}
+.win-head .wt svg{width:16px;height:16px;flex-shrink:0}
+.win-ctrl{display:flex;gap:4px}
+.win-ctrl button{width:30px;height:30px;border:none;background:transparent;border-radius:8px;display:grid;place-items:center}
+.win-ctrl button svg{width:15px;height:15px;opacity:.8}
+.win-ctrl button:hover{background:rgba(255,255,255,.1)}
+.win-ctrl .wc-close:hover{background:var(--danger);color:#fff}
+.win-body{flex:1;overflow:auto;position:relative;background:var(--panel-solid)}
+.rsz{position:absolute;z-index:5}
+.rsz.n{top:-3px;left:8px;right:8px;height:7px;cursor:ns-resize}
+.rsz.s{bottom:-3px;left:8px;right:8px;height:7px;cursor:ns-resize}
+.rsz.e{right:-3px;top:8px;bottom:8px;width:7px;cursor:ew-resize}
+.rsz.w{left:-3px;top:8px;bottom:8px;width:7px;cursor:ew-resize}
+.rsz.ne{top:-3px;right:-3px;width:14px;height:14px;cursor:nesw-resize}
+.rsz.nw{top:-3px;left:-3px;width:14px;height:14px;cursor:nwse-resize}
+.rsz.se{bottom:-3px;right:-3px;width:14px;height:14px;cursor:nwse-resize}
+.rsz.sw{bottom:-3px;left:-3px;width:14px;height:14px;cursor:nesw-resize}
+
+/* ===== generic UI ===== */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border:1px solid var(--line);border-radius:9px;background:rgba(255,255,255,.05);font-size:12.5px;transition:.12s}
+.btn:hover{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.18)}
+.btn svg{width:15px;height:15px}
+.btn.pri{background:linear-gradient(135deg,var(--accent),#ff5d6c);border:none;font-weight:600;color:#fff}
+.btn.acc{background:linear-gradient(135deg,var(--accent-2),#2b9c8b);border:none;color:#062420;font-weight:600}
+.toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:8px 10px;border-bottom:1px solid var(--line);background:rgba(255,255,255,.02)}
+.tb-input{background:#0c0f16;border:1px solid var(--line);border-radius:8px;padding:7px 11px;color:var(--ink);font-size:13px;outline:none}
+.tb-input:focus{border-color:var(--accent-2)}
+select.tb-input{cursor:pointer}
+
+/* ===== File explorer ===== */
+.fx{display:flex;height:100%;font-size:13px}
+.fx-side{width:188px;flex-shrink:0;border-right:1px solid var(--line);padding:10px 8px;overflow:auto;background:rgba(0,0,0,.18)}
+.fx-side .grp{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);margin:12px 6px 6px}
+.fx-side .nav{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:8px;color:var(--ink)}
+.fx-side .nav:hover{background:rgba(255,255,255,.07)}
+.fx-side .nav.active{background:rgba(61,215,194,.16);color:#fff}
+.fx-side .nav svg{width:16px;height:16px;opacity:.85}
+.fx-main{flex:1;display:flex;flex-direction:column;min-width:0}
+.fx-bar{display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid var(--line)}
+.fx-crumb{flex:1;display:flex;align-items:center;gap:3px;overflow:auto;font-size:13px;white-space:nowrap;scrollbar-width:none}
+.fx-crumb::-webkit-scrollbar{display:none}
+.fx-crumb span{padding:3px 7px;border-radius:6px;cursor:pointer}
+.fx-crumb span:hover{background:rgba(255,255,255,.08)}
+.fx-crumb .sl{opacity:.4;padding:0}
+.fx-list{flex:1;overflow:auto}
+.fx-hd{display:grid;grid-template-columns:1fr 150px 110px 100px;gap:8px;padding:8px 14px;border-bottom:1px solid var(--line);font-size:11.5px;color:var(--ink-soft);position:sticky;top:0;background:var(--panel-solid);z-index:2}
+.fx-hd span{cursor:pointer;display:flex;align-items:center;gap:4px}
+.fx-hd span:hover{color:var(--ink)}
+.fx-row{display:grid;grid-template-columns:1fr 150px 110px 100px;gap:8px;padding:7px 14px;align-items:center;border-bottom:1px solid rgba(255,255,255,.03)}
+.fx-row:hover{background:rgba(255,255,255,.05)}
+.fx-row.selected{background:rgba(61,215,194,.18)}
+.fx-row .nm{display:flex;align-items:center;gap:10px;min-width:0}
+.fx-row .nm svg{width:20px;height:20px;flex-shrink:0}
+.fx-row .nm span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fx-row .meta{font-size:12px;color:var(--ink-soft)}
+.empty{display:grid;place-items:center;height:100%;color:var(--ink-soft);gap:10px;text-align:center}
+.empty svg{width:54px;height:54px;opacity:.4}
+
+/* ===== Notepad ===== */
+.np-area{width:100%;height:100%;border:none;outline:none;resize:none;background:#0c0f16;color:var(--ink);font-family:var(--font-mono);font-size:14px;line-height:1.6;padding:16px}
+
+/* ===== table ===== */
+.tbl-wrap{overflow:auto;height:100%}
+table.csv{border-collapse:collapse;font-size:13px;width:max-content;min-width:100%}
+table.csv td,table.csv th{border:1px solid var(--line);padding:6px 12px;white-space:nowrap}
+table.csv th{background:rgba(61,215,194,.12);position:sticky;top:0}
+table.csv tr:nth-child(even) td{background:rgba(255,255,255,.02)}
+
+/* code editor */
+.ed-wrap{display:flex;flex-direction:column;height:100%}
+.ed-body{flex:1;display:flex;min-height:0}
+.ed-left{flex:1;min-width:200px;display:flex;flex-direction:column;min-height:0}
+.ed-left .CodeMirror{flex:1;height:auto;font-family:var(--font-mono);font-size:13.5px}
+.ed-split{width:6px;background:var(--line);cursor:col-resize;flex-shrink:0}
+.ed-split:hover{background:var(--accent-2)}
+.ed-right{width:42%;min-width:120px;display:flex;flex-direction:column;background:#fff}
+.ed-right iframe{flex:1;border:none;width:100%;background:#fff}
+.ed-status{height:26px;flex-shrink:0;display:flex;align-items:center;gap:16px;padding:0 14px;font-family:var(--font-mono);font-size:11px;color:var(--ink-soft);border-top:1px solid var(--line);background:rgba(0,0,0,.2)}
+.ed-find{display:none;gap:6px;align-items:center;padding:6px 10px;border-bottom:1px solid var(--line);background:rgba(0,0,0,.25);flex-wrap:wrap}
+.ed-find.on{display:flex}
+.ed-find .mini{width:30px;height:28px;border:1px solid var(--line);border-radius:6px;background:transparent;font-size:12px;font-family:var(--font-mono)}
+.ed-find .mini.on{background:var(--accent-2);color:#062420;border-color:var(--accent-2)}
+.CodeMirror-search-hl{background:rgba(244,198,106,.35)}
+.CodeMirror-search-cur{background:rgba(255,122,89,.55)}
+
+/* viewers */
+.iv{display:flex;flex-direction:column;height:100%;background:#0a0c11}
+.iv-stage{flex:1;overflow:auto;display:grid;place-items:center;position:relative}
+.iv-stage img{transition:transform .12s;max-width:100%}
+.media-wrap{display:grid;place-items:center;height:100%;background:#000;padding:14px}
+.media-wrap audio{width:90%;max-width:560px}
+.media-wrap video{max-width:100%;max-height:100%}
+.manga{height:100%;overflow:auto;background:#000;display:flex;flex-direction:column;align-items:center;padding:0}
+.manga img{width:100%;max-width:1000px;display:block;pointer-events:none}
+
+/* calculator */
+.calc{display:flex;flex-direction:column;height:100%;padding:14px;gap:10px;background:radial-gradient(120% 80% at 50% 0%,#1a2030,#10131a)}
+.calc-disp{flex:0 0 auto;min-height:84px;border-radius:14px;background:#0a0c11;border:1px solid var(--line);padding:14px 18px;display:flex;flex-direction:column;justify-content:flex-end;align-items:flex-end}
+.calc-disp .ex{font-family:var(--font-mono);font-size:14px;color:var(--ink-soft);min-height:18px}
+.calc-disp .res{font-family:var(--font-display);font-size:38px;font-weight:600}
+.calc-pad{flex:1;display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.calc-pad button{border:none;border-radius:13px;background:rgba(255,255,255,.06);font-size:19px;font-family:var(--font-mono);transition:.1s}
+.calc-pad button:hover{background:rgba(255,255,255,.13)}
+.calc-pad button:active{transform:scale(.95)}
+.calc-pad .op{background:rgba(61,215,194,.18);color:var(--accent-2)}
+.calc-pad .eq{background:linear-gradient(135deg,var(--accent),#ff5d6c);color:#fff;grid-row:span 2}
+.calc-pad .fn{background:rgba(255,255,255,.1);color:var(--gold)}
+
+/* paint */
+.paint{display:flex;flex-direction:column;height:100%}
+.paint-tools{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.paint canvas{flex:1;background:#fff;cursor:crosshair;touch-action:none}
+.swatch{width:24px;height:24px;border-radius:6px;border:2px solid transparent;cursor:pointer}
+.swatch.on{border-color:#fff;transform:scale(1.12)}
+
+/* settings */
+.settings{padding:22px;overflow:auto;height:100%}
+.settings h2{font-family:var(--font-display);font-size:24px;margin-bottom:4px}
+.set-card{background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:14px;padding:18px;margin-top:18px}
+.set-card h4{font-size:13px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:12px}
+.bar{height:14px;border-radius:8px;background:rgba(255,255,255,.08);overflow:hidden;display:flex}
+.bar i{height:100%;display:block}
+.wp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px}
+.wp{height:72px;border-radius:11px;cursor:pointer;border:2px solid transparent;background-size:cover;background-position:center}
+.wp.on{border-color:var(--accent-2)}
+
+/* toast */
+#toast-wrap{position:fixed;bottom:72px;left:50%;transform:translateX(-50%);z-index:11000;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none}
+.toast{background:var(--panel-solid);border:1px solid var(--line);border-left:3px solid var(--accent-2);border-radius:10px;padding:11px 18px;font-size:13px;box-shadow:var(--shadow);animation:tin .25s ease}
+.toast.err{border-left-color:var(--danger)}
+@keyframes tin{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+
+/* dialog */
+#modal-mask{position:fixed;inset:0;background:rgba(5,7,11,.6);z-index:12000;display:none;place-items:center;backdrop-filter:blur(4px)}
+.modal{background:var(--panel-solid);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);width:380px;max-width:90vw;padding:22px;animation:pop .18s ease}
+.modal h3{font-family:var(--font-display);font-size:18px;margin-bottom:12px}
+.modal input{width:100%;margin-bottom:16px}
+.modal .row{display:flex;justify-content:flex-end;gap:8px}
+
+/* mobile */
+@media(max-width:760px){
+  .dicon{width:78px}
+  #start-menu{width:calc(100vw - 24px);left:12px;bottom:64px}
+  #sm-grid{grid-template-columns:repeat(3,1fr)}
+  .fx-side{display:none}
+  .fx-side.show{display:block;position:absolute;left:0;top:0;bottom:0;z-index:10;width:220px;box-shadow:var(--shadow)}
+  .fx-hd,.fx-row{grid-template-columns:1fr 88px}
+  .fx-hd .c-type,.fx-row .c-type,.fx-hd .c-size,.fx-row .c-size{display:none}
+  .ed-right{display:none}
+  .ed-split{display:none}
+  .win-head{height:46px}
+  #clock{display:none}
+}
+.mobile-only{display:none}
+@media(max-width:760px){.mobile-only{display:inline-flex}}
+.fullscreen-manga .win-head{display:none}
+.manga-exit{position:absolute;top:12px;right:12px;z-index:20;width:40px;height:40px;border-radius:50%;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.2);color:#fff;display:none;place-items:center;font-size:22px}
+.fullscreen-manga .manga-exit{display:grid}
+</style>
+</head>
+<body>
+
+<div id="desktop">
+  <div id="icon-layer"></div>
+  <div id="sel-box"></div>
+</div>
+
+<div id="taskbar">
+  <button id="start-btn">
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3.2"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>
+    NOVA
+  </button>
+  <div id="task-list"></div>
+  <div id="clock"><b id="clk-time">--:--</b><br><span id="clk-date"></span></div>
+</div>
+
+<div id="start-menu">
+  <h3>应用程序</h3>
+  <div id="sm-grid"></div>
+  <div id="sm-foot">
+    <div id="sm-user"><div class="av">N</div><div>NOVA 用户<br><span style="font-size:11px;color:var(--ink-soft)">本地账户</span></div></div>
+    <button class="btn" id="sm-settings">设置</button>
+  </div>
+</div>
+
+<div class="ctx-menu" id="desk-ctx"></div>
+<div class="ctx-menu" id="file-ctx"></div>
+
+<div id="toast-wrap"></div>
+
+<div id="modal-mask"><div class="modal" id="modal"></div></div>
+
+<input type="file" id="global-file-input" multiple style="display:none">
+
+<script>
+/* ============================================================
+   NOVA OS  —  single-file browser desktop
+   ============================================================ */
+const $ = (s,r=document)=>r.querySelector(s);
+const $$ = (s,r=document)=>[...r.querySelectorAll(s)];
+const sleep = ms=>new Promise(r=>setTimeout(r,ms));
+
+/* ---------- toast ---------- */
+function toast(msg,err=false){
+  const t=document.createElement('div');
+  t.className='toast'+(err?' err':'');t.textContent=msg;
+  $('#toast-wrap').appendChild(t);
+  setTimeout(()=>{t.style.opacity=0;t.style.transition='opacity .3s';setTimeout(()=>t.remove(),300)},2600);
+}
+
+/* ---------- modal prompt ---------- */
+function prompt2(title,def='',okLabel='确定'){
+  return new Promise(res=>{
+    const m=$('#modal');
+    m.innerHTML=`<h3>${title}</h3><input class="tb-input" id="m-in" value="${(def||'').replace(/"/g,'&quot;')}"><div class="row"><button class="btn" id="m-cancel">取消</button><button class="btn pri" id="m-ok">${okLabel}</button></div>`;
+    $('#modal-mask').style.display='grid';
+    const inp=$('#m-in');inp.focus();inp.select();
+    const done=v=>{$('#modal-mask').style.display='none';res(v)};
+    $('#m-ok').onclick=()=>done(inp.value);
+    $('#m-cancel').onclick=()=>done(null);
+    inp.onkeydown=e=>{if(e.key==='Enter')done(inp.value);if(e.key==='Escape')done(null)};
+  });
+}
+function confirm2(title,msg){
+  return new Promise(res=>{
+    const m=$('#modal');
+    m.innerHTML=`<h3>${title}</h3><p style="color:var(--ink-soft);margin-bottom:16px;font-size:14px;line-height:1.5">${msg}</p><div class="row"><button class="btn" id="m-cancel">取消</button><button class="btn pri" id="m-ok">确定</button></div>`;
+    $('#modal-mask').style.display='grid';
+    const done=v=>{$('#modal-mask').style.display='none';res(v)};
+    $('#m-ok').onclick=()=>done(true);$('#m-cancel').onclick=()=>done(false);
+  });
+}
+
+/* ============================================================
+   FILE SYSTEM  (OPFS primary + IndexedDB MemFS fallback)
+   Unified handle interface so mounts work transparently.
+   ============================================================ */
+const mounts=[]; // {path, handle}
+let FS_BACKEND='opfs';
+
+/* ---- IndexedDB-backed MemFS that mimics FileSystemDirectoryHandle ---- */
+const MemFS=(()=>{
+  let tree={kind:'directory',children:{}};
+  let db=null;
+  function openDB(){return new Promise((res)=>{
+    const r=indexedDB.open('nova-memfs',1);
+    r.onupgradeneeded=()=>r.result.createObjectStore('kv');
+    r.onsuccess=()=>res(r.result);
+    r.onerror=()=>res(null);
+  });}
+  async function persist(){ if(!db)return; try{ const tx=db.transaction('kv','readwrite'); tx.objectStore('kv').put(serialize(tree),'tree'); }catch(e){} }
+  function serialize(node){
+    if(node.kind==='file')return{kind:'file',blob:node.blob,mtime:node.mtime};
+    const c={};for(const k in node.children)c[k]=serialize(node.children[k]);
+    return{kind:'directory',children:c};
+  }
+  async function load(){
+    db=await openDB(); if(!db)return;
+    await new Promise(res=>{const tx=db.transaction('kv','readonly');const rq=tx.objectStore('kv').get('tree');rq.onsuccess=()=>{if(rq.result)tree=rq.result;res()};rq.onerror=()=>res()});
+  }
+  function wrapDir(node,name){
+    return{
+      kind:'directory',name,
+      async getDirectoryHandle(n,{create}={}){
+        if(!node.children[n]){if(!create)throw new DOMException('NotFound','NotFoundError');node.children[n]={kind:'directory',children:{}};await persist();}
+        if(node.children[n].kind!=='directory')throw new DOMException('Mismatch','TypeMismatchError');
+        return wrapDir(node.children[n],n);
+      },
+      async getFileHandle(n,{create}={}){
+        if(!node.children[n]){if(!create)throw new DOMException('NotFound','NotFoundError');node.children[n]={kind:'file',blob:new Blob([]),mtime:Date.now()};await persist();}
+        if(node.children[n].kind!=='file')throw new DOMException('Mismatch','TypeMismatchError');
+        return wrapFile(node.children[n],n);
+      },
+      async removeEntry(n,{recursive}={}){delete node.children[n];await persist();},
+      async *entries(){for(const k in node.children)yield[k,node.children[k].kind==='directory'?wrapDir(node.children[k],k):wrapFile(node.children[k],k)];},
+    };
+  }
+  function wrapFile(node,name){
+    return{
+      kind:'file',name,
+      async getFile(){const f=new File([node.blob],name,{lastModified:node.mtime||Date.now()});return f;},
+      async createWritable(){
+        let chunks=[];
+        return{
+          async write(d){chunks.push(d);},
+          async close(){node.blob=new Blob(chunks);node.mtime=Date.now();await persist();},
+        };
+      },
+    };
+  }
+  return{ async init(){await load();return wrapDir(tree,'');} };
+})();
+
+let ROOT=null;
+async function initFS(){
+  try{
+    if(navigator.storage&&navigator.storage.getDirectory){
+      ROOT=await navigator.storage.getDirectory();
+      FS_BACKEND='opfs';
+      // test write
+      const t=await ROOT.getFileHandle('.nova_test',{create:true});
+      const w=await t.createWritable();await w.write('ok');await w.close();
+      await ROOT.removeEntry('.nova_test');
+    } else throw new Error('no opfs');
+  }catch(e){
+    console.warn('OPFS unavailable, using MemFS fallback',e);
+    ROOT=await MemFS.init();
+    FS_BACKEND='memfs';
+  }
+  if(navigator.storage&&navigator.storage.persist){try{await navigator.storage.persist();}catch(e){}}
+}
+
+function normalize(p){p=('/'+p).replace(/\/+/g,'/');if(p.length>1&&p.endsWith('/'))p=p.slice(0,-1);return p;}
+function dirname(p){p=normalize(p);const i=p.lastIndexOf('/');return i<=0?'/':p.slice(0,i);}
+function basename(p){p=normalize(p);return p.slice(p.lastIndexOf('/')+1);}
+function joinp(a,b){return normalize(a+'/'+b);}
+function extOf(name){const i=name.lastIndexOf('.');return i<0?'':name.slice(i+1).toLowerCase();}
+
+function resolveRoot(path){
+  const norm=normalize(path);
+  for(const m of mounts){
+    if(norm===m.path||norm.startsWith(m.path+'/')){
+      return{root:m.handle,parts:norm.slice(m.path.length).split('/').filter(Boolean)};
+    }
+  }
+  return{root:ROOT,parts:norm.split('/').filter(Boolean)};
+}
+async function dirHandleFor(path,create=false){
+  const{root,parts}=resolveRoot(path);let dir=root;
+  for(const p of parts)dir=await dir.getDirectoryHandle(p,{create});
+  return dir;
+}
+async function fileHandleFor(path,create=false){
+  const{root,parts}=resolveRoot(path);const name=parts.pop();let dir=root;
+  for(const p of parts)dir=await dir.getDirectoryHandle(p,{create});
+  return{dir,name,handle:await dir.getFileHandle(name,{create})};
+}
+
+const fs={
+  async readdir(path){
+    const dir=await dirHandleFor(path);const out=[];
+    for await(const[name,handle]of dir.entries()){if(name.startsWith('.nova_'))continue;out.push({name,kind:handle.kind});}
+    return out;
+  },
+  async stat(path,isLstat){
+    path=normalize(path);
+    if(path==='/')return{name:'/',isDirectory:true,isFile:false,size:0,mtime:Date.now()};
+    // is it a mount root?
+    for(const m of mounts){if(m.path===path)return{name:basename(path),isDirectory:true,isFile:false,size:0,mtime:Date.now()};}
+    const parent=await dirHandleFor(dirname(path));const nm=basename(path);
+    try{const fh=await parent.getFileHandle(nm);const f=await fh.getFile();return{name:nm,isDirectory:false,isFile:true,size:f.size,mtime:f.lastModified,type:f.type};}
+    catch(e){const dh=await parent.getDirectoryHandle(nm);return{name:nm,isDirectory:true,isFile:false,size:0,mtime:Date.now()};}
+  },
+  async exists(path){try{await this.stat(path);return true;}catch(e){return false;}},
+  async mkdir(path){await dirHandleFor(path,true);},
+  async readFile(path,flag){const{handle}=await fileHandleFor(path);return await handle.getFile();},
+  async readText(path){const f=await this.readFile(path);return await f.text();},
+  async readArrayBuffer(path){const f=await this.readFile(path);return await f.arrayBuffer();},
+  async writeFile(path,data,flag){
+    const{handle}=await fileHandleFor(path,true);
+    const w=await handle.createWritable();
+    if(data instanceof Blob){await w.write(data);}
+    else if(data instanceof ArrayBuffer||ArrayBuffer.isView(data)){await w.write(data);}
+    else{await w.write(new Blob([data]));}
+    await w.close();
+  },
+  async unlink(path){const parent=await dirHandleFor(dirname(path));await parent.removeEntry(basename(path));},
+  async rmdir(path){const parent=await dirHandleFor(dirname(path));await parent.removeEntry(basename(path),{recursive:true});},
+  async remove(path){const s=await this.stat(path);if(s.isDirectory)await this.rmdir(path);else await this.unlink(path);},
+  async rename(oldPath,newPath){await this.copy(oldPath,newPath);await this.remove(oldPath);},
+  async copy(src,dest){
+    const s=await this.stat(src);
+    if(s.isFile){const f=await this.readFile(src);await this.writeFile(dest,f);}
+    else{
+      await this.mkdir(dest);
+      const items=await this.readdir(src);
+      for(const it of items)await this.copy(joinp(src,it.name),joinp(dest,it.name));
+    }
+  },
+  async uniquePath(dir,name){
+    let p=joinp(dir,name);if(!await this.exists(p))return p;
+    const dot=name.lastIndexOf('.');const base=dot>0?name.slice(0,dot):name;const ext=dot>0?name.slice(dot):'';
+    let i=1;while(await this.exists(joinp(dir,`${base} (${i})${ext}`)))i++;
+    return joinp(dir,`${base} (${i})${ext}`);
+  }
+};
+window.fs=fs;
+
+/* ============================================================
+   ICONS  (original SVGs)
+   ============================================================ */
+const I={
+  folder:`<svg viewBox="0 0 24 24" fill="none"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" fill="#f4c66a"/><path d="M3 9h18v8a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" fill="#e6b450"/></svg>`,
+  file:`<svg viewBox="0 0 24 24" fill="none"><path d="M6 3h8l5 5v13a1 1 0 01-1 1H6a1 1 0 01-1-1V4a1 1 0 011-1z" fill="#7c8aa6"/><path d="M14 3l5 5h-5V3z" fill="#aab6cc"/></svg>`,
+  txt:`<svg viewBox="0 0 24 24" fill="none"><path d="M6 3h8l5 5v13a1 1 0 01-1 1H6a1 1 0 01-1-1V4a1 1 0 011-1z" fill="#5b7fb5"/><path d="M14 3l5 5h-5V3z" fill="#9ec0f0"/><path d="M8 12h8M8 15h8M8 18h5" stroke="#dfeaff" stroke-width="1.3"/></svg>`,
+  code:`<svg viewBox="0 0 24 24" fill="none"><path d="M6 3h8l5 5v13a1 1 0 01-1 1H6a1 1 0 01-1-1V4a1 1 0 011-1z" fill="#2b9c8b"/><path d="M14 3l5 5h-5V3z" fill="#6fe0cd"/><path d="M10 12l-2 2 2 2M14 12l2 2-2 2" stroke="#eafff9" stroke-width="1.4" fill="none"/></svg>`,
+  img:`<svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="2" fill="#3dd7c2"/><circle cx="8.5" cy="9.5" r="1.8" fill="#fff"/><path d="M4 18l5-5 4 4 3-3 4 4v1a1 1 0 01-1 1H5a1 1 0 01-1-1z" fill="#0b6b5e"/></svg>`,
+  audio:`<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" fill="#ff7a59"/><path d="M10 8v8M14 6v12" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/><circle cx="12" cy="12" r="2" fill="#fff"/></svg>`,
+  video:`<svg viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="14" rx="2" fill="#ff5d6c"/><path d="M10 9l5 3-5 3V9z" fill="#fff"/></svg>`,
+  pdf:`<svg viewBox="0 0 24 24" fill="none"><path d="M6 3h8l5 5v13a1 1 0 01-1 1H6a1 1 0 01-1-1V4a1 1 0 011-1z" fill="#d6504a"/><path d="M14 3l5 5h-5V3z" fill="#f0938d"/><text x="12" y="18" font-size="6" fill="#fff" text-anchor="middle" font-family="sans-serif" font-weight="700">PDF</text></svg>`,
+  zip:`<svg viewBox="0 0 24 24" fill="none"><path d="M5 4a2 2 0 012-2h10a2 2 0 012 2v16a2 2 0 01-2 2H7a2 2 0 01-2-2V4z" fill="#b58df0"/><path d="M11 3h2v2h-2zM11 6h2v2h-2zM11 9h2v2h-2z" fill="#fff"/><rect x="10" y="12" width="4" height="5" rx="1" fill="#fff"/></svg>`,
+  csv:`<svg viewBox="0 0 24 24" fill="none"><path d="M6 3h8l5 5v13a1 1 0 01-1 1H6a1 1 0 01-1-1V4a1 1 0 011-1z" fill="#2d9d63"/><path d="M14 3l5 5h-5V3z" fill="#7fe0a8"/><path d="M8 12h8M8 15h8M12 11v8" stroke="#eafff2" stroke-width="1.1"/></svg>`,
+  explorer:`<svg viewBox="0 0 24 24" fill="none"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" fill="#f4c66a"/><path d="M3 10h18v7a2 2 0 01-2 2H5a2 2 0 01-2-2v-7z" fill="#e6b450"/></svg>`,
+  notepad:`<svg viewBox="0 0 24 24" fill="none"><rect x="4" y="3" width="16" height="18" rx="2" fill="#5b7fb5"/><path d="M8 8h8M8 11h8M8 14h6" stroke="#fff" stroke-width="1.4"/><path d="M16 2l3 3-2 2-3-3 2-2z" fill="#ff7a59"/></svg>`,
+  editor:`<svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="2" fill="#1f2a3a"/><rect x="3" y="4" width="18" height="3.5" fill="#2b9c8b"/><path d="M9 12l-2 2 2 2M15 12l2 2-2 2M13 11l-2 6" stroke="#6fe0cd" stroke-width="1.3" fill="none"/></svg>`,
+  browser:`<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" fill="#3dd7c2"/><circle cx="12" cy="12" r="9" fill="none" stroke="#0b6b5e" stroke-width="1"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18" stroke="#0b6b5e" stroke-width="1" fill="none"/></svg>`,
+  calc:`<svg viewBox="0 0 24 24" fill="none"><rect x="4" y="3" width="16" height="18" rx="2.5" fill="#ff7a59"/><rect x="6.5" y="5.5" width="11" height="4" rx="1" fill="#2a0f08"/><circle cx="8" cy="13" r="1.4" fill="#fff"/><circle cx="12" cy="13" r="1.4" fill="#fff"/><circle cx="16" cy="13" r="1.4" fill="#fff"/><circle cx="8" cy="17" r="1.4" fill="#fff"/><circle cx="12" cy="17" r="1.4" fill="#fff"/><circle cx="16" cy="17" r="1.4" fill="#fff"/></svg>`,
+  paint:`<svg viewBox="0 0 24 24" fill="none"><path d="M12 3a9 9 0 000 18c1.5 0 2-1 2-2 0-1.5 1-2 2.5-2H18a4 4 0 004-4c0-5-4.5-8-10-8z" fill="#f4c66a"/><circle cx="8" cy="10" r="1.4" fill="#ff5d6c"/><circle cx="12" cy="8" r="1.4" fill="#3dd7c2"/><circle cx="16" cy="10" r="1.4" fill="#5b7fb5"/></svg>`,
+  settings:`<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" fill="#fff"/><path d="M12 2l1.5 3 3.3-.8.8 3.3 3 1.5-2 2.7 2 2.7-3 1.5-.8 3.3-3.3-.8L12 22l-1.5-3-3.3.8-.8-3.3-3-1.5 2-2.7-2-2.7 3-1.5.8-3.3 3.3.8L12 2z" fill="#9aa6bd"/><circle cx="12" cy="12" r="3" fill="#10131a"/></svg>`,
+  image:`<svg viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="14" rx="2" fill="#3dd7c2"/><circle cx="8.5" cy="10" r="1.8" fill="#fff"/><path d="M4 17l5-5 4 4 3-3 4 4v1a1 1 0 01-1 1H5a1 1 0 01-1-1z" fill="#0b6b5e"/></svg>`,
+  media:`<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" fill="#ff5d6c"/><path d="M10 9l5 3-5 3V9z" fill="#fff"/></svg>`,
+  vm:`<svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="13" rx="2" fill="#5b7fb5"/><rect x="5.5" y="6.5" width="13" height="8" rx="1" fill="#0a1020"/><path d="M9 12h6M12 9v6" stroke="#3dd7c2" stroke-width="1.2"/><path d="M8 20h8M12 17v3" stroke="#aab6cc" stroke-width="1.4"/></svg>`,
+  drive:`<svg viewBox="0 0 24 24" fill="none"><rect x="3" y="6" width="18" height="12" rx="2" fill="#7c8aa6"/><circle cx="17" cy="12" r="1.5" fill="#3dd7c2"/></svg>`,
+  home:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 11l8-7 8 7M6 10v9h12v-9"/></svg>`,
+  desk:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="12" rx="1.5"/><path d="M9 20h6M12 16v4"/></svg>`,
+  search:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>`,
+  back:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>`,
+  fwd:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>`,
+  up:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M5 12l7-7 7 7"/></svg>`,
+  refresh:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12a9 9 0 11-3-6.7M21 4v5h-5"/></svg>`,
+  trash:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>`,
+  plus:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>`,
+  upload:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 16V4M7 9l5-5 5 5M5 20h14"/></svg>`,
+  download:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 4v12M7 11l5 5 5-5M5 20h14"/></svg>`,
+  copy:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 012-2h8"/></svg>`,
+  paste:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="6" y="4" width="12" height="16" rx="2"/><path d="M9 4V3h6v1"/></svg>`,
+  rename:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9M16 4l4 4-11 11-4 1 1-4 10-12z"/></svg>`,
+  open:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 3h7v7M21 3l-9 9M5 5h6M5 5v14h14v-6"/></svg>`,
+  wallpaper:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8" cy="10" r="1.5"/><path d="M3 16l5-4 4 3 3-2 6 5"/></svg>`,
+  fscreen:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 3H3v5M16 3h5v5M16 21h5v-5M8 21H3v-5"/></svg>`,
+};
+function iconFor(name,kind){
+  if(kind==='directory')return I.folder;
+  const e=extOf(name);
+  if(['png','jpg','jpeg','gif','svg','webp','bmp','ico'].includes(e))return I.img;
+  if(['mp3','wav','ogg','flac','aac','m4a'].includes(e))return I.audio;
+  if(['mp4','webm','ogv','mov','mkv'].includes(e))return I.video;
+  if(e==='pdf')return I.pdf;
+  if(['zip','gz','tar','tgz','rar','7z'].includes(e))return I.zip;
+  if(['csv','tsv'].includes(e))return I.csv;
+  if(['txt','md','yaml','yml','log','json','xml'].includes(e))return I.txt;
+  if(['html','htm','css','js','mjs'].includes(e))return I.code;
+  return I.file;
+}
+
+/* ============================================================
+   WALLPAPERS
+   ============================================================ */
+const WALLPAPERS={
+  dusk:'radial-gradient(120% 90% at 15% 10%,#3a2a52 0%,transparent 55%),radial-gradient(110% 100% at 90% 20%,#b85c5c 0%,transparent 45%),linear-gradient(160deg,#10131a 0%,#1b1f2e 45%,#2a1f33 100%)',
+  reef:'radial-gradient(100% 100% at 80% 0%,#1f6f63 0%,transparent 50%),radial-gradient(120% 120% at 10% 100%,#0e2b3a 0%,transparent 55%),linear-gradient(145deg,#06141a,#0c2230)',
+  ember:'radial-gradient(110% 90% at 20% 15%,#ff7a59 0%,transparent 42%),radial-gradient(120% 110% at 85% 90%,#7a1f3d 0%,transparent 48%),linear-gradient(150deg,#1a0f12,#241318)',
+  forest:'radial-gradient(120% 100% at 75% 10%,#345e3a 0%,transparent 48%),radial-gradient(100% 100% at 15% 90%,#11261c 0%,transparent 50%),linear-gradient(160deg,#0a140e,#15241a)',
+  mono:'radial-gradient(120% 90% at 30% 10%,#2c333f 0%,transparent 55%),linear-gradient(155deg,#0c0e13,#171b24)',
+  candy:'radial-gradient(110% 90% at 20% 20%,#f4c66a 0%,transparent 42%),radial-gradient(110% 110% at 85% 85%,#3dd7c2 0%,transparent 45%),linear-gradient(150deg,#141318,#1c1a22)',
+};
+function applyWallpaper(val){
+  const d=$('#desktop');
+  if(val&&val.startsWith('opfs:')){
+    fs.readFile(val.slice(5)).then(f=>{const u=URL.createObjectURL(f);d.style.backgroundImage=`url(${u})`;});
+  }else{
+    d.style.backgroundImage=WALLPAPERS[val]||WALLPAPERS.dusk;
+  }
+  localStorage.setItem('nova-wallpaper',val);
+}
+
+/* ============================================================
+   WINDOW MANAGER
+   ============================================================ */
+let zTop=100;
+const windows=new Map();
+let winSeq=0;
+const isMobile=()=>window.innerWidth<=760;
+
+function createWindow(opt){
+  const id='w'+(++winSeq);
+  const w=document.createElement('div');
+  w.className='win';w.dataset.id=id;
+  const W=opt.width||640,H=opt.height||440;
+  let left=opt.x??(60+(winSeq*26)%200), top=opt.y??(40+(winSeq*22)%140);
+  if(isMobile()){left=6;top=6;}
+  w.style.width=(isMobile()?window.innerWidth-12:W)+'px';
+  w.style.height=(isMobile()?window.innerHeight-68:H)+'px';
+  w.style.left=left+'px';w.style.top=top+'px';
+  w.style.zIndex=++zTop;
+  w.innerHTML=`
+    <div class="win-head">
+      <div class="wt">${opt.icon||I.file}<span>${opt.title||'窗口'}</span></div>
+      <div class="win-ctrl">
+        <button class="wc-min" title="最小化"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/></svg></button>
+        <button class="wc-max" title="最大化"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="5" width="14" height="14" rx="1"/></svg></button>
+        <button class="wc-close" title="关闭"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+    </div>
+    <div class="win-body"></div>
+    ${['n','s','e','w','ne','nw','se','sw'].map(d=>`<div class="rsz ${d}"></div>`).join('')}
+  `;
+  document.body.appendChild(w);
+  const body=$('.win-body',w);
+  const obj={id,el:w,body,title:opt.title,type:opt.type,icon:opt.icon,onClose:opt.onClose,meta:opt.meta||{}};
+  windows.set(id,obj);
+
+  const focus=()=>{w.style.zIndex=++zTop;renderTasks();};
+  w.addEventListener('pointerdown',focus,true);
+
+  // controls
+  $('.wc-close',w).onclick=()=>closeWindow(id);
+  $('.wc-min',w).onclick=()=>{w.classList.add('min');renderTasks();};
+  const maxBtn=$('.wc-max',w);
+  maxBtn.onclick=()=>toggleMax(obj);
+
+  // drag header
+  const head=$('.win-head',w);
+  head.addEventListener('pointerdown',e=>{
+    if(e.target.closest('.win-ctrl'))return;
+    if(w.classList.contains('max'))return;
+    focus();
+    const sx=e.clientX,sy=e.clientY,ox=w.offsetLeft,oy=w.offsetTop;
+    head.setPointerCapture(e.pointerId);head.style.cursor='grabbing';
+    const mv=ev=>{w.style.left=Math.max(-w.offsetWidth+80,ox+ev.clientX-sx)+'px';w.style.top=Math.max(0,oy+ev.clientY-sy)+'px';};
+    const up=()=>{head.style.cursor='grab';head.removeEventListener('pointermove',mv);head.removeEventListener('pointerup',up);};
+    head.addEventListener('pointermove',mv);head.addEventListener('pointerup',up);
+  });
+  head.addEventListener('dblclick',e=>{if(!e.target.closest('.win-ctrl'))toggleMax(obj);});
+
+  // resize handles
+  if(!isMobile()) $$('.rsz',w).forEach(h=>{
+    h.addEventListener('pointerdown',e=>{
+      e.stopPropagation();focus();
+      const dir=[...h.classList].find(c=>['n','s','e','w','ne','nw','se','sw'].includes(c));
+      const sx=e.clientX,sy=e.clientY,ow=w.offsetWidth,oh=w.offsetHeight,ol=w.offsetLeft,ot=w.offsetTop;
+      h.setPointerCapture(e.pointerId);
+      const mv=ev=>{
+        let dx=ev.clientX-sx,dy=ev.clientY-sy;
+        if(dir.includes('e'))w.style.width=Math.max(280,ow+dx)+'px';
+        if(dir.includes('s'))w.style.height=Math.max(160,oh+dy)+'px';
+        if(dir.includes('w')){const nw=Math.max(280,ow-dx);w.style.width=nw+'px';w.style.left=ol+(ow-nw)+'px';}
+        if(dir.includes('n')){const nh=Math.max(160,oh-dy);w.style.height=nh+'px';w.style.top=ot+(oh-nh)+'px';}
+        if(obj.onResize)obj.onResize();
+      };
+      const up=()=>{h.removeEventListener('pointermove',mv);h.removeEventListener('pointerup',up);};
+      h.addEventListener('pointermove',mv);h.addEventListener('pointerup',up);
+    });
+  });
+
+  renderTasks();
+  return obj;
+}
+function toggleMax(obj){
+  const w=obj.el;
+  if(w.classList.contains('max')){
+    w.classList.remove('max');
+    Object.assign(w.style,obj._pre||{});
+  }else{
+    obj._pre={left:w.style.left,top:w.style.top,width:w.style.width,height:w.style.height};
+    w.classList.add('max');
+    Object.assign(w.style,{left:'0px',top:'0px',width:'100vw',height:'calc(100vh - 56px)'});
+  }
+  if(obj.onResize)obj.onResize();
+}
+function closeWindow(id){
+  const o=windows.get(id);if(!o)return;
+  if(o.onClose)try{o.onClose();}catch(e){}
+  o.el.style.opacity=0;o.el.style.transform='scale(.97)';o.el.style.transition='.15s';
+  setTimeout(()=>{o.el.remove();windows.delete(id);renderTasks();},150);
+}
+function renderTasks(){
+  const list=$('#task-list');list.innerHTML='';
+  for(const[id,o]of windows){
+    const t=document.createElement('div');
+    t.className='task-item'+(o.el.classList.contains('min')?' min':'');
+    if(+o.el.style.zIndex===zTop&&!o.el.classList.contains('min'))t.classList.add('active');
+    t.innerHTML=`${o.icon||I.file}<span class="t">${o.title}</span>`;
+    t.onclick=()=>{
+      if(o.el.classList.contains('min')){o.el.classList.remove('min');o.el.style.zIndex=++zTop;}
+      else if(+o.el.style.zIndex===zTop){o.el.classList.add('min');}
+      else{o.el.style.zIndex=++zTop;}
+      renderTasks();
+    };
+    list.appendChild(t);
+  }
+}
+
+/* ============================================================
+   FILE OPEN DISPATCHER
+   ============================================================ */
+async function openPath(path){
+  let st;try{st=await fs.stat(path);}catch(e){toast('无法打开：'+e.message,true);return;}
+  if(st.isDirectory){openExplorer(path);return;}
+  const e=extOf(path);
+  if(['png','jpg','jpeg','gif','svg','webp','bmp','ico'].includes(e))return openImage(path);
+  if(['mp3','wav','ogg','flac','aac','m4a'].includes(e))return openMedia(path,'audio');
+  if(['mp4','webm','ogv','mov'].includes(e))return openMedia(path,'video');
+  if(e==='pdf')return openPDF(path);
+  if(['zip','gz','tar','tgz'].includes(e))return openArchive(path);
+  if(['csv','tsv'].includes(e))return openTable(path);
+  if(['html','htm'].includes(e))return openHtmlChoice(path);
+  if(['txt','md','markdown','log','yaml','yml','json','xml','css','js','mjs','svg','ini','conf'].includes(e))return openNotepad(path);
+  // default text
+  return openNotepad(path);
+}
+
+/* ============================================================
+   APP: FILE EXPLORER
+   ============================================================ */
+let clipboard=null; // {op:'copy'|'cut', paths:[]}
+const explorerWindows=new Set();
+
+function openExplorer(start='/Desktop'){
+  const win=createWindow({title:'文件资源管理器',type:'explorer',icon:I.explorer,width:820,height:520});
+  explorerWindows.add(win);
+  win.onClose=()=>explorerWindows.delete(win);
+  win.state={path:start,sort:'name',dir:1,sel:new Set()};
+  win.body.innerHTML=`
+    <div class="fx">
+      <div class="fx-side">
+        <div class="grp">快速访问</div>
+        <div class="nav" data-p="/Desktop">${I.desk}桌面</div>
+        <div class="nav" data-p="/Documents">${I.notepad}文档</div>
+        <div class="nav" data-p="/Pictures">${I.image}图片</div>
+        <div class="nav" data-p="/Music">${I.audio}音乐</div>
+        <div class="nav" data-p="/Videos">${I.video}视频</div>
+        <div class="nav" data-p="/Downloads">${I.download}下载</div>
+        <div class="grp">设备</div>
+        <div class="nav" data-p="/">${I.drive}NOVA 磁盘</div>
+        <div class="fx-mnt"></div>
+      </div>
+      <div class="fx-main">
+        <div class="fx-bar">
+          <button class="btn fx-back" title="后退">${I.back}</button>
+          <button class="btn fx-up" title="上级">${I.up}</button>
+          <button class="btn fx-ref" title="刷新">${I.refresh}</button>
+          <button class="btn mobile-only fx-toggle">☰</button>
+          <div class="fx-crumb"></div>
+          <input class="tb-input fx-search" placeholder="搜索…" style="width:140px">
+        </div>
+        <div class="fx-hd">
+          <span data-s="name">名称</span>
+          <span data-s="mtime">修改日期</span>
+          <span data-s="type" class="c-type">类型</span>
+          <span data-s="size" class="c-size">大小</span>
+        </div>
+        <div class="fx-list"></div>
+      </div>
+    </div>`;
+  const back=[];
+  const list=$('.fx-list',win.body);
+  $('.fx-back',win.body).onclick=()=>{const p=back.pop();if(p)nav(p,true);};
+  $('.fx-up',win.body).onclick=()=>nav(dirname(win.state.path));
+  $('.fx-ref',win.body).onclick=()=>render();
+  $('.fx-toggle',win.body).onclick=()=>$('.fx-side',win.body).classList.toggle('show');
+  $$('.nav',win.body).forEach(n=>n.onclick=()=>{nav(n.dataset.p);$('.fx-side',win.body).classList.remove('show');});
+  $$('.fx-hd span',win.body).forEach(s=>s.onclick=()=>{
+    const k=s.dataset.s;if(win.state.sort===k)win.state.dir*=-1;else{win.state.sort=k;win.state.dir=1;}render();
+  });
+  const search=$('.fx-search',win.body);
+  search.oninput=()=>render();
+
+  function nav(p,noPush){if(!noPush&&p!==win.state.path)back.push(win.state.path);win.state.path=p;win.state.sel.clear();search.value='';render();renderMounts();}
+  win._nav=nav;win._render=render;
+
+  function renderMounts(){
+    const c=$('.fx-mnt',win.body);c.innerHTML='';
+    if(mounts.length){const g=document.createElement('div');g.className='grp';g.textContent='已挂载';c.appendChild(g);}
+    mounts.forEach(m=>{const n=document.createElement('div');n.className='nav';n.dataset.p=m.path;n.innerHTML=I.drive+basename(m.path);n.onclick=()=>nav(m.path);c.appendChild(n);});
+  }
+  renderMounts();
+
+  async function render(){
+    $$('.nav',win.body).forEach(n=>n.classList.toggle('active',n.dataset.p===win.state.path));
+    // crumb
+    const cr=$('.fx-crumb',win.body);cr.innerHTML='';
+    const parts=win.state.path.split('/').filter(Boolean);let acc='';
+    const root=document.createElement('span');root.textContent='NOVA';root.onclick=()=>nav('/');cr.appendChild(root);
+    parts.forEach(p=>{acc+='/'+p;const sl=document.createElement('span');sl.className='sl';sl.textContent='›';cr.appendChild(sl);const s=document.createElement('span');s.textContent=p;const cp=acc;s.onclick=()=>nav(cp);cr.appendChild(s);});
+    // win title
+    $('.wt span',win.el).textContent=basename(win.state.path)||'NOVA 磁盘';
+
+    let items;
+    try{items=await fs.readdir(win.state.path);}catch(e){list.innerHTML=`<div class="empty">${I.folder}<div>无法读取目录</div></div>`;return;}
+    // stats
+    const rows=[];
+    for(const it of items){
+      let st={size:0,mtime:0};
+      try{st=await fs.stat(joinp(win.state.path,it.name));}catch(e){}
+      rows.push({name:it.name,kind:it.kind,size:st.size||0,mtime:st.mtime||0});
+    }
+    const q=search.value.trim().toLowerCase();
+    let filtered=q?rows.filter(r=>r.name.toLowerCase().includes(q)):rows;
+    const {sort,dir}=win.state;
+    filtered.sort((a,b)=>{
+      if(a.kind!==b.kind)return a.kind==='directory'?-1:1;
+      let v;
+      if(sort==='name')v=a.name.localeCompare(b.name,undefined,{numeric:true});
+      else if(sort==='size')v=a.size-b.size;
+      else if(sort==='mtime')v=a.mtime-b.mtime;
+      else v=(extOf(a.name)||'').localeCompare(extOf(b.name)||'');
+      return v*dir;
+    });
+    if(!filtered.length){list.innerHTML=`<div class="empty">${I.folder}<div>${q?'未找到匹配项':'此文件夹为空'}</div></div>`;return;}
+    list.innerHTML='';
+    for(const r of filtered){
+      const full=joinp(win.state.path,r.name);
+      const row=document.createElement('div');row.className='fx-row';row.dataset.path=full;row.dataset.kind=r.kind;
+      if(win.state.sel.has(full))row.classList.add('selected');
+      const typ=r.kind==='directory'?'文件夹':(extOf(r.name).toUpperCase()+' 文件');
+      row.innerHTML=`<div class="nm">${iconFor(r.name,r.kind)}<span>${r.name}</span></div>
+        <div class="meta">${r.mtime?fmtDate(r.mtime):'—'}</div>
+        <div class="meta c-type">${typ}</div>
+        <div class="meta c-size">${r.kind==='directory'?'—':fmtSize(r.size)}</div>`;
+      row.draggable=true;
+      row.addEventListener('mouseenter',()=>preloadDrag(full));
+      row.addEventListener('dragstart',e=>fxDragStart(e,full,r));
+      row.addEventListener('dragend',e=>cleanupDrag());
+      row.addEventListener('dragover',e=>{if(r.kind==='directory'){e.preventDefault();row.style.background='rgba(61,215,194,.3)';}});
+      row.addEventListener('dragleave',()=>{row.style.background='';});
+      row.addEventListener('drop',e=>{row.style.background='';if(r.kind==='directory')fxDrop(e,full,win);});
+      row.onclick=e=>{
+        if(e.ctrlKey||e.metaKey){if(win.state.sel.has(full))win.state.sel.delete(full);else win.state.sel.add(full);}
+        else{win.state.sel.clear();win.state.sel.add(full);}
+        render();
+      };
+      row.ondblclick=()=>openPath(full);
+      row.oncontextmenu=e=>{e.preventDefault();e.stopPropagation();if(!win.state.sel.has(full)){win.state.sel.clear();win.state.sel.add(full);render();}showFileCtx(e,win,full,r.kind);};
+      list.appendChild(row);
+    }
+  }
+  // drop on empty area / window = move into this folder
+  win.body.addEventListener('dragover',e=>{e.preventDefault();});
+  win.body.addEventListener('drop',e=>{if(e.target.closest('.fx-row'))return;fxDrop(e,win.state.path,win);});
+  win.body.oncontextmenu=e=>{if(e.target.closest('.fx-row'))return;e.preventDefault();showFolderCtx(e,win);};
+
+  render();
+}
+
+/* explorer drag helpers (HTML5 native) */
+const dragCache=new Map();
+async function preloadDrag(path){
+  if(dragCache.has(path))return;
+  try{const st=await fs.stat(path);if(st.isFile){const f=await fs.readFile(path);dragCache.set(path,f);}}catch(e){}
+}
+function fxDragStart(e,full,r){
+  e.dataTransfer.effectAllowed='all';
+  e.dataTransfer.setData('application/x-nova-path',full);
+  if(r.kind!=='directory'){
+    const f=dragCache.get(full);
+    if(f){
+      try{const file=new File([f],r.name,{type:f.type||'application/octet-stream'});e.dataTransfer.items.add(file);}catch(_){}
+      const url=URL.createObjectURL(f);
+      e.dataTransfer.setData('DownloadURL',`${f.type||'application/octet-stream'}:${r.name}:${url}`);
+      e.dataTransfer.setData('text/plain',r.name);
+      setTimeout(()=>setTimeout(()=>URL.revokeObjectURL(url),6000),0);
+    }
+  }
+}
+function cleanupDrag(){}
+async function fxDrop(e,destDir,win){
+  e.preventDefault();e.stopPropagation();
+  // internal move?
+  const internal=e.dataTransfer.getData('application/x-nova-path');
+  if(internal){
+    const name=basename(internal);
+    if(dirname(internal)===destDir||internal===destDir){return;}
+    if(destDir===internal||destDir.startsWith(internal+'/')){toast('不能移动到自身',true);return;}
+    try{const dest=await fs.uniquePath(destDir,name);await fs.rename(internal,dest);toast('已移动 '+name);refreshAll();}catch(err){toast('移动失败：'+err.message,true);}
+    return;
+  }
+  // external import
+  await importDataTransfer(e.dataTransfer,destDir);
+  refreshAll();
+}
+
+function refreshAll(){renderDesktop();for(const w of explorerWindows){if(w._render)w._render();if(w._nav){}}}
+
+/* ============================================================
+   external import (drag from OS / file picker / FS entries)
+   ============================================================ */
+async function importDataTransfer(dt,destDir){
+  const items=dt.items;let count=0;
+  if(items&&items.length&&items[0].webkitGetAsEntry){
+    const entries=[];
+    for(let i=0;i<items.length;i++){const en=items[i].webkitGetAsEntry&&items[i].webkitGetAsEntry();if(en)entries.push(en);}
+    for(const en of entries){count+=await importEntry(en,destDir);}
+  }else if(dt.files&&dt.files.length){
+    for(const f of dt.files){const p=await fs.uniquePath(destDir,f.name);await fs.writeFile(p,f);count++;}
+  }
+  if(count)toast(`已导入 ${count} 个项目`);
+}
+async function importEntry(entry,destDir){
+  let n=0;
+  if(entry.isFile){
+    const file=await new Promise((res,rej)=>entry.file(res,rej));
+    const p=await fs.uniquePath(destDir,file.name);
+    await fs.writeFile(p,file);return 1;
+  }else if(entry.isDirectory){
+    const newDir=await fs.uniquePath(destDir,entry.name);await fs.mkdir(newDir);
+    const reader=entry.createReader();
+    let batch;
+    do{batch=await new Promise((res,rej)=>reader.readEntries(res,rej));for(const e of batch)n+=await importEntry(e,newDir);}while(batch.length);
+    return n+1;
+  }
+  return 0;
+}
+async function importFiles(fileList,destDir){
+  let c=0;for(const f of fileList){const p=await fs.uniquePath(destDir,f.name);await fs.writeFile(p,f);c++;}
+  if(c)toast(`已导入 ${c} 个文件`);refreshAll();
+}
+
+/* ============================================================
+   utils
+   ============================================================ */
+function fmtSize(b){if(b<1024)return b+' B';if(b<1048576)return(b/1024).toFixed(1)+' KB';if(b<1073741824)return(b/1048576).toFixed(1)+' MB';return(b/1073741824).toFixed(2)+' GB';}
+function fmtDate(t){const d=new Date(t);const p=n=>String(n).padStart(2,'0');return `${d.getFullYear()}/${p(d.getMonth()+1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;}
+
+/* ============================================================
+   APP: NOTEPAD
+   ============================================================ */
+function openNotepad(path){
+  const win=createWindow({title:path?basename(path):'新建文本',type:'notepad',icon:I.notepad,width:640,height:480});
+  win.body.innerHTML=`<div style="display:flex;flex-direction:column;height:100%">
+    <div class="toolbar">
+      <button class="btn pri np-save">${I.download}保存 (Ctrl+S)</button>
+      <button class="btn np-saveas">另存为</button>
+      <span style="margin-left:auto;font-size:11px;color:var(--ink-soft)" class="np-stat"></span>
+    </div>
+    <textarea class="np-area" spellcheck="false"></textarea></div>`;
+  const ta=$('.np-area',win.body);
+  win.meta.path=path;
+  if(path)fs.readText(path).then(t=>{ta.value=t;updateStat();}).catch(e=>toast('读取失败',true));
+  function updateStat(){$('.np-stat',win.body).textContent=`${ta.value.length} 字符 · ${ta.value.split('\n').length} 行`;}
+  ta.addEventListener('input',updateStat);
+  async function save(p){
+    if(!p){p=await prompt2('保存为（完整路径）',win.meta.path||'/Documents/新建文本.txt');if(!p)return;}
+    try{await fs.mkdir(dirname(p));await fs.writeFile(p,ta.value);win.meta.path=p;$('.wt span',win.el).textContent=basename(p);toast('已保存');refreshAll();}
+    catch(e){toast('保存失败：'+e.message,true);}
+  }
+  $('.np-save',win.body).onclick=()=>save(win.meta.path);
+  $('.np-saveas',win.body).onclick=()=>save(null);
+  ta.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='s'){e.preventDefault();save(win.meta.path);}});
+}
+
+/* ============================================================
+   APP: TABLE (CSV/TSV)
+   ============================================================ */
+function openTable(path){
+  const win=createWindow({title:basename(path),type:'table',icon:I.csv,width:760,height:520});
+  const sep=extOf(path)==='tsv'?'\t':',';
+  win.body.innerHTML=`<div style="display:flex;flex-direction:column;height:100%">
+    <div class="toolbar">
+      <button class="btn tv-tbl pri">表格视图</button>
+      <button class="btn tv-txt">文本视图</button>
+      <button class="btn pri tv-save" style="margin-left:auto">${I.download}保存</button>
+    </div>
+    <div class="tbl-wrap" style="flex:1;display:block"></div>
+    <textarea class="np-area" style="flex:1;display:none" spellcheck="false"></textarea>
+  </div>`;
+  const wrap=$('.tbl-wrap',win.body),ta=$('.np-area',win.body);
+  let raw='';
+  fs.readText(path).then(t=>{raw=t;ta.value=t;renderTbl();});
+  function parse(text){return text.replace(/\r/g,'').split('\n').filter(l=>l.length).map(l=>l.split(sep));}
+  function renderTbl(){
+    const rows=parse(ta.value);if(!rows.length){wrap.innerHTML='<div class="empty">空表格</div>';return;}
+    let h='<table class="csv"><thead><tr>'+rows[0].map(c=>`<th>${esc(c)}</th>`).join('')+'</tr></thead><tbody>';
+    for(let i=1;i<rows.length;i++)h+='<tr>'+rows[i].map(c=>`<td>${esc(c)}</td>`).join('')+'</tr>';
+    wrap.innerHTML=h+'</tbody></table>';
+  }
+  $('.tv-tbl',win.body).onclick=()=>{wrap.style.display='block';ta.style.display='none';renderTbl();};
+  $('.tv-txt',win.body).onclick=()=>{wrap.style.display='none';ta.style.display='block';};
+  $('.tv-save',win.body).onclick=async()=>{try{await fs.writeFile(path,ta.value);toast('已保存');refreshAll();}catch(e){toast('保存失败',true);}};
+}
+function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+/* ============================================================
+   APP: CODE EDITOR  (CodeMirror)
+   ============================================================ */
+function openEditor(opt={}){
+  if(typeof CodeMirror==='undefined'){toast('代码编辑器内核未加载，使用记事本',true);return openNotepad(opt.path);}
+  const win=createWindow({title:'HTML编辑器',type:'editor',icon:I.editor,width:1000,height:650});
+  win.meta.saveDir=opt.path?dirname(opt.path):'/Desktop';
+  win.meta.fileName=opt.path?basename(opt.path):'index.html';
+  win.body.innerHTML=`
+  <div class="ed-wrap">
+    <div class="toolbar">
+      <select class="tb-input ed-mode">
+        <option value="htmlmixed">HTML</option><option value="css">CSS</option>
+        <option value="javascript">JavaScript</option><option value="markdown">Markdown</option>
+        <option value="application/json">JSON</option><option value="xml">XML/SVG</option>
+      </select>
+      <button class="btn acc ed-run">▶ 运行</button>
+      <button class="btn ed-refresh">刷新预览</button>
+      <button class="btn ed-fmt">格式化</button>
+      <button class="btn ed-undo">撤销</button>
+      <button class="btn ed-redo">重做</button>
+      <button class="btn ed-foldall">折叠</button>
+      <button class="btn ed-unfoldall">展开</button>
+      <button class="btn ed-find-btn">查找</button>
+      <button class="btn ed-import">导入</button>
+      <button class="btn ed-export">导出</button>
+      <button class="btn ed-clear">清空</button>
+      <button class="btn ed-newwin">新窗口</button>
+      <button class="btn pri ed-save">${I.download}保存</button>
+    </div>
+    <div class="ed-find">
+      <input class="tb-input ed-q" placeholder="查找" style="width:130px">
+      <span class="ed-count" style="font-size:11px;color:var(--ink-soft);min-width:54px"></span>
+      <input class="tb-input ed-r" placeholder="替换" style="width:130px">
+      <button class="mini ed-case" title="区分大小写">Aa</button>
+      <button class="mini ed-word" title="全词">W</button>
+      <button class="mini ed-regex" title="正则">.*</button>
+      <button class="btn ed-prev">↑</button><button class="btn ed-next">↓</button>
+      <button class="btn ed-rep">替换</button><button class="btn ed-repall">全部</button>
+      <button class="btn ed-find-close">✕</button>
+    </div>
+    <div class="ed-body">
+      <div class="ed-left"><textarea class="ed-ta"></textarea></div>
+      <div class="ed-split"></div>
+      <div class="ed-right"><iframe class="ed-prev" sandbox="allow-scripts allow-forms allow-same-origin allow-popups allow-modals allow-top-navigation allow-popups-to-escape-sandbox"></iframe></div>
+    </div>
+    <div class="ed-status">
+      <span class="st-pos">行 1, 列 1</span><span class="st-sel"></span>
+      <span class="st-lines"></span><span class="st-chars"></span>
+      <span class="st-lang" style="margin-left:auto">HTML</span><span>UTF-8</span>
+    </div>
+  </div>`;
+  const editor=CodeMirror.fromTextArea($('.ed-ta',win.body),{
+    lineNumbers:true,lineWrapping:true,styleActiveLine:true,showTrailingSpace:true,
+    matchBrackets:true,autoCloseBrackets:true,matchTags:{bothTags:true},autoCloseTags:true,
+    foldGutter:true,gutters:['CodeMirror-linenumbers','CodeMirror-foldgutter'],
+    theme:'material-darker',mode:'htmlmixed',indentUnit:2,tabSize:2,
+  });
+  win.meta.editor=editor;
+  win.onClose=()=>{try{editor.toTextArea();}catch(e){}};
+  win.onResize=()=>editor.refresh();
+  const iframe=$('.ed-prev',win.body);
+  const modeSel=$('.ed-mode',win.body);
+
+  function setMode(m){editor.setOption('mode',m);modeSel.value=m;
+    const map={'htmlmixed':'HTML','css':'CSS','javascript':'JavaScript','markdown':'Markdown','application/json':'JSON','xml':'XML'};
+    $('.st-lang',win.body).textContent=map[m]||m;}
+  modeSel.onchange=()=>setMode(modeSel.value);
+
+  function refreshPreview(){
+    const code=editor.getValue();const m=editor.getOption('mode');
+    let html=code;
+    if(m==='css')html=`<style>${code}</style><div style="padding:20px;font-family:sans-serif">CSS 预览区域</div>`;
+    else if(m==='javascript')html=`<pre style="font-family:monospace;padding:10px"></pre><script>try{${code}}catch(e){document.body.innerHTML='<p style=color:red>'+e+'</p>'}<\/script>`;
+    else if(m==='markdown')html=`<div style="font-family:sans-serif;padding:20px;white-space:pre-wrap">${esc(code)}</div>`;
+    else if(m==='application/json'){try{html=`<pre style="padding:14px;font-family:monospace">${esc(JSON.stringify(JSON.parse(code),null,2))}</pre>`;}catch(e){html=`<pre style="color:red;padding:14px">JSON 错误: ${esc(e.message)}</pre>`;}}
+    try{const doc=iframe.contentDocument;doc.open();doc.write(html);doc.close();}
+    catch(e){const blob=new Blob([html],{type:'text/html'});iframe.src=URL.createObjectURL(blob);}
+  }
+  let prevTimer;editor.on('change',()=>{clearTimeout(prevTimer);prevTimer=setTimeout(refreshPreview,400);updateStatus();updateCount();});
+  editor.on('cursorActivity',updateStatus);
+  function updateStatus(){
+    const c=editor.getCursor();$('.st-pos',win.body).textContent=`行 ${c.line+1}, 列 ${c.ch+1}`;
+    const sel=editor.getSelection();$('.st-sel',win.body).textContent=sel?`已选 ${sel.length} 字符`:'';
+    $('.st-lines',win.body).textContent=`${editor.lineCount()} 行`;
+    $('.st-chars',win.body).textContent=`${editor.getValue().length} 字符`;
+  }
+  $('.ed-run',win.body).onclick=refreshPreview;
+  $('.ed-refresh',win.body).onclick=refreshPreview;
+  $('.ed-fmt',win.body).onclick=()=>{
+    const m=editor.getOption('mode');const cur=editor.getCursor();const code=editor.getValue();let out=code;
+    try{
+      const o={indent_size:2,wrap_line_length:120,max_preserve_newlines:2,end_with_newline:true};
+      if(m==='htmlmixed'||m==='xml')out=html_beautify(code,{...o,indent_inner_html:true});
+      else if(m==='css')out=css_beautify(code,o);
+      else if(m==='javascript'||m==='application/json')out=js_beautify(code,o);
+      editor.setValue(out);editor.setCursor(cur);toast('已格式化');
+    }catch(e){toast('格式化失败',true);}
+  };
+  $('.ed-undo',win.body).onclick=()=>editor.undo();
+  $('.ed-redo',win.body).onclick=()=>editor.redo();
+  $('.ed-foldall',win.body).onclick=()=>{for(let i=0;i<editor.lineCount();i++)editor.foldCode({line:i,ch:0},null,'fold');};
+  $('.ed-unfoldall',win.body).onclick=()=>{for(let i=0;i<editor.lineCount();i++)editor.foldCode({line:i,ch:0},null,'unfold');};
+  $('.ed-clear',win.body).onclick=()=>editor.setValue('');
+  $('.ed-newwin',win.body).onclick=()=>{const blob=new Blob([editor.getValue()],{type:'text/html'});window.open(URL.createObjectURL(blob),'_blank');};
+  const fi=document.createElement('input');fi.type='file';fi.style.display='none';win.body.appendChild(fi);
+  $('.ed-import',win.body).onclick=()=>fi.click();
+  fi.onchange=async()=>{const f=fi.files[0];if(!f)return;const t=await f.text();editor.setValue(t);autoMode(f.name);};
+  $('.ed-export',win.body).onclick=()=>{
+    const m=editor.getOption('mode');const ext={'htmlmixed':'html','css':'css','javascript':'js','markdown':'md','application/json':'json','xml':'xml'}[m]||'txt';
+    const blob=new Blob([editor.getValue()],{type:'text/plain'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='export.'+ext;a.click();
+  };
+  async function save(){
+    const p=joinp(win.meta.saveDir,win.meta.fileName);
+    try{await fs.mkdir(win.meta.saveDir);await fs.writeFile(p,editor.getValue());toast('已保存到 '+p);refreshAll();}
+    catch(e){const np=await prompt2('保存为完整路径',p);if(np){await fs.mkdir(dirname(np));await fs.writeFile(np,editor.getValue());win.meta.saveDir=dirname(np);win.meta.fileName=basename(np);toast('已保存');refreshAll();}}
+  }
+  $('.ed-save',win.body).onclick=save;
+  function autoMode(name){const e=extOf(name);const map={html:'htmlmixed',htm:'htmlmixed',css:'css',js:'javascript',mjs:'javascript',json:'application/json',md:'markdown',markdown:'markdown',xml:'xml',svg:'xml'};setMode(map[e]||'htmlmixed');}
+
+  // find/replace
+  const findBar=$('.ed-find',win.body);
+  let marks=[],curIdx=-1,opts={case:false,word:false,regex:false};
+  function toggleFind(focusRep){findBar.classList.add('on');$('.ed-q',win.body).focus();if(focusRep)$('.ed-r',win.body).focus();}
+  $('.ed-find-btn',win.body).onclick=()=>toggleFind();
+  $('.ed-find-close',win.body).onclick=()=>{findBar.classList.remove('on');clearMarks();};
+  ['case','word','regex'].forEach(k=>{const b=$('.ed-'+k,win.body);b.onclick=()=>{opts[k]=!opts[k];b.classList.toggle('on',opts[k]);doFind();};});
+  function clearMarks(){marks.forEach(m=>m.clear());marks=[];}
+  function buildRe(q){
+    let pat=opts.regex?q:q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+    if(opts.word)pat='\\b'+pat+'\\b';
+    return new RegExp(pat,opts.case?'g':'gi');
+  }
+  function doFind(){
+    clearMarks();const q=$('.ed-q',win.body).value;if(!q){$('.ed-count',win.body).textContent='';return;}
+    let re;try{re=buildRe(q);}catch(e){$('.ed-count',win.body).textContent='无效正则';return;}
+    const doc=editor.getDoc();const text=editor.getValue();let m;const positions=[];
+    while((m=re.exec(text))){if(m.index===re.lastIndex)re.lastIndex++;const from=doc.posFromIndex(m.index);const to=doc.posFromIndex(m.index+m[0].length);positions.push({from,to});}
+    positions.forEach((p,i)=>marks.push(doc.markText(p.from,p.to,{className:'CodeMirror-search-hl'})));
+    win.meta._pos=positions;curIdx=positions.length?0:-1;highlightCur();
+    $('.ed-count',win.body).textContent=positions.length?`${curIdx+1}/${positions.length}`:'0/0';
+  }
+  function highlightCur(){
+    const pos=win.meta._pos||[];if(curIdx<0||!pos[curIdx])return;
+    clearMarks();const doc=editor.getDoc();
+    pos.forEach((p,i)=>marks.push(doc.markText(p.from,p.to,{className:i===curIdx?'CodeMirror-search-cur':'CodeMirror-search-hl'})));
+    editor.setSelection(pos[curIdx].from,pos[curIdx].to);editor.scrollIntoView(pos[curIdx].from,80);
+    $('.ed-count',win.body).textContent=`${curIdx+1}/${pos.length}`;
+  }
+  $('.ed-q',win.body).oninput=doFind;
+  $('.ed-next',win.body).onclick=()=>{const p=win.meta._pos||[];if(!p.length)return;curIdx=(curIdx+1)%p.length;highlightCur();};
+  $('.ed-prev',win.body).onclick=()=>{const p=win.meta._pos||[];if(!p.length)return;curIdx=(curIdx-1+p.length)%p.length;highlightCur();};
+  $('.ed-rep',win.body).onclick=()=>{const p=win.meta._pos||[];if(curIdx<0||!p[curIdx])return;editor.replaceRange($('.ed-r',win.body).value,p[curIdx].from,p[curIdx].to);doFind();};
+  $('.ed-repall',win.body).onclick=()=>{const q=$('.ed-q',win.body).value;if(!q)return;let re;try{re=buildRe(q);}catch(e){return;}editor.setValue(editor.getValue().replace(re,$('.ed-r',win.body).value));doFind();toast('已全部替换');};
+  $('.ed-q',win.body).onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();if(e.shiftKey)$('.ed-prev',win.body).click();else $('.ed-next',win.body).click();}if(e.key==='Escape')$('.ed-find-close',win.body).click();};
+
+  editor.setOption('extraKeys',{
+    'Ctrl-S':()=>save(),'Cmd-S':()=>save(),
+    'Ctrl-Enter':refreshPreview,'Cmd-Enter':refreshPreview,
+    'Ctrl-F':()=>toggleFind(),'Cmd-F':()=>toggleFind(),
+    'Ctrl-H':()=>toggleFind(true),
+    'Shift-Ctrl-F':()=>$('.ed-fmt',win.body).click(),
+    'Ctrl-Y':()=>editor.redo(),
+    'F3':()=>$('.ed-next',win.body).click(),
+  });
+
+  // splitter
+  const split=$('.ed-split',win.body),left=$('.ed-left',win.body),right=$('.ed-right',win.body);
+  split.addEventListener('pointerdown',e=>{
+    e.preventDefault();split.setPointerCapture(e.pointerId);
+    const body=$('.ed-body',win.body);const rect=body.getBoundingClientRect();
+    const mv=ev=>{let lw=ev.clientX-rect.left;lw=Math.max(200,Math.min(rect.width-126,lw));left.style.flex='none';left.style.width=lw+'px';right.style.width=(rect.width-lw-6)+'px';};
+    const up=()=>{split.removeEventListener('pointermove',mv);split.removeEventListener('pointerup',up);editor.refresh();};
+    split.addEventListener('pointermove',mv);split.addEventListener('pointerup',up);
+  });
+
+  // load file
+  if(opt.path){fs.readText(opt.path).then(t=>{editor.setValue(t);autoMode(opt.path);refreshPreview();}).catch(e=>toast('读取失败',true));}
+  else if(opt.content){editor.setValue(opt.content);setMode(opt.mode||'htmlmixed');}
+  else{editor.setValue('<!DOCTYPE html>\n<html>\n<head>\n  <meta charset="UTF-8">\n  <title>新文档</title>\n  <style>\n    body{font-family:sans-serif;display:grid;place-items:center;height:100vh;margin:0;background:#10131a;color:#fff}\n  </style>\n</head>\n<body>\n  <h1>你好，NOVA</h1>\n</body>\n</html>');}
+  setTimeout(()=>{editor.refresh();refreshPreview();updateStatus();},80);
+  return win;
+}
+
+/* ============================================================
+   APP: IMAGE VIEWER  (+ manga detection)
+   ============================================================ */
+async function openImage(path){
+  const win=createWindow({title:basename(path),type:'image',icon:I.image,width:680,height:520});
+  win.body.innerHTML=`<div class="iv">
+    <div class="toolbar">
+      <button class="btn iv-zin">${I.plus} 放大</button>
+      <button class="btn iv-zout">缩小</button>
+      <button class="btn iv-fit">适应</button>
+      <button class="btn iv-manga acc">连环画阅读</button>
+      <span style="margin-left:auto;font-size:11px;color:var(--ink-soft)" class="iv-info"></span>
+    </div>
+    <div class="iv-stage"><img></div>
+  </div>`;
+  const img=$('.iv-stage img',win.body);let scale=1;
+  try{const f=await fs.readFile(path);const u=URL.createObjectURL(f);img.src=u;img.onload=()=>$('.iv-info',win.body).textContent=`${img.naturalWidth}×${img.naturalHeight} · ${fmtSize(f.size)}`;}catch(e){toast('无法加载图片',true);}
+  $('.iv-zin',win.body).onclick=()=>{scale=Math.min(8,scale*1.25);img.style.transform=`scale(${scale})`;};
+  $('.iv-zout',win.body).onclick=()=>{scale=Math.max(.1,scale/1.25);img.style.transform=`scale(${scale})`;};
+  $('.iv-fit',win.body).onclick=()=>{scale=1;img.style.transform='scale(1)';};
+  $('.iv-stage',win.body).addEventListener('wheel',e=>{if(e.ctrlKey){e.preventDefault();scale=Math.max(.1,Math.min(8,scale*(e.deltaY<0?1.1:.9)));img.style.transform=`scale(${scale})`;}});
+  $('.iv-manga',win.body).onclick=()=>{closeWindow(win.id);openManga(path);};
+}
+
+/* ============================================================
+   APP: MANGA VIEWER
+   ============================================================ */
+async function openManga(path){
+  const win=createWindow({title:'连环画阅读器',type:'manga',icon:I.image,width:760,height:600});
+  win.body.style.padding='0';
+  win.body.innerHTML=`<div style="display:flex;flex-direction:column;height:100%">
+    <div class="toolbar" style="position:relative;z-index:2">
+      <span class="mg-stat" style="font-size:12px;color:var(--ink-soft)">加载中…</span>
+      <button class="btn mg-fs acc" style="margin-left:auto">${I.fscreen} 全屏</button>
+    </div>
+    <div class="manga"></div>
+    <button class="manga-exit">✕</button>
+  </div>`;
+  const cont=$('.manga',win.body);const stat=$('.mg-stat',win.body);
+  const dir=dirname(path);
+  let files;
+  try{files=await fs.readdir(dir);}catch(e){toast('无法读取目录',true);closeWindow(win.id);return;}
+  const imgExt=/\.(jpe?g|png|webp|gif)$/i;
+  let imgs=files.filter(f=>f.kind!=='directory'&&imgExt.test(f.name)).map(f=>f.name);
+  imgs.sort((a,b)=>a.localeCompare(b,undefined,{numeric:true,sensitivity:'base'}));
+  if(!imgs.length){toast('该目录没有图片',true);closeWindow(win.id);return;}
+  stat.textContent=`共 ${imgs.length} 页`;
+  const datas=await Promise.all(imgs.map(async n=>{try{const f=await fs.readFile(joinp(dir,n));return URL.createObjectURL(f);}catch(e){return null;}}));
+  let targetEl=null;
+  imgs.forEach((n,i)=>{if(!datas[i])return;const im=document.createElement('img');im.src=datas[i];im.loading='lazy';cont.appendChild(im);if(joinp(dir,n)===normalize(path))targetEl=im;});
+  if(targetEl)setTimeout(()=>targetEl.scrollIntoView(),120);
+  // fullscreen
+  const fsBtn=$('.mg-fs',win.body);const exit=$('.manga-exit',win.body);
+  fsBtn.onclick=()=>{win.el.classList.add('fullscreen-manga');win.el.requestFullscreen&&win.el.requestFullscreen().catch(()=>{});Object.assign(win.el.style,{left:'0',top:'0',width:'100vw',height:'100vh',zIndex:++zTop});};
+  exit.onclick=()=>{win.el.classList.remove('fullscreen-manga');if(document.fullscreenElement)document.exitFullscreen();};
+  document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement)win.el.classList.remove('fullscreen-manga');});
+}
+
+/* ============================================================
+   APP: MEDIA PLAYER
+   ============================================================ */
+async function openMedia(path,kind){
+  const win=createWindow({title:basename(path),type:'media',icon:kind==='audio'?I.audio:I.video,width:kind==='audio'?480:680,height:kind==='audio'?220:480});
+  win.body.innerHTML=`<div class="media-wrap"></div>`;
+  try{const f=await fs.readFile(path);const u=URL.createObjectURL(f);
+    const el=document.createElement(kind);el.src=u;el.controls=true;el.autoplay=true;
+    if(kind==='audio'){const w=$('.media-wrap',win.body);w.innerHTML=`<div style="text-align:center"><div style="width:120px;height:120px;margin:0 auto 20px;border-radius:50%;background:linear-gradient(135deg,#ff7a59,#ff5d6c);display:grid;place-items:center;animation:spin 6s linear infinite">${I.audio.replace('width="24"','width="56"')}</div><div style="font-size:14px;margin-bottom:14px">${basename(path)}</div></div>`;w.firstChild.appendChild(el);}
+    else $('.media-wrap',win.body).appendChild(el);
+  }catch(e){toast('无法播放',true);}
+}
+const style=document.createElement('style');style.textContent='@keyframes spin{to{transform:rotate(360deg)}}';document.head.appendChild(style);
+
+/* ============================================================
+   APP: PDF VIEWER
+   ============================================================ */
+async function openPDF(path){
+  const win=createWindow({title:basename(path),type:'pdf',icon:I.pdf,width:760,height:600});
+  try{const f=await fs.readFile(path);const u=URL.createObjectURL(new Blob([await f.arrayBuffer()],{type:'application/pdf'}));win.body.innerHTML=`<iframe src="${u}" style="width:100%;height:100%;border:none"></iframe>`;}
+  catch(e){toast('无法打开 PDF',true);}
+}
+
+/* ============================================================
+   APP: HTML choice (preview/edit)
+   ============================================================ */
+async function openHtmlChoice(path){
+  const win=createWindow({title:basename(path),type:'browser',icon:I.browser,width:900,height:600});
+  win.body.innerHTML=`<div style="display:flex;flex-direction:column;height:100%">
+    <div class="toolbar">
+      <button class="btn pri h-edit">${I.editor} 编辑源代码</button>
+      <button class="btn acc h-browser">${I.browser} 浏览器打开</button>
+      <button class="btn h-reload">${I.refresh} 刷新</button>
+      <span style="margin-left:auto;font-size:12px;color:var(--ink-soft)">实时预览</span>
+    </div>
+    <iframe class="h-frame" sandbox="allow-scripts allow-forms allow-same-origin allow-popups allow-modals" style="flex:1;border:none;background:#fff"></iframe>
+  </div>`;
+  const frame=$('.h-frame',win.body);
+  async function load(){const t=await fs.readText(path);try{const d=frame.contentDocument;d.open();d.write(t);d.close();}catch(e){frame.src=URL.createObjectURL(new Blob([t],{type:'text/html'}));}}
+  load();
+  $('.h-reload',win.body).onclick=load;
+  $('.h-edit',win.body).onclick=()=>openEditor({path});
+  $('.h-browser',win.body).onclick=()=>openBrowser('file://'+path);
+}
+
+/* ============================================================
+   APP: WEB BROWSER
+   ============================================================ */
+function openBrowser(url){
+  const win=createWindow({title:'网页浏览器',type:'browser',icon:I.browser,width:900,height:600});
+  win.body.innerHTML=`<div style="display:flex;flex-direction:column;height:100%">
+    <div class="toolbar">
+      <button class="btn b-back">${I.back}</button>
+      <button class="btn b-fwd">${I.fwd}</button>
+      <button class="btn b-reload">${I.refresh}</button>
+      <input class="tb-input b-url" style="flex:1" placeholder="输入网址或 VFS 路径…">
+      <button class="btn pri b-go">前往</button>
+    </div>
+    <iframe class="b-frame" sandbox="allow-scripts allow-forms allow-same-origin allow-popups allow-modals allow-top-navigation" style="flex:1;border:none;background:#fff"></iframe>
+  </div>`;
+  const frame=$('.b-frame',win.body),inp=$('.b-url',win.body);
+  async function go(u){
+    u=u.trim();if(!u)return;
+    if(u.startsWith('file://')){const p=u.slice(7);const t=await fs.readText(p);const d=frame.contentDocument;d.open();d.write(t);d.close();inp.value=u;return;}
+    if(!/^https?:\/\//.test(u))u='https://'+u;
+    inp.value=u;frame.src=u;
+  }
+  $('.b-go',win.body).onclick=()=>go(inp.value);
+  inp.onkeydown=e=>{if(e.key==='Enter')go(inp.value);};
+  $('.b-back',win.body).onclick=()=>{try{frame.contentWindow.history.back();}catch(e){}};
+  $('.b-fwd',win.body).onclick=()=>{try{frame.contentWindow.history.forward();}catch(e){}};
+  $('.b-reload',win.body).onclick=()=>{try{frame.contentWindow.location.reload();}catch(e){frame.src=frame.src;}};
+  if(url)go(url);else go('https://www.wikipedia.org');
+}
+
+/* ============================================================
+   APP: CALCULATOR
+   ============================================================ */
+function openCalc(){
+  const win=createWindow({title:'计算器',type:'calc',icon:I.calc,width:320,height:440});
+  win.body.innerHTML=`<div class="calc">
+    <div class="calc-disp"><div class="ex"></div><div class="res">0</div></div>
+    <div class="calc-pad">
+      <button class="fn" data-k="C">C</button><button class="fn" data-k="back">⌫</button><button class="fn" data-k="%">%</button><button class="op" data-k="/">÷</button>
+      <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button><button class="op" data-k="*">×</button>
+      <button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button><button class="op" data-k="-">−</button>
+      <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button><button class="op" data-k="+">+</button>
+      <button data-k="0" style="grid-column:span 2">0</button><button data-k=".">.</button><button class="eq" data-k="=">=</button>
+    </div></div>`;
+  let ex='';const res=$('.res',win.body),exEl=$('.ex',win.body);
+  function upd(){res.textContent=ex||'0';}
+  $$('.calc-pad button',win.body).forEach(b=>b.onclick=()=>{
+    const k=b.dataset.k;
+    if(k==='C'){ex='';exEl.textContent='';}
+    else if(k==='back')ex=ex.slice(0,-1);
+    else if(k==='='){try{exEl.textContent=ex+' =';const r=Function('"use strict";return('+ex.replace(/×/g,'*').replace(/÷/g,'/')+')')();ex=String(+(+r).toPrecision(12));}catch(e){ex='错误';}}
+    else if(k==='%'){try{ex=String(parseFloat(ex)/100);}catch(e){}}
+    else ex+=k;
+    upd();
+  });
+  document.addEventListener('keydown',function kh(e){if(!windows.has(win.id)){document.removeEventListener('keydown',kh);return;}if(+win.el.style.zIndex!==zTop)return;if('0123456789.+-*/'.includes(e.key)){ex+=e.key;upd();}else if(e.key==='Enter'){$('.eq',win.body).click();}else if(e.key==='Backspace'){ex=ex.slice(0,-1);upd();}});
+}
+
+/* ============================================================
+   APP: PAINT
+   ============================================================ */
+function openPaint(){
+  const win=createWindow({title:'画板',type:'paint',icon:I.paint,width:680,height:520});
+  win.body.innerHTML=`<div class="paint">
+    <div class="paint-tools">
+      <span class="swatch on" style="background:#10131a" data-c="#10131a"></span>
+      <span class="swatch" style="background:#ff5d6c" data-c="#ff5d6c"></span>
+      <span class="swatch" style="background:#ff7a59" data-c="#ff7a59"></span>
+      <span class="swatch" style="background:#f4c66a" data-c="#f4c66a"></span>
+      <span class="swatch" style="background:#3dd7c2" data-c="#3dd7c2"></span>
+      <span class="swatch" style="background:#5b7fb5" data-c="#5b7fb5"></span>
+      <span class="swatch" style="background:#ffffff" data-c="#ffffff"></span>
+      <input type="color" class="p-color" value="#10131a" style="width:32px;height:28px;background:none;border:none">
+      <input type="range" class="p-size" min="1" max="40" value="4">
+      <button class="btn p-clear">清空</button>
+      <button class="btn pri p-save">${I.download} 保存PNG</button>
+    </div>
+    <canvas></canvas>
+  </div>`;
+  const cv=$('canvas',win.body);const ctx=cv.getContext('2d');
+  let color='#10131a',size=4,drawing=false;
+  function resize(){const r=cv.getBoundingClientRect();const data=ctx.getImageData?null:null;const tmp=document.createElement('canvas');tmp.width=cv.width;tmp.height=cv.height;if(cv.width)tmp.getContext('2d').drawImage(cv,0,0);cv.width=r.width;cv.height=r.height;ctx.fillStyle='#fff';ctx.fillRect(0,0,cv.width,cv.height);ctx.drawImage(tmp,0,0);}
+  win.onResize=resize;setTimeout(resize,60);
+  function pos(e){const r=cv.getBoundingClientRect();const t=e.touches?e.touches[0]:e;return{x:t.clientX-r.left,y:t.clientY-r.top};}
+  function start(e){drawing=true;const p=pos(e);ctx.beginPath();ctx.moveTo(p.x,p.y);e.preventDefault();}
+  function move(e){if(!drawing)return;const p=pos(e);ctx.lineTo(p.x,p.y);ctx.strokeStyle=color;ctx.lineWidth=size;ctx.lineCap='round';ctx.lineJoin='round';ctx.stroke();e.preventDefault();}
+  function end(){drawing=false;}
+  cv.addEventListener('pointerdown',start);cv.addEventListener('pointermove',move);window.addEventListener('pointerup',end);
+  $$('.swatch',win.body).forEach(s=>s.onclick=()=>{$$('.swatch',win.body).forEach(x=>x.classList.remove('on'));s.classList.add('on');color=s.dataset.c;});
+  $('.p-color',win.body).oninput=e=>color=e.target.value;
+  $('.p-size',win.body).oninput=e=>size=+e.target.value;
+  $('.p-clear',win.body).onclick=()=>{ctx.fillStyle='#fff';ctx.fillRect(0,0,cv.width,cv.height);};
+  $('.p-save',win.body).onclick=async()=>{cv.toBlob(async b=>{const p=await fs.uniquePath('/Pictures','画板作品.png');await fs.mkdir('/Pictures');await fs.writeFile(p,b);toast('已保存到 /Pictures');refreshAll();});};
+}
+
+/* ============================================================
+   APP: ARCHIVE (zip extract)
+   ============================================================ */
+async function openArchive(path){
+  const e=extOf(path);
+  if(e!=='zip'){
+    // gz / tar fallback: try gz via DecompressionStream
+    if(e==='gz'){return gunzipFile(path);}
+    toast('该压缩格式暂仅支持解压 ZIP（或在此处右键解压）',true);
+    return openExplorer(dirname(path));
+  }
+  if(typeof JSZip==='undefined'){toast('JSZip 未加载',true);return;}
+  const win=createWindow({title:'压缩包 — '+basename(path),type:'zip',icon:I.zip,width:560,height:440});
+  win.body.innerHTML=`<div style="display:flex;flex-direction:column;height:100%">
+    <div class="toolbar"><button class="btn pri z-extract">${I.download} 全部解压到当前目录</button><span class="z-stat" style="margin-left:auto;font-size:12px;color:var(--ink-soft)"></span></div>
+    <div class="fx-list" style="padding:6px"></div></div>`;
+  const listEl=$('.fx-list',win.body);
+  try{
+    const f=await fs.readFile(path);const zip=await JSZip.loadAsync(await f.arrayBuffer());
+    const entries=Object.values(zip.files);
+    $('.z-stat',win.body).textContent=`${entries.length} 个条目`;
+    listEl.innerHTML=entries.map(en=>`<div class="fx-row" style="grid-template-columns:1fr 100px"><div class="nm">${en.dir?I.folder:iconFor(en.name)}<span>${en.name}</span></div><div class="meta">${en.dir?'':fmtSize(en._data?en._data.uncompressedSize:0)}</div></div>`).join('');
+    $('.z-extract',win.body).onclick=async()=>{
+      const dest=dirname(path);const base=basename(path).replace(/\.zip$/i,'');const outDir=await fs.uniquePath(dest,base);await fs.mkdir(outDir);
+      let n=0;
+      for(const en of entries){const tgt=joinp(outDir,en.name);if(en.dir){await fs.mkdir(tgt);}else{await fs.mkdir(dirname(tgt));const blob=await en.async('blob');await fs.writeFile(tgt,blob);n++;}}
+      toast(`已解压 ${n} 个文件到 ${basename(outDir)}`);refreshAll();closeWindow(win.id);
+    };
+  }catch(err){listEl.innerHTML=`<div class="empty">解压失败：${err.message}</div>`;}
+}
+async function gunzipFile(path){
+  try{
+    const buf=await fs.readArrayBuffer(path);
+    const ds=new DecompressionStream('gzip');
+    const stream=new Blob([buf]).stream().pipeThrough(ds);
+    const out=await new Response(stream).blob();
+    const name=basename(path).replace(/\.gz$/i,'');
+    const dest=await fs.uniquePath(dirname(path),name);
+    await fs.writeFile(dest,out);toast('已解压：'+basename(dest));refreshAll();
+  }catch(e){toast('GZ 解压失败：'+e.message,true);}
+}
+
+/* ============================================================
+   APP: VM (v86, optional, from VFS image)
+   ============================================================ */
+async function openVM(){
+  const win=createWindow({title:'虚拟机 (v86)',type:'vm',icon:I.vm,width:760,height:560});
+  win.body.innerHTML=`<div style="display:flex;flex-direction:column;height:100%;background:#000">
+    <div class="toolbar" style="background:#0c0f16">
+      <button class="btn pri vm-pick">选择 VFS 镜像 (.iso/.img)</button>
+      <span class="vm-stat" style="font-size:12px;color:var(--ink-soft)">需要先导入磁盘镜像到文件系统</span>
+    </div>
+    <div style="flex:1;position:relative;overflow:hidden">
+      <div id="vm-screen" style="white-space:pre;font:14px monospace;color:#0f0;position:absolute;top:0;left:0"></div>
+      <canvas id="vm-canvas" style="position:absolute;top:0;left:0"></canvas>
+    </div>
+  </div>`;
+  $('.vm-pick',win.body).onclick=async()=>{
+    const p=await prompt2('输入 VFS 中镜像文件的完整路径','/Downloads/disk.iso');if(!p)return;
+    if(typeof window.V86==='undefined'){toast('v86 引擎未加载，请检查网络',true);return;}
+    let buf;try{buf=await fs.readArrayBuffer(p);}catch(e){toast('找不到镜像文件',true);return;}
+    const e=extOf(p);const opt={
+      wasm_path:'https://cdn.jsdelivr.net/npm/v86@0.5.319/build/v86.wasm',
+      bios:{url:'https://cdn.jsdelivr.net/gh/copy/v86@bbb2a5b4fd44e85d902792f9b93ec3e0d42e1b0f/bios/seabios.bin'},
+      vga_bios:{url:'https://cdn.jsdelivr.net/gh/copy/v86@bbb2a5b4fd44e85d902792f9b93ec3e0d42e1b0f/bios/vgabios.bin'},
+      screen_container:$('#vm-screen',win.body).parentElement,
+      autostart:true,memory_size:64*1024*1024,vga_memory_size:8*1024*1024,
+    };
+    const img={buffer:buf};
+    if(e==='iso')opt.cdrom=img;else if(['img','fda','bin'].includes(e))opt.fda=img;else opt.hda=img;
+    try{$('.vm-stat',win.body).textContent='启动中…';win.meta.vm=new V86(opt);$('.vm-stat',win.body).textContent='运行中：'+basename(p);}
+    catch(err){toast('VM 启动失败：'+err.message,true);}
+  };
+  win.onClose=()=>{if(win.meta.vm)try{win.meta.vm.destroy();}catch(e){}};
+}
+
+/* ============================================================
+   APP: SETTINGS
+   ============================================================ */
+async function openSettings(){
+  const win=createWindow({title:'设置',type:'settings',icon:I.settings,width:620,height:560});
+  const curWp=localStorage.getItem('nova-wallpaper')||'dusk';
+  win.body.innerHTML=`<div class="settings">
+    <h2>系统设置</h2><p style="color:var(--ink-soft);font-size:13px">NOVA OS · 存储后端：<b style="color:var(--accent-2)">${FS_BACKEND.toUpperCase()}</b></p>
+    <div class="set-card"><h4>存储用量</h4><div class="bar" id="st-bar"></div><div id="st-text" style="margin-top:10px;font-size:13px;color:var(--ink-soft)">计算中…</div></div>
+    <div class="set-card"><h4>桌面壁纸</h4><div class="wp-grid" id="wp-grid"></div>
+      <button class="btn pri" id="wp-upload" style="margin-top:14px">${I.upload} 上传自定义壁纸</button></div>
+    <div class="set-card"><h4>本地文件夹挂载</h4>
+      <p style="font-size:12.5px;color:var(--ink-soft);margin-bottom:10px">将电脑真实文件夹挂载到 /mnt/local，享有完整功能。</p>
+      <button class="btn acc" id="mnt-add">${I.drive} 挂载本地文件夹</button>
+      <div id="mnt-list" style="margin-top:12px"></div></div>
+    <div class="set-card"><h4>危险区域</h4>
+      <button class="btn" id="reset-fs" style="border-color:var(--danger);color:var(--danger)">${I.trash} 清空文件系统并重置</button></div>
+  </div>`;
+  // storage
+  try{const est=await navigator.storage.estimate();const usage=est.usage||0,quota=est.quota||1;const pct=(usage/quota*100);
+    $('#st-bar',win.body).innerHTML=`<i style="width:${Math.max(pct,1.5)}%;background:linear-gradient(90deg,var(--accent-2),var(--accent))"></i>`;
+    $('#st-text',win.body).innerHTML=`已用 <b style="color:var(--ink)">${fmtSize(usage)}</b> / 配额 ${fmtSize(quota)} （占用率 ${pct.toFixed(2)}%）`;}
+  catch(e){$('#st-text',win.body).textContent='无法获取存储信息';}
+  // wallpapers
+  const wg=$('#wp-grid',win.body);
+  Object.entries(WALLPAPERS).forEach(([k,v])=>{const d=document.createElement('div');d.className='wp'+(curWp===k?' on':'');d.style.background=v;d.onclick=()=>{applyWallpaper(k);$$('.wp',wg).forEach(x=>x.classList.remove('on'));d.classList.add('on');};wg.appendChild(d);});
+  $('#wp-upload',win.body).onclick=()=>{const i=document.createElement('input');i.type='file';i.accept='image/*';i.onchange=async()=>{const f=i.files[0];if(!f)return;await fs.mkdir('/Pictures');const p=await fs.uniquePath('/Pictures','wallpaper-'+f.name);await fs.writeFile(p,f);applyWallpaper('opfs:'+p);toast('壁纸已更新');};i.click();};
+  // mounts
+  function renderMnt(){const ml=$('#mnt-list',win.body);ml.innerHTML=mounts.map((m,i)=>`<div class="fx-row" style="grid-template-columns:1fr auto"><div class="nm">${I.drive}<span>${m.path}</span></div><button class="btn mnt-un" data-i="${i}">卸载</button></div>`).join('')||'<div style="font-size:12px;color:var(--ink-soft)">暂无挂载</div>';
+    $$('.mnt-un',ml).forEach(b=>b.onclick=()=>{mounts.splice(+b.dataset.i,1);renderMnt();refreshAll();toast('已卸载');});}
+  renderMnt();
+  $('#mnt-add',win.body).onclick=async()=>{
+    if(!window.showDirectoryPicker){toast('当前浏览器不支持 File System Access API',true);return;}
+    try{const handle=await window.showDirectoryPicker();const path='/mnt/local/'+handle.name;
+      if(mounts.find(m=>m.path===path)){toast('已挂载该文件夹',true);return;}
+      mounts.push({path,handle});renderMnt();refreshAll();toast('已挂载：'+handle.name);}
+    catch(e){}
+  };
+  $('#reset-fs',win.body).onclick=async()=>{
+    if(!await confirm2('重置文件系统','此操作将永久删除所有文件，且无法恢复。确定继续？'))return;
+    try{for await(const[name]of ROOT.entries())await ROOT.removeEntry(name,{recursive:true});}catch(e){}
+    localStorage.clear();
+    if(FS_BACKEND==='memfs')indexedDB.deleteDatabase('nova-memfs');
+    toast('已重置，正在重启…');setTimeout(()=>location.reload(),900);
+  };
+}
+
+/* ============================================================
+   APP REGISTRY  +  start menu
+   ============================================================ */
+const APPS=[
+  {id:'explorer',name:'文件管理',icon:I.explorer,run:()=>openExplorer('/Desktop')},
+  {id:'editor',name:'代码编辑器',icon:I.editor,run:()=>openEditor()},
+  {id:'notepad',name:'记事本',icon:I.notepad,run:()=>openNotepad()},
+  {id:'browser',name:'浏览器',icon:I.browser,run:()=>openBrowser()},
+  {id:'calc',name:'计算器',icon:I.calc,run:()=>openCalc()},
+  {id:'paint',name:'画板',icon:I.paint,run:()=>openPaint()},
+  {id:'image',name:'图片库',icon:I.image,run:()=>openExplorer('/Pictures')},
+  {id:'media',name:'媒体库',icon:I.media,run:()=>openExplorer('/Music')},
+  {id:'vm',name:'虚拟机',icon:I.vm,run:()=>openVM()},
+  {id:'settings',name:'设置',icon:I.settings,run:()=>openSettings()},
+];
+function buildStartMenu(){
+  const g=$('#sm-grid');g.innerHTML='';
+  APPS.forEach(a=>{const b=document.createElement('button');b.className='sm-app';b.innerHTML=a.icon+`<span>${a.name}</span>`;b.onclick=()=>{a.run();toggleStart(false);};g.appendChild(b);});
+}
+function toggleStart(force){const m=$('#start-menu');const show=force??(m.style.display!=='flex');m.style.display=show?'flex':'none';}
+$('#start-btn').onclick=e=>{e.stopPropagation();toggleStart();};
+$('#sm-settings').onclick=()=>{openSettings();toggleStart(false);};
+document.addEventListener('click',e=>{if(!e.target.closest('#start-menu')&&!e.target.closest('#start-btn'))toggleStart(false);hideCtx();});
+
+/* ============================================================
+   DESKTOP ICONS + grid + drag + selection
+   ============================================================ */
+const ICON_W=92,ICON_H=104,GRID_X=100,GRID_Y=112;
+function loadPositions(){try{return JSON.parse(localStorage.getItem('nova-icon-pos')||'{}');}catch(e){return{};}}
+function savePositions(p){localStorage.setItem('nova-icon-pos',JSON.stringify(p));}
+
+async function renderDesktop(){
+  const layer=$('#icon-layer');layer.innerHTML='';
+  let items;try{items=await fs.readdir('/Desktop');}catch(e){await fs.mkdir('/Desktop');items=[];}
+  const pos=loadPositions();let auto=0;
+  const cols=Math.max(1,Math.floor((window.innerWidth-20)/GRID_X));
+  for(const it of items){
+    const full=joinp('/Desktop',it.name);
+    const d=document.createElement('div');d.className='dicon';d.dataset.path=full;d.dataset.kind=it.kind;
+    d.innerHTML=`<div class="ic">${iconFor(it.name,it.kind)}</div><div class="lbl">${it.name}</div>`;
+    let p=pos[full];
+    if(!p){const col=auto%cols,row=Math.floor(auto/cols);p={x:14+col*GRID_X,y:14+row*GRID_Y};auto++;}
+    else auto++;
+    d.style.left=p.x+'px';d.style.top=p.y+'px';
+    d.draggable=true;
+    d.addEventListener('mouseenter',()=>preloadDrag(full));
+    d.addEventListener('dragstart',e=>deskDragStart(e,full,it));
+    d.addEventListener('dragover',e=>{if(it.kind==='directory'){e.preventDefault();d.style.outline='2px solid var(--accent-2)';}});
+    d.addEventListener('dragleave',()=>d.style.outline='');
+    d.addEventListener('drop',e=>{d.style.outline='';if(it.kind==='directory')deskDropOnFolder(e,full);});
+    d.onclick=e=>{e.stopPropagation();if(!e.ctrlKey)$$('.dicon').forEach(x=>x.classList.remove('selected'));d.classList.toggle('selected');};
+    d.ondblclick=e=>{e.stopPropagation();openPath(full);};
+    d.oncontextmenu=e=>{e.preventDefault();e.stopPropagation();$$('.dicon').forEach(x=>x.classList.remove('selected'));d.classList.add('selected');showFileCtxDesktop(e,full,it.kind);};
+    // touch drag
+    enableTouchDrag(d,full);
+    layer.appendChild(d);
+  }
+}
+let deskDragData=null;
+function deskDragStart(e,full,it){
+  deskDragData=full;
+  e.dataTransfer.effectAllowed='all';
+  e.dataTransfer.setData('application/x-nova-path',full);
+  if(it.kind!=='directory'){
+    const f=dragCache.get(full);
+    if(f){try{e.dataTransfer.items.add(new File([f],it.name,{type:f.type||'application/octet-stream'}));}catch(_){}
+      const url=URL.createObjectURL(f);e.dataTransfer.setData('DownloadURL',`${f.type||'application/octet-stream'}:${it.name}:${url}`);e.dataTransfer.setData('text/plain',it.name);
+      setTimeout(()=>setTimeout(()=>URL.revokeObjectURL(url),6000),0);}
+  }
+}
+async function deskDropOnFolder(e,folderPath){
+  e.preventDefault();e.stopPropagation();
+  const internal=e.dataTransfer.getData('application/x-nova-path');
+  if(internal){if(internal===folderPath)return;const name=basename(internal);const dest=await fs.uniquePath(folderPath,name);await fs.rename(internal,dest);toast('已移动 '+name);refreshAll();return;}
+  await importDataTransfer(e.dataTransfer,folderPath);refreshAll();
+}
+// touch drag for icons (move position)
+function enableTouchDrag(el,full){
+  let sx,sy,ox,oy,moved,startT;
+  el.addEventListener('touchstart',e=>{const t=e.touches[0];sx=t.clientX;sy=t.clientY;ox=el.offsetLeft;oy=el.offsetTop;moved=false;startT=Date.now();el.style.zIndex=50;},{passive:true});
+  el.addEventListener('touchmove',e=>{const t=e.touches[0];const dx=t.clientX-sx,dy=t.clientY-sy;if(Math.abs(dx)>6||Math.abs(dy)>6)moved=true;if(moved){el.style.left=Math.max(0,ox+dx)+'px';el.style.top=Math.max(0,oy+dy)+'px';e.preventDefault();}},{passive:false});
+  el.addEventListener('touchend',e=>{el.style.zIndex='';if(moved){const pos=loadPositions();pos[full]={x:el.offsetLeft,y:el.offsetTop};savePositions(pos);}else if(Date.now()-startT<400){openPath(full);}});
+}
+
+// desktop dragover/drop: internal reposition OR external import
+const desktop=$('#desktop');
+desktop.addEventListener('dragover',e=>{e.preventDefault();});
+desktop.addEventListener('drop',async e=>{
+  e.preventDefault();
+  if(e.target.closest('.dicon[data-kind="directory"]'))return;
+  const internal=e.dataTransfer.getData('application/x-nova-path');
+  if(internal&&dirname(internal)==='/Desktop'){
+    // reposition
+    const pos=loadPositions();pos[internal]={x:Math.max(0,e.clientX-ICON_W/2),y:Math.max(0,e.clientY-30)};savePositions(pos);
+    const el=$(`.dicon[data-path="${cssEsc(internal)}"]`);if(el){el.style.left=pos[internal].x+'px';el.style.top=pos[internal].y+'px';}
+    return;
+  }
+  if(internal){const name=basename(internal);const dest=await fs.uniquePath('/Desktop',name);await fs.rename(internal,dest);refreshAll();return;}
+  // external
+  await importDataTransfer(e.dataTransfer,'/Desktop');refreshAll();
+});
+function cssEsc(s){return s.replace(/["\\]/g,'\\$&');}
+
+/* selection box on desktop */
+let selStart=null;
+desktop.addEventListener('pointerdown',e=>{
+  if(e.target.closest('.dicon')||e.target.closest('.win')||e.target.closest('#taskbar'))return;
+  if(e.button!==0)return;
+  $$('.dicon').forEach(x=>x.classList.remove('selected'));
+  selStart={x:e.clientX,y:e.clientY};
+  const box=$('#sel-box');box.style.display='block';box.style.left=e.clientX+'px';box.style.top=e.clientY+'px';box.style.width='0';box.style.height='0';
+});
+desktop.addEventListener('pointermove',e=>{
+  if(!selStart)return;
+  const box=$('#sel-box');const x=Math.min(e.clientX,selStart.x),y=Math.min(e.clientY,selStart.y),w=Math.abs(e.clientX-selStart.x),h=Math.abs(e.clientY-selStart.y);
+  box.style.left=x+'px';box.style.top=y+'px';box.style.width=w+'px';box.style.height=h+'px';
+  $$('.dicon').forEach(d=>{const r=d.getBoundingClientRect();const hit=r.left<x+w&&r.right>x&&r.top<y+h&&r.bottom>y;d.classList.toggle('selected',hit);});
+});
+window.addEventListener('pointerup',()=>{if(selStart){selStart=null;$('#sel-box').style.display='none';}});
+
+/* ============================================================
+   CONTEXT MENUS
+   ============================================================ */
+function hideCtx(){$('#desk-ctx').style.display='none';$('#file-ctx').style.display='none';}
+function buildMenu(el,items){
+  el.innerHTML='';
+  items.forEach(it=>{
+    if(it==='sep'){const s=document.createElement('div');s.className='sep';el.appendChild(s);return;}
+    const d=document.createElement('div');d.className='item'+(it.danger?' danger':'')+(it.dis?' dis':'');
+    d.innerHTML=(it.icon||'')+`<span>${it.label}</span>`;
+    d.onclick=()=>{hideCtx();it.action&&it.action();};
+    el.appendChild(d);
+  });
+}
+function showMenu(el,x,y){
+  el.style.display='block';
+  const r=el.getBoundingClientRect();
+  el.style.left=Math.min(x,window.innerWidth-r.width-8)+'px';
+  el.style.top=Math.min(y,window.innerHeight-r.height-8)+'px';
+}
+desktop.addEventListener('contextmenu',e=>{
+  if(e.target.closest('.dicon')||e.target.closest('.win'))return;
+  e.preventDefault();showDesktopCtx(e);
+});
+function showDesktopCtx(e){
+  const el=$('#desk-ctx');
+  buildMenu(el,[
+    {label:'刷新',icon:I.refresh,action:renderDesktop},
+    {label:'新建文件夹',icon:I.folder,action:async()=>{const n=await prompt2('新建文件夹','新建文件夹');if(n){await fs.mkdir(await fs.uniquePath('/Desktop',n));renderDesktop();}}},
+    {label:'新建文本文件',icon:I.notepad,action:async()=>{const n=await prompt2('新建文件','新建文本.txt');if(n){await fs.writeFile(await fs.uniquePath('/Desktop',n),'');renderDesktop();}}},
+    'sep',
+    {label:'上传文件',icon:I.upload,action:()=>{globalUploadTarget='/Desktop';$('#global-file-input').click();}},
+    {label:'粘贴',icon:I.paste,dis:!clipboard,action:()=>pasteTo('/Desktop')},
+    'sep',
+    {label:'更换壁纸',icon:I.wallpaper,action:openSettings},
+    {label:document.fullscreenElement?'退出全屏':'全屏模式',icon:I.fscreen,action:()=>{if(document.fullscreenElement)document.exitFullscreen();else document.documentElement.requestFullscreen();}},
+    {label:'打开文件管理器',icon:I.explorer,action:()=>openExplorer('/Desktop')},
+  ]);
+  showMenu(el,e.clientX,e.clientY);
+}
+function fileMenuItems(path,kind){
+  const items=[
+    {label:'打开',icon:I.open,action:()=>openPath(path)},
+  ];
+  if(kind!=='directory'){
+    const e=extOf(path);
+    if(['html','htm','txt','md','css','js','json','xml','svg'].includes(e))items.push({label:'用代码编辑器打开',icon:I.editor,action:()=>openEditor({path})});
+    if(['html','htm'].includes(e))items.push({label:'在浏览器中打开',icon:I.browser,action:()=>openBrowser('file://'+path)});
+    if(['png','jpg','jpeg','gif','webp'].includes(e))items.push({label:'连环画阅读',icon:I.image,action:()=>openManga(path)});
+    if(e==='zip'||e==='gz')items.push({label:'解压',icon:I.zip,action:()=>openArchive(path)});
+  }
+  items.push('sep',
+    {label:'复制',icon:I.copy,action:()=>{clipboard={op:'copy',paths:[path]};toast('已复制');}},
+    {label:'剪切',icon:I.copy,action:()=>{clipboard={op:'cut',paths:[path]};toast('已剪切');}},
+    {label:'重命名',icon:I.rename,action:async()=>{const n=await prompt2('重命名',basename(path));if(n&&n!==basename(path)){await fs.rename(path,joinp(dirname(path),n));refreshAll();}}},
+    {label:'下载到本机',icon:I.download,action:()=>downloadPath(path)},
+    'sep',
+    {label:'删除',icon:I.trash,danger:true,action:async()=>{if(await confirm2('删除','确定删除 “'+basename(path)+'”？')){await fs.remove(path);refreshAll();}}},
+  );
+  return items;
+}
+function showFileCtx(e,win,path,kind){const el=$('#file-ctx');const items=fileMenuItems(path,kind);
+  if(kind==='directory')items.splice(1,0,{label:'粘贴到此处',icon:I.paste,dis:!clipboard,action:()=>pasteTo(path)});
+  buildMenu(el,items);showMenu(el,e.clientX,e.clientY);}
+function showFileCtxDesktop(e,path,kind){const el=$('#file-ctx');buildMenu(el,fileMenuItems(path,kind));showMenu(el,e.clientX,e.clientY);}
+function showFolderCtx(e,win){
+  const el=$('#desk-ctx');const p=win.state.path;
+  buildMenu(el,[
+    {label:'刷新',icon:I.refresh,action:win._render},
+    {label:'新建文件夹',icon:I.folder,action:async()=>{const n=await prompt2('新建文件夹','新建文件夹');if(n){await fs.mkdir(await fs.uniquePath(p,n));win._render();}}},
+    {label:'新建文本文件',icon:I.notepad,action:async()=>{const n=await prompt2('新建文件','新建文本.txt');if(n){await fs.writeFile(await fs.uniquePath(p,n),'');win._render();}}},
+    'sep',
+    {label:'上传文件',icon:I.upload,action:()=>{globalUploadTarget=p;$('#global-file-input').click();}},
+    {label:'粘贴',icon:I.paste,dis:!clipboard,action:()=>pasteTo(p)},
+  ]);
+  showMenu(el,e.clientX,e.clientY);
+}
+async function pasteTo(dir){
+  if(!clipboard)return;
+  for(const src of clipboard.paths){const dest=await fs.uniquePath(dir,basename(src));if(clipboard.op==='copy')await fs.copy(src,dest);else await fs.rename(src,dest);}
+  if(clipboard.op==='cut')clipboard=null;
+  toast('已粘贴');refreshAll();
+}
+async function downloadPath(path){
+  try{const st=await fs.stat(path);
+    if(st.isFile){const f=await fs.readFile(path);const a=document.createElement('a');a.href=URL.createObjectURL(f);a.download=basename(path);a.click();setTimeout(()=>URL.revokeObjectURL(a.href),6000);}
+    else{toast('正在打包文件夹…');const zip=new JSZip();await addToZip(zip,path,'');const blob=await zip.generateAsync({type:'blob'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=basename(path)+'.zip';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),6000);}
+  }catch(e){toast('下载失败',true);}
+}
+async function addToZip(zip,path,rel){
+  const items=await fs.readdir(path);
+  for(const it of items){const full=joinp(path,it.name);const r=rel?rel+'/'+it.name:it.name;
+    if(it.kind==='directory')await addToZip(zip,full,r);else{const f=await fs.readFile(full);zip.file(r,await f.arrayBuffer());}}
+}
+
+/* global upload */
+let globalUploadTarget='/Desktop';
+$('#global-file-input').onchange=e=>{if(e.target.files.length)importFiles(e.target.files,globalUploadTarget);e.target.value='';};
+
+/* ============================================================
+   CLOCK
+   ============================================================ */
+function tickClock(){const d=new Date();const p=n=>String(n).padStart(2,'0');$('#clk-time').textContent=`${p(d.getHours())}:${p(d.getMinutes())}`;$('#clk-date').textContent=`${d.getMonth()+1}/${d.getDate()} 周${'日一二三四五六'[d.getDay()]}`;}
+setInterval(tickClock,1000);tickClock();
+
+/* keyboard shortcuts */
+document.addEventListener('keydown',e=>{
+  if(e.key==='F5'){e.preventDefault();renderDesktop();}
+  if(e.key==='Escape'){hideCtx();$('#modal-mask').style.display==='grid'&&($('#modal-mask').style.display='none');}
+});
+window.addEventListener('resize',()=>{});
+
+/* ============================================================
+   FIRST-RUN seeding + boot
+   ============================================================ */
+async function seedFS(){
+  if(localStorage.getItem('nova-seeded'))return;
+  const dirs=['/Desktop','/Documents','/Pictures','/Music','/Videos','/Downloads'];
+  for(const d of dirs)await fs.mkdir(d);
+  await fs.writeFile('/Desktop/欢迎.txt','欢迎使用 NOVA OS！\n\n这是一个完全运行在浏览器中的桌面系统。\n你的所有文件通过 OPFS 持久化保存，刷新后依然存在。\n\n· 双击图标打开文件\n· 右键桌面新建 / 上传 / 更换壁纸\n· 拖拽文件可移动位置，也可把电脑文件拖进来导入\n· 设置里可挂载真实本地文件夹\n\n尽情探索吧。');
+  await fs.writeFile('/Desktop/示例.html','<!DOCTYPE html>\n<html><head><meta charset="UTF-8"><style>body{margin:0;font-family:sans-serif;height:100vh;display:grid;place-items:center;background:linear-gradient(135deg,#ff7a59,#3dd7c2);color:#fff}h1{font-size:48px}</style></head><body><h1>Hello NOVA ✦</h1></body></html>');
+  await fs.writeFile('/Documents/数据.csv','姓名,城市,分数\n张三,北京,92\n李四,上海,88\n王五,广州,95\n赵六,深圳,79');
+  await fs.writeFile('/Documents/笔记.md','# NOVA 笔记\n\n- 支持 **OPFS** 持久化\n- 内置代码编辑器、画板、计算器\n- 响应式适配移动端\n');
+  localStorage.setItem('nova-seeded','1');
+}
+
+async function boot(){
+  await initFS();
+  if(FS_BACKEND==='memfs')toast('OPFS 不可用，已启用 IndexedDB 降级存储');
+  await seedFS();
+  applyWallpaper(localStorage.getItem('nova-wallpaper')||'dusk');
+  buildStartMenu();
+  await renderDesktop();
+  // remind remount
+  if(localStorage.getItem('nova-had-mounts')&&window.showDirectoryPicker){setTimeout(()=>toast('提示：本地挂载需在「设置」中重新挂载'),1500);}
+}
+boot();
+</script>
+</body>
+</html>
