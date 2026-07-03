@@ -195,7 +195,7 @@ body{
 .model-gemini{background:rgba(66,133,244,.15);color:#60a5fa;border:1px solid rgba(66,133,244,.25)}
 .model-deepseek{background:rgba(77,107,253,.12);color:#5b76fc;border:1px solid rgba(77,107,253,.25)}
 .model-glm{background:rgba(107,114,128,.12);color:#9ca3af;border:1px solid rgba(107,114,128,.25)}
-.model-collab{background:rgba(255,255,255,.1);color:#e8e8f0;border:1px solid rgba(255,255,255,.2)}
+.model-collab{background:rgba(196,181,155,.12);color:#c4b59b;border:1px solid rgba(196,181,155,.22)}
 
 .card-date{
   font-family:var(--font-mono);font-size:11px;color:var(--text-muted);
@@ -362,11 +362,11 @@ body{
         <div class="logo-icon">W</div>
         <div class="logo-text">
           <h1>WEB OS GALLERY</h1>
-          <p>AI 模型 Web OS 作品集 — 41 件作品 · 7 个模型系列</p>
+          <p>AI 模型 Web OS 作品集 — 44 件作品 · 7 个模型系列</p>
         </div>
       </div>
       <div class="header-stats">
-        <div class="stat"><div class="stat-num">41</div><div class="stat-label">作品</div></div>
+        <div class="stat"><div class="stat-num">44</div><div class="stat-label">作品</div></div>
         <div class="stat"><div class="stat-num">7</div><div class="stat-label">模型</div></div>
         <div class="stat"><div class="stat-num">2026</div><div class="stat-label">年度</div></div>
       </div>
@@ -443,6 +443,8 @@ body{
 <script>
 // === 数据 ===
 const projects = [
+  {model:"Claude Fable 5",modelClass:"claude",name:"墨渊 OS · InkAbyss",version:"v2.1.18.1",date:"2026.07.03",file:"Claude Fable 5 作品 2026.07.03 墨渊 OS · InkAbyss v2.1.18.1.html",tags:["Web OS","桌面","水墨"]},
+  {model:"Claude Fable 5",modelClass:"claude",name:"AeroOS — 网页操作系统",version:"v2.1.18.1",date:"2026.07.02",file:"Claude Fable 5 作品 2026.07.02 AeroOS — 网页操作系统 v2.1.18.1.html",tags:["Web OS","桌面"]},
   {model:"Claude Opus 4.8 Thinking",modelClass:"claude",name:"NOVA OS",version:"v2.1.18",date:"2026.06.19",file:"Claude Opus 4.8 Thinking 作品 2026.06.19 NOVA OS v2.1.18.html",tags:["Web OS","桌面"]},
   {model:"Claude Fable 5",modelClass:"claude",name:"墨枢 SUMI-OS",version:"v2.1.17",date:"2026.06.12",file:"Claude Fable 5 作品 2026.06.12 墨枢 SUMI-OS v2.1.17.html",tags:["Web OS","桌面","Kanagawa"]},
   {model:"Claude Fable 5",modelClass:"claude",name:"BLOODTHORN OS",version:"v2.1.17.1",date:"2026.06.12",file:"Claude Fable 5 作品 2026.06.12 BLOODTHORN OS v2.1.17.1.html",tags:["Web OS","桌面","血棘"]},
@@ -468,6 +470,7 @@ const projects = [
   {model:"GPT-5.5 High",modelClass:"gpt",name:"Aster FS - Web OS",version:"v2.1.2",date:"2026.05.05",file:"GPT-5.5 High 作品 2026.05.05 Aster FS - Web OS v2.1.2.html",tags:["Web OS","文件系统"]},
   {model:"GPT-5.4 High",modelClass:"gpt",name:"Noir Grid OS",version:"v2.1.7",date:"2026.05.27",file:"GPT-5.4 High 作品 2026.05.27 Noir Grid OS v2.1.7.html",tags:["Web OS","桌面"]},
   {model:"GPT-5.2",modelClass:"gpt",name:"Kintsugi OS",version:"v1",date:"2026.01.14",file:"GPT-5.2 作品 2026.01.14 Kintsugi OS v1.html",tags:["Web OS","桌面"]},
+  {model:"Qwen 3.7 Max",modelClass:"qwen",name:"AeroOS · 玻璃花园",version:"v2.1.18.1",date:"2026.07.01",file:"Qwen 3.7 Max 作品 2026.07.01 AeroOS · 玻璃花园 v2.1.18.1.html",tags:["Web OS","桌面"]},
   {model:"Qwen 3.7 Max x GLM-5.2",modelClass:"collab",name:"羽笺 · 白鸽 OS",version:"v特殊提示词",date:"2026.06.23",file:"Qwen 3.7 Max x GLM-5.2 作品 2026.06.23 羽笺 · 白鸽 OS v特殊提示词.html",tags:["Web OS","桌面"]},
   {model:"GPT-5.2 x Gemini 3 Pro",modelClass:"collab",name:"NOCTUA WebOS",version:"v1",date:"2026.01.14",file:"GPT-5.2 x Gemini 3 Pro 作品 2026.01.14 NOCTUA WebOS v1.html",tags:["Web OS","协作"]},
   {model:"Qwen 3.7 Max",modelClass:"qwen",name:"SageOS",version:"v2.1.18",date:"2026.06.19",file:"Qwen 3.7 Max 作品 2026.06.19 SageOS v2.1.18.html",tags:["Web OS","桌面"]},
