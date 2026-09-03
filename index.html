@@ -127,7 +127,7 @@ body{
 .filter-btn[data-filter="Gemini"]:hover{border-color:rgba(96,165,250,.4);color:#60a5fa;background:rgba(96,165,250,.08);box-shadow:0 0 12px rgba(96,165,250,.15)}
 .filter-btn[data-filter="DeepSeek"]:hover{border-color:rgba(91,118,252,.4);color:#5b76fc;background:rgba(91,118,252,.08);box-shadow:0 0 12px rgba(91,118,252,.15)}
 .filter-btn[data-filter="GLM"]:hover{border-color:rgba(156,163,175,.4);color:#9ca3af;background:rgba(156,163,175,.08);box-shadow:0 0 12px rgba(156,163,175,.15)}
-.filter-btn[data-filter="Kimi"]:hover{border-color:rgba(180,186,208,.4);color:#b4bad0;background:rgba(22,22,30,.55);box-shadow:0 0 14px rgba(180,190,220,.08),inset 0 0 0 1px rgba(180,186,208,.05)}
+.filter-btn[data-filter="未知"]:hover{border-color:rgba(184,164,212,.4);color:#b8a4d4;background:rgba(184,164,212,.08);box-shadow:0 0 12px rgba(184,164,212,.15)}
 .filter-btn.active{
   border-color:var(--accent);color:var(--accent);
   background:rgba(0,229,255,.08);box-shadow:0 0 12px var(--glow);
@@ -197,7 +197,7 @@ body{
 .model-deepseek{background:rgba(77,107,253,.12);color:#5b76fc;border:1px solid rgba(77,107,253,.25)}
 .model-glm{background:rgba(107,114,128,.12);color:#9ca3af;border:1px solid rgba(107,114,128,.25)}
 .model-collab{background:rgba(196,181,155,.12);color:#c4b59b;border:1px solid rgba(196,181,155,.22)}
-.model-kimi{background:rgba(18,18,26,.92);color:#b4bad0;border:1px solid rgba(180,186,208,.22);box-shadow:inset 0 0 0 1px rgba(180,186,208,.03),0 0 10px rgba(180,190,220,.05)}
+.model-unknown{background:rgba(184,164,212,.15);color:#b8a4d4;border:1px solid rgba(184,164,212,.25)}
 
 .card-date{
   font-family:var(--font-mono);font-size:11px;color:var(--text-muted);
@@ -348,27 +348,6 @@ body{
 .card:nth-child(25){animation-delay:.50s}
 .card:nth-child(26){animation-delay:.52s}
 .card:nth-child(27){animation-delay:.54s}
-.card:nth-child(28){animation-delay:.56s}
-.card:nth-child(29){animation-delay:.58s}
-.card:nth-child(30){animation-delay:.60s}
-.card:nth-child(31){animation-delay:.62s}
-.card:nth-child(32){animation-delay:.64s}
-.card:nth-child(33){animation-delay:.66s}
-.card:nth-child(34){animation-delay:.68s}
-.card:nth-child(35){animation-delay:.70s}
-.card:nth-child(36){animation-delay:.72s}
-.card:nth-child(37){animation-delay:.74s}
-.card:nth-child(38){animation-delay:.76s}
-.card:nth-child(39){animation-delay:.78s}
-.card:nth-child(40){animation-delay:.80s}
-.card:nth-child(41){animation-delay:.82s}
-.card:nth-child(42){animation-delay:.84s}
-.card:nth-child(43){animation-delay:.86s}
-.card:nth-child(44){animation-delay:.88s}
-.card:nth-child(45){animation-delay:.90s}
-.card:nth-child(46){animation-delay:.92s}
-.card:nth-child(47){animation-delay:.94s}
-.card:nth-child(48){animation-delay:.96s}
 </style>
 </head>
 <body>
@@ -385,11 +364,11 @@ body{
         <div class="logo-icon">W</div>
         <div class="logo-text">
           <h1>WEB OS GALLERY</h1>
-          <p>AI 模型 Web OS 作品集 — 48 件作品 · 8 个模型系列</p>
+          <p>AI 模型 Web OS 作品集 — 47 件作品 · 8 个模型系列</p>
         </div>
       </div>
       <div class="header-stats">
-        <div class="stat"><div class="stat-num">48</div><div class="stat-label">作品</div></div>
+        <div class="stat"><div class="stat-num">47</div><div class="stat-label">作品</div></div>
         <div class="stat"><div class="stat-num">8</div><div class="stat-label">模型</div></div>
         <div class="stat"><div class="stat-num">2026</div><div class="stat-label">年度</div></div>
       </div>
@@ -414,7 +393,7 @@ body{
       <button class="filter-btn" data-filter="Gemini">Gemini</button>
       <button class="filter-btn" data-filter="DeepSeek">DeepSeek</button>
       <button class="filter-btn" data-filter="GLM">GLM</button>
-      <button class="filter-btn" data-filter="Kimi">Kimi</button>
+      <button class="filter-btn" data-filter="未知">未知模型</button>
     </div>
     <div class="mode-toggle">
       <button class="mode-btn active" id="modeNewTab" title="新标签页打开">
@@ -467,6 +446,7 @@ body{
 <script>
 // === 数据 ===
 const projects = [
+  {model:"Claude Opus 5 Max",modelClass:"claude",name:"硯 OS",version:"v2.1.18.3",date:"2026.09.02",file:"Claude Opus 5 Max 作品 2026.09.02 硯 OS v2.1.18.3.html",tags:["Web OS","桌面","水墨"]},
   {model:"Claude Fable 5",modelClass:"claude",name:"墨渊 OS · InkAbyss",version:"v2.1.18.1",date:"2026.07.03",file:"Claude Fable 5 作品 2026.07.03 墨渊 OS · InkAbyss v2.1.18.1.html",tags:["Web OS","桌面","水墨"]},
   {model:"Claude Fable 5",modelClass:"claude",name:"AeroOS — 网页操作系统",version:"v2.1.18.1",date:"2026.07.02",file:"Claude Fable 5 作品 2026.07.02 AeroOS — 网页操作系统 v2.1.18.1.html",tags:["Web OS","桌面"]},
   {model:"Claude Opus 4.8 Thinking",modelClass:"claude",name:"NOVA OS",version:"v2.1.18",date:"2026.06.19",file:"Claude Opus 4.8 Thinking 作品 2026.06.19 NOVA OS v2.1.18.html",tags:["Web OS","桌面"]},
@@ -487,7 +467,6 @@ const projects = [
   {model:"Claude Sonnet 4.6",modelClass:"claude",name:"StormOS",version:"v2.1",date:"2026.05.02",file:"Claude Sonnet 4.6 作品 2026.05.02 StormOS v2.1.html",tags:["Web OS","桌面"]},
   {model:"Claude Sonnet 4.6",modelClass:"claude",name:"青丝 OS",version:"v特殊提示词",date:"2026.04.17",file:"Claude Sonnet 4.6 作品 2026.04.17 青丝 OS v特殊提示词.html",tags:["Web OS","桌面","中文"]},
   {model:"Claude Sonnet 4.6",modelClass:"claude",name:"VOLT OS",version:"v特殊提示词",date:"2026.04.20",file:"Claude Sonnet 4.6 作品 2026.04.20 VOLT OS v特殊提示词.html",tags:["Web OS","桌面"]},
-  {model:"GPT-5.6 Sol X-High",modelClass:"gpt",name:"砚台 OS",version:"v2.1.18.2",date:"2026.07.10",file:"GPT-5.6 Sol X-High 作品 2026.07.10 砚台 OS v2.1.18.2.html",tags:["Web OS","桌面","水墨"]},
   {model:"GPT-5.5 X-High",modelClass:"gpt",name:"Obsidian VFS Web OS",version:"v2.1.13",date:"2026.06.04",file:"GPT-5.5 X-High 作品 2026.06.04 Obsidian VFS Web OS v2.1.13.html",tags:["Web OS","桌面"]},
   {model:"GPT-5.5 X-High",modelClass:"gpt",name:"Noctilux Web OS",version:"v2.1.11",date:"2026.05.29",file:"GPT-5.5 X-High 作品 2026.05.29 Noctilux Web OS v2.1.11.html",tags:["Web OS","桌面"]},
   {model:"GPT-5.5 X-High",modelClass:"gpt",name:"Monsoon OS - OPFS Web Desktop",version:"v2.1.2",date:"2026.05.06",file:"GPT-5.5 X-High 作品 2026.05.06 Monsoon OS - OPFS Web Desktop v2.1.2.html",tags:["Web OS","OPFS"]},
@@ -512,9 +491,8 @@ const projects = [
   {model:"GLM-5.2",modelClass:"glm",name:"墨砚 · InkOS",version:"v2.1.18",date:"2026.06.20",file:"GLM-5.2 作品 2026.06.19 墨砚 · InkOS v2.1.18.html",tags:["Web OS","桌面","水墨"]},
   {model:"GLM-5.2 Max",modelClass:"glm",name:"Cinder OS",version:"v2.1.17.1",date:"2026.06.18",file:"GLM-5.2 Max 作品 2026.06.18 Cinder OS v2.1.17.1.html",tags:["Web OS","桌面","余烬"]},
   {model:"GLM-4.7",modelClass:"glm",name:"Yozakura OS",version:"v1",date:"2026.01.14",file:"GLM-4.7 作品 2026.01.14 Yozakura OS v1.html",tags:["Web OS","桌面"]},
-  {model:"Kimi k3",modelClass:"kimi",name:"墨屿 InkIsle OS",version:"v2.1.18.2",date:"2026.07.17",file:"Kimi k3 作品 2026.07.17 墨屿 InkIsle OS v2.1.18.2.html",tags:["Web OS","桌面"]},
-  {model:"Kimi k3",modelClass:"kimi",name:"琥珀OS · AmberOS",version:"v2.1.18.2",date:"2026.07.17",file:"Kimi k3 作品 2026.07.17 琥珀OS · AmberOS v2.1.18.2.html",tags:["Web OS","桌面"]},
-  {model:"Kimi k3",modelClass:"kimi",name:"琥珀OS · AMBER OS",version:"v2.1.18.2",date:"2026.07.17",file:"Kimi k3 作品 2026.07.17 琥珀OS · AMBER OS v2.1.18.2.html",tags:["Web OS","桌面"]},
+  {model:"未知模型",modelClass:"unknown",name:"墨岚 OS",version:"v2.1.18.3",date:"2026.09.03",file:"未知模型 作品 2026.09.03 墨岚 OS v2.1.18.3.html",tags:["Web OS","桌面"]},
+  {model:"未知模型",modelClass:"unknown",name:"砚 OS",version:"v2.1.18.3",date:"2026.09.03",file:"未知模型 作品 2026.09.03 砚 OS v2.1.18.3.html",tags:["Web OS","桌面","水墨"]}
 ];
 
 // === 状态 ===
