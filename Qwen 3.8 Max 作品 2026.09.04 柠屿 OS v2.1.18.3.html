@@ -1,0 +1,2896 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>柠屿 OS · Lemon Isle</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300..800&family=JetBrains+Mono:wght@400;600&family=Noto+Sans+SC:wght@400;500;700&family=ZCOOL+QingKe+HuangYou&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.18/lib/codemirror.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.18/theme/material-darker.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.18/addon/fold/foldgutter.min.css">
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.18/lib/codemirror.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.18/mode/xml/xml.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.18/mode/javascript/javascript.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.18/mode/css/css.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.18/mode/htmlmixed/htmlmixed.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.18/mode/markdown/markdown.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.18/addon/edit/matchbrackets.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.18/addon/edit/closebrackets.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.18/addon/edit/matchtags.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.18/addon/edit/closetag.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.18/addon/edit/trailingspace.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.18/addon/selection/active-line.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.18/addon/fold/foldcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.18/addon/fold/foldgutter.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.18/addon/fold/brace-fold.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.18/addon/fold/xml-fold.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.18/addon/fold/comment-fold.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.18/addon/fold/indent-fold.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.18/addon/search/searchcursor.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/js-beautify@1.15.1/js/lib/beautify.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/js-beautify@1.15.1/js/lib/beautify-css.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/js-beautify@1.15.1/js/lib/beautify-html.min.js"></script>
+<script src="https://unpkg.com/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/v86@0.5.319/build/libv86.js" defer></script>
+<style>
+/* ========== 柠屿 OS 设计系统：爱琴白墙 × 柠檬 ========== */
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+--font-d:"Bricolage Grotesque","ZCOOL QingKe HuangYou","Noto Sans SC",sans-serif;
+--font-b:"Noto Sans SC","Bricolage Grotesque",sans-serif;
+--font-m:"JetBrains Mono","Noto Sans SC",monospace;
+--bg:#F4F2EA;--wall:#EDEAE0;--surface:#FFFFFF;--surface2:#F7F5EE;--field:#FBFAF5;
+--ink:#212B22;--mut:#71806F;--faint:#A7B2A2;
+--line:#E2DECF;--line2:#D3CEBA;
+--acc:#E9BE00;--acc-ink:#241F04;--acc-soft:rgba(233,190,0,.16);
+--sea:#2B6E9E;--sea-soft:rgba(43,110,158,.12);--olive:#7C9A3D;--coral:#D96B4A;--slate:#7C8794;
+--danger:#C6473E;--ok:#4E9B62;
+--hov:rgba(33,43,34,.055);--selbg:rgba(233,190,0,.20);
+--sh-s:0 1px 2px rgba(30,35,25,.06),0 2px 8px rgba(30,35,25,.05);
+--sh-m:0 4px 10px rgba(30,35,25,.08),0 12px 32px rgba(30,35,25,.10);
+--sh-l:0 10px 24px rgba(25,30,20,.12),0 28px 70px rgba(25,30,20,.18);
+--r-s:7px;--r-m:11px;--r-l:15px;
+--taskh:52px;--icsz:88px;--icico:52px;
+}
+[data-theme="dark"]{
+--bg:#12161A;--wall:#0E1216;--surface:#1A2026;--surface2:#151B20;--field:#12181D;
+--ink:#EDEBE0;--mut:#96A29A;--faint:#5F6B64;
+--line:#2A323A;--line2:#39434D;
+--acc:#F0C400;--acc-ink:#241F04;--acc-soft:rgba(240,196,0,.15);
+--sea:#5B9CC9;--sea-soft:rgba(91,156,201,.14);--olive:#9AB95F;--coral:#E08263;--slate:#8E99A6;
+--danger:#D65A50;--ok:#63B078;
+--hov:rgba(237,235,224,.07);--selbg:rgba(240,196,0,.20);
+--sh-s:0 1px 2px rgba(0,0,0,.3),0 2px 8px rgba(0,0,0,.25);
+--sh-m:0 4px 10px rgba(0,0,0,.35),0 12px 32px rgba(0,0,0,.35);
+--sh-l:0 10px 24px rgba(0,0,0,.45),0 28px 70px rgba(0,0,0,.5);
+}
+html,body{height:100%;overflow:hidden}
+body{font-family:var(--font-b);font-size:14px;color:var(--ink);background:var(--bg);-webkit-font-smoothing:antialiased;user-select:none;-webkit-user-select:none;overscroll-behavior:none}
+button{font-family:inherit;color:inherit;background:none;border:none;cursor:pointer}
+input,textarea,select{font-family:inherit;color:inherit;outline:none}
+::selection{background:var(--acc-soft)}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:var(--line2);border-radius:6px;border:2px solid transparent;background-clip:content-box}
+::-webkit-scrollbar-thumb:hover{background:var(--faint);border:2px solid transparent;background-clip:content-box}
+::-webkit-scrollbar-corner{background:transparent}
+:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+.hidden{display:none!important}
+svg{display:block}
+/* ---------- 壁纸层 ---------- */
+#wall{position:fixed;inset:0;z-index:0;background:var(--wall);transition:opacity .4s}
+#wall::after{content:"";position:absolute;inset:0;pointer-events:none}
+.wp-santorini{background:
+linear-gradient(180deg,rgba(255,255,255,0) 55%,rgba(43,110,158,.10) 56%,rgba(43,110,158,.30) 100%),
+radial-gradient(120% 90% at 85% -10%,rgba(233,190,0,.20),rgba(233,190,0,0) 45%),
+repeating-linear-gradient(90deg,rgba(43,110,158,.05) 0 2px,rgba(43,110,158,0) 2px 90px),
+linear-gradient(180deg,#EAF1F4 0%,#F6F3E9 55%,#E7EEE9 100%)}
+.wp-santorini::after{background:
+linear-gradient(180deg,rgba(255,255,255,0) 55.5%,rgba(255,255,255,.25) 56%,rgba(255,255,255,0) 57%),
+radial-gradient(140px 60px at 22% 62%,rgba(255,255,255,.85) 40%,rgba(255,255,255,0) 70%),
+radial-gradient(180px 70px at 70% 58%,rgba(255,255,255,.7) 40%,rgba(255,255,255,0) 72%)}
+.wp-lemon{background:
+radial-gradient(circle at 20px 20px,rgba(233,190,0,.18) 8px,rgba(233,190,0,0) 9px),
+radial-gradient(circle at 70px 60px,rgba(124,154,61,.16) 6px,rgba(124,154,61,0) 7px),
+radial-gradient(circle at 45px 95px,rgba(233,190,0,.12) 5px,rgba(233,190,0,0) 6px),
+radial-gradient(circle at 95px 25px,rgba(43,110,158,.08) 4px,rgba(43,110,158,0) 5px),
+linear-gradient(160deg,#F8F6EC,#EFEEE2 60%,#F3EFDD);background-size:120px 120px,120px 120px,120px 120px,120px 120px,100% 100%}
+.wp-aegean{background:
+radial-gradient(90% 60% at 78% 8%,rgba(240,196,0,.35),rgba(240,196,0,0) 55%),
+repeating-linear-gradient(180deg,rgba(255,255,255,.06) 0 1px,rgba(255,255,255,0) 1px 26px),
+linear-gradient(180deg,#F2EFE3 0%,#CFE0E6 34%,#5E93B8 62%,#2B6E9E 100%)}
+[data-theme="dark"] .wp-aegean{background:
+radial-gradient(90% 60% at 78% 8%,rgba(240,196,0,.14),rgba(240,196,0,0) 55%),
+repeating-linear-gradient(180deg,rgba(255,255,255,.04) 0 1px,rgba(255,255,255,0) 1px 26px),
+linear-gradient(180deg,#171D24 0%,#1C2B36 34%,#1E4460 62%,#122C40 100%)}
+.wp-terrazzo{background:
+conic-gradient(from 20deg at 30% 30%,rgba(233,190,0,.10) 0 25%,rgba(43,110,158,.08) 0 50%,rgba(124,154,61,.10) 0 75%,rgba(217,107,74,.08) 0 100%),
+radial-gradient(circle at 60px 40px,rgba(255,255,255,.5) 2px,rgba(255,255,255,0) 3px),
+radial-gradient(circle at 20px 90px,rgba(33,43,34,.08) 2px,rgba(33,43,34,0) 3px),
+linear-gradient(150deg,#F6F4EC,#ECE9DC);background-size:100% 100%,110px 110px,110px 110px,100% 100%}
+#wallImg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+/* ---------- 桌面 ---------- */
+#desk{position:fixed;inset:0 0 var(--taskh) 0;z-index:1;overflow:hidden;touch-action:none}
+#icons{position:absolute;inset:0}
+.dicon{position:absolute;left:0;top:0;width:var(--icsz);padding:6px 2px;display:flex;flex-direction:column;align-items:center;gap:5px;border-radius:10px;cursor:default;transition:transform .28s cubic-bezier(.22,1,.36,1),left .28s cubic-bezier(.22,1,.36,1),top .28s cubic-bezier(.22,1,.36,1),background .12s;will-change:left,top}
+.dicon.noanim{transition:none}
+.dicon:hover{background:rgba(255,255,255,.28)}
+[data-theme="dark"] .dicon:hover{background:rgba(255,255,255,.07)}
+.dicon.sel{background:var(--selbg);box-shadow:inset 0 0 0 1px var(--acc)}
+.dicon.droptarget{box-shadow:inset 0 0 0 2px var(--acc);background:var(--acc-soft)}
+.dicon.cut .dico,.dicon.cut .dname{opacity:.45}
+.dico{width:var(--icico);height:var(--icico);display:grid;place-items:center;border-radius:12px;background:var(--surface);border:1px solid var(--line);box-shadow:var(--sh-s);color:var(--sea);position:relative;transition:transform .15s}
+.dicon:hover .dico{transform:translateY(-2px)}
+.dico svg{width:62%;height:62%}
+.dico.thumb{background-size:cover;background-position:center;background-color:#fff}
+.dname{max-width:100%;font-size:12px;line-height:1.35;text-align:center;color:#fff;text-shadow:0 1px 3px rgba(20,26,20,.65),0 0 8px rgba(20,26,20,.35);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-all;padding:0 2px;border-radius:4px}
+.dicon.sel .dname{background:var(--acc);color:var(--acc-ink);text-shadow:none}
+.dbadge{position:absolute;right:-4px;bottom:-4px;width:20px;height:20px;border-radius:6px;background:var(--sea);color:#fff;display:grid;place-items:center;box-shadow:var(--sh-s)}
+.dbadge svg{width:12px;height:12px}
+#band,#lband{position:fixed;border:1px solid var(--acc);background:rgba(233,190,0,.16);border-radius:4px;pointer-events:none;z-index:60}
+/* ---------- 任务栏 ---------- */
+#taskbar{position:fixed;left:0;right:0;bottom:0;height:var(--taskh);z-index:1000;display:flex;align-items:center;gap:8px;padding:0 10px;background:color-mix(in srgb,var(--surface) 88%,transparent);backdrop-filter:blur(14px) saturate(1.2);border-top:1px solid var(--line)}
+#tbStart{display:flex;align-items:center;gap:8px;height:38px;padding:0 12px;border-radius:10px;font-family:var(--font-d);font-weight:700;font-size:15px;letter-spacing:.02em;border:1px solid var(--line);background:var(--surface2)}
+#tbStart:hover{border-color:var(--acc);box-shadow:var(--sh-s)}
+#tbStart .mark{width:22px;height:22px;border-radius:7px;background:var(--acc);color:var(--acc-ink);display:grid;place-items:center}
+#tbStart .mark svg{width:14px;height:14px}
+#tbApps{display:flex;align-items:center;gap:6px;flex:1;overflow-x:auto;scrollbar-width:none;padding:2px}
+#tbApps::-webkit-scrollbar{display:none}
+.titem{position:relative;width:42px;height:42px;flex:0 0 auto;border-radius:10px;display:grid;place-items:center;color:var(--mut);transition:background .12s,transform .12s}
+.titem:hover{background:var(--hov);transform:translateY(-2px)}
+.titem.on{color:var(--ink);background:var(--surface2)}
+.titem.on::after{content:"";position:absolute;left:50%;bottom:2px;width:14px;height:3px;border-radius:2px;background:var(--acc);transform:translateX(-50%)}
+.titem.min::after{background:var(--faint)}
+.titem svg{width:22px;height:22px}
+.titem .tip{position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);font-size:11px;padding:3px 8px;border-radius:6px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .12s}
+.titem:hover .tip{opacity:1}
+#tray{display:flex;align-items:center;gap:6px}
+.traybtn{width:36px;height:36px;border-radius:9px;display:grid;place-items:center;color:var(--mut)}
+.traybtn:hover{background:var(--hov);color:var(--ink)}
+.traybtn svg{width:18px;height:18px}
+#trayStore{display:flex;align-items:center;gap:6px;height:32px;padding:0 10px;border-radius:8px;font-size:11.5px;color:var(--mut);font-family:var(--font-m)}
+#trayStore:hover{background:var(--hov)}
+#trayStore .dot{width:8px;height:8px;border-radius:50%;background:var(--olive)}
+#clock{text-align:right;line-height:1.2;padding:0 6px;cursor:default}
+#clock b{font-family:var(--font-d);font-size:16px;font-weight:700;display:block}
+#clock span{font-size:10.5px;color:var(--mut)}
+/* ---------- 开始菜单 ---------- */
+#startmenu{position:fixed;left:10px;bottom:calc(var(--taskh) + 10px);z-index:1200;width:330px;max-height:min(560px,calc(100vh - var(--taskh) - 30px));background:var(--surface);border:1px solid var(--line);border-radius:var(--r-l);box-shadow:var(--sh-l);display:flex;flex-direction:column;overflow:hidden;transform-origin:bottom left;animation:pop .16s ease-out}
+@keyframes pop{from{opacity:0;transform:scale(.96) translateY(6px)}}
+#smSearch{margin:12px 12px 6px;display:flex;align-items:center;gap:8px;background:var(--field);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+#smSearch:focus-within{border-color:var(--acc)}
+#smSearch svg{width:16px;height:16px;color:var(--mut);flex:0 0 auto}
+#smSearch input{flex:1;border:none;background:none;font-size:13px}
+#smApps{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:10px;overflow:auto}
+.smapp{display:flex;flex-direction:column;align-items:center;gap:7px;padding:12px 4px;border-radius:12px;font-size:12px;transition:background .12s,transform .12s}
+.smapp:hover{background:var(--acc-soft);transform:translateY(-2px)}
+.smapp .ai{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;color:#fff;box-shadow:var(--sh-s)}
+.smapp .ai svg{width:24px;height:24px}
+#smFoot{border-top:1px solid var(--line);padding:8px 12px;display:flex;justify-content:space-between;align-items:center;background:var(--surface2)}
+#smFoot .qk{display:flex;gap:4px}
+/* ---------- 右键菜单 ---------- */
+#ctx{position:fixed;z-index:1300;min-width:210px;max-width:280px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-m);box-shadow:var(--sh-l);padding:5px;animation:pop .13s ease-out;max-height:70vh;overflow:auto}
+.menu-it{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:7px;font-size:13px;cursor:default;white-space:nowrap}
+.menu-it:hover{background:var(--acc-soft)}
+.menu-it:active{transform:scale(.98)}
+.menu-it svg{width:16px;height:16px;color:var(--mut);flex:0 0 auto}
+.menu-it:hover svg{color:var(--ink)}
+.menu-it .k{margin-left:auto;font-size:11px;color:var(--faint);font-family:var(--font-m)}
+.menu-it.dis{opacity:.4;pointer-events:none}
+.menu-it.danger{color:var(--danger)}
+.menu-it.danger svg{color:var(--danger)}
+.menu-sep{height:1px;background:var(--line);margin:5px 8px}
+.menu-head{padding:5px 9px 3px;font-size:11px;color:var(--faint);letter-spacing:.05em}
+#ctxSub{position:fixed;z-index:1301;min-width:180px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-m);box-shadow:var(--sh-l);padding:5px;animation:pop .13s ease-out}
+/* ---------- 窗口 ---------- */
+#wins{position:fixed;inset:0;z-index:10;pointer-events:none}
+.win{position:absolute;pointer-events:auto;display:flex;flex-direction:column;min-width:300px;min-height:180px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-l);box-shadow:var(--sh-m);overflow:hidden;animation:winin .2s cubic-bezier(.22,1,.36,1)}
+@keyframes winin{from{opacity:0;transform:scale(.96) translateY(10px)}}
+.win.closing{animation:winout .15s ease-in forwards}
+@keyframes winout{to{opacity:0;transform:scale(.96) translateY(8px)}}
+.win.min{display:none}
+.win.max{left:0!important;top:0!important;width:100%!important;height:calc(100% - var(--taskh))!important;border-radius:0;border-left:none;border-right:none;border-top:none}
+.win.focused{box-shadow:var(--sh-l);border-color:var(--line2)}
+.win:not(.focused){opacity:.985}
+.win:not(.focused) .win-hd{background:var(--surface)}
+.win-hd{height:40px;flex:0 0 auto;display:flex;align-items:center;gap:9px;padding:0 8px 0 12px;background:var(--surface2);border-bottom:1px solid var(--line);cursor:grab;touch-action:none}
+.win-hd:active{cursor:grabbing}
+.win-ic{width:20px;height:20px;color:var(--sea);flex:0 0 auto}
+.win-ic svg{width:100%;height:100%}
+.win-tt{flex:1;font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:.01em}
+.win-btns{display:flex;gap:4px}
+.wbtn{width:28px;height:24px;border-radius:7px;display:grid;place-items:center;color:var(--mut);transition:background .1s,color .1s,transform .1s}
+.wbtn:hover{background:var(--hov);color:var(--ink)}
+.wbtn:active{transform:scale(.9)}
+.wbtn svg{width:13px;height:13px}
+.wbtn.cls:hover{background:var(--danger);color:#fff}
+.win-bd{flex:1;min-height:0;position:relative;display:flex;flex-direction:column;background:var(--surface)}
+.rh{position:absolute;z-index:6}
+.rh[data-d="n"]{left:10px;right:10px;top:-3px;height:7px;cursor:n-resize}
+.rh[data-d="s"]{left:10px;right:10px;bottom:-3px;height:7px;cursor:s-resize}
+.rh[data-d="e"]{top:10px;bottom:10px;right:-3px;width:7px;cursor:e-resize}
+.rh[data-d="w"]{top:10px;bottom:10px;left:-3px;width:7px;cursor:w-resize}
+.rh[data-d="ne"]{top:-3px;right:-3px;width:14px;height:14px;cursor:ne-resize}
+.rh[data-d="nw"]{top:-3px;left:-3px;width:14px;height:14px;cursor:nw-resize}
+.rh[data-d="se"]{bottom:-3px;right:-3px;width:16px;height:16px;cursor:se-resize}
+.rh[data-d="sw"]{bottom:-3px;left:-3px;width:16px;height:16px;cursor:sw-resize}
+.win.fs-mode{position:fixed!important;inset:0!important;width:100%!important;height:100%!important;border-radius:0;border:none;z-index:2000}
+.win.fs-mode .win-hd{display:none}
+/* ---------- 通用控件 ---------- */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border-radius:8px;font-size:13px;border:1px solid var(--line);background:var(--surface);transition:all .12s;font-weight:500}
+.btn:hover{border-color:var(--line2);background:var(--surface2);box-shadow:var(--sh-s)}
+.btn:active{transform:scale(.97)}
+.btn.pri{background:var(--acc);border-color:var(--acc);color:var(--acc-ink);font-weight:700}
+.btn.pri:hover{filter:brightness(1.05);box-shadow:0 3px 10px rgba(233,190,0,.35)}
+.btn.danger{color:var(--danger);border-color:color-mix(in srgb,var(--danger) 40%,var(--line))}
+.btn.danger:hover{background:var(--danger);color:#fff;border-color:var(--danger)}
+.btn svg{width:15px;height:15px}
+.btn.sm{padding:4px 9px;font-size:12px;border-radius:7px}
+.inp{background:var(--field);border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-size:13px;transition:border-color .12s;width:100%}
+.inp:focus{border-color:var(--acc);box-shadow:0 0 0 3px var(--acc-soft)}
+textarea.inp{user-select:text;-webkit-user-select:text;resize:none;line-height:1.6}
+select.inp{cursor:pointer}
+.tb{display:flex;align-items:center;gap:5px;padding:6px 8px;border-bottom:1px solid var(--line);background:var(--surface);flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+.tb::-webkit-scrollbar{display:none}
+.tbtn{height:30px;min-width:30px;padding:0 8px;border-radius:7px;display:inline-flex;align-items:center;justify-content:center;gap:6px;font-size:12.5px;color:var(--ink);border:1px solid transparent;flex:0 0 auto;transition:all .1s}
+.tbtn:hover{background:var(--hov);border-color:var(--line)}
+.tbtn:active{transform:scale(.93)}
+.tbtn.on{background:var(--acc-soft);border-color:var(--acc);color:var(--acc-ink);font-weight:700}
+.tbtn:disabled{opacity:.35;pointer-events:none}
+.tbtn svg{width:16px;height:16px}
+.tsep{width:1px;height:20px;background:var(--line);flex:0 0 auto;margin:0 3px}
+.tsp{flex:1}
+.sb{border-top:1px solid var(--line);padding:4px 12px;font-size:11.5px;color:var(--mut);display:flex;gap:14px;align-items:center;background:var(--surface2);flex:0 0 auto;min-height:26px;overflow:hidden;white-space:nowrap}
+.sb .tsp{flex:1}
+/* ---------- 对话框 / Toast ---------- */
+#mask{position:fixed;inset:0;z-index:9000;background:rgba(16,20,14,.45);display:grid;place-items:center;animation:fade .15s}
+@keyframes fade{from{opacity:0}}
+.dlg{width:min(430px,92vw);background:var(--surface);border:1px solid var(--line);border-radius:var(--r-l);box-shadow:var(--sh-l);padding:20px;animation:pop .18s cubic-bezier(.22,1,.36,1);max-height:86vh;overflow:auto}
+.dlg h3{font-family:var(--font-d);font-size:17px;margin-bottom:6px}
+.dlg p{font-size:13px;color:var(--mut);line-height:1.6;word-break:break-all}
+.dlg .row{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+.dlg .inp{margin-top:12px}
+#toasts{position:fixed;right:14px;bottom:calc(var(--taskh) + 12px);z-index:9500;display:flex;flex-direction:column;gap:8px;align-items:flex-end;pointer-events:none}
+.toast{display:flex;align-items:center;gap:9px;background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--sea);border-radius:10px;box-shadow:var(--sh-m);padding:10px 14px;font-size:13px;max-width:min(340px,86vw);animation:tin .25s cubic-bezier(.22,1,.36,1);pointer-events:auto}
+.toast.ok{border-left-color:var(--ok)}
+.toast.err{border-left-color:var(--danger)}
+.toast.warn{border-left-color:var(--acc)}
+.toast.out{animation:tout .2s ease-in forwards}
+@keyframes tin{from{opacity:0;transform:translateX(30px)}}
+@keyframes tout{to{opacity:0;transform:translateX(30px)}}
+.toast svg{width:16px;height:16px;flex:0 0 auto;color:var(--mut)}
+/* ---------- 文件资源管理器 ---------- */
+.ex{display:grid;grid-template-columns:185px 1fr;grid-template-rows:auto 1fr auto;height:100%;--cols:minmax(0,1fr) 84px 92px 128px;position:relative}
+.ex-tb{grid-column:1/-1}
+.ex-side{border-right:1px solid var(--line);background:var(--surface2);overflow:auto;padding:8px}
+.side-h{padding:8px 10px 4px;font-size:10.5px;letter-spacing:.08em;color:var(--faint);font-weight:700}
+.side-it{display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:8px;font-size:13px;cursor:default;transition:background .1s;overflow:hidden}
+.side-it svg{width:17px;height:17px;color:var(--mut);flex:0 0 auto}
+.side-it span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.side-it:hover{background:var(--hov)}
+.side-it.on{background:var(--acc-soft);font-weight:700}
+.side-it.on svg{color:var(--acc-ink)}
+.ex-main{position:relative;overflow:hidden;display:flex;flex-direction:column;min-width:0}
+.crumbs{display:flex;align-items:center;gap:2px;padding:5px 8px;border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none;flex:0 0 auto}
+.crumbs::-webkit-scrollbar{display:none}
+.crumb{padding:4px 9px;border-radius:7px;font-size:12.5px;color:var(--mut);flex:0 0 auto;display:flex;align-items:center;gap:5px}
+.crumb:hover{background:var(--hov);color:var(--ink)}
+.crumb.cur{color:var(--ink);font-weight:700}
+.crumb svg{width:12px;height:12px;color:var(--faint)}
+.ex-list{flex:1;overflow:auto;position:relative;user-select:none}
+.lhd,.lrow{display:grid;grid-template-columns:var(--cols);align-items:center;gap:8px;padding:0 12px}
+.lhd{position:sticky;top:0;z-index:3;height:34px;background:var(--surface2);border-bottom:1px solid var(--line);font-size:12px;color:var(--mut);font-weight:700}
+.lhd .hc{display:flex;align-items:center;gap:4px;position:relative;height:100%;cursor:default}
+.lhd .hc:hover{color:var(--ink)}
+.lhd .hc svg{width:11px;height:11px}
+.hrs{position:absolute;right:-6px;top:6px;bottom:6px;width:7px;cursor:col-resize;border-radius:3px;z-index:4}
+.hrs:hover,.hrs.on{background:var(--acc)}
+.lrow{height:38px;border-bottom:1px solid color-mix(in srgb,var(--line) 55%,transparent);font-size:13px;cursor:default;position:relative}
+.lrow:hover{background:var(--hov)}
+.lrow.sel{background:var(--selbg);box-shadow:inset 2px 0 0 var(--acc)}
+.lrow.cut{opacity:.5}
+.lrow.droptarget{box-shadow:inset 0 0 0 2px var(--acc)}
+.lrow .nm{display:flex;align-items:center;gap:9px;overflow:hidden}
+.lrow .nm svg{width:21px;height:21px;flex:0 0 auto}
+.lrow .nm .th{width:24px;height:24px;border-radius:5px;background-size:cover;background-position:center;flex:0 0 auto;border:1px solid var(--line)}
+.lrow .nm b{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lrow .mt{font-size:12px;color:var(--mut);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lrow .rn-inp{font-size:13px;padding:2px 6px;border-radius:5px;border:1px solid var(--acc);background:var(--field);width:90%}
+.ex-empty{position:absolute;inset:0;display:grid;place-items:center;color:var(--faint);font-size:13px;pointer-events:none}
+.ex-sb{grid-column:1/-1}
+.ex-drop{position:absolute;inset:0;z-index:20;background:var(--acc-soft);border:2px dashed var(--acc);display:grid;place-items:center;font-weight:700;color:var(--acc-ink);pointer-events:none;border-radius:8px}
+/* ---------- 代码编辑器 ---------- */
+.ed{display:flex;flex-direction:column;height:100%;min-height:0}
+.ed-main{flex:1;display:flex;min-height:0}
+.ed-code{flex:1;min-width:200px;display:flex;flex-direction:column;min-height:0;background:#212121}
+.ed-code .CodeMirror{flex:1;height:auto;font-family:var(--font-m);font-size:13px}
+.ed-split{width:6px;flex:0 0 auto;cursor:col-resize;background:var(--line);transition:background .12s}
+.ed-split:hover,.ed-split.on{background:var(--acc)}
+.ed-prev{width:42%;min-width:120px;display:flex;flex-direction:column;min-height:0;border-left:1px solid var(--line)}
+.ed-prev-hd{height:30px;display:flex;align-items:center;gap:6px;padding:0 10px;font-size:12px;color:var(--mut);background:var(--surface2);border-bottom:1px solid var(--line);flex:0 0 auto}
+.ed-prev iframe{flex:1;border:none;width:100%;background:#fff}
+.findbar{display:none;align-items:center;gap:6px;padding:6px 10px;background:var(--surface2);border-bottom:1px solid var(--line);flex-wrap:wrap;flex:0 0 auto}
+.findbar.open{display:flex}
+.findbar .inp{width:170px;padding:5px 9px;font-size:12.5px;font-family:var(--font-m)}
+.fbtn{height:28px;min-width:28px;padding:0 7px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-size:12px;border:1px solid transparent;color:var(--mut)}
+.fbtn:hover{background:var(--hov);color:var(--ink)}
+.fbtn.on{background:var(--acc-soft);border-color:var(--acc);color:var(--acc-ink);font-weight:700}
+.fbtn svg{width:14px;height:14px}
+.fcount{font-size:11.5px;color:var(--mut);font-family:var(--font-m);min-width:56px;text-align:center}
+.mk{background:rgba(240,196,0,.4);border-radius:2px}
+.mk.cur{background:var(--acc);outline:1px solid #8a6d00;color:#221f04}
+.ed-status{display:flex;gap:16px;align-items:center;padding:3px 12px;font-size:11.5px;color:var(--mut);font-family:var(--font-m);background:var(--surface2);border-top:1px solid var(--line);flex:0 0 auto;overflow-x:auto;white-space:nowrap;scrollbar-width:none}
+/* ---------- 漫画阅读器 ---------- */
+.mv{height:100%;display:flex;flex-direction:column;background:#000}
+.mv-bd{flex:1;overflow:auto;background:#000;display:flex;flex-direction:column;align-items:center;scrollbar-width:thin;--mvw:1000px}
+.mv-bd img{width:100%;max-width:var(--mvw);display:block;pointer-events:none}
+.mv-load{padding:26px;color:#9aa39b;font-size:13px;display:flex;align-items:center;gap:10px}
+.spin{width:16px;height:16px;border:2px solid rgba(240,196,0,.25);border-top-color:var(--acc);border-radius:50%;animation:sp 0.8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.mv-exit{position:absolute;top:12px;right:12px;z-index:50;width:38px;height:38px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;display:none;place-items:center;backdrop-filter:blur(4px)}
+.mv-exit:hover{background:var(--danger)}
+.mv-exit svg{width:16px;height:16px}
+.win.fs-mode .mv-exit{display:grid}
+/* ---------- 计算器 ---------- */
+.calc{display:grid;grid-template-columns:1fr 150px;height:100%}
+.calc-main{display:flex;flex-direction:column;padding:14px;gap:12px;min-width:0}
+.c-disp{background:var(--field);border:1px solid var(--line);border-radius:12px;padding:14px 16px;text-align:right;min-height:88px;display:flex;flex-direction:column;justify-content:flex-end;gap:2px}
+.c-expr{font-size:13px;color:var(--mut);font-family:var(--font-m);min-height:18px;word-break:break-all}
+.c-num{font-family:var(--font-d);font-size:38px;font-weight:700;letter-spacing:-.01em;word-break:break-all;line-height:1.1}
+.c-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;flex:1}
+.ck{border-radius:11px;background:var(--surface2);border:1px solid var(--line);font-family:var(--font-d);font-size:19px;font-weight:600;transition:all .08s;min-height:44px}
+.ck:hover{border-color:var(--line2);box-shadow:var(--sh-s)}
+.ck:active{transform:scale(.93)}
+.ck.op{background:var(--sea-soft);color:var(--sea);font-weight:700}
+.ck.eq{background:var(--acc);color:var(--acc-ink);font-weight:800}
+.ck.fn{color:var(--mut)}
+.c-tape{border-left:1px solid var(--line);background:var(--surface2);overflow:auto;padding:10px;display:flex;flex-direction:column;gap:6px}
+.c-tape h4{font-size:10.5px;letter-spacing:.08em;color:var(--faint);padding:2px 4px}
+.tp-it{font-family:var(--font-m);font-size:11.5px;padding:6px 8px;border-radius:7px;cursor:default;color:var(--mut);line-height:1.4}
+.tp-it:hover{background:var(--hov)}
+.tp-it b{color:var(--ink);display:block;font-size:13px}
+/* ---------- 画板 ---------- */
+.pt{display:flex;flex-direction:column;height:100%}
+.pt-area{flex:1;overflow:auto;display:grid;place-items:center;background:repeating-conic-gradient(#eeece4 0 25%,#f7f5ee 0 50%) 0 0/22px 22px;padding:16px}
+[data-theme="dark"] .pt-area{background:repeating-conic-gradient(#161b20 0 25%,#1a2026 0 50%) 0 0/22px 22px}
+.pt-area canvas{background:#fff;box-shadow:var(--sh-m);border-radius:4px;touch-action:none;cursor:crosshair;max-width:100%}
+.pt-colors{display:flex;gap:6px;align-items:center}
+.swb{width:22px;height:22px;border-radius:50%;border:2px solid var(--surface);box-shadow:0 0 0 1px var(--line2);cursor:default;transition:transform .1s}
+.swb:hover{transform:scale(1.15)}
+.swb.on{box-shadow:0 0 0 2px var(--acc);transform:scale(1.15)}
+/* ---------- 设置 ---------- */
+.set{display:grid;grid-template-columns:172px 1fr;height:100%}
+.set-nav{border-right:1px solid var(--line);background:var(--surface2);padding:10px 8px;overflow:auto}
+.set-sec{padding:16px 18px;overflow:auto;display:flex;flex-direction:column;gap:14px}
+.set-card{background:var(--surface2);border:1px solid var(--line);border-radius:var(--r-m);padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.set-card h4{font-family:var(--font-d);font-size:14px}
+.set-card .d{font-size:12px;color:var(--mut);line-height:1.6}
+.set-row{display:flex;align-items:center;gap:10px;justify-content:space-between}
+.set-row .lb{font-size:13px}
+.set-row .lb small{display:block;color:var(--mut);font-size:11.5px;margin-top:2px}
+.switch{width:40px;height:22px;border-radius:11px;background:var(--line2);position:relative;transition:background .15s;flex:0 0 auto;cursor:default}
+.switch::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:var(--sh-s);transition:left .18s cubic-bezier(.22,1,.36,1)}
+.switch.on{background:var(--acc)}
+.switch.on::after{left:21px}
+.sbar{height:16px;border-radius:8px;overflow:hidden;display:flex;background:var(--field);border:1px solid var(--line)}
+.sbar i{height:100%;transition:width .5s cubic-bezier(.22,1,.36,1)}
+.slegend{display:flex;flex-wrap:wrap;gap:10px 16px;font-size:12px;color:var(--mut)}
+.slegend i{width:10px;height:10px;border-radius:3px;display:inline-block;margin-right:5px;vertical-align:-1px}
+.wp-card{display:flex;gap:10px;flex-wrap:wrap}
+.wp-th{width:110px;height:68px;border-radius:9px;border:2px solid var(--line);cursor:default;position:relative;overflow:hidden;transition:transform .12s}
+.wp-th:hover{transform:translateY(-2px)}
+.wp-th.on{border-color:var(--acc);box-shadow:0 0 0 3px var(--acc-soft)}
+.wp-th span{position:absolute;left:0;right:0;bottom:0;background:rgba(20,24,18,.55);color:#fff;font-size:10.5px;padding:2px 6px}
+/* ---------- 浏览器 ---------- */
+.br{display:flex;flex-direction:column;height:100%}
+.br iframe{flex:1;border:none;background:#fff;width:100%}
+.br .addr{flex:1;min-width:60px}
+/* ---------- 虚拟机 ---------- */
+.vm{display:flex;flex-direction:column;height:100%;background:#0c0f12}
+.vm-screen{flex:1;position:relative;display:grid;place-items:center;overflow:hidden;min-height:0}
+.vm-screen div[white-space]{color:#e8e6df}
+.vm-note{padding:10px 14px;font-size:12px;color:var(--mut);background:var(--surface2);border-top:1px solid var(--line);line-height:1.6}
+/* ---------- 媒体播放器 ---------- */
+.mp{display:flex;flex-direction:column;height:100%;background:#101418}
+.mp-stage{flex:1;display:grid;place-items:center;min-height:0;position:relative}
+.mp-stage video{max-width:100%;max-height:100%}
+.mp-cover{display:flex;flex-direction:column;align-items:center;gap:14px;color:#cfd6cd}
+.mp-disc{width:130px;height:130px;border-radius:50%;background:conic-gradient(from 0deg,#22282e,#39424b,#22282e,#39424b,#22282e);box-shadow:0 10px 40px rgba(0,0,0,.5),inset 0 0 0 14px #171c21,inset 0 0 0 16px var(--acc);display:grid;place-items:center}
+.mp-disc.playing{animation:sp 3.5s linear infinite}
+.mp-disc svg{width:34px;height:34px;color:var(--acc)}
+.mp-ctl{padding:12px 16px 14px;background:var(--surface);border-top:1px solid var(--line);display:flex;flex-direction:column;gap:9px}
+.mp-row{display:flex;align-items:center;gap:10px}
+.mp-tt{font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;text-align:center}
+.pbtn{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:var(--surface2);border:1px solid var(--line);flex:0 0 auto;transition:all .1s}
+.pbtn:hover{border-color:var(--acc)}
+.pbtn:active{transform:scale(.92)}
+.pbtn svg{width:18px;height:18px}
+.pbtn.big{width:50px;height:50px;background:var(--acc);border-color:var(--acc);color:var(--acc-ink)}
+input[type=range]{-webkit-appearance:none;height:5px;border-radius:3px;background:var(--line2);flex:1;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--acc);border:2px solid #fff;box-shadow:var(--sh-s)}
+.mp-time{font-family:var(--font-m);font-size:11px;color:var(--mut);min-width:74px;text-align:center}
+/* ---------- 表格应用 ---------- */
+.sh{display:flex;flex-direction:column;height:100%}
+.sh-wrap{flex:1;overflow:auto;position:relative}
+.sh table{border-collapse:collapse;font-size:12.5px;font-family:var(--font-m);width:max-content;min-width:100%}
+.sh th{position:sticky;top:0;background:var(--surface2);border:1px solid var(--line);padding:5px 10px;font-weight:700;color:var(--mut);z-index:2;min-width:70px}
+.sh th.rh-h{left:0;z-index:3;min-width:44px}
+.sh td{border:1px solid var(--line);padding:5px 10px;background:var(--surface);white-space:nowrap}
+.sh td:focus{outline:2px solid var(--acc);outline-offset:-2px;background:#fffbe8}
+.sh td.rh-h{position:sticky;left:0;background:var(--surface2);color:var(--mut);font-weight:700;z-index:1}
+.sh textarea{width:100%;height:100%;border:none;background:var(--surface);padding:12px;font-family:var(--font-m);font-size:12.5px;resize:none;user-select:text;-webkit-user-select:text;line-height:1.6}
+/* ---------- 压缩 / 归档 ---------- */
+.zp{display:flex;flex-direction:column;height:100%}
+.zp-list{flex:1;overflow:auto;padding:8px}
+.zp-it{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:8px;font-size:13px}
+.zp-it:hover{background:var(--hov)}
+.zp-it svg{width:18px;height:18px;color:var(--mut);flex:0 0 auto}
+.zp-it .p{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--font-m);font-size:12px}
+.zp-it .s{color:var(--mut);font-size:11.5px;font-family:var(--font-m)}
+.prog{height:6px;border-radius:3px;background:var(--line);overflow:hidden;flex:1}
+.prog i{display:block;height:100%;background:var(--acc);width:0;transition:width .2s}
+/* ---------- PDF / 查看器 ---------- */
+.pdfv iframe{width:100%;height:100%;border:none}
+/* ---------- 启动点缀 ---------- */
+.deskbrand{position:absolute;right:18px;bottom:14px;font-family:var(--font-d);font-size:12px;letter-spacing:.14em;color:rgba(255,255,255,.75);text-shadow:0 1px 4px rgba(0,0,0,.3);pointer-events:none;display:flex;align-items:center;gap:7px}
+.deskbrand i{width:9px;height:9px;border-radius:50%;background:var(--acc);box-shadow:0 0 10px rgba(233,190,0,.8)}
+#dropHint{position:fixed;inset:0;z-index:8000;background:var(--acc-soft);border:3px dashed var(--acc);display:none;place-items:center;pointer-events:none}
+#dropHint b{background:var(--surface);padding:14px 22px;border-radius:12px;box-shadow:var(--sh-l);font-size:15px}
+/* ---------- 响应式 ---------- */
+@media (max-width:820px){
+:root{--icsz:76px;--icico:46px;--taskh:58px}
+.hidden-sm{display:none!important}
+#tbStart span.lbl{display:none}
+#tbStart{padding:0 9px}
+#clock span{display:none}
+#trayStore span{display:none}
+#trayStore{padding:0 6px}
+.win{left:0!important;top:0!important;width:100%!important;height:calc(100% - var(--taskh))!important;border-radius:0;border-left:none;border-right:none}
+.win.max{height:calc(100% - var(--taskh))!important}
+.rh{display:none}
+#startmenu{left:0;right:0;bottom:0;width:auto;max-height:calc(100% - var(--taskh));border-radius:18px 18px 0 0;transform-origin:bottom}
+#smApps{grid-template-columns:repeat(4,1fr)}
+.ex{grid-template-columns:1fr;--cols:minmax(0,1fr) 76px}
+.ex-side{display:none}
+.ex-side.open{display:block;position:absolute;z-index:30;top:0;bottom:0;left:0;width:210px;box-shadow:var(--sh-l)}
+.lhd .hc:nth-child(3),.lrow .mt:nth-child(3),.lhd .hc:nth-child(4){display:none}
+.calc{grid-template-columns:1fr}
+.c-tape{display:none}
+.set{grid-template-columns:1fr;grid-template-rows:auto 1fr}
+.set-nav{display:flex;gap:4px;overflow-x:auto;border-right:none;border-bottom:1px solid var(--line);padding:8px}
+.side-it{white-space:nowrap}
+.ed-prev{position:absolute;right:0;top:0;bottom:0;width:46%!important;background:var(--surface);z-index:5;box-shadow:var(--sh-l)}
+.ed-split{display:none}
+#toasts{left:14px;align-items:stretch}
+}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+<div id="wall" class="wp-santorini"></div>
+<div id="desk">
+  <div id="icons"></div>
+  <div class="deskbrand"><i></i>LEMON ISLE OS</div>
+</div>
+<div id="wins"></div>
+<div id="taskbar">
+  <button id="tbStart"><span class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 3c-3.5 0-6 2.5-6 6 0 4 3 5.5 6 12 3-6.5 6-8 6-12 0-3.5-2.5-6-6-6z" stroke-linejoin="round"/><path d="M12 3c0 2.5-1 4-2.5 5" stroke-linecap="round"/></svg></span><span class="lbl">柠屿</span></button>
+  <div id="tbApps"></div>
+  <div id="tray">
+    <button class="traybtn" id="trayTheme" title="切换深浅色"></button>
+    <button id="trayStore" title="存储占用"><i class="dot"></i><span>--</span></button>
+    <div id="clock"><b>--:--</b><span>--</span></div>
+  </div>
+</div>
+<div id="ctx" class="hidden"></div>
+<div id="ctxSub" class="hidden"></div>
+<div id="toasts"></div>
+<div id="dropHint"><b>松开以导入到柠屿文件系统</b></div>
+<input type="file" id="filePick" multiple class="hidden">
+<input type="file" id="imgPick" accept="image/*" class="hidden">
+<script>
+"use strict";
+/* ================= 工具 ================= */
+const $=(s,p)=>(p||document).querySelector(s);
+const $$=(s,p)=>[...(p||document).querySelectorAll(s)];
+const el=(t,c,h)=>{const n=document.createElement(t);if(c)n.className=c;if(h!=null)n.innerHTML=h;return n};
+const esc=s=>String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const debounce=(f,t)=>{let h;return(...a)=>{clearTimeout(h);h=setTimeout(()=>f(...a),t)}};
+const fmtSize=b=>{if(b==null)return'—';if(b<1024)return b+' B';if(b<1048576)return(b/1024).toFixed(1)+' KB';if(b<1073741824)return(b/1048576).toFixed(1)+' MB';return(b/1073741824).toFixed(2)+' GB'};
+const fmtDate=t=>{if(!t)return'—';const d=new Date(t);const p=n=>String(n).padStart(2,'0');return`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`};
+const natCmp=(a,b)=>String(a).localeCompare(String(b),'zh-CN',{numeric:true,sensitivity:'base'});
+const extOf=n=>{const i=String(n).lastIndexOf('.');return i>0?String(n).slice(i+1).toLowerCase():''};
+const baseName=p=>p.split('/').filter(Boolean).pop()||'/';
+const dirName=p=>{const a=p.split('/').filter(Boolean);a.pop();return'/'+a.join('/')};
+const joinPath=(d,n)=>(d==='/'?'/':d+'/'+n).replace(/\/+/g,'/');
+const isTouch=()=>matchMedia('(pointer: coarse)').matches;
+const isMobile=()=>matchMedia('(max-width: 820px)').matches;
+const MIME={png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',gif:'image/gif',webp:'image/webp',svg:'image/svg+xml',bmp:'image/bmp',ico:'image/x-icon',mp3:'audio/mpeg',wav:'audio/wav',ogg:'audio/ogg',flac:'audio/flac',aac:'audio/aac',m4a:'audio/mp4',mp4:'video/mp4',webm:'video/webm',ogv:'video/ogg',pdf:'application/pdf',zip:'application/zip',gz:'application/gzip',tar:'application/x-tar',tgz:'application/gzip','7z':'application/x-7z-compressed',html:'text/html',htm:'text/html',css:'text/css',js:'text/javascript',mjs:'text/javascript',json:'application/json',md:'text/markdown',txt:'text/plain',csv:'text/csv',tsv:'text/tab-separated-values',xml:'text/xml',svg2:'image/svg+xml'};
+const mimeOf=n=>MIME[extOf(n)]||'application/octet-stream';
+/* ================= 原创 SVG 图标库（系统内无任何 Emoji） ================= */
+const I=(d,extra)=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"${extra||''}>${d}</svg>`;
+const ICONS={
+lemon:I('<path d="M12 3c-3.5 0-6 2.5-6 6 0 4 3 5.5 6 12 3-6.5 6-8 6-12 0-3.5-2.5-6-6-6z"/><path d="M12 3c0 2.5-1 4-2.5 5"/>'),
+folder:I('<path d="M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/>'),
+folderOpen:I('<path d="M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V11H7.5a2 2 0 0 0-1.9 1.4L3 19V7z"/><path d="M3 19l2.6-6.6A2 2 0 0 1 7.5 11H21l-2.4 6.5a2 2 0 0 1-1.9 1.5H5a2 2 0 0 1-2-2z"/>'),
+file:I('<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/>'),
+fileText:I('<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/><path d="M9 12h6M9 15.5h6"/>'),
+fileCode:I('<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/><path d="M10.2 11.5 8 13.7l2.2 2.2M13.8 11.5l2.2 2.2-2.2 2.2"/>'),
+fileImage:I('<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/><circle cx="10" cy="11" r="1.4"/><path d="M8 18l3-3.5 2 2 1.6-1.8L17 18"/>'),
+fileAudio:I('<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/><path d="M10 16.5v-5l4.5-1v5"/><circle cx="8.9" cy="16.5" r="1.3"/><circle cx="13.4" cy="15.5" r="1.3"/>'),
+fileVideo:I('<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/><path d="M10 11.5l4.5 2.7-4.5 2.7z"/>'),
+fileZip:I('<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/><path d="M12 6v2M12 9.5v2M12 13v2"/><rect x="10.6" y="15.5" width="2.8" height="3.4" rx="0.8"/>'),
+filePdf:I('<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/><path d="M8.5 17v-5h1.6a1.5 1.5 0 0 1 0 3H8.5M13 17v-5h1a2.5 2.5 0 0 1 0 5h-1M16.8 17v-5h2.4M16.8 14.6h1.8"/>'),
+fileSheet:I('<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/><path d="M8.5 11h7v7h-7z"/><path d="M8.5 14.5h7M12 11v7"/>'),
+fileKey:I('<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/><circle cx="12" cy="12" r="2.2"/><path d="M12 14.2V18M12 16.5h2"/>'),
+appExplorer:I('<rect x="3" y="5" width="18" height="15" rx="2"/><path d="M3 9h18M9 5v4"/>'),
+appNote:I('<path d="M5 4h14v16H5z"/><path d="M8.5 9h7M8.5 12.5h7M8.5 16h4.5"/>'),
+appCode:I('<path d="M8 6 3.5 12 8 18M16 6l4.5 6L16 18M13.2 4.5l-2.4 15"/>'),
+appBrowser:I('<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.6 2.3 4 5.2 4 8.5s-1.4 6.2-4 8.5c-2.6-2.3-4-5.2-4-8.5s1.4-6.2 4-8.5z"/>'),
+appCalc:I('<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8.5 7h7"/><path d="M8.5 12h.01M12 12h.01M15.5 12h.01M8.5 15.5h.01M12 15.5h.01M15.5 15.5h.01M8.5 12v.01" stroke-width="2.4"/>'),
+appPaint:I('<path d="M12 3a9 9 0 1 0 0 18c1.5 0 2-.9 2-2 0-1.4-1-1.6-1-3 0-1.2 1-2 2.5-2H17a4 4 0 0 0 4-4c0-4-4.5-7-9-7z"/><circle cx="8" cy="10" r="1" fill="currentColor"/><circle cx="12" cy="7.5" r="1" fill="currentColor"/><circle cx="16" cy="10" r="1" fill="currentColor"/>'),
+appSettings:I('<circle cx="12" cy="12" r="3"/><path d="M12 2.8l1.2 2.6 2.8-.7 2 2 .7 2.8-2 2 2 2-.7 2.8-2 2-2.8-.7L12 21.2l-1.2-2.6-2.8.7-2-2-.7-2.8 2-2-2-2 .7-2.8 2-2 2.8.7z"/>'),
+appVm:I('<rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/><path d="M7 8h4M7 11h7" opacity=".7"/>'),
+appViewer:I('<rect x="4" y="4" width="16" height="16" rx="2"/><circle cx="9.5" cy="9.5" r="1.5"/><path d="M6 17.5 11 12l3 3 2-2 2.5 2.5"/>'),
+appSheet:I('<rect x="3.5" y="4" width="17" height="16" rx="2"/><path d="M3.5 9h17M9 4v16M15 4v16"/>'),
+appZip:I('<path d="M5 4h14v16H5z"/><path d="M12 4v3M12 9v2M12 13v2"/><rect x="10.4" y="16" width="3.2" height="4" rx="1"/>'),
+back:I('<path d="M14.5 5 8 12l6.5 7"/>'),
+fwd:I('<path d="M9.5 5 16 12l-6.5 7"/>'),
+up:I('<path d="M12 19V5M5.5 11.5 12 5l6.5 6.5"/>'),
+home:I('<path d="M4 11 12 4l8 7"/><path d="M6 10v10h12V10"/>'),
+search:I('<circle cx="11" cy="11" r="6"/><path d="M20 20l-4.3-4.3"/>'),
+plus:I('<path d="M12 5v14M5 12h14"/>'),
+minus:I('<path d="M5 12h14"/>'),
+close:I('<path d="M6 6l12 12M18 6 6 18"/>'),
+maxi:I('<rect x="5" y="5" width="14" height="14" rx="2"/>'),
+restor:I('<rect x="4" y="8" width="12" height="12" rx="2"/><path d="M8 8V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2"/>'),
+mini:I('<path d="M5 16h14"/>'),
+refresh:I('<path d="M20 12a8 8 0 1 1-2.3-5.6M20 3.5V8h-4.5"/>'),
+trash:I('<path d="M4.5 7h15M9 7V5h6v2M6.5 7l1 13h9l1-13"/><path d="M10 11v5M14 11v5"/>'),
+copy:I('<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a1 1 0 0 1 1-1h9"/>'),
+cut:I('<circle cx="6.5" cy="6.5" r="2.5"/><circle cx="6.5" cy="17.5" r="2.5"/><path d="M8.6 8.2 20 19M20 5 8.6 15.8"/>'),
+paste:I('<rect x="6" y="5" width="12" height="16" rx="2"/><path d="M9 5V3.5h6V5M9.5 11h5M9.5 14.5h5"/>'),
+rename:I('<path d="M4 20l4-1L19 8l-3-3L5 16l-1 4z"/><path d="M13.5 6.5l3 3"/>'),
+download:I('<path d="M12 4v11M7 10.5l5 5 5-5"/><path d="M4.5 19.5h15"/>'),
+upload:I('<path d="M12 15V4M7 8.5l5-5 5 5"/><path d="M4.5 19.5h15"/>'),
+open:I('<path d="M4 11V6a2 2 0 0 1 2-2h4l2 2.5h6a2 2 0 0 1 2 2V11"/><path d="M4 11h16.5l-1.8 7.4a2 2 0 0 1-1.9 1.6H6.2a2 2 0 0 1-1.9-1.6L4 11z"/>'),
+mount:I('<path d="M12 3v10M8 9.5l4 4 4-4"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/>'),
+unmount:I('<path d="M12 13V3M8 6.5l4-4 4 4"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/>'),
+play:I('<path d="M8 5.5v13l10-6.5z"/>'),
+pause:I('<path d="M8 5.5v13M16 5.5v13" stroke-width="2.4"/>'),
+prevT:I('<path d="M16 5.5v13L7 12z"/><path d="M6.5 5.5v13"/>'),
+nextT:I('<path d="M8 5.5v13l9-6.5z"/><path d="M17.5 5.5v13"/>'),
+expand:I('<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>'),
+shrink:I('<path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/>'),
+lockM:I('<rect x="5.5" y="10.5" width="13" height="9.5" rx="2"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/><circle cx="12" cy="15" r="1.3" fill="currentColor"/>'),
+check:I('<path d="M5 12.5 10 17.5 19 7"/>'),
+chevR:I('<path d="M9.5 5 16 12l-6.5 7"/>'),
+chevD:I('<path d="M5 9.5 12 16l7-6.5"/>'),
+sortA:I('<path d="M8 4v16M8 20 4.5 16.5M8 20l3.5-3.5M14 6h6M14 12h4.5M14 18h3"/>'),
+sortD:I('<path d="M8 20V4M8 4 4.5 7.5M8 4l3.5 3.5M14 6h3M14 12h4.5M14 18h6"/>'),
+grid:I('<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>'),
+list:I('<path d="M4 6h16M4 12h16M4 18h16"/>'),
+save:I('<path d="M5 4h11l3 3v13H5z"/><path d="M8 4v5h7V4M8 20v-6h8v6"/>'),
+run:I('<path d="M7 4.5v15l11-7.5z"/><path d="M4 4.5v15" opacity=".6"/>'),
+format:I('<path d="M5 6h14M5 12h9M5 18h12"/><path d="M17.5 10.5 20 13l-2.5 2.5"/>'),
+fold:I('<path d="M5 7h14M5 17h14"/><path d="M12 10.5v3M10.5 12h3"/>'),
+unfold:I('<path d="M5 7h14M5 17h14"/><path d="M12 9v6"/>'),
+find:I('<circle cx="10.5" cy="10.5" r="5.5"/><path d="M19.5 19.5l-5-5"/><path d="M8.2 10.5h4.6"/>'),
+replace:I('<path d="M4 8h12M13 4.5 16.5 8 13 11.5"/><path d="M20 16H8M11 12.5 7.5 16l3.5 3.5"/>'),
+undo:I('<path d="M8 5 4 9l4 4"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/>'),
+redo:I('<path d="M16 5l4 4-4 4"/><path d="M20 9H10a6 6 0 0 0 0 12h3"/>'),
+import:I('<path d="M12 3v9M8.5 8.5 12 12l3.5-3.5"/><path d="M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/>'),
+export:I('<path d="M12 12V3M8.5 6.5 12 3l3.5 3.5"/><path d="M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/>'),
+newWin:I('<rect x="4" y="4" width="13" height="13" rx="2"/><path d="M9 21h9a2 2 0 0 0 2-2V9"/>'),
+clear:I('<path d="M5 5l14 14M19 5 5 19"/><circle cx="12" cy="12" r="9.5" opacity=".5"/>'),
+wall:I('<rect x="3.5" y="4.5" width="17" height="15" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M5 17.5 10.5 12l3.5 3.5 2-2 3 3"/>'),
+theme:I('<path d="M20 13.5A8.5 8.5 0 0 1 10.5 4 8.5 8.5 0 1 0 20 13.5z"/>'),
+sun:I('<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5 5l1.8 1.8M17.2 17.2 19 19M19 5l-1.8 1.8M6.8 17.2 5 19"/>'),
+info:I('<circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 7.8v.4" stroke-width="2.2"/>'),
+warn:I('<path d="M12 4 2.5 20h19z"/><path d="M12 10v4.5M12 17.5v.3" stroke-width="2.2"/>'),
+err:I('<circle cx="12" cy="12" r="8.5"/><path d="M9 9l6 6M15 9l-6 6"/>'),
+okI:I('<circle cx="12" cy="12" r="8.5"/><path d="M8 12.5l2.8 2.8L16.5 9"/>'),
+power:I('<path d="M12 3v8"/><path d="M6.5 6.5a8 8 0 1 0 11 0"/>'),
+zipO:I('<path d="M5 4h14v16H5z"/><path d="M12 4v2.5M12 9v2.5M12 14v2"/><circle cx="12" cy="18.5" r="1.4"/>'),
+eye:I('<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/>'),
+brush:I('<path d="M14.5 4.5 19.5 9.5 9 20H4v-5z"/><path d="M12.5 6.5l5 5"/>'),
+eraser:I('<path d="M8 19h11M5.5 15.5 13 8l4.5 4.5-6 6H8z"/>'),
+disk:I('<rect x="4" y="4" width="16" height="16" rx="2"/><circle cx="12" cy="12" r="3.5"/><path d="M4 9h3"/>'),
+clock:I('<circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3.5 2"/>'),
+select:I('<path d="M5 4l14 6.5-6.5 2L10 19z"/>'),
+send:I('<path d="M4 12 20 4l-4 16-4.5-6z"/><path d="M11.5 14 20 4"/>'),
+reset:I('<path d="M4 12a8 8 0 1 0 2.3-5.6M4 3.5V8h4.5"/>'),
+table:I('<rect x="3.5" y="4.5" width="17" height="15" rx="1.5"/><path d="M3.5 9.5h17M9.5 9.5v10"/>'),
+text:I('<path d="M5 6V4.5h14V6M12 4.5v15M9 19.5h6"/>')
+};
+ICONS.appViewer=ICONS.appViewer||ICONS.appViewer;
+const icon=(n,c)=>`<span class="${c||''}" style="display:contents">${ICONS[n]||ICONS.file}</span>`;
+function fileIconName(name,isDir){
+  if(isDir)return'folder';
+  const e=extOf(name);
+  if(['png','jpg','jpeg','gif','webp','svg','bmp','ico'].includes(e))return'fileImage';
+  if(['mp3','wav','ogg','flac','aac','m4a'].includes(e))return'fileAudio';
+  if(['mp4','webm','ogv','mov','mkv'].includes(e))return'fileVideo';
+  if(['zip','gz','tar','tgz','7z','rar'].includes(e))return'fileZip';
+  if(e==='pdf')return'filePdf';
+  if(['csv','tsv','xls','xlsx'].includes(e))return'fileSheet';
+  if(['html','htm','css','js','mjs','json','xml','svg','py','c','cpp','java','sh','yaml','yml','ini','toml'].includes(e))return'fileCode';
+  if(['txt','md','log','markdown'].includes(e))return'fileText';
+  return'file';
+}
+const APP_COLORS={explorer:'#2B6E9E',note:'#7C9A3D',code:'#3A4A5A',browser:'#2B6E9E',calc:'#B98F00',paint:'#D96B4A',settings:'#7C8794',vm:'#333B44',viewer:'#2B6E9E',sheet:'#4E9B62',zip:'#8A6D3B',media:'#333B44',pdf:'#C6473E'};
+/* ================= Toast & 对话框 ================= */
+const ui={
+toast(msg,type,ms){const t=el('div','toast '+(type||'info'));t.innerHTML=`${type==='ok'?ICONS.okI:type==='err'?ICONS.err:type==='warn'?ICONS.warn:ICONS.info}<span>${esc(msg)}</span>`;$('#toasts').appendChild(t);setTimeout(()=>{t.classList.add('out');setTimeout(()=>t.remove(),220)},ms||3200);return t},
+dialog(opts){return new Promise(res=>{
+  const mask=el('div','',``);mask.id='mask';
+  const d=el('div','dlg');
+  d.innerHTML=`<h3>${esc(opts.title||'柠屿')}</h3>${opts.html?`<div>${opts.html}</div>`:`<p>${esc(opts.text||'')}</p>`}`;
+  const row=el('div','row');
+  (opts.buttons||[{t:'确定',v:true,pri:true}]).forEach(b=>{
+    const btn=el('button','btn '+(b.pri?'pri':b.danger?'danger':''),esc(b.t));
+    btn.onclick=()=>{if(opts.input){const inp=$('.inp',d);res(b.v?(inp?inp.value:null):null)}else{res(b.v===undefined?true:b.v)}mask.remove()};
+    row.appendChild(btn);
+  });
+  d.appendChild(row);mask.appendChild(d);document.body.appendChild(mask);
+  const inp=$('.inp',d);if(inp){setTimeout(()=>{inp.focus();if(inp.select)inp.select()},60);
+    inp.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();const pri=(opts.buttons||[{t:'确定',v:true}]).find(x=>x.pri!==false);res(inp.value);mask.remove()}});}
+  mask.addEventListener('pointerdown',e=>{if(e.target===mask&&!opts.modal){res(opts.cancelVal!==undefined?opts.cancelVal:null);mask.remove()}});
+})},
+confirm(text,title){return this.dialog({title:title||'请确认',text,buttons:[{t:'取消',v:false},{t:'确定',v:true,pri:true}]})},
+prompt(text,val,title){return this.dialog({title:title||'输入',text,html:`<p>${esc(text)}</p><input class="inp" value="${esc(val||'')}">`,buttons:[{t:'取消',v:false},{t:'确定',v:true,pri:true}],cancelVal:null})},
+alert(text,title){return this.dialog({title:title||'提示',text,buttons:[{t:'好的',v:true,pri:true}]})}
+};
+/* ================= 事件总线 ================= */
+const bus={m:{},on(e,f){(this.m[e]=this.m[e]||[]).push(f)},emit(e,...a){(this.m[e]||[]).forEach(f=>{try{f(...a)}catch(err){console.error(err)}})}};
+/* ================= 本地设置（localStorage + cookie） ================= */
+const store={
+  get(k,d){try{const v=localStorage.getItem('lios.'+k);return v==null?d:JSON.parse(v)}catch(e){return d}},
+  set(k,v){try{localStorage.setItem('lios.'+k,JSON.stringify(v))}catch(e){}},
+  del(k){try{localStorage.removeItem('lios.'+k)}catch(e){}}
+};
+document.cookie='lemonisle_session='+Date.now()+';max-age=31536000;SameSite=Lax;path=/';
+/* ================= IndexedDB（挂载句柄 / 降级存储） ================= */
+const idb={
+  _db:null,
+  open(){if(this._db)return this._db;this._db=new Promise((res,rej)=>{const r=indexedDB.open('lemonisle',1);r.onupgradeneeded=()=>{const d=r.result;['kv','mounts','fs'].forEach(s=>{if(!d.objectStoreNames.contains(s))d.createObjectStore(s)});};r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)});return this._db},
+  async tx(s,m){const d=await this.open();return d.transaction(s,m).objectStore(s)},
+  async get(s,k){try{const t=await this.tx(s,'readonly');return await new Promise((res,rej)=>{const q=t.get(k);q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error)})}catch(e){return undefined}},
+  async set(s,k,v){try{const t=await this.tx(s,'readwrite');return await new Promise((res,rej)=>{const q=t.put(v,k);q.onsuccess=()=>res();q.onerror=()=>rej(q.error)})}catch(e){}},
+  async del(s,k){try{const t=await this.tx(s,'readwrite');return await new Promise(res=>{const q=t.delete(k);q.onsuccess=()=>res();q.onerror=()=>res()})}catch(e){}},
+  async keys(s){try{const t=await this.tx(s,'readonly');return await new Promise(res=>{const q=t.getAllKeys();q.onsuccess=()=>res(q.result||[]);q.onerror=()=>res([])})}catch(e){return[]}},
+  async clear(s){try{const t=await this.tx(s,'readwrite');await new Promise(res=>{const q=t.clear();q.onsuccess=()=>res();q.onerror=()=>res()})}catch(e){}}
+};
+/* ================= 虚拟文件系统 fs（OPFS 主后端 + 本地挂载 + 降级） ================= */
+const fs=(()=>{
+  let root=null,backend='opfs';
+  const mounts=new Map();          // '/mnt/local/名字' -> {handle,name}
+  const dirMeta=new Map();         // 目录修改时间
+  let metaTimer=null;
+  /* ---- 内存降级后端 ---- */
+  const mem={dirs:new Set(['/']),files:new Map(),
+    async load(){const snap=await idb.get('kv','memfs');if(snap){snap.dirs.forEach(d=>mem.dirs.add(d));snap.files.forEach(f=>mem.files.set(f.p,{blob:f.b,mtime:f.m}))}},
+    save:debounce(async()=>{await idb.set('kv','memfs',{dirs:[...mem.dirs],files:[...mem.files.values()].map((v,k)=>({p:k,b:v.blob,m:v.mtime}))})},600)};
+  const norm=p=>{const s='/'+String(p==null?'':p).split('/').filter(Boolean).join('/');return s};
+  const parts=p=>norm(p).split('/').filter(Boolean);
+  const isHidden=n=>n.startsWith('.');
+  function baseFor(pts){
+    if(pts[0]==='mnt'&&pts[1]==='local'){
+      if(pts.length<3)return{virtual:true,rest:pts};
+      const mp='/mnt/local/'+pts[2];const m=mounts.get(mp);
+      if(!m){const e=new Error('挂载点不存在: '+mp);e.code='ENOENT';throw e}
+      return{handle:m.handle,rest:pts.slice(3),mount:mp};
+    }
+    if(backend!=='opfs'){return{mem:true,rest:pts}}
+    return{handle:root,rest:pts};
+  }
+  async function dirHandle(path,create){
+    const pts=parts(path);const b=baseFor(pts);
+    if(b.virtual){const e=new Error('无效路径 '+path);e.code='EINVAL';throw e}
+    if(b.mem){const p=norm(path);if(!mem.dirs.has(p)){if(!create){const e=new Error('目录不存在 '+path);e.code='ENOENT';throw e}let cur='/';for(const s of pts){cur=joinPath(cur,s);mem.dirs.add(cur)}}return{__mem:p}}
+    let h=b.handle;
+    for(const s of b.rest)h=await h.getDirectoryHandle(s,{create});
+    return h;
+  }
+  function touchDir(p){if(p.startsWith('/mnt/local'))return;dirMeta.set(norm(p)||'/',Date.now());saveMeta()}
+  function saveMeta(){clearTimeout(metaTimer);metaTimer=setTimeout(async()=>{if(backend!=='opfs')return;try{const obj={};dirMeta.forEach((v,k)=>obj[k]=v);const f=await root.getFileHandle('.lemonisle.meta',{create:true});const w=await f.createWritable();await w.write(JSON.stringify(obj));await w.close()}catch(e){}},400)}
+  async function loadMeta(){try{const f=await root.getFileHandle('.lemonisle.meta');const j=JSON.parse(await (await f.getFile()).text());Object.entries(j).forEach(([k,v])=>dirMeta.set(k,v))}catch(e){}}
+  const toBlob=d=>d instanceof Blob?d:new Blob([d],{type:'application/octet-stream'});
+  /* ---- 统一 API（Promise 化，同时兼容 callback 传参签名） ---- */
+  function wrap(fn){return function(...args){let cb=null;const rest=args.filter(a=>{if(typeof a==='function'){cb=a;return false}return true});const p=fn.apply(this,rest);if(cb){p.then(r=>cb(null,r),e=>cb(e));return undefined}return p}}
+  const api={
+    backend:()=>backend,
+    mounts,
+    ready:(async()=>{
+      try{
+        if(navigator.storage&&navigator.storage.getDirectory){root=await navigator.storage.getDirectory();backend='opfs';await loadMeta()}
+        else{backend='mem';await mem.load();ui.toast('当前浏览器不支持 OPFS，已降级到 IndexedDB 存储','warn',5000)}
+      }catch(e){console.error(e);backend='mem';await mem.load();ui.toast('OPFS 初始化失败，已降级到内存+IndexedDB 存储','warn',5000)}
+      return true;
+    })(),
+    norm,
+    async exists(p){try{await api.stat(p);return true}catch(e){return false}},
+    async stat(p,isLstat,cb){
+      p=norm(p);
+      if(p==='/')return{name:'/',isDirectory:true,size:0,mtime:Date.now()};
+      if(p==='/mnt'||p==='/mnt/local')return{name:baseName(p),isDirectory:true,size:0,mtime:Date.now()};
+      const pts=parts(p);const b=baseFor(pts);
+      if(b.virtual){if(p==='/mnt/local/'+pts[2]&&mounts.has(p))return{name:pts[2],isDirectory:true,size:0,mtime:Date.now()};const e=new Error('不存在 '+p);e.code='ENOENT';throw e}
+      if(b.mem){if(mem.dirs.has(p))return{name:baseName(p),isDirectory:true,size:0,mtime:dirMeta.get(p)||Date.now()};const f=mem.files.get(p);if(f)return{name:baseName(p),isDirectory:false,size:f.blob.size,mtime:f.mtime};const e=new Error('不存在 '+p);e.code='ENOENT';throw e}
+      const parent=await dirHandle(dirName(p));
+      const name=pts[pts.length-1];
+      try{const dh=await parent.getDirectoryHandle(name);return{name,isDirectory:true,size:0,mtime:dirMeta.get(p)||Date.now()}}catch(e){}
+      try{const fh=await parent.getFileHandle(name);const file=await fh.getFile();return{name,isDirectory:false,size:file.size,mtime:file.lastModified}}catch(e){const er=new Error('不存在 '+p);er.code='ENOENT';throw er}
+    },
+    async readdir(p){
+      p=norm(p);
+      if(p==='/mnt')return[{name:'local',isDirectory:true,size:0,mtime:Date.now()}];
+      if(p==='/mnt/local')return[...mounts.values()].map(m=>({name:m.name,isDirectory:true,size:0,mtime:Date.now()}));
+      const b=baseFor(parts(p));
+      if(b.virtual)return[];
+      if(b.mem){const out=[];const pre=p==='/'?'/':p+'/';
+        mem.dirs.forEach(d=>{if(d.startsWith(pre)&&d!==p&&!d.slice(pre.length).includes('/')&&d.slice(pre.length))out.push({name:d.slice(pre.length),isDirectory:true,size:0,mtime:dirMeta.get(d)||Date.now()})});
+        mem.files.forEach((f,k)=>{if(k.startsWith(pre)&&!k.slice(pre.length).includes('/'))out.push({name:k.slice(pre.length),isDirectory:false,size:f.blob.size,mtime:f.mtime})});
+        return out.filter(e=>store.get('showHidden',false)||!isHidden(e.name)).sort((a,b2)=>(b2.isDirectory-a.isDirectory)||natCmp(a.name,b2.name))}
+      const dh=await dirHandle(p);const out=[];const jobs=[];
+      for await(const ent of dh.values()){
+        if(isHidden(ent.name)&&!store.get('showHidden',false))continue;
+        if(ent.kind==='directory')out.push({name:ent.name,isDirectory:true,size:0,mtime:dirMeta.get(joinPath(p,ent.name))||Date.now()});
+        else jobs.push(ent.getFile().then(f=>out.push({name:ent.name,isDirectory:false,size:f.size,mtime:f.lastModified})).catch(()=>{}));
+      }
+      await Promise.all(jobs);
+      return out.sort((a,b2)=>(b2.isDirectory-a.isDirectory)||natCmp(a.name,b2.name));
+    },
+    async mkdir(p,opts){
+      p=norm(p);const b=baseFor(parts(p));
+      if(b.virtual)throw new Error('无法在该位置创建');
+      if(b.mem){let cur='/';for(const s of parts(p)){cur=joinPath(cur,s);mem.dirs.add(cur)}touchDir(dirName(p));mem.save();bus.emit('fs-change',dirName(p));return}
+      await dirHandle(p,true);touchDir(p);touchDir(dirName(p));bus.emit('fs-change',dirName(p));
+    },
+    async readFile(p,flag){
+      p=norm(p);const b=baseFor(parts(p));
+      if(b.mem){const f=mem.files.get(p);if(!f){const e=new Error('文件不存在 '+p);e.code='ENOENT';throw e}return f.blob}
+      const dh=await dirHandle(dirName(p));
+      const fh=await dh.getFileHandle(parts(p).pop());
+      return await fh.getFile();
+    },
+    async writeFile(p,data){
+      p=norm(p);const blob=toBlob(data);const b=baseFor(parts(p));
+      if(b.mem){mem.dirs.add(dirName(p)==='/'?'/':dirName(p));mem.files.set(p,{blob,mtime:Date.now()});touchDir(dirName(p));mem.save();bus.emit('fs-change',dirName(p));return}
+      const dh=await dirHandle(dirName(p),true);
+      const fh=await dh.getFileHandle(baseName(p),{create:true});
+      const w=await fh.createWritable();await w.write(blob);await w.close();
+      touchDir(dirName(p));bus.emit('fs-change',dirName(p));
+    },
+    async remove(p){
+      p=norm(p);if(p==='/'||p==='/mnt'||p==='/mnt/local'||mounts.has(p))throw new Error('该位置受保护，无法删除');
+      const b=baseFor(parts(p));
+      if(b.mem){const pre=p+'/';[...mem.files.keys()].forEach(k=>{if(k===p||k.startsWith(pre))mem.files.delete(k)});[...mem.dirs].forEach(d=>{if(d===p||d.startsWith(pre))mem.dirs.delete(d)});touchDir(dirName(p));mem.save();bus.emit('fs-change',dirName(p));return}
+      const dh=await dirHandle(dirName(p));const name=baseName(p);
+      await dh.removeEntry(name,{recursive:true});
+      touchDir(dirName(p));bus.emit('fs-change',dirName(p));
+    },
+    async rename(from,to){
+      from=norm(from);to=norm(to);
+      if(await api.exists(to))throw new Error('目标已存在：'+to);
+      const bf=baseFor(parts(from)),bt=baseFor(parts(to));
+      if(bf.mem||bt.mem){
+        if(bf.mem!==bt.mem)throw new Error('不支持跨存储移动');
+        const st=await api.stat(from);
+        if(st.isDirectory){const pre=from+'/';const moving=[...mem.dirs].filter(d=>d===from||d.startsWith(pre));const mf=[...mem.files.keys()].filter(k=>k.startsWith(pre));
+          moving.forEach(d=>{mem.dirs.delete(d);mem.dirs.add(to+d.slice(from.length))});
+          mf.forEach(k=>{const f=mem.files.get(k);mem.files.delete(k);mem.files.set(to+k.slice(from.length),f)});
+        }else{const f=mem.files.get(from);mem.files.delete(from);mem.files.set(to,f)}
+        touchDir(dirName(from));touchDir(dirName(to));mem.save();bus.emit('fs-change',dirName(from));bus.emit('fs-change',dirName(to));return;
+      }
+      const srcDh=await dirHandle(dirName(from)),dstDh=await dirHandle(dirName(to),true);
+      const srcName=baseName(from),dstName=baseName(to);
+      let moved=false;
+      try{
+        let h;try{h=await srcDh.getDirectoryHandle(srcName)}catch(e){h=await srcDh.getFileHandle(srcName)}
+        if(typeof h.move==='function'){await h.move(dstDh,dstName);moved=true}
+      }catch(e){moved=false}
+      if(!moved){await api.copy(from,to);await api.remove(from)}
+      touchDir(dirName(from));touchDir(dirName(to));
+      bus.emit('fs-change',dirName(from));bus.emit('fs-change',dirName(to));
+    },
+    async copy(from,to){
+      from=norm(from);to=norm(to);
+      const st=await api.stat(from);
+      if(st.isDirectory){
+        await api.mkdir(to).catch(()=>{});
+        const list=await api.readdir(from);
+        for(const it of list)await api.copy(joinPath(from,it.name),joinPath(to,it.name));
+      }else{const blob=await api.readFile(from);await api.writeFile(to,blob)}
+    },
+    async treeSize(p){
+      const st=await api.stat(p);
+      if(!st.isDirectory)return{size:st.size,count:1,dirs:0};
+      let size=0,count=0,dirs=0;const list=await api.readdir(p);
+      for(const it of list){if(it.isDirectory){dirs++;const r=await api.treeSize(joinPath(p,it.name));size+=r.size;count+=r.count;dirs+=r.dirs}else{size+=it.size;count++}}
+      return{size,count,dirs};
+    },
+    async estimate(){try{return await navigator.storage.estimate()}catch(e){return{quota:0,usage:0}}},
+    async persist(){try{return await navigator.storage.persist()}catch(e){return false}},
+    async readText(p){return await(await api.readFile(p)).text()},
+    async readBuffer(p){return await(await api.readFile(p)).arrayBuffer()},
+    /* ---- 本地文件夹挂载（File System Access API → 统一后端） ---- */
+    async mountLocal(handle){
+      const path='/mnt/local/'+handle.name;
+      if(mounts.has(path)){ui.toast('该文件夹已挂载','warn');return path}
+      try{
+        let perm=await handle.queryPermission({mode:'readwrite'});
+        if(perm!=='granted')perm=await handle.requestPermission({mode:'readwrite'});
+        if(perm!=='granted'){ui.toast('未获得文件夹访问权限','err');return null}
+      }catch(e){/* 某些实现不支持 queryPermission，直接尝试使用 */}
+      mounts.set(path,{handle,name:handle.name});
+      try{await idb.set('mounts',path,handle)}catch(e){}
+      bus.emit('fs-change','/mnt');bus.emit('fs-change','/');bus.emit('mounts-change');
+      ui.toast(`已挂载本地文件夹「${handle.name}」`,'ok');
+      return path;
+    },
+    async restoreMounts(){
+      const keys=await idb.keys('mounts');const pending=[];
+      for(const k of keys){
+        try{const h=await idb.get('mounts',k);if(!h)continue;
+          let perm='granted';
+          try{perm=await h.queryPermission({mode:'readwrite'})}catch(e){}
+          if(perm==='granted'){mounts.set(k,{handle:h,name:h.name})}
+          else pending.push({path:k,handle:h});
+        }catch(e){}
+      }
+      return pending;
+    },
+    async reauth(handle){
+      try{const p=await handle.requestPermission({mode:'readwrite'});if(p==='granted'){await api.mountLocal(handle);return true}}catch(e){}
+      ui.toast('授权失败','err');return false;
+    },
+    async unmount(path){
+      mounts.delete(path);await idb.del('mounts',path);
+      bus.emit('fs-change','/mnt');bus.emit('fs-change','/');bus.emit('mounts-change');
+      ui.toast('已卸载','ok');
+    },
+    async resetAll(){
+      if(backend==='opfs'&&root){
+        const kill=dh=>dh.removeEntry?Promise.resolve():Promise.resolve();
+        for await(const ent of root.values()){try{await root.removeEntry(ent.name,{recursive:true})}catch(e){}}
+      }else{mem.dirs=new Set(['/']);mem.files.clear();await idb.del('kv','memfs')}
+      dirMeta.clear();saveMeta();
+      ['icons','wall','seeded','cols'].forEach(k=>store.del(k));
+    },
+    async exportZip(){
+      if(typeof JSZip==='undefined')throw new Error('JSZip 未加载');
+      const zip=new JSZip();
+      const add=async(p,zp)=>{const list=await api.readdir(p);for(const it of list){const fp=joinPath(p,it.name);if(it.isDirectory)await add(fp,zp.folder(it.name));else zp.file(it.name,await api.readFile(fp))}};
+      await add('/',zip);
+      return await zip.generateAsync({type:'blob'});
+    }
+  };
+  return api;
+})();
+window.fs=fs;
+/* ================= 缩略图缓存 ================= */
+const thumbs={m:new Map(),
+  async url(path){if(this.m.has(path))return this.m.get(path);
+    try{const blob=await fs.readFile(path);const u=URL.createObjectURL(blob);if(this.m.size>120){const k=this.m.keys().next().value;URL.revokeObjectURL(this.m.get(k));this.m.delete(k)}this.m.set(path,u);return u}catch(e){return null}},
+  drop(path){if(this.m.has(path)){URL.revokeObjectURL(this.m.get(path));this.m.delete(path)}}
+};
+bus.on('fs-change',p=>{if(p)thumbs.drop(p)});
+/* ================= 首次启动种子数据 ================= */
+const SEED_MD=`# 欢迎来到柠屿 OS
+
+这是一台运行在浏览器里的完整桌面系统，所有文件都真实保存在 **OPFS 私有文件系统** 中，刷新后依然保留。
+
+## 快速上手
+
+- 拖拽桌面上的图标自由摆放，松手自动对齐网格
+- 从电脑桌面拖文件进浏览器窗口，即可导入到当前目录
+- 把虚拟文件拖出浏览器窗口，即可下载到电脑
+- 右键桌面或文件查看更多操作：新建、上传、挂载本地文件夹、更换壁纸…
+- 设置 → 存储 可查看真实占用并一键重置
+
+## 内置应用
+
+文件资源管理器、代码编辑器（实时预览）、表格、漫画阅读器、媒体播放器、浏览器、计算器、画板、虚拟机…
+
+祝你在岛上玩得开心。
+`;
+const SEED_HTML=`<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>柠屿演示页</title>
+<style>
+  body{margin:0;min-height:100vh;display:grid;place-items:center;font-family:system-ui;background:linear-gradient(160deg,#f6f3e9,#e8efe9);color:#22301f}
+  .card{background:#fff;border-radius:16px;padding:40px 48px;box-shadow:0 20px 60px rgba(30,40,25,.15);text-align:center;border:1px solid #e6e2d2}
+  h1{font-size:30px;margin:0 0 8px}
+  .dot{display:inline-block;width:14px;height:14px;border-radius:50%;background:#e9be00;margin:18px 4px 0;animation:bounce 1.2s infinite}
+  .dot:nth-child(2){animation-delay:.15s;background:#2b6e9e}
+  .dot:nth-child(3){animation-delay:.3s;background:#7c9a3d}
+  @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+  p{color:#6b7a68;margin:14px 0 0;font-size:14px;line-height:1.7}
+  button{margin-top:20px;background:#e9be00;border:none;padding:10px 22px;border-radius:9px;font-weight:700;cursor:pointer;font-size:14px}
+  button:hover{filter:brightness(1.06)}
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>你好，柠屿</h1>
+    <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+    <p>这是一个保存在虚拟文件系统里的网页。<br>你可以在代码编辑器中修改它，右侧会实时预览。</p>
+    <button onclick="this.textContent='点击成功：'+new Date().toLocaleTimeString()">点我试试</button>
+  </div>
+</body>
+</html>`;
+const SEED_CSV=`名称,分类,数量,单价,产地
+柠檬,水果,120,3.5,西西里
+橄榄,果干,80,6.0,伯罗奔尼撒
+海盐,调味,45,2.2,爱琴海
+蜂蜜,甜品,30,12.8,克里特
+酸奶,乳品,60,4.6,圣托里尼
+无花果,水果,25,8.4,雅典
+`;
+const SEED_SVG=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <defs><linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f2efe3"/><stop offset="1" stop-color="#cfe0e6"/></linearGradient></defs>
+  <rect width="400" height="300" fill="url(#sky)"/>
+  <circle cx="320" cy="60" r="34" fill="#f0c400"/>
+  <rect y="190" width="400" height="110" fill="#2b6e9e"/>
+  <rect y="186" width="400" height="6" fill="#5e93b8"/>
+  <rect x="40" y="110" width="70" height="80" rx="6" fill="#ffffff"/>
+  <rect x="52" y="130" width="14" height="20" rx="6" fill="#2b6e9e"/>
+  <rect x="84" y="130" width="14" height="20" rx="6" fill="#2b6e9e"/>
+  <path d="M40 110 q35 -26 70 0 z" fill="#3b7fb0"/>
+  <rect x="130" y="130" width="56" height="60" rx="6" fill="#ffffff"/>
+  <rect x="146" y="146" width="12" height="16" rx="5" fill="#2b6e9e"/>
+  <g transform="translate(250,150)"><ellipse cx="0" cy="0" rx="34" ry="26" fill="#f0c400"/><ellipse cx="-30" cy="-4" rx="8" ry="6" fill="#f0c400"/><ellipse cx="30" cy="-4" rx="8" ry="6" fill="#f0c400"/><path d="M6 -24 q14 -14 26 -10 q-6 12 -22 14 z" fill="#7c9a3d"/></g>
+  <path d="M0 230 q50 -14 100 0 t100 0 t100 0 t100 0" stroke="#ffffff" stroke-opacity=".35" stroke-width="4" fill="none"/>
+</svg>`;
+async function seedFS(){
+  if(store.get('seeded'))return;
+  try{
+    await fs.mkdir('/文档');await fs.mkdir('/图片');await fs.mkdir('/音乐');await fs.mkdir('/视频');await fs.mkdir('/下载');
+    await fs.writeFile('/欢迎使用.md',SEED_MD);
+    await fs.writeFile('/示例页面.html',SEED_HTML);
+    await fs.writeFile('/货品清单.csv',SEED_CSV);
+    await fs.writeFile('/图片/柠屿风光.svg',SEED_SVG);
+    store.set('seeded',1);
+  }catch(e){console.error(e)}
+}
+/* ================= 主题 ================= */
+function setTheme(t){
+  document.documentElement.dataset.theme=t;store.set('theme',t);
+  $('#trayTheme').innerHTML=t==='dark'?ICONS.sun:ICONS.theme;
+  $('#trayTheme').title=t==='dark'?'切换到浅色':'切换到深色';
+  bus.emit('theme',t);
+}
+$('#trayTheme').addEventListener('click',()=>setTheme(document.documentElement.dataset.theme==='dark'?'light':'dark'));
+/* ================= 窗口管理器 ================= */
+const wm={
+  wins:new Map(),z:100,seq:0,focusedId:null,
+  create(opts){
+    if(opts.single){for(const[id,w]of this.wins){if(w.app===opts.app){w.restore();w.focus();if(opts.onReuse)opts.onReuse(w);return w}}}
+    const id='w'+(++this.seq);
+    const n=this.wins.size;
+    const win=el('div','win');win.dataset.id=id;
+    const W=Math.min(opts.w||640,innerWidth-24),H=Math.min(opts.h||440,innerHeight-80);
+    const x=opts.x!=null?opts.x:clamp(40+(n%6)*34,8,Math.max(8,innerWidth-W-12));
+    const y=opts.y!=null?opts.y:clamp(30+(n%6)*28,8,Math.max(8,innerHeight-H-70));
+    win.style.cssText+=`;width:${W}px;height:${H}px;left:${x}px;top:${y}px;z-index:${++this.z}`;
+    const color=opts.color||APP_COLORS[opts.app]||'#2B6E9E';
+    win.innerHTML=`<div class="win-hd"><span class="win-ic" style="color:${color}">${ICONS[opts.icon]||ICONS.file}</span><span class="win-tt">${esc(opts.title||'窗口')}</span><span class="win-btns"><button class="wbtn mn" title="最小化">${ICONS.mini}</button><button class="wbtn mx" title="最大化">${ICONS.maxi}</button><button class="wbtn cls" title="关闭">${ICONS.close}</button></span></div><div class="win-bd"></div>${(opts.noResize?'':'<i class="rh" data-d="n"></i><i class="rh" data-d="s"></i><i class="rh" data-d="e"></i><i class="rh" data-d="w"></i><i class="rh" data-d="ne"></i><i class="rh" data-d="nw"></i><i class="rh" data-d="se"></i><i class="rh" data-d="sw"></i>')}`;
+    const body=$('.win-bd',win);
+    if(opts.content)body.appendChild(typeof opts.content==='string'?el('div','',opts.content):opts.content);
+    const api={id,app:opts.app,type:opts.type||opts.app,el:win,body,
+      setTitle(t){$('.win-tt',win).textContent=t},
+      focus(){wm.focus(id)},
+      close(){wm.close(id)},
+      minimize(){wm.minimize(id)},
+      maximize(){wm.toggleMax(id)},
+      isMax:()=>win.classList.contains('max'),
+      onClose:opts.onClose||null,
+      fullEl(){win.classList.toggle('fs-mode');if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});else win.requestFullscreen&&win.requestFullscreen().catch(()=>{});bus.emit('resize',id)},
+    };
+    win.addEventListener('pointerdown',()=>this.focus(id),true);
+    /* 标题栏拖拽 */
+    const hd=$('.win-hd',win);let dr=null;
+    hd.addEventListener('pointerdown',e=>{
+      if(e.target.closest('.wbtn'))return;
+      if(e.pointerType==='mouse'&&e.button!==0)return;
+      const wasMax=win.classList.contains('max');
+      dr={px:e.clientX,py:e.clientY,l:win.offsetLeft,t:win.offsetTop,w:win.offsetWidth,wasMax,moved:false};
+      hd.setPointerCapture(e.pointerId);
+    });
+    hd.addEventListener('pointermove',e=>{
+      if(!dr)return;
+      const dx=e.clientX-dr.px,dy=e.clientY-dr.py;
+      if(!dr.moved&&Math.hypot(dx,dy)<4)return;
+      dr.moved=true;
+      if(dr.wasMax){
+        if(dy<14&&dx===0&&dy===0)return;
+        win.classList.remove('max');$('.mx',win).innerHTML=ICONS.maxi;
+        const ratio=dr.px/dr.w;
+        dr.l=dr.px-win.offsetWidth*ratio;dr.t=0;dr.wasMax=false;dr.px=e.clientX;dr.py=e.clientY;
+        win.style.left=dr.l+'px';win.style.top='0px';
+      }
+      win.style.left=clamp(dr.l+dx,-win.offsetWidth+90,innerWidth-60)+'px';
+      win.style.top=clamp(dr.t+dy,0,innerHeight-90)+'px';
+    });
+    const endDr=()=>{if(dr&&dr.moved){win.classList.add('noanim');setTimeout(()=>win.classList.remove('noanim'),50)}dr=null};
+    hd.addEventListener('pointerup',endDr);hd.addEventListener('pointercancel',endDr);
+    hd.addEventListener('dblclick',e=>{if(!e.target.closest('.wbtn'))this.toggleMax(id)});
+    /* 八向缩放 */
+    $$('.rh',win).forEach(h=>{
+      let rz=null;
+      h.addEventListener('pointerdown',e=>{e.stopPropagation();rz={d:h.dataset.d,px:e.clientX,py:e.clientY,r:win.getBoundingClientRect()};h.setPointerCapture(e.pointerId);h.classList.add('on')});
+      h.addEventListener('pointermove',e=>{
+        if(!rz)return;
+        const dx=e.clientX-rz.px,dy=e.clientY-rz.py,r=rz.r,minW=opts.minW||300,minH=opts.minH||180;
+        let L=r.left,T=r.top,Wd=r.width,Ht=r.height;
+        if(rz.d.includes('e'))Wd=Math.max(minW,r.width+dx);
+        if(rz.d.includes('s'))Ht=Math.max(minH,r.height+dy);
+        if(rz.d.includes('w')){Wd=Math.max(minW,r.width-dx);L=r.left+(r.width-Wd)}
+        if(rz.d.includes('n')){Ht=Math.max(minH,r.height-dy);T=r.top+(r.height-Ht)}
+        win.style.left=L+'px';win.style.top=Math.max(0,T)+'px';win.style.width=Wd+'px';win.style.height=Ht+'px';
+      });
+      const endRz=()=>{rz=null;h.classList.remove('on');bus.emit('resize',id)};
+      h.addEventListener('pointerup',endRz);h.addEventListener('pointercancel',endRz);
+    });
+    $('.mn',win).onclick=()=>this.minimize(id);
+    $('.mx',win).onclick=()=>this.toggleMax(id);
+    $('.cls',win).onclick=()=>this.close(id);
+    $('#wins').appendChild(win);
+    this.wins.set(id,api);
+    this.focus(id);this.renderTaskbar();
+    if(isMobile())win.classList.add('max');
+    return api;
+  },
+  focus(id){const w=this.wins.get(id);if(!w)return;
+    if(w.el.classList.contains('min'))w.el.classList.remove('min');
+    w.el.style.zIndex=++this.z;
+    this.wins.forEach(o=>o.el.classList.toggle('focused',o===w));
+    this.focusedId=id;this.renderTaskbar();
+  },
+  minimize(id){const w=this.wins.get(id);if(!w)return;w.el.classList.add('min');if(this.focusedId===id)this.focusedId=null;this.renderTaskbar()},
+  toggleMax(id){const w=this.wins.get(id);if(!w)return;w.el.classList.toggle('max');$('.mx',w.el).innerHTML=w.el.classList.contains('max')?ICONS.restor:ICONS.maxi;bus.emit('resize',id)},
+  close(id){const w=this.wins.get(id);if(!w)return;
+    try{w.onClose&&w.onClose()}catch(e){console.error(e)}
+    w.el.classList.add('closing');setTimeout(()=>w.el.remove(),160);
+    this.wins.delete(id);if(this.focusedId===id)this.focusedId=null;
+    this.renderTaskbar();
+  },
+  restore(id){const w=this.wins.get(id);if(!w)return;w.el.classList.remove('min');this.focus(id)},
+  renderTaskbar(){
+    const box=$('#tbApps');box.innerHTML='';
+    this.wins.forEach(w=>{
+      const meta=APPS[w.app]||{name:w.app,icon:'file'};
+      const b=el('button','titem on'+(w.el.classList.contains('min')?' min':''));
+      b.innerHTML=`<span style="display:contents;color:${APP_COLORS[w.app]||'var(--sea)'}">${ICONS[meta.icon]||ICONS.file}</span><span class="tip">${esc(meta.name)}</span>`;
+      b.onclick=()=>{
+        if(w.el.classList.contains('min'))this.restore(w.id);
+        else if(this.focusedId===w.id)this.minimize(w.id);
+        else this.focus(w.id);
+      };
+      box.appendChild(b);
+    });
+  }
+};
+addEventListener('resize',debounce(()=>bus.emit('resize','all'),150));
+document.addEventListener('fullscreenchange',()=>{
+  if(!document.fullscreenElement){$$('.win.fs-mode').forEach(w=>w.classList.remove('fs-mode'));bus.emit('resize','all')}
+});
+/* ================= 应用注册表 ================= */
+const APPS={};
+function regApp(id,meta){APPS[id]={...meta,id};bus.emit('apps-change')}
+/* ================= 开始菜单 ================= */
+const startMenu={
+  node:null,open:false,
+  ensure(){if(this.node)return this.node;
+    const m=el('div','hidden');m.id='startmenu';
+    m.innerHTML=`<div id="smSearch">${ICONS.search}<input placeholder="搜索应用…"></div><div id="smApps"></div><div id="smFoot"><span class="qk"><button class="tbtn" data-q="explorer">${ICONS.appExplorer}<span>文件</span></button><button class="tbtn" data-q="settings">${ICONS.appSettings}<span>设置</span></button></span><button class="tbtn" id="smPower">${ICONS.power}<span>电源</span></button></div>`;
+    document.body.appendChild(m);this.node=m;
+    $('#smPower',m).onclick=async()=>{this.hide();const r=await ui.dialog({title:'电源',text:'选择要进行的操作',buttons:[{t:'取消',v:0},{t:'重启系统',v:1},{t:'重置并清空',v:2,danger:true}]});
+      if(r===1)location.reload();
+      if(r===2){if(await ui.confirm('将清空 OPFS 文件系统中的全部数据并恢复出厂，确定继续吗？','危险操作')){try{await fs.resetAll()}catch(e){}store.del('icons');location.reload()}}};
+    $$('[data-q]',m).forEach(b=>b.onclick=()=>{this.hide();launchApp(b.dataset.q)});
+    $('input',m).addEventListener('input',e=>this.render(e.target.value.trim().toLowerCase()));
+    $('input',m).addEventListener('keydown',e=>{if(e.key==='Enter'){const f=$('.smapp:not(.hidden)',m);if(f){f.click()}}});
+    return m;
+  },
+  render(q=''){const box=$('#smApps',this.node);box.innerHTML='';
+    Object.values(APPS).forEach(a=>{
+      if(q&&!(a.name.toLowerCase().includes(q)||(a.kw||'').toLowerCase().includes(q)))return;
+      const b=el('button','smapp');
+      b.innerHTML=`<span class="ai" style="background:${a.color||APP_COLORS[a.id]||'var(--sea)'}">${ICONS[a.icon]}</span><span>${esc(a.name)}</span>`;
+      b.onclick=()=>{this.hide();launchApp(a.id)};
+      box.appendChild(b);
+    });
+    if(!box.children.length)box.innerHTML='<div style="grid-column:1/-1;text-align:center;color:var(--faint);padding:26px;font-size:13px">没有匹配的应用</div>';
+  },
+  show(){this.ensure();this.render('');$('input',this.node).value='';this.node.classList.remove('hidden');this.node.style.animation='none';void this.node.offsetWidth;this.node.style.animation='';this.open=true;setTimeout(()=>$('input',this.node).focus(),80)},
+  hide(){if(this.node)this.node.classList.add('hidden');this.open=false},
+  toggle(){this.open?this.hide():this.show()}
+};
+$('#tbStart').addEventListener('click',e=>{e.stopPropagation();startMenu.toggle()});
+document.addEventListener('pointerdown',e=>{
+  if(startMenu.open&&startMenu.node&&!e.target.closest('#startmenu')&&!e.target.closest('#tbStart'))startMenu.hide();
+});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){startMenu.hide();ctx.hide()}});
+/* ================= 右键菜单 ================= */
+const ctx={
+  show(x,y,items){
+    const c=$('#ctx');c.innerHTML='';c.classList.remove('hidden');
+    this.render(c,items);
+    c.style.left='0px';c.style.top='0px';
+    const r=c.getBoundingClientRect();
+    c.style.left=clamp(x,6,innerWidth-r.width-6)+'px';
+    c.style.top=clamp(y,6,innerHeight-r.height-6)+'px';
+    this._close=null;
+  },
+  render(c,items){
+    items.forEach(it=>{
+      if(it.sep)return c.appendChild(el('div','menu-sep'));
+      if(it.head)return c.appendChild(el('div','menu-head',esc(it.head)));
+      const b=el('div','menu-it'+(it.disabled?' dis':'')+(it.danger?' danger':''));
+      b.innerHTML=`${it.icon?ICONS[it.icon]||'':''}<span>${esc(it.label)}</span>${it.key?`<span class="k">${esc(it.key)}</span>`:''}${it.sub?`<span style="margin-left:auto;color:var(--faint)">${ICONS.chevR.replace('width="16"','width="12"')}</span>`:''}`;
+      if(it.sub){
+        b.addEventListener('pointerenter',()=>{
+          let sub=$('#ctxSub');sub.innerHTML='';sub.classList.remove('hidden');
+          this.render(sub,it.sub);
+          const r=b.getBoundingClientRect(),sr=sub.getBoundingClientRect();
+          sub.style.left=clamp(r.right+4,6,innerWidth-sr.width-6)+'px';
+          sub.style.top=clamp(r.top,6,innerHeight-sr.height-6)+'px';
+        });
+      }else{
+        b.addEventListener('pointerenter',()=>$('#ctxSub').classList.add('hidden'));
+        b.addEventListener('click',()=>{this.hide();it.action&&it.action()});
+      }
+      c.appendChild(b);
+    });
+  },
+  hide(){$('#ctx').classList.add('hidden');$('#ctxSub').classList.add('hidden')}
+};
+document.addEventListener('pointerdown',e=>{if(!e.target.closest('#ctx')&&!e.target.closest('#ctxSub'))ctx.hide()});
+addEventListener('blur',()=>ctx.hide());
+addEventListener('scroll',()=>ctx.hide(),true);
+/* 触摸屏长按唤起右键菜单 */
+function bindLongPress(node,getItems){
+  let t=null,pt=null;
+  node.addEventListener('pointerdown',e=>{
+    if(e.pointerType==='mouse')return;
+    pt={x:e.clientX,y:e.clientY};
+    t=setTimeout(()=>{const items=getItems(e);if(items&&items.length){ctx.show(pt.x,pt.y,items);if(navigator.vibrate)navigator.vibrate(12)}},520);
+  });
+  const cancel=e=>{clearTimeout(t);t=null};
+  node.addEventListener('pointermove',e=>{if(pt&&Math.hypot(e.clientX-pt.x,e.clientY-pt.y)>10)cancel()});
+  node.addEventListener('pointerup',cancel);node.addEventListener('pointercancel',cancel);
+}
+function showCtxAt(e,items){e.preventDefault();e.stopPropagation();ctx.show(e.clientX,e.clientY,items)}
+/* ================= 任务栏托盘：时钟 / 存储 ================= */
+setInterval(()=>{const d=new Date();const p=n=>String(n).padStart(2,'0');$('#clock b').textContent=`${p(d.getHours())}:${p(d.getMinutes())}`;$('#clock span').textContent=`${d.getMonth()+1}月${d.getDate()}日 周${'日一二三四五六'[d.getDay()]}`},1000);
+async function refreshStoragePill(){
+  try{const es=await fs.estimate();$('#trayStore span').textContent=fmtSize(es.usage)+' / '+fmtSize(es.quota)}catch(e){}
+}
+$('#trayStore').addEventListener('click',()=>launchApp('settings','storage'));
+setInterval(refreshStoragePill,30000);
+bus.on('fs-change',debounce(refreshStoragePill,1500));
+/* ================= 框选工具 ================= */
+function rubberband(startEvt,container,getItems,onSel){
+  const band=el('div');band.id='band';document.body.appendChild(band);
+  const sx=startEvt.clientX,sy=startEvt.clientY;
+  const move=e=>{
+    const x=Math.min(sx,e.clientX),y=Math.min(sy,e.clientY),w=Math.abs(e.clientX-sx),h=Math.abs(e.clientY-sy);
+    band.style.left=x+'px';band.style.top=y+'px';band.style.width=w+'px';band.style.height=h+'px';
+    const r={x,y,w,h};
+    const sel=getItems().filter(it=>{const ir=it.el.getBoundingClientRect();return ir.x<r.x+r.w&&ir.x+ir.width>r.x&&ir.y<r.y+r.h&&ir.y+ir.height>r.y});
+    onSel(sel,e);
+  };
+  const up=e=>{removeEventListener('pointermove',move);removeEventListener('pointerup',up);band.remove();onSel(null,e,true)};
+  addEventListener('pointermove',move);addEventListener('pointerup',up);
+}
+/* ================= 启动应用 ================= */
+function launchApp(id,arg){const a=APPS[id];if(!a){ui.toast('应用不存在：'+id,'err');return}try{a.launch(arg)}catch(e){console.error(e);ui.toast('应用启动失败：'+e.message,'err')}}
+/* ================= 文件打开分派（stat 先行，目录/文件智能分流） ================= */
+const IMG_EXT=['png','jpg','jpeg','gif','webp','bmp','ico','svg'];
+const AV_EXT=['mp3','wav','ogg','flac','aac','m4a','mp4','webm','ogv','mov','mkv'];
+const CODE_EXT=['html','htm','css','js','mjs','json','md','markdown','xml','yaml','yml','ini','toml','py','c','cpp','h','java','sh','ts','log'];
+const ZIP_EXT=['zip','gz','tar','tgz','7z'];
+async function openPath(path){
+  let st;try{st=await fs.stat(path)}catch(e){ui.toast('无法打开：文件不存在','err');return}
+  if(st.isDirectory){launchApp('explorer',path);return}
+  const e=extOf(path);
+  if(IMG_EXT.includes(e))return launchApp('viewer',path);
+  if(AV_EXT.includes(e))return launchApp('media',path);
+  if(e==='pdf')return launchApp('pdf',path);
+  if(e==='csv'||e==='tsv')return launchApp('sheet',path);
+  if(ZIP_EXT.includes(e))return launchApp('zip',path);
+  if(CODE_EXT.includes(e))return launchApp('code',path);
+  if(e==='txt'||st.size<512*1024){
+    const r=await ui.dialog({title:'未知格式 .'+(e||'?'),text:`「${baseName(path)}」没有专属应用，选择打开方式：`,buttons:[{t:'以文本打开',v:'txt',pri:true},{t:'下载',v:'dl'},{t:'取消',v:null}]});
+    if(r==='txt')launchApp('note',path);
+    if(r==='dl')downloadPath(path);
+    return;
+  }
+  const r=await ui.dialog({title:'大文件',text:`「${baseName(path)}」较大且格式未知，建议下载到本地查看。`,buttons:[{t:'下载',v:'dl',pri:true},{t:'以文本打开',v:'txt'},{t:'取消',v:null}]});
+  if(r==='dl')downloadPath(path);if(r==='txt')launchApp('note',path);
+}
+async function downloadPath(path){
+  try{const blob=await fs.readFile(path);const u=URL.createObjectURL(blob);const a=el('a');a.href=u;a.download=baseName(path);document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),8000);ui.toast('已开始下载 '+baseName(path),'ok')}catch(e){ui.toast('导出失败：'+e.message,'err')}
+}
+async function uniqueName(dir,name){
+  let n=name,i=1;const dot=name.lastIndexOf('.');const stem=dot>0?name.slice(0,dot):name;const ext=dot>0?name.slice(dot):'';
+  while(await fs.exists(joinPath(dir,n))){n=`${stem} (${++i})${ext}`}
+  return n;
+}
+/* ================= 拖出缓存（dragstart 严禁异步 → 提前预载） ================= */
+const dragCache=new Map();
+async function preloadDrag(path){
+  if(dragCache.has(path))return;
+  try{const st=await fs.stat(path);if(st.isDirectory)return;
+    const blob=await fs.readFile(path);
+    const file=new File([blob],baseName(path),{type:mimeOf(path)});
+    dragCache.set(path,{file,url:URL.createObjectURL(blob)});
+  }catch(e){}
+}
+function armDragOut(e,paths){
+  const primary=paths[0];const c=dragCache.get(primary);
+  e.dataTransfer.setData('application/x-lemonisle',JSON.stringify({paths}));
+  e.dataTransfer.effectAllowed='copyMove';
+  if(c){
+    try{e.dataTransfer.items.add(c.file)}catch(err){}
+    try{e.dataTransfer.setData('DownloadURL',`${c.file.type||'application/octet-stream'}:${c.file.name}:${c.url}`)}catch(err){}
+  }
+  setTimeout(()=>{paths.forEach(p=>{const cc=dragCache.get(p);if(cc){setTimeout(()=>URL.revokeObjectURL(cc.url),6000);dragCache.delete(p)}})},300);
+}
+/* ================= 桌面图标 ================= */
+const desk={
+  items:[],sel:new Set(),GRID:98,
+  load(){this.items=store.get('icons',null);},
+  save(){store.set('icons',this.items.map(i=>({path:i.path,x:i.x,y:i.y})))},
+  async ensureDefaults(){
+    if(this.items)return;
+    this.items=[];
+    const seeds=['/文档','/图片','/音乐','/视频','/下载','/欢迎使用.md','/示例页面.html','/货品清单.csv'];
+    for(const p of seeds){if(await fs.exists(p))this.items.push({path:p,x:0,y:0})}
+    this.autoArrange(false);this.save();
+  },
+  autoArrange(saveIt=true){
+    const perCol=Math.max(1,Math.floor(($('#desk').clientHeight-20)/100));
+    [...this.items].sort((a,b)=>{const ad=a.path.split('/').pop(),bd=b.path.split('/').pop();return natCmp(ad,bd)}).forEach((it,i)=>{
+      it.x=14+Math.floor(i/perCol)*this.GRID;it.y=14+(i%perCol)*100;
+    });
+    if(saveIt)this.save();
+  },
+  snap(v,cell){return store.get('snap',true)?Math.round(v/cell)*cell:v},
+  async render(){
+    const box=$('#icons');box.innerHTML='';this.sel.clear();
+    const fine=matchMedia('(pointer:fine)').matches;
+    for(const it of this.items){
+      let st;try{st=await fs.stat(it.path)}catch(e){continue}
+      const name=baseName(it.path);
+      const d=el('div','dicon');d.dataset.path=it.path;
+      d.style.left=it.x+'px';d.style.top=it.y+'px';
+      const isImg=!st.isDirectory&&IMG_EXT.includes(extOf(name));
+      let inner='';
+      if(isImg){const u=await thumbs.url(it.path);if(u)inner=`<span class="dico thumb" style="background-image:url('${u}')"></span>`}
+      if(!inner)inner=`<span class="dico" style="color:${st.isDirectory?'#C79A00':(APP_COLORS[fileIconName(name)]?'':'var(--sea)')}">${ICONS[fileIconName(name,st.isDirectory)]}</span>`;
+      d.innerHTML=inner+`<span class="dname">${esc(name)}</span>`;
+      if(st.isDirectory&&name==='下载')d.querySelector('.dico').insertAdjacentHTML('beforeend',`<span class="dbadge">${ICONS.download}</span>`);
+      if(fine)d.draggable=true;
+      /* 选择与单击打开 */
+      let pd=null;
+      d.addEventListener('pointerdown',e=>{
+        if(e.pointerType==='mouse'&&e.button===2)return;
+        pd={x:e.clientX,y:e.clientY,moved:false};
+        if(e.ctrlKey||e.metaKey){this.sel.has(it.path)?this.sel.delete(it.path):this.sel.add(it.path)}
+        else if(!this.sel.has(it.path)){this.sel.clear();this.sel.add(it.path)}
+        this.paintSel();
+        if(e.pointerType!=='mouse'&&!isTouch())return;
+      });
+      d.addEventListener('pointermove',e=>{if(pd&&Math.hypot(e.clientX-pd.x,e.clientY-pd.y)>6)pd.moved=true});
+      d.addEventListener('pointerup',e=>{
+        if(pd&&!pd.moved&&!e.ctrlKey&&!e.metaKey&&e.pointerType!=='mouse'){openPath(it.path)}
+        pd=null;
+      });
+      d.addEventListener('click',e=>{
+        if(e.pointerType==='touch')return;
+        if(desk._wasDrag)return;
+        if(pd&&pd.moved)return;
+        if(!e.ctrlKey&&!e.metaKey)openPath(it.path);
+      });
+      /* 触摸拖动（原生 DnD 不支持触摸 → 自实现） */
+      if(!fine){
+        let td=null;
+        d.addEventListener('touchstart',e=>{td={x:e.touches[0].clientX,y:e.touches[0].clientY,moved:false,ox:it.x,oy:it.y,others:this.items.filter(o=>this.sel.has(o.path)&&o!==it).map(o=>({o,dx:o.x-it.x,dy:o.y-it.y,el:$(`.dicon[data-path="${CSS.escape(o.path)}"]`)}))};preloadDrag(it.path)},{passive:true});
+        d.addEventListener('touchmove',e=>{
+          if(!td)return;
+          const t=e.touches[0];const dx=t.clientX-td.x,dy=t.clientY-td.y;
+          if(!td.moved&&Math.hypot(dx,dy)<8)return;
+          td.moved=true;e.preventDefault();
+          d.classList.add('noanim');
+          it.x=td.ox+dx;it.y=td.oy+dy;d.style.left=it.x+'px';d.style.top=it.y+'px';
+          if(td.others)td.others.forEach(({o,el:oe})=>{o.x=it.x+o.dx;o.y=it.y+o.dy;if(oe){oe.style.left=o.x+'px';oe.style.top=o.y+'px'}});
+        },{passive:false});
+        const tend=()=>{if(td&&td.moved){this.dropAt(it,td.others)}td=null};
+        d.addEventListener('touchend',tend);d.addEventListener('touchcancel',tend);
+      }
+      /* 鼠标原生拖拽 */
+      d.addEventListener('dragstart',e=>{
+        if(!this.sel.has(it.path)){this.sel.clear();this.sel.add(it.path);this.paintSel()}
+        const paths=[...this.sel];
+        preloadDrag(it.path);
+        armDragOut(e,paths);
+        e.dataTransfer.setDragImage&&e.dataTransfer.setDragImage(d,30,30);
+        setTimeout(()=>d.style.opacity='.4',0);
+      });
+      d.addEventListener('dragend',()=>{d.style.opacity='';desk._wasDrag=true;setTimeout(()=>desk._wasDrag=false,80)});
+      d.addEventListener('mouseenter',()=>preloadDrag(it.path));
+      /* 文件夹图标作为放置目标 */
+      if(st.isDirectory){
+        d.addEventListener('dragover',e=>{if(e.dataTransfer.types.includes('application/x-lemonisle')){e.preventDefault();e.stopPropagation();d.classList.add('droptarget')}});
+        d.addEventListener('dragleave',()=>d.classList.remove('droptarget'));
+        d.addEventListener('drop',async e=>{
+          e.preventDefault();e.stopPropagation();d.classList.remove('droptarget');
+          const raw=e.dataTransfer.getData('application/x-lemonisle');if(!raw)return;
+          const{paths}=JSON.parse(raw);
+          for(const p of paths){if(dirName(p)===it.path)continue;
+            try{const nn=await uniqueName(it.path,baseName(p));await fs.rename(p,joinPath(it.path,nn))}catch(err){ui.toast('移动失败：'+err.message,'err')}
+          }
+          ui.toast(`已移动 ${paths.length} 项到「${name}」`,'ok');
+        });
+      }
+      /* 触摸长按菜单 */
+      bindLongPress(d,()=>this.iconMenu(it));
+      d.addEventListener('contextmenu',e=>showCtxAt(e,this.iconMenu(it)));
+      box.appendChild(d);
+    }
+    this.paintSel();
+  },
+  paintSel(){$$('.dicon').forEach(d=>d.classList.toggle('sel',this.sel.has(d.dataset.path)))},
+  dropAt(primary,others){
+    const deskR=$('#desk').getBoundingClientRect();
+    primary.x=clamp(this.snap(primary.x-14,this.GRID)+14,4,deskR.width-70);
+    primary.y=clamp(this.snap(primary.y-14,100)+14,4,deskR.height-90);
+    this.items.forEach(o=>{if(o!==primary&&this.sel.has(o.path)){o.x=clamp(primary.x+(o.x-primary.x),4,deskR.width-70)}});
+    /* 其余选中项保持相对偏移 */
+    const d0=$(`.dicon[data-path="${CSS.escape(primary.path)}"]`);
+    if(d0){d0.classList.remove('noanim');d0.style.left=primary.x+'px';d0.style.top=primary.y+'px'}
+    this.save();
+  },
+  iconMenu(it){
+    const isSelMulti=this.sel.size>1;
+    const paths=isSelMulti&&this.sel.has(it.path)?[...this.sel]:[it.path];
+    return[
+      {icon:'open',label:isSelMulti?`打开 ${paths.length} 项`:'打开',action:()=>paths.forEach(p=>openPath(p))},
+      {icon:'eye',label:'打开方式',sub:[
+        {icon:'appNote',label:'记事本',action:()=>paths.forEach(p=>launchApp('note',p))},
+        {icon:'appCode',label:'代码编辑器',action:()=>paths.forEach(p=>launchApp('code',p))},
+        {icon:'appBrowser',label:'浏览器',action:()=>paths.forEach(p=>openInBrowser(p))},
+        {icon:'appViewer',label:'图片查看',action:()=>paths.forEach(p=>launchApp('viewer',p))},
+        {icon:'text',label:'以文本打开',action:()=>paths.forEach(p=>launchApp('note',p))},
+      ]},
+      {sep:1},
+      {icon:'copy',label:'复制',key:'Ctrl+C',action:()=>clipboard.copy(paths)},
+      {icon:'cut',label:'剪切',key:'Ctrl+X',action:()=>clipboard.cut(paths)},
+      {icon:'rename',label:'重命名',disabled:paths.length>1,action:async()=>{
+        const nn=await ui.prompt('新名称',baseName(it.path),'重命名');if(!nn||nn===baseName(it.path))return;
+        try{await fs.rename(it.path,joinPath(dirName(it.path),nn));this.syncPath(it.path,joinPath(dirName(it.path),nn))}catch(e){ui.toast(e.message,'err')}
+      }},
+      {icon:'download',label:'导出 / 下载',action:()=>paths.forEach(p=>downloadPath(p))},
+      {sep:1},
+      {icon:'trash',label:`删除${paths.length>1?' '+paths.length+' 项':''}`,danger:true,action:async()=>{
+        if(!await ui.confirm(`确定删除 ${paths.length>1?paths.length+' 个项目':'「'+baseName(it.path)+'」'} 吗？此操作不可撤销。`))return;
+        for(const p of paths){try{await fs.remove(p)}catch(e){ui.toast(e.message,'err')}this.items=this.items.filter(i=>i.path!==p)}
+        this.save();this.render();
+      }},
+      {icon:'info',label:'属性',disabled:paths.length>1,action:async()=>{
+        const st=await fs.stat(it.path);
+        let html=`<p>路径：${esc(it.path)}<br>类型：${st.isDirectory?'文件夹':'文件（.'+(extOf(it.path)||'无')+'）'}<br>大小：${fmtSize(st.size)}<br>修改时间:${fmtDate(st.mtime)}`;
+        if(st.isDirectory){const t=await fs.treeSize(it.path);html+=`<br>包含：${t.dirs} 个文件夹，${t.count} 个文件，共 ${fmtSize(t.size)}`}
+        html+='</p>';ui.dialog({title:'属性',html,buttons:[{t:'关闭',v:true,pri:true}]});
+      }}
+    ];
+  },
+  syncPath(oldP,newP){this.items.forEach(i=>{if(i.path===oldP)i.path=newP;else if(i.path.startsWith(oldP+'/'))i.path=newP+i.path.slice(oldP.length)});this.save()},
+  deskMenu(e){
+    return[
+      {icon:'refresh',label:'刷新桌面',action:()=>{this.render();ui.toast('桌面已刷新','ok',1400)}},
+      {icon:'grid',label:'自动排列图标',action:()=>{this.autoArrange();this.render()}},
+      {icon:store.get('snap',true)?'check':'list',label:'网格对齐：'+(store.get('snap',true)?'开':'关'),action:()=>{store.set('snap',!store.get('snap',true));this.render()}},
+      {sep:1},
+      {icon:'folder',label:'新建文件夹',action:async()=>{
+        const n=await ui.prompt('文件夹名称','新建文件夹');if(!n)return;
+        try{const fn=await uniqueName('/',n);await fs.mkdir('/'+fn);await this.addItem('/'+fn)}catch(err){ui.toast(err.message,'err')}
+      }},
+      {icon:'fileText',label:'新建文本文件',action:async()=>{
+        const n=await ui.prompt('文件名称','未命名.txt');if(!n)return;
+        try{const fn=await uniqueName('/',n);await fs.writeFile('/'+fn,'');await this.addItem('/'+fn)}catch(err){ui.toast(err.message,'err')}
+      }},
+      {icon:'upload',label:'上传文件…',action:()=>pickFiles('/')},
+      {icon:'mount',label:'挂载本地文件夹…',action:mountLocalFolder},
+      {sep:1},
+      {icon:'wall',label:'更换壁纸',sub:[
+        ...WALLS.map(w=>({icon:'wall',label:w.name,action:()=>setWallpaper({t:'css',id:w.id})})),
+        {icon:'upload',label:'上传图片…',action:uploadWallpaper}
+      ]},
+      {icon:'expand',label:'全屏模式',action:()=>{document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen().catch(()=>{})}},
+      {icon:'appSettings',label:'显示设置',action:()=>launchApp('settings')}
+    ];
+  },
+  async addItem(path){
+    const free=this.findFreeSpot();
+    this.items.push({path,x:free.x,y:free.y});this.save();this.render();
+  },
+  findFreeSpot(){
+    const H=$('#desk').clientHeight,perCol=Math.max(1,Math.floor((H-20)/100));
+    for(let c=0;c<40;c++)for(let r=0;r<perCol;r++){
+      const x=14+c*this.GRID,y=14+r*100;
+      if(!this.items.some(i=>Math.abs(i.x-x)<50&&Math.abs(i.y-y)<50))return{x,y};
+    }
+    return{x:14,y:14};
+  }
+};
+/* 桌面空白区：框选 / 右键 / 原生拖放定位 */
+const iconsBox=$('#icons');
+$('#desk').addEventListener('pointerdown',e=>{
+  if(e.target.closest('.dicon')||e.button===2)return;
+  desk.sel.clear();desk.paintSel();startMenu.hide();
+  if(e.pointerType==='mouse'||true){
+    rubberband(e,$('#desk'),()=>$$('.dicon').map(dn=>({el:dn,path:dn.dataset.path})),(sel,ev,fin)=>{
+      if(sel){desk.sel=new Set(sel.map(s=>s.path));desk.paintSel()}
+    });
+  }
+});
+$('#desk').addEventListener('contextmenu',e=>{if(!e.target.closest('.dicon'))showCtxAt(e,desk.deskMenu(e))});
+/* 桌面拖放：内部移动 + 外部导入 */
+let dragDepth=0;
+addEventListener('dragenter',e=>{if([...e.dataTransfer.types].includes('Files')){dragDepth++;$('#dropHint').style.display='grid'}});
+addEventListener('dragleave',e=>{if(--dragDepth<=0){dragDepth=0;$('#dropHint').style.display='none'}});
+addEventListener('dragover',e=>{if(e.dataTransfer.types.length)e.preventDefault()});
+addEventListener('drop',e=>{e.preventDefault();dragDepth=0;$('#dropHint').style.display='none'});
+$('#desk').addEventListener('dragover',e=>{
+  if(e.target.closest('.dicon'))return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect=e.dataTransfer.types.includes('application/x-lemonisle')?'move':'copy';
+});
+$('#desk').addEventListener('drop',async e=>{
+  if(e.target.closest('.dicon'))return;
+  e.preventDefault();e.stopPropagation();
+  const raw=e.dataTransfer.getData('application/x-lemonisle');
+  const deskR=$('#desk').getBoundingClientRect();
+  const tx=e.clientX-deskR.left,ty=e.clientY-deskR.top;
+  if(raw){
+    const{paths}=JSON.parse(raw);
+    const primary=desk.items.find(i=>i.path===paths[0]);
+    if(primary){
+      const rel=desk.items.filter(i=>paths.includes(i.path)&&i!==primary).map(i=>({i,dx:i.x-primary.x,dy:i.y-primary.y}));
+      primary.x=clamp(desk.snap(tx-40,desk.GRID),4,deskR.width-70);
+      primary.y=clamp(desk.snap(ty-30,100),4,deskR.height-90);
+      rel.forEach(({i,dx,dy})=>{i.x=clamp(primary.x+dx,4,deskR.width-70);i.y=clamp(primary.y+dy,4,deskR.height-90)});
+      desk.save();desk.render();
+    }
+    return;
+  }
+  if(e.dataTransfer.items.length){
+    await importDataTransfer(e.dataTransfer,'/');
+  }
+});
+/* ================= 导入（物理 → 虚拟，递归目录） ================= */
+async function importDataTransfer(dt,targetDir){
+  const entries=[];
+  for(const it of dt.items){const en=it.webkitGetAsEntry&&it.webkitGetAsEntry();if(en)entries.push(en)}
+  let count=0,fails=0;
+  const toast=ui.toast('正在导入文件…','info',60000);
+  const writeOne=async(file,dir)=>{
+    try{const name=await uniqueName(dir,file.name);const buf=await file.arrayBuffer();await fs.writeFile(joinPath(dir,name),buf);count++}
+    catch(e){fails++;console.error(e)}
+  };
+  const walk=async(entry,dir)=>{
+    if(entry.isFile){const f=await new Promise((res,rej)=>entry.file(res,rej));await writeOne(f,dir)}
+    else if(entry.isDirectory){
+      const dname=await uniqueName(dir,entry.name);await fs.mkdir(joinPath(dir,dname)).catch(()=>{});
+      const rd=entry.createReader();
+      while(true){
+        const batch=await new Promise((res,rej)=>rd.readEntries(res,rej));
+        if(!batch.length)break;
+        for(const sub of batch)await walk(sub,joinPath(dir,dname));
+      }
+    }
+  };
+  try{
+    if(entries.length){for(const en of entries)await walk(en,targetDir)}
+    else{for(const f of dt.files)await writeOne(f,targetDir)}
+  }catch(e){fails++}
+  toast.remove();
+  if(count)ui.toast(`导入完成：成功 ${count} 个${fails?'，失败 '+fails+' 个':''}`,'ok');
+  else ui.toast('没有可导入的文件','warn');
+  bus.emit('fs-change',targetDir);
+}
+async function pickFiles(targetDir){
+  return new Promise(res=>{
+    const inp=$('#filePick');inp.value='';
+    inp.onchange=async()=>{
+      if(!inp.files.length)return res(0);
+      let n=0;for(const f of inp.files){try{const name=await uniqueName(targetDir,f.name);await fs.writeFile(joinPath(targetDir,name),await f.arrayBuffer());n++}catch(e){}}
+      ui.toast(`已导入 ${n} 个文件`,'ok');bus.emit('fs-change',targetDir);res(n);
+    };
+    inp.click();
+  });
+}
+async function mountLocalFolder(){
+  if(!window.showDirectoryPicker){ui.toast('当前浏览器不支持 File System Access API','err');return}
+  try{const h=await window.showDirectoryPicker({mode:'readwrite'});if(h)await fs.mountLocal(h)}
+  catch(e){if(e.name!=='AbortError')ui.toast('挂载失败：'+e.message,'err')}
+}
+/* ================= 剪贴板 ================= */
+const clipboard={paths:[],mode:null,
+  copy(p){this.paths=p;this.mode='copy';ui.toast(`已复制 ${p.length} 项`,'ok',1600);bus.emit('clip')},
+  cut(p){this.paths=p;this.mode='cut';ui.toast(`已剪切 ${p.length} 项`,'ok',1600);bus.emit('clip')},
+  clear(){this.paths=[];this.mode=null;bus.emit('clip')},
+  async paste(dir){
+    if(!this.paths.length)return;
+    let n=0;
+    for(const p of this.paths){
+      try{
+        const nn=await uniqueName(dir,baseName(p));const dst=joinPath(dir,nn);
+        if(this.mode==='cut'){await fs.rename(p,dst)}else{await fs.copy(p,dst)}
+        n++;
+      }catch(e){ui.toast(e.message,'err')}
+    }
+    if(this.mode==='cut')this.clear();
+    ui.toast(`已粘贴 ${n} 项`,'ok');bus.emit('fs-change',dir);
+  }
+};
+/* ================= 壁纸系统 ================= */
+const WALLS=[
+  {id:'santorini',name:'圣岛晨曦',cls:'wp-santorini'},
+  {id:'lemon',name:'柠檬果园',cls:'wp-lemon'},
+  {id:'aegean',name:'爱琴黄昏',cls:'wp-aegean'},
+  {id:'terrazzo',name:'水磨石纹',cls:'wp-terrazzo'}
+];
+let wallUrl=null;
+async function setWallpaper(conf){
+  store.set('wall',conf);await applyWallpaper();ui.toast('壁纸已更换','ok',1500);
+}
+async function applyWallpaper(){
+  const conf=store.get('wall',{t:'css',id:'santorini'});
+  const wall=$('#wall');
+  if(wallUrl){URL.revokeObjectURL(wallUrl);wallUrl=null}
+  wall.className='';wall.style.background='';
+  const old=$('#wallImg');if(old)old.remove();
+  if(conf.t==='css'){const w=WALLS.find(x=>x.id===conf.id)||WALLS[0];wall.classList.add(w.cls)}
+  else{
+    try{const blob=await fs.readFile(conf.path);wallUrl=URL.createObjectURL(blob);
+      const img=el('img');img.id='wallImg';img.src=wallUrl;wall.appendChild(img);
+    }catch(e){wall.classList.add('wp-santorini')}
+  }
+}
+async function uploadWallpaper(){
+  const inp=$('#imgPick');inp.value='';
+  inp.onchange=async()=>{
+    const f=inp.files[0];if(!f)return;
+    try{
+      const name=await uniqueName('/图片','壁纸_'+f.name);
+      await fs.writeFile(joinPath('/图片',name),await f.arrayBuffer());
+      await setWallpaper({t:'file',path:joinPath('/图片',name)});
+    }catch(e){ui.toast('设置失败：'+e.message,'err')}
+  };
+  inp.click();
+}
+/* ================= 浏览器打开文件 ================= */
+async function openInBrowser(path){launchApp('browser','file://'+path)}
+bus.off=function(e,f){this.m[e]=(this.m[e]||[]).filter(x=>x!==f)};
+/* ================= 文件资源管理器 ================= */
+function buildExplorer(initPath){
+  const st={cwd:fs.norm(initPath||'/'),hist:[],hi:-1,sel:new Set(),sort:store.get('sort',{k:'name',d:1}),q:'',items:[],renaming:false};
+  const root=el('div','ex');
+  root.innerHTML=`
+  <div class="tb ex-tb">
+    <button class="tbtn" data-a="back" title="后退">${ICONS.back}</button>
+    <button class="tbtn" data-a="fwd" title="前进">${ICONS.fwd}</button>
+    <button class="tbtn" data-a="up" title="上级">${ICONS.up}</button>
+    <button class="tbtn" data-a="home" title="根目录">${ICONS.home}</button>
+    <button class="tbtn side-tgl hidden" data-a="side" title="导航窗格">${ICONS.list}</button>
+    <div class="crumbs" style="flex:1;min-width:80px;border:none;padding:0 6px"></div>
+    <div style="display:flex;align-items:center;gap:4px;background:var(--field);border:1px solid var(--line);border-radius:8px;padding:0 8px;height:30px">
+      <span style="display:contents;color:var(--mut)">${ICONS.search}</span>
+      <input class="q" placeholder="搜索此文件夹" style="border:none;background:none;width:110px;font-size:12.5px">
+    </div>
+    <span class="tsep"></span>
+    <button class="tbtn" data-a="newdir" title="新建文件夹">${ICONS.folder}<span class="hidden-sm">新建</span></button>
+    <button class="tbtn" data-a="upload" title="上传文件">${ICONS.upload}</button>
+    <button class="tbtn" data-a="paste" title="粘贴">${ICONS.paste}</button>
+    <button class="tbtn" data-a="refresh" title="刷新">${ICONS.refresh}</button>
+  </div>
+  <aside class="ex-side"></aside>
+  <div class="ex-main">
+    <div class="lhd"></div>
+    <div class="ex-list"></div>
+    <div class="ex-empty hidden">此文件夹为空</div>
+    <div class="ex-drop hidden">松开以导入到当前文件夹</div>
+  </div>
+  <div class="sb ex-sb"><span class="cnt"></span><span class="selc"></span><span class="tsp"></span><span class="loc" style="color:var(--faint)"></span></div>`;
+  const listEl=$('.ex-list',root),crumbsEl=$('.crumbs',root),sideEl=$('.ex-side',root);
+  const COLS=[{k:'name',t:'名称',w:null},{k:'size',t:'大小',w:84},{k:'type',t:'类型',w:92},{k:'mtime',t:'修改时间',w:128}];
+  let colW=store.get('cols',{size:84,type:92,mtime:128});
+  function gridCols(){return isMobile()?`minmax(0,1fr) 74px`:`minmax(0,1fr) ${colW.size}px ${colW.type}px ${colW.mtime}px`}
+  function renderHeader(){
+    const hd=$('.lhd',root);hd.innerHTML='';hd.style.setProperty('--cols',gridCols());
+    const mob=isMobile();
+    COLS.filter((c,i)=>!mob||i<2).forEach((c,i)=>{
+      const h=el('div','hc');
+      h.innerHTML=`<span>${c.t}</span>${st.sort.k===c.k?(st.sort.d>0?ICONS.sortA:ICONS.sortD):''}`;
+      h.onclick=()=>{if(st.sort.k===c.k)st.sort.d*=-1;else st.sort={k:c.k,d:c.k==='name'||c.k==='type'?1:-1};store.set('sort',st.sort);renderHeader();renderRows()};
+      if(i>0&&!mob){
+        const rs=el('span','hrs');
+        rs.addEventListener('pointerdown',e=>{
+          e.stopPropagation();rs.classList.add('on');rs.setPointerCapture(e.pointerId);
+          const sx=e.clientX,sw=colW[c.k];
+          const mv=ev=>{colW[c.k]=clamp(sw+ev.clientX-sx,54,320);listEl.style.setProperty('--cols',gridCols());hd.style.setProperty('--cols',gridCols())};
+          const up=()=>{rs.classList.remove('on');rs.removeEventListener('pointermove',mv);rs.removeEventListener('pointerup',up);store.set('cols',colW)};
+          rs.addEventListener('pointermove',mv);rs.addEventListener('pointerup',up);
+        });
+        h.appendChild(rs);
+      }
+      hd.appendChild(h);
+    });
+  }
+  function typeLabel(it){return it.isDirectory?'文件夹':('.'+(extOf(it.name)||'—')+' 文件')}
+  function sortItems(arr){const{k,d}=st.sort;return[...arr].sort((a,b)=>(b.isDirectory-a.isDirectory)||((k==='name'||k==='type')?natCmp(k==='type'?typeLabel(a):a.name,k==='type'?typeLabel(b):b.name)*d:((a[k]||0)-(b[k]||0))*d))}
+  function renderRows(){
+    listEl.innerHTML='';listEl.style.setProperty('--cols',gridCols());
+    let arr=st.items;
+    if(st.q){const q=st.q.toLowerCase();arr=arr.filter(i=>i.name.toLowerCase().includes(q))}
+    arr=sortItems(arr);
+    $('.ex-empty',root).classList.toggle('hidden',arr.length>0);
+    arr.forEach(it=>{
+      const path=joinPath(st.cwd,it.name);
+      const r=el('div','lrow'+(st.sel.has(path)?' sel':'')+(clipboard.mode==='cut'&&clipboard.paths.includes(path)?' cut':''));
+      r.dataset.path=path;r.dataset.dir=it.isDirectory?'1':'';
+      const isImg=!it.isDirectory&&IMG_EXT.includes(extOf(it.name));
+      r.innerHTML=`<div class="nm">${isImg?'<span class="th" data-th="'+esc(path)+'"></span>':`<span style="display:contents;color:${it.isDirectory?'#C79A00':'var(--sea)'}">${ICONS[fileIconName(it.name,it.isDirectory)]}</span>`}<b>${esc(it.name)}</b></div><div class="mt">${it.isDirectory?'—':fmtSize(it.size)}</div>${isMobile()?'':`<div class="mt">${typeLabel(it)}</div><div class="mt">${fmtDate(it.mtime)}</div>`}`;
+      if(isImg)thumbs.url(path).then(u=>{const th=$('.th',r);if(th&&u)th.style.backgroundImage=`url('${u}')`});
+      bindRow(r,it,path);
+      listEl.appendChild(r);
+    });
+    $('.cnt',root).textContent=`${st.items.length} 个项目`;
+    $('.loc',root).textContent=st.cwd;
+    updateSel();
+  }
+  function updateSel(){$$('.lrow',listEl).forEach(r=>r.classList.toggle('sel',st.sel.has(r.dataset.path)));$('.selc',root).textContent=st.sel.size?`已选 ${st.sel.size} 项`:''}
+  function bindRow(r,it,path){
+    let pd=null;
+    r.addEventListener('pointerdown',e=>{pd={x:e.clientX,y:e.clientY,moved:false}});
+    r.addEventListener('pointermove',e=>{if(pd&&Math.hypot(e.clientX-pd.x,e.clientY-pd.y)>5)pd.moved=true});
+    r.addEventListener('click',e=>{
+      if(st.renaming)return;
+      if(pd&&pd.moved){pd=null;return}pd=null;
+      if(e.ctrlKey||e.metaKey){st.sel.has(path)?st.sel.delete(path):st.sel.add(path)}
+      else if(e.shiftKey&&st.lastIdx!=null){
+        const rows=$$('.lrow',listEl);const i=rows.indexOf(r);const[a,b]=[Math.min(i,st.lastIdx),Math.max(i,st.lastIdx)];
+        st.sel=new Set(rows.slice(a,b+1).map(x=>x.dataset.path));
+      }else{st.sel.clear();st.sel.add(path)}
+      st.lastIdx=$$('.lrow',listEl).indexOf(r);
+      updateSel();
+    });
+    r.addEventListener('dblclick',()=>openPath(path));
+    if(matchMedia('(pointer:fine)').matches)r.draggable=true;
+    r.addEventListener('dragstart',e=>{
+      if(!st.sel.has(path)){st.sel.clear();st.sel.add(path);updateSel()}
+      preloadDrag(path);armDragOut(e,[...st.sel]);
+      setTimeout(()=>r.style.opacity='.4',0);
+    });
+    r.addEventListener('dragend',()=>{r.style.opacity=''});
+    r.addEventListener('mouseenter',()=>{if(!it.isDirectory||true)preloadDrag(path)});
+    if(it.isDirectory){
+      r.addEventListener('dragover',e=>{if(e.dataTransfer.types.includes('application/x-lemonisle')||e.dataTransfer.types.includes('Files')){e.preventDefault();e.stopPropagation();r.classList.add('droptarget')}});
+      r.addEventListener('dragleave',()=>r.classList.remove('droptarget'));
+      r.addEventListener('drop',async e=>{
+        e.preventDefault();e.stopPropagation();r.classList.remove('droptarget');
+        const raw=e.dataTransfer.getData('application/x-lemonisle');
+        if(raw){const{paths}=JSON.parse(raw);
+          for(const p of paths){if(p===path||p.startsWith(path+'/'))continue;
+            try{await fs.rename(p,joinPath(path,await uniqueName(path,baseName(p))))}catch(err){ui.toast(err.message,'err')}}
+          ui.toast(`已移动到「${it.name}」`,'ok');
+        }else if(e.dataTransfer.items.length){await importDataTransfer(e.dataTransfer,path)}
+      });
+    }
+    r.addEventListener('contextmenu',e=>showCtxAt(e,rowMenu(it,path)));
+    bindLongPress(r,()=>rowMenu(it,path));
+  }
+  function rowMenu(it,path){
+    const paths=st.sel.size>1&&st.sel.has(path)?[...st.sel]:[path];
+    return[
+      {icon:'open',label:it.isDirectory?'打开':'打开',action:()=>openPath(path)},
+      ...(it.isDirectory?[]:[{icon:'eye',label:'打开方式',sub:[
+        {icon:'appNote',label:'记事本',action:()=>launchApp('note',path)},
+        {icon:'appCode',label:'代码编辑器',action:()=>launchApp('code',path)},
+        {icon:'appBrowser',label:'浏览器',action:()=>openInBrowser(path)},
+        {icon:'appViewer',label:'图片查看',action:()=>launchApp('viewer',path)},
+        {icon:'text',label:'以文本打开',action:()=>launchApp('note',path)}]}]),
+      {sep:1},
+      {icon:'copy',label:'复制',key:'Ctrl+C',action:()=>clipboard.copy(paths)},
+      {icon:'cut',label:'剪切',key:'Ctrl+X',action:()=>clipboard.cut(paths)},
+      {icon:'rename',label:'重命名',key:'F2',disabled:paths.length>1,action:()=>startRename(path)},
+      {icon:'download',label:'导出 / 下载',action:()=>paths.forEach(p=>downloadPath(p))},
+      {sep:1},
+      {icon:'trash',label:'删除',key:'Del',danger:true,action:()=>delPaths(paths)}
+    ];
+  }
+  async function delPaths(paths){
+    if(!await ui.confirm(`确定删除 ${paths.length>1?paths.length+' 个项目':'「'+baseName(paths[0])+'」'} 吗？`))return;
+    for(const p of paths){try{await fs.remove(p)}catch(e){ui.toast(e.message,'err')}}
+    st.sel.clear();bus.emit('fs-change',st.cwd);
+  }
+  function startRename(path){
+    const r=$(`.lrow[data-path="${CSS.escape(path)}"]`,listEl);if(!r)return;
+    st.renaming=true;
+    const b=$('.nm b',r);const old=baseName(path);
+    const inp=el('input','rn-inp');inp.value=old;b.replaceWith(inp);inp.focus();
+    const dot=old.lastIndexOf('.');inp.setSelectionRange(0,dot>0?dot:old.length);
+    const done=async ok=>{
+      inp.removeEventListener('blur',onBlur);
+      st.renaming=false;
+      if(ok&&inp.value&&inp.value!==old){
+        try{await fs.rename(path,joinPath(dirName(path),inp.value))}catch(e){ui.toast(e.message,'err')}
+      }else await refresh();
+    };
+    const onBlur=()=>done(true);
+    inp.addEventListener('blur',onBlur);
+    inp.addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter')inp.blur();if(e.key==='Escape'){inp.value=old;inp.blur()}});
+  }
+  async function navigate(p,push=true){
+    p=fs.norm(p);
+    try{const s=await fs.stat(p);if(!s.isDirectory){openPath(p);return}}catch(e){ui.toast('路径不存在：'+p,'err');return}
+    st.cwd=p;st.sel.clear();st.q='';$('.q',root).value='';
+    if(push){st.hist=st.hist.slice(0,st.hi+1);st.hist.push(p);st.hi=st.hist.length-1}
+    await refresh();
+  }
+  async function refresh(){
+    try{st.items=await fs.readdir(st.cwd)}catch(e){st.items=[];if(st.cwd!=='/'){ui.toast('目录读取失败，返回上级','warn');st.cwd=dirName(st.cwd)}}
+    renderCrumbs();renderRows();renderSide();
+  }
+  function renderCrumbs(){
+    crumbsEl.innerHTML='';
+    const parts=st.cwd.split('/').filter(Boolean);
+    const mk=(label,path)=>{const b=el('button','crumb'+(path===st.cwd?' cur':''),esc(label));b.onclick=()=>navigate(path);return b};
+    crumbsEl.appendChild(mk('柠屿','/'));
+    let acc='';
+    parts.forEach(p=>{acc+='/'+p;crumbsEl.appendChild(el('span','',ICONS.chevR));crumbsEl.appendChild(mk(p,acc))});
+    crumbsEl.scrollLeft=crumbsEl.scrollWidth;
+  }
+  function renderSide(){
+    sideEl.innerHTML='';
+    const groups=[
+      {h:'快速访问',items:[{n:'根目录',p:'/',i:'home'},{n:'文档',p:'/文档',i:'fileText'},{n:'图片',p:'/图片',i:'fileImage'},{n:'音乐',p:'/音乐',i:'fileAudio'},{n:'视频',p:'/视频',i:'fileVideo'},{n:'下载',p:'/下载',i:'download'}]},
+    ];
+    const mts=[...fs.mounts.keys()];
+    if(mts.length)groups.push({h:'本地挂载',items:mts.map(m=>({n:m.split('/').pop(),p:m,i:'mount'}))});
+    groups.forEach(g=>{
+      sideEl.appendChild(el('div','side-h',g.h));
+      g.items.forEach(it=>{
+        const b=el('div','side-it'+(st.cwd===it.p?' on':''),`<span style="display:contents">${ICONS[it.i]}</span><span>${esc(it.n)}</span>`);
+        b.onclick=()=>navigate(it.p);
+        sideEl.appendChild(b);
+      });
+    });
+    const mb=el('div','side-it',`<span style="display:contents">${ICONS.plus}</span><span>挂载本地文件夹</span>`);
+    mb.onclick=mountLocalFolder;sideEl.appendChild(mb);
+  }
+  /* 工具栏动作 */
+  $$('[data-a]',root).forEach(b=>b.onclick=async()=>{
+    const a=b.dataset.a;
+    if(a==='back'&&st.hi>0){st.hi--;await navigate(st.hist[st.hi],false)}
+    if(a==='fwd'&&st.hi<st.hist.length-1){st.hi++;await navigate(st.hist[st.hi],false)}
+    if(a==='up'&&st.cwd!=='/')navigate(dirName(st.cwd));
+    if(a==='home')navigate('/');
+    if(a==='side')sideEl.classList.toggle('open');
+    if(a==='newdir'){const n=await ui.prompt('文件夹名称','新建文件夹');if(n){await fs.mkdir(joinPath(st.cwd,await uniqueName(st.cwd,n)))}}
+    if(a==='upload')pickFiles(st.cwd);
+    if(a==='paste')clipboard.paste(st.cwd);
+    if(a==='refresh'){await refresh();ui.toast('已刷新','ok',1200)}
+  });
+  $('.q',root).addEventListener('input',debounce(e=>{st.q=e.target.value.trim();renderRows()},180));
+  /* 空白处右键 & 框选 & 拖入 */
+  listEl.addEventListener('contextmenu',e=>{
+    if(e.target.closest('.lrow'))return;
+    showCtxAt(e,[
+      {icon:'open',label:'打开',disabled:st.sel.size===0,action:()=>[...st.sel].forEach(p=>openPath(p))},
+      {sep:1},
+      {icon:'folder',label:'新建文件夹',action:()=>$$('[data-a=newdir]',root)[0].click()},
+      {icon:'fileText',label:'新建文本文件',action:async()=>{const n=await ui.prompt('文件名','未命名.txt');if(n)await fs.writeFile(joinPath(st.cwd,await uniqueName(st.cwd,n)),'')}},
+      {icon:'upload',label:'上传文件…',action:()=>pickFiles(st.cwd)},
+      {icon:'mount',label:'挂载本地文件夹…',action:mountLocalFolder},
+      {icon:'paste',label:'粘贴',disabled:!clipboard.paths.length,action:()=>clipboard.paste(st.cwd)},
+      {sep:1},
+      {icon:'select',label:'全选',key:'Ctrl+A',action:()=>{st.sel=new Set(st.items.map(i=>joinPath(st.cwd,i.name)));updateSel()}},
+      {icon:'refresh',label:'刷新',action:()=>refresh()}
+    ]);
+  });
+  listEl.addEventListener('pointerdown',e=>{
+    if(e.target.closest('.lrow')||e.button===2)return;
+    st.sel.clear();updateSel();
+    rubberband(e,listEl,()=>$$('.lrow',listEl).map(rn=>({el:rn,path:rn.dataset.path})),sel=>{if(sel){st.sel=new Set(sel.map(s=>s.path));updateSel()}});
+  });
+  let dd=0;
+  const mainEl=$('.ex-main',root);
+  mainEl.addEventListener('dragenter',e=>{dd++;$('.ex-drop',root).classList.remove('hidden');$('#dropHint').style.display='none'});
+  mainEl.addEventListener('dragleave',()=>{if(--dd<=0){dd=0;$('.ex-drop',root).classList.add('hidden')}});
+  mainEl.addEventListener('dragover',e=>{if(e.target.closest('.lrow'))return;e.preventDefault();e.stopPropagation()});
+  mainEl.addEventListener('drop',async e=>{
+    if(e.target.closest('.lrow'))return;
+    e.preventDefault();e.stopPropagation();dd=0;$('.ex-drop',root).classList.add('hidden');
+    if(e.dataTransfer.items.length)await importDataTransfer(e.dataTransfer,st.cwd);
+  });
+  /* 键盘快捷键 */
+  root.addEventListener('keydown',e=>{
+    if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'||st.renaming)return;
+    const paths=[...st.sel];
+    if(e.key==='Delete'&&paths.length)delPaths(paths);
+    if(e.key==='F2'&&paths.length===1)startRename(paths[0]);
+    if(e.key==='Enter'&&paths.length===1)openPath(paths[0]);
+    if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='c'&&paths.length)clipboard.copy(paths);
+    if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='x'&&paths.length)clipboard.cut(paths);
+    if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='v')clipboard.paste(st.cwd);
+    if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='a'){e.preventDefault();st.sel=new Set(st.items.map(i=>joinPath(st.cwd,i.name)));updateSel()}
+    if(e.key==='Backspace'&&st.cwd!=='/')navigate(dirName(st.cwd));
+  });
+  root.tabIndex=0;
+  bus.on('mounts-change',renderSide);
+  const onFs=debounce(p=>{if(p&&fs.norm(p)!==st.cwd&&!fs.norm(p).startsWith(st.cwd==='/'?'/':st.cwd))return;refresh()},250);
+  bus.on('fs-change',onFs);
+  bus.on('clip',updateSel);
+  renderHeader();navigate(st.cwd);
+  if(isMobile())$$('.side-tgl',root).forEach(b=>b.classList.remove('hidden'));
+  bus.on('resize',root._rs=debounce(()=>{renderHeader();renderRows()},250));
+  return{el:root,cleanup(){bus.off('fs-change',onFs);bus.off('mounts-change',renderSide);bus.off('clip',updateSel);bus.off('resize',root._rs)},nav:navigate,get cwd(){return st.cwd}};
+}
+regApp('explorer',{name:'文件管理器',icon:'appExplorer',color:APP_COLORS.explorer,kw:'file explorer 资源 目录',launch(path){
+  const ex=buildExplorer(path||'/');
+  const w=wm.create({app:'explorer',title:'文件管理器',icon:'appExplorer',w:880,h:560,content:ex.el,onClose:()=>ex.cleanup(),minW:420});
+  ex.win=w;
+}});
+/* ================= 记事本 ================= */
+function buildNotepad(path,text){
+  const st={path:path||null,dirty:false};
+  const root=el('div','');root.style.cssText='display:flex;flex-direction:column;height:100%';
+  root.innerHTML=`
+  <div class="tb">
+    <button class="tbtn" data-a="save" title="保存 Ctrl+S">${ICONS.save}<span>保存</span></button>
+    <button class="tbtn" data-a="saveas" title="另存为">${ICONS.export}<span>另存</span></button>
+    <button class="tbtn" data-a="wrap">${ICONS.text}<span>换行</span></button>
+    <span class="tsep"></span>
+    <button class="tbtn" data-a="f-">A-</button>
+    <button class="tbtn" data-a="f+">A+</button>
+    <span class="tsp"></span>
+    <span class="enc" style="font-size:11px;color:var(--faint);font-family:var(--font-m)">UTF-8</span>
+  </div>
+  <textarea class="inp" spellcheck="false" style="flex:1;border:none;border-radius:0;font-family:var(--font-m);font-size:13.5px;padding:14px 16px;background:var(--surface)"></textarea>
+  <div class="sb"><span class="pos"></span><span class="tsp"></span><span class="wc"></span></div>`;
+  const ta=$('textarea',root);ta.value=text||'';
+  let fsz=13.5,wrap=true;
+  const mark=()=>{st.dirty=true};
+  ta.addEventListener('input',()=>{mark();upd()});
+  ta.addEventListener('keyup',upd);ta.addEventListener('click',upd);
+  function upd(){
+    const v=ta.value,p=ta.selectionStart;
+    const line=v.slice(0,p).split('\n').length,col=p-v.lastIndexOf('\n',p-1);
+    $('.pos',root).textContent=`行 ${line}, 列 ${col}`;
+    $('.wc',root).textContent=`${v.length} 字符 · ${v.split('\n').length} 行`;
+  }
+  async function save(as){
+    let p=st.path;
+    if(as||!p){
+      const n=await ui.prompt('保存路径（含文件名）',p||'/文档/未命名.txt','另存为');if(!n)return;
+      p=fs.norm(n);
+    }
+    try{await fs.writeFile(p,ta.value);st.path=p;st.dirty=false;setTitle();ui.toast('已保存到 '+p,'ok')}catch(e){ui.toast('保存失败：'+e.message,'err')}
+  }
+  function setTitle(){root._setTitle&&root._setTitle((st.path?baseName(st.path):'未命名')+(st.dirty?' •':'')+' — 记事本')}
+  $$('[data-a]',root).forEach(b=>b.onclick=()=>{
+    const a=b.dataset.a;
+    if(a==='save')save(false);
+    if(a==='saveas')save(true);
+    if(a==='wrap'){wrap=!wrap;ta.style.whiteSpace=wrap?'pre-wrap':'pre';ta.style.overflowX=wrap?'hidden':'auto';b.classList.toggle('on',wrap)}
+    if(a==='f-'){fsz=Math.max(10,fsz-1);ta.style.fontSize=fsz+'px'}
+    if(a==='f+'){fsz=Math.min(24,fsz+1);ta.style.fontSize=fsz+'px'}
+  });
+  root.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();save(false)}});
+  upd();setTitle();
+  return{el:root,setTitle:setTitleRaw=>root._setTitle=setTitleRaw,setPath:p=>{st.path=p;setTitle()},getPath:()=>st.path,setText:t=>{ta.value=t;upd()}};
+}
+regApp('note',{name:'记事本',icon:'appNote',color:APP_COLORS.note,kw:'notepad text 文本 txt',launch:async arg=>{
+  const np=buildNotepad();
+  const w=wm.create({app:'note',title:'记事本',icon:'appNote',w:640,h:470,content:np.el,minW:340});
+  np.setTitle(t=>w.setTitle(t));np.setTitle();
+  if(typeof arg==='string'&&arg){try{np.setText(await fs.readText(arg));np.setPath(arg)}catch(e){ui.toast('打开失败：'+e.message,'err')}}
+}});
+/* ================= 表格（CSV / TSV 双视图） ================= */
+function parseDelim(text,delim){
+  const rows=[];let row=[],cur='',q=false;
+  for(let i=0;i<text.length;i++){const c=text[i];
+    if(q){if(c==='"'){if(text[i+1]==='"'){cur+='"';i++}else q=false}else cur+=c}
+    else{
+      if(c==='"')q=true;
+      else if(c===delim){row.push(cur);cur=''}
+      else if(c==='\n'){row.push(cur);rows.push(row);row=[];cur=''}
+      else if(c==='\r'){if(text[i+1]==='\n')i++;row.push(cur);rows.push(row);row=[];cur=''}
+      else cur+=c;
+    }}
+  if(cur!==''||row.length){row.push(cur);rows.push(row)}
+  return rows.filter(r=>!(r.length===1&&r[0]===''));
+}
+function toDelim(rows,delim){
+  return rows.map(r=>r.map(c=>{c=String(c);return(c.includes('"')||c.includes(delim)||c.includes('\n'))?'"'+c.replace(/"/g,'""')+'"':c}).join(delim)).join('\n')+'\n';
+}
+const colName=i=>{let s='';i++;while(i>0){const m=(i-1)%26;s=String.fromCharCode(65+m)+s;i=Math.floor((i-1)/26)}return s};
+function buildSheet(path){
+  const st={path,rows:[],view:'table',delim:path&&extOf(path)==='tsv'?'	':','};
+  const root=el('div','sh');
+  root.innerHTML=`
+  <div class="tb">
+    <button class="tbtn" data-a="save">${ICONS.save}<span>保存</span></button>
+    <span class="tsep"></span>
+    <button class="tbtn on" data-v="table">${ICONS.table}<span>表格</span></button>
+    <button class="tbtn" data-v="text">${ICONS.text}<span>文本</span></button>
+    <span class="tsep"></span>
+    <button class="tbtn" data-a="addR">${ICONS.plus}<span>行</span></button>
+    <button class="tbtn" data-a="addC">${ICONS.plus}<span>列</span></button>
+    <span class="tsp"></span>
+    <span style="font-size:11px;color:var(--faint)">${extOf(path)==='tsv'?'TSV':'CSV'} · UTF-8</span>
+  </div>
+  <div class="sh-wrap"></div>
+  <div class="sb"><span class="info"></span><span class="tsp"></span><span>双击单元格编辑</span></div>`;
+  const wrap=$('.sh-wrap',root);
+  function render(){
+    if(st.view==='table'){
+      const cols=Math.max(...st.rows.map(r=>r.length),1);
+      let h='<table><thead><tr><th class="rh-h"></th>';
+      for(let c=0;c<cols;c++)h+=`<th>${colName(c)}</th>`;
+      h+='</tr></thead><tbody>';
+      st.rows.forEach((r,ri)=>{
+        h+=`<tr><td class="rh-h">${ri+1}</td>`;
+        for(let c=0;c<cols;c++)h+=`<td data-r="${ri}" data-c="${c}" contenteditable="plaintext-only">${esc(r[c]??'')}</td>`;
+        h+='</tr>';
+      });
+      h+='</tbody></table>';
+      wrap.innerHTML=h;
+      $$('td[contenteditable]',wrap).forEach(td=>{
+        td.addEventListener('blur',()=>{const r=+td.dataset.r,c=+td.dataset.c;while(st.rows.length<=r)st.rows.push([]);st.rows[r][c]=td.textContent});
+        td.addEventListener('keydown',e=>{
+          if(e.key==='Enter'){e.preventDefault();const nx=td.parentElement.nextElementSibling;if(nx)nx.children[c+1]&&nx.children[c+1].focus()}
+          if(e.key==='Tab'){e.preventDefault();const nx=td.nextElementSibling;if(nx)nx.focus()}
+        });
+      });
+      $('.info',root).textContent=`${st.rows.length} 行 × ${cols} 列`;
+    }else{
+      wrap.innerHTML=`<textarea spellcheck="false">${esc(toDelim(st.rows,st.delim))}</textarea>`;
+      const ta=$('textarea',wrap);
+      ta.addEventListener('input',()=>{st.rows=parseDelim(ta.value,st.delim);$('.info',root).textContent=`${st.rows.length} 行`});
+      $('.info',root).textContent=`${st.rows.length} 行 · 文本视图`;
+    }
+    $$('[data-v]',root).forEach(b=>b.classList.toggle('on',b.dataset.v===st.view));
+  }
+  $$('[data-v]',root).forEach(b=>b.onclick=()=>{st.view=b.dataset.v;render()});
+  $$('[data-a]',root).forEach(b=>b.onclick=async()=>{
+    const a=b.dataset.a;
+    if(a==='save'){try{await fs.writeFile(st.path,toDelim(st.rows,st.delim));ui.toast('已保存 '+baseName(st.path),'ok')}catch(e){ui.toast(e.message,'err')}}
+    if(a==='addR'){st.rows.push(new Array(Math.max(...st.rows.map(r=>r.length),1)).fill(''));if(st.view==='table')render()}
+    if(a==='addC'){st.rows.forEach(r=>r.push(''));if(st.rows.length===0)st.rows.push(['']);render()}
+  });
+  root.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();$$('[data-a=save]',root)[0].click()}});
+  (async()=>{try{const t=await fs.readText(path);st.rows=parseDelim(t,st.delim)}catch(e){st.rows=[[]];ui.toast('读取失败：'+e.message,'err')}render()})();
+  return{el:root};
+}
+regApp('sheet',{name:'表格',icon:'appSheet',color:APP_COLORS.sheet,kw:'csv tsv excel 表格',launch:async path=>{
+  if(!path){const n=await ui.prompt('新建表格文件名','表格.csv');if(!n)return;path=joinPath('/文档',await uniqueName('/文档',n));await fs.writeFile(path,'列A,列B,列C\n');}
+  const sh=buildSheet(path);
+  wm.create({app:'sheet',title:baseName(path)+' — 表格',icon:'appSheet',w:780,h:520,content:sh.el,minW:380});
+}});
+/* ================= 漫画阅读器 / 图片查看 ================= */
+function buildViewer(path){
+  const st={path,imgs:[],idx:0,zooms:[520,760,1000,1400,2000],zi:2,urls:[]};
+  const root=el('div','mv');
+  root.innerHTML=`
+  <div class="tb" style="background:#101418;border-color:#232a31">
+    <button class="tbtn" data-a="prev" style="color:#cfd6cd">${ICONS.prevT}</button>
+    <button class="tbtn" data-a="next" style="color:#cfd6cd">${ICONS.nextT}</button>
+    <span class="tsep"></span>
+    <button class="tbtn" data-a="zo" style="color:#cfd6cd">−</button>
+    <span class="zl" style="font-size:12px;color:#9aa39b;font-family:var(--font-m);min-width:52px;text-align:center"></span>
+    <button class="tbtn" data-a="zi" style="color:#cfd6cd">＋</button>
+    <span class="tsp"></span>
+    <span class="ct" style="font-size:12px;color:#9aa39b;font-family:var(--font-m)"></span>
+    <span class="tsp"></span>
+    <button class="tbtn" data-a="dl" style="color:#cfd6cd">${ICONS.download}</button>
+    <button class="tbtn" data-a="fs" style="color:#cfd6cd">${ICONS.expand}</button>
+  </div>
+  <div class="mv-bd"><div class="mv-load"><span class="spin"></span><span class="lt">正在加载同目录图片序列…</span></div></div>
+  <button class="mv-exit" data-a="fsx">${ICONS.close}</button>`;
+  const bd=$('.mv-bd',root);
+  const setZoom=()=>{bd.style.setProperty('--mvw',st.zooms[st.zi]+'px');$('.zl',root).textContent=Math.round(st.zooms[st.zi]/10)+'%'};
+  function updCount(){
+    const top=bd.scrollTop+bd.clientHeight/2;let cur=0;
+    bd.querySelectorAll('img').forEach((im,i)=>{if(im.offsetTop<=top)cur=i});
+    st.idx=cur;$('.ct',root).textContent=st.imgs.length?`${cur+1} / ${st.imgs.length} · ${st.imgs[cur]||''}`:'';
+  }
+  bd.addEventListener('scroll',debounce(updCount,120));
+  $$('[data-a]',root).forEach(b=>b.onclick=()=>{
+    const a=b.dataset.a;
+    if(a==='prev'||a==='next'){const i=clamp(st.idx+(a==='prev'?-1:1),0,st.imgs.length-1);const im=bd.querySelectorAll('img')[i];im&&im.scrollIntoView({behavior:'smooth'})}
+    if(a==='zo')st.zi=Math.max(0,st.zi-1);
+    if(a==='zi')st.zi=Math.min(st.zooms.length-1,st.zi+1);
+    if(a==='zo'||a==='zi')setZoom();
+    if(a==='dl')downloadPath(joinPath(dirName(st.path),st.imgs[st.idx]));
+    if(a==='fs'||a==='fsx')root._win&&root._win.fullEl();
+  });
+  (async()=>{
+    const dir=dirName(path);
+    let list;
+    try{list=await fs.readdir(dir)}catch(e){$('.mv-load',root).innerHTML=ICONS.err+'<span>目录读取失败：'+esc(e.message)+'</span>';return}
+    st.imgs=list.filter(f=>!f.isDirectory&&IMG_EXT.includes(extOf(f.name))).map(f=>f.name).sort((a,b)=>natCmp(a,b));
+    if(!st.imgs.length){$('.mv-load',root).innerHTML='该目录下没有可显示的图片';return}
+    const target=baseName(path);
+    const blobs=await Promise.all(st.imgs.map(async n=>{try{return{url:URL.createObjectURL(await fs.readFile(joinPath(dir,n))),n}}catch(e){return null}}));
+    $('.mv-load',root).remove();
+    blobs.forEach(b=>{if(!b)return;const im=el('img');im.src=b.url;im.alt=b.n;im.dataset.n=b.n;if(b.n===target)im.dataset.target='1';bd.appendChild(im);st.urls.push(b.url)});
+    const t=$('img[data-target]',bd);if(t)t.scrollIntoView();
+    setZoom();updCount();
+  })();
+  return{el:root,cleanup(){st.urls.forEach(u=>URL.revokeObjectURL(u))}};
+}
+regApp('viewer',{name:'图片查看',icon:'appViewer',color:APP_COLORS.viewer,kw:'image manga 漫画 图片',launch:async path=>{
+  const v=buildViewer(path);
+  const w=wm.create({app:'viewer',title:baseName(path)+' — 图片查看',icon:'appViewer',w:760,h:600,content:v.el,onClose:v.cleanup,minW:340});
+  v.el._win=w;
+}});
+/* ================= 媒体播放器 ================= */
+function buildMedia(path){
+  const st={path,list:[],idx:0};
+  const isVideo=AV_EXT.slice(6).includes(extOf(path));
+  const root=el('div','mp');
+  root.innerHTML=`
+  <div class="mp-stage"></div>
+  <div class="mp-ctl">
+    <div class="mp-row"><span class="mp-time t0">0:00</span><input type="range" class="seek" min="0" max="1000" value="0"><span class="mp-time t1">0:00</span></div>
+    <div class="mp-row">
+      <button class="pbtn" data-a="prev">${ICONS.prevT}</button>
+      <button class="pbtn big" data-a="pp">${ICONS.play}</button>
+      <button class="pbtn" data-a="next">${ICONS.nextT}</button>
+      <span class="mp-tt"></span>
+      ${ICONS.fileAudio.replace('<svg','<svg style="width:16px;height:16px;color:var(--mut)"')}
+      <input type="range" class="vol" min="0" max="100" value="85" style="max-width:90px">
+    </div>
+  </div>`;
+  const stage=$('.mp-stage',root);let media=null,url=null;
+  const tfmt=s=>{s=Math.floor(s||0);return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
+  async function load(i){
+    st.idx=clamp(i,0,st.list.length-1);
+    const name=st.list[st.idx];const p=joinPath(dirName(st.path),name);
+    if(url)URL.revokeObjectURL(url);
+    stage.innerHTML='';
+    try{url=URL.createObjectURL(await fs.readFile(p))}catch(e){ui.toast('读取失败：'+e.message,'err');return}
+    const video=AV_EXT.slice(6).includes(extOf(name));
+    media=el(video?'video':'audio');media.src=url;media.volume=$('.vol',root).value/100;
+    if(video){stage.appendChild(media)}
+    else{stage.innerHTML=`<div class="mp-cover"><div class="mp-disc">${ICONS.fileAudio}</div><div style="font-size:13px;max-width:80%;text-align:center">${esc(name)}</div></div>`;stage.appendChild(media)}
+    media.addEventListener('timeupdate',()=>{$('.seek',root).value=(media.currentTime/media.duration||0)*1000;$('.t0',root).textContent=tfmt(media.currentTime);$('.t1',root).textContent=tfmt(media.duration)});
+    media.addEventListener('play',()=>{$('[data-a=pp]',root).innerHTML=ICONS.pause;const d=$('.mp-disc',root);d&&d.classList.add('playing')});
+    media.addEventListener('pause',()=>{$('[data-a=pp]',root).innerHTML=ICONS.play;const d=$('.mp-disc',root);d&&d.classList.remove('playing')});
+    media.addEventListener('ended',()=>{if(st.idx<st.list.length-1)load(st.idx+1)});
+    $('.mp-tt',root).textContent=`${st.idx+1}/${st.list.length} ${name}`;
+    media.play().catch(()=>{});
+  }
+  $$('[data-a]',root).forEach(b=>b.onclick=()=>{
+    const a=b.dataset.a;
+    if(a==='pp'){if(!media)return;media.paused?media.play():media.pause()}
+    if(a==='prev')load(st.idx-1);
+    if(a==='next')load(st.idx+1);
+  });
+  $('.seek',root).addEventListener('input',e=>{if(media&&media.duration)media.currentTime=e.target.value/1000*media.duration});
+  $('.vol',root).addEventListener('input',e=>{if(media)media.volume=e.target.value/100});
+  (async()=>{
+    try{const list=await fs.readdir(dirName(st.path));st.list=list.filter(f=>!f.isDirectory&&AV_EXT.includes(extOf(f.name))).map(f=>f.name).sort((a,b)=>natCmp(a,b));
+      load(Math.max(0,st.list.indexOf(baseName(st.path))));
+    }catch(e){ui.toast(e.message,'err')}
+  })();
+  return{el:root,cleanup(){if(url)URL.revokeObjectURL(url)}};
+}
+regApp('media',{name:'媒体播放',icon:'fileAudio',color:APP_COLORS.media,kw:'music video 音乐 视频 播放',launch:path=>{
+  const m=buildMedia(path);
+  wm.create({app:'media',title:baseName(path)+' — 播放',icon:'fileAudio',w:680,h:480,content:m.el,onClose:m.cleanup,minW:360});
+}});
+/* ================= PDF 查看 ================= */
+regApp('pdf',{name:'PDF 查看',icon:'filePdf',color:APP_COLORS.pdf,kw:'pdf 文档',launch:async path=>{
+  let url;try{url=URL.createObjectURL(await fs.readFile(path))}catch(e){ui.toast(e.message,'err');return}
+  const box=el('div','pdfv');box.style.cssText='height:100%';
+  box.innerHTML=`<iframe src="${url}"></iframe>`;
+  wm.create({app:'pdf',title:baseName(path)+' — PDF',icon:'filePdf',w:820,h:600,content:box,onClose:()=>setTimeout(()=>URL.revokeObjectURL(url),4000)});
+}});
+/* ================= 网页浏览器 ================= */
+function buildBrowser(homeUrl){
+  const st={hist:[],hi:-1,blobs:[]};
+  const root=el('div','br');
+  root.innerHTML=`
+  <div class="tb">
+    <button class="tbtn" data-a="back">${ICONS.back}</button>
+    <button class="tbtn" data-a="fwd">${ICONS.fwd}</button>
+    <button class="tbtn" data-a="re">${ICONS.refresh}</button>
+    <button class="tbtn" data-a="home">${ICONS.home}</button>
+    <input class="inp addr" placeholder="输入地址，或 /路径 打开虚拟文件" style="height:30px;padding:0 10px">
+    <button class="tbtn" data-a="go">${ICONS.chevR}</button>
+  </div>
+  <iframe sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals" referrerpolicy="no-referrer"></iframe>`;
+  const frame=$('iframe',root),addr=$('.addr',root);
+  const HOME=`data:text/html;charset=utf-8,${encodeURIComponent(`<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{margin:0;min-height:100vh;display:grid;place-items:center;font-family:system-ui;background:linear-gradient(160deg,#f6f3e9,#e3ece6)} .c{text-align:center;max-width:420px;padding:20px} h1{font-size:26px;color:#22301f} p{color:#6b7a68;font-size:13px;line-height:1.8} .t{margin:16px auto;display:block;padding:10px 14px;border-radius:9px;border:1px solid #ddd8c6;width:300px;font-size:14px;outline:none} .t:focus{border-color:#e9be00} a{display:inline-block;margin:6px;color:#2b6e9e;font-size:13px}</style></head><body><div class="c"><h1>柠屿 · 启航</h1><input class="t" placeholder="搜索或输入网址" onkeydown="if(event.key==='Enter')parent.postMessage({liosNav:this.value})"><p>提示：许多网站禁止被嵌入浏览，若页面空白属正常现象。<br>在地址栏输入 /开头路径 可直接打开虚拟文件系统中的网页。</p><a href="https://zh.wikipedia.org" target="_top">维基百科</a><a href="https://example.com" target="_top">Example</a><a href="https://www.bing.com" target="_top">Bing</a></div></body></html>`)}`;
+  function setNav(){addr.value=st.hist[st.hi]||''}
+  async function go(raw,push=true){
+    let u=(raw||'').trim();
+    if(!u||u==='about:home'){u=HOME}
+    else if(u.startsWith('file://')){u=await vfsUrl(u.slice(7))}
+    else if(u.startsWith('/')){u=await vfsUrl(u)}
+    else if(!/^[a-z]+:\/\//i.test(u)){
+      if(await fs.exists('/'+u)){u=await vfsUrl('/'+u)}
+      else if(u.includes('.')&&!u.includes(' ')){u='https://'+u}
+      else{u='https://www.bing.com/search?q='+encodeURIComponent(u)}
+    }
+    if(!u)return;
+    if(push){st.hist=st.hist.slice(0,st.hi+1);st.hist.push(u.startsWith('data:')?'about:home':u);st.hi++}
+    frame.src=u;setNav();
+  }
+  async function vfsUrl(p){
+    try{const b=await fs.readFile(fs.norm(p));const u=URL.createObjectURL(b);st.blobs.push(u);return u}catch(e){ui.toast('文件不存在：'+p,'err');return HOME}
+  }
+  addEventListener('message',st._mh=e=>{if(e.data&&e.data.liosNav)go(e.data.liosNav)});
+  $$('[data-a]',root).forEach(b=>b.onclick=()=>{
+    const a=b.dataset.a;
+    if(a==='back'&&st.hi>0){st.hi--;frame.src=st.hist[st.hi];setNav()}
+    if(a==='fwd'&&st.hi<st.hist.length-1){st.hi++;frame.src=st.hist[st.hi];setNav()}
+    if(a==='re')frame.src=frame.src;
+    if(a==='home')go('about:home');
+    if(a==='go')go(addr.value);
+  });
+  addr.addEventListener('keydown',e=>{if(e.key==='Enter')go(addr.value)});
+  go(homeUrl||'about:home');
+  return{el:root,go,cleanup(){removeEventListener('message',st._mh);st.blobs.forEach(u=>URL.revokeObjectURL(u))}};
+}
+regApp('browser',{name:'浏览器',icon:'appBrowser',color:APP_COLORS.browser,kw:'web browser 网页',launch:url=>{
+  const b=buildBrowser(url);
+  wm.create({app:'browser',title:'浏览器',icon:'appBrowser',w:900,h:580,content:b.el,onClose:b.cleanup,minW:380});
+}});
+/* ================= 代码编辑器（CodeMirror 5.65.x） ================= */
+const ED_MODES=[['htmlmixed','HTML'],['css','CSS'],['javascript','JavaScript'],['markdown','Markdown'],['application/json','JSON'],['xml','XML']];
+function edModeFor(ext){
+  return({html:'htmlmixed',htm:'htmlmixed',css:'css',js:'javascript',mjs:'javascript',ts:'javascript',json:'application/json',md:'markdown',markdown:'markdown',xml:'xml',svg:'xml',xhtml:'htmlmixed'})[ext]||'htmlmixed';
+}
+function edExtFor(mode){return({htmlmixed:'html',css:'css',javascript:'js',markdown:'md','application/json':'json',xml:'xml'})[mode]||'txt'}
+function buildEditor(path){
+  const st={path:path||null,dir:path?dirName(path):'/',marks:[],ranges:[],idx:-1,auto:true};
+  const root=el('div','ed');
+  root.innerHTML=`
+  <div class="tb">
+    <select class="inp mode" style="width:104px;height:30px;padding:0 6px;font-size:12.5px;flex:0 0 auto"></select>
+    <button class="tbtn" data-a="run" title="运行 Ctrl+Enter">${ICONS.run}<span>运行</span></button>
+    <button class="tbtn" data-a="prev" title="刷新预览">${ICONS.refresh}</button>
+    <button class="tbtn" data-a="auto" title="自动预览">自动</button>
+    <span class="tsep"></span>
+    <button class="tbtn" data-a="fmt" title="格式化 Ctrl+Shift+F">${ICONS.format}<span>格式化</span></button>
+    <button class="tbtn" data-a="fold" title="折叠全部">${ICONS.fold}</button>
+    <button class="tbtn" data-a="unfold" title="展开全部">${ICONS.unfold}</button>
+    <button class="tbtn" data-a="find" title="查找 Ctrl+F">${ICONS.find}</button>
+    <button class="tbtn" data-a="repl" title="替换 Ctrl+H">${ICONS.replace}</button>
+    <span class="tsep"></span>
+    <button class="tbtn" data-a="undo" title="撤销 Ctrl+Z">${ICONS.undo}</button>
+    <button class="tbtn" data-a="redo" title="重做 Ctrl+Y">${ICONS.redo}</button>
+    <span class="tsp"></span>
+    <button class="tbtn" data-a="import">${ICONS.import}<span>导入</span></button>
+    <button class="tbtn" data-a="export">${ICONS.export}<span>导出</span></button>
+    <button class="tbtn" data-a="save" title="保存 Ctrl+S">${ICONS.save}<span>保存</span></button>
+    <button class="tbtn" data-a="clear" title="清空">${ICONS.clear}</button>
+    <button class="tbtn" data-a="tab" title="在新标签页打开">${ICONS.newWin}</button>
+    <button class="tbtn br-open hidden" data-a="browser" title="在浏览器应用中打开">${ICONS.appBrowser}<span>浏览器打开</span></button>
+  </div>
+  <div class="findbar">
+    <span style="display:contents;color:var(--mut)">${ICONS.find}</span>
+    <input class="fq" placeholder="查找…">
+    <span class="fcount">0/0</span>
+    <button class="fbtn" data-f="up" title="上一个 Shift+Enter">${ICONS.up}</button>
+    <button class="fbtn" data-f="dn" title="下一个 Enter">${ICONS.chevD}</button>
+    <button class="fbtn tog" data-f="aa" title="区分大小写">Aa</button>
+    <button class="fbtn tog" data-f="w" title="全词匹配">W</button>
+    <button class="fbtn tog" data-f="re" title="正则表达式">.*</button>
+    <span class="tsep"></span>
+    <input class="fr" placeholder="替换为…">
+    <button class="fbtn" data-f="one">替换</button>
+    <button class="fbtn" data-f="all">全部</button>
+    <span class="tsp"></span>
+    <button class="fbtn" data-f="x" title="关闭 Esc">${ICONS.close}</button>
+  </div>
+  <div class="ed-main">
+    <div class="ed-code"><textarea class="ed-ta" spellcheck="false"></textarea></div>
+    <div class="ed-split" title="拖动调整"></div>
+    <div class="ed-prev">
+      <div class="ed-prev-hd"><span style="display:contents">${ICONS.eye}</span><span>实时预览</span><span style="flex:1"></span><span class="pv-st" style="font-family:var(--font-m);font-size:10.5px"></span></div>
+      <iframe sandbox="allow-scripts allow-forms allow-same-origin allow-popups allow-modals allow-top-navigation allow-popups-to-escape-sandbox"></iframe>
+    </div>
+  </div>
+  <div class="ed-status"><span class="s-pos">行 1, 列 1</span><span class="s-sel"></span><span class="s-lines"></span><span class="s-chars"></span><span class="tsp"></span><span class="s-mode">HTML</span><span>UTF-8</span></div>`;
+  const ta=$('.ed-ta',root),frame=$('iframe',root),modeSel=$('.mode',root);
+  ED_MODES.forEach(([v,l])=>{const o=el('option');o.value=v;o.textContent=l;modeSel.appendChild(o)});
+  let cm=null;
+  const hasCM=!!window.CodeMirror;
+  if(hasCM){
+    cm=CodeMirror.fromTextArea(ta,{
+      mode:'htmlmixed',theme:'material-darker',lineNumbers:true,lineWrapping:true,
+      styleActiveLine:true,showTrailingSpace:true,matchBrackets:true,autoCloseBrackets:true,
+      matchTags:{bothTags:true},autoCloseTags:true,
+      foldGutter:true,gutters:['CodeMirror-linenumbers','CodeMirror-foldgutter'],
+      extraKeys:{
+        'Ctrl-Enter':()=>runPrev(),
+        'Ctrl-S':()=>save(),
+        'Ctrl-Shift-F':()=>fmt(),
+        'Ctrl-F':()=>openFind(false),
+        'Ctrl-H':()=>openFind(true),
+        'Ctrl-Z':()=>cm.undo(),'Ctrl-Y':()=>cm.redo()
+      }
+    });
+    cm.on('change',()=>{onEdit()});
+    cm.on('cursorActivity',()=>{updStatus()});
+  }else{
+    ta.style.cssText='flex:1;width:100%;border:none;background:#212121;color:#eee;padding:12px;font-family:var(--font-m);font-size:13px;resize:none;user-select:text;-webkit-user-select:text';
+    ta.addEventListener('input',onEdit);
+    ta.addEventListener('keydown',e=>{
+      if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();save()}
+      if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();runPrev()}
+    });
+    ui.toast('CodeMirror 加载失败，已启用纯文本编辑模式','warn',5000);
+  }
+  const getVal=()=>cm?cm.getValue():ta.value;
+  const setVal=v=>{if(cm)cm.setValue(v);else ta.value=v};
+  function curMode(){return modeSel.value}
+  function setMode(m){modeSel.value=m;if(cm){cm.setOption('mode',m)}updStatus();$('.br-open',root).classList.toggle('hidden',m!=='htmlmixed')}
+  modeSel.addEventListener('change',()=>setMode(modeSel.value));
+  /* ---- 预览 ---- */
+  function wrapForPrev(code,mode){
+    if(mode==='htmlmixed'||mode==='xml')return code;
+    if(mode==='css')return`<!DOCTYPE html><html><head><meta charset="utf-8"><style>${code}</style></head><body><h3>CSS 预览</h3><p>样式已应用到本页。示例元素：<button>按钮</button> <a href="#">链接</a></p><div style="padding:16px;border:1px dashed #aaa;margin-top:10px">容器</div></body></html>`;
+    if(mode==='javascript')return`<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="font-family:monospace;padding:14px"><script>window.onerror=function(m){document.body.insertAdjacentHTML('beforeend','<pre style="color:#c0392b">'+m+'</pre>')};<\/script><script>${code}<\/script></body></html>`;
+    if(mode==='application/json')return`<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{font-family:monospace;padding:14px;white-space:pre-wrap}</style></head><body>${esc(code)}</body></html>`;
+    return`<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{font-family:system-ui;padding:20px;line-height:1.8;max-width:720px;margin:auto}</style></head><body>${esc(code).replace(/^### (.*)$/gm,'<h3>$1</h3>').replace(/^## (.*)$/gm,'<h2>$1</h2>').replace(/^# (.*)$/gm,'<h1>$1</h1>').replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/\n/g,'<br>')}</body></html>`;
+  }
+  let prevBlobs=[];
+  function refreshPrev(){
+    const code=wrapForPrev(getVal(),curMode());
+    $('.pv-st',root).textContent='渲染中…';
+    try{
+      const doc=frame.contentDocument;
+      doc.open();doc.write(code);doc.close();
+      $('.pv-st',root).textContent='DOM 直写';
+    }catch(e){
+      const u=URL.createObjectURL(new Blob([code],{type:'text/html'}));prevBlobs.push(u);
+      frame.src=u;$('.pv-st',root).textContent='Blob 回退';
+    }
+  }
+  const runPrev=()=>{refreshPrev();ui.toast('已运行','ok',1000)};
+  const debPrev=debounce(()=>{if(st.auto)refreshPrev()},600);
+  function onEdit(){debPrev();updStatus()}
+  /* ---- 状态栏 ---- */
+  function updStatus(){
+    const v=getVal();
+    let line=1,ch=1,selc=0;
+    if(cm){const c=cm.getCursor();line=c.line+1;ch=c.ch+1;selc=cm.getSelection().length}
+    else{const p=ta.selectionStart;const pre=v.slice(0,p).split('\n');line=pre.length;ch=pre[pre.length-1].length+1;selc=ta.selectionEnd-ta.selectionStart}
+    $('.s-pos',root).textContent=`行 ${line}, 列 ${ch}`;
+    $('.s-sel',root).textContent=selc?`已选 ${selc} 字符`:'';
+    $('.s-lines',root).textContent=`${v.split('\n').length} 行`;
+    $('.s-chars',root).textContent=`${v.length} 字符`;
+    $('.s-mode',root).textContent=ED_MODES.find(m=>m[0]===curMode())?.[1]||curMode();
+  }
+  /* ---- 查找替换 ---- */
+  const fb=$('.findbar',root),fq=$('.fq',root),fr=$('.fr',root);
+  const fstate={aa:false,w:false,re:false};
+  function openFind(repl){fb.classList.add('open');(repl?fr:fq).focus();(repl?fr:fq).select&& (repl?fr:fq).select();doSearch()}
+  function closeFind(){fb.classList.remove('open');clearMarks();cm&&cm.focus()}
+  function clearMarks(){st.marks.forEach(m=>m.clear());st.marks=[];st.ranges=[];st.idx=-1;$('.fcount',root).textContent='0/0'}
+  function buildQuery(){
+    const q=fq.value;
+    if(fstate.re){try{return new RegExp(q,fstate.aa?'m':'im')}catch(e){$('.fcount',root).textContent='无效正则';return null}}
+    let s=q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+    if(fstate.w)s='\\b'+s+'\\b';
+    return new RegExp(s,fstate.aa?'gm':'gim');
+  }
+  function doSearch(){
+    clearMarks();
+    const q=fq.value;if(!q||!cm)return;
+    const rx=buildQuery();if(!rx)return;
+    const cur=cm.getSearchCursor(rx,{line:0,ch:0});
+    while(cur.findNext()){
+      if(st.ranges.length>2000)break;
+      st.ranges.push({from:cur.from(),to:cur.to()});
+    }
+    st.marks=st.ranges.map(r=>cm.markText(r.from,r.to,{className:'mk'}));
+    const c=cm.getCursor();
+    st.idx=st.ranges.findIndex(r=>CodeMirror.cmpPos(r.from,c)>=0);
+    if(st.idx<0&&st.ranges.length)st.idx=0;
+    paintCur();
+  }
+  function paintCur(){
+    st.marks.forEach((m,i)=>{m.clear();const r=st.ranges[i];st.marks[i]=cm.markText(r.from,r.to,{className:i===st.idx?'mk cur':'mk'})});
+    if(st.idx>=0&&st.ranges[st.idx]){cm.setCursor(st.ranges[st.idx].from);cm.scrollIntoView(st.ranges[st.idx],80)}
+    $('.fcount',root).textContent=st.ranges.length?`${st.idx+1}/${st.ranges.length}`:`0/${st.ranges.length}`;
+  }
+  function nav(d){if(!st.ranges.length){doSearch();return}st.idx=(st.idx+d+st.ranges.length)%st.ranges.length;paintCur()}
+  function repOne(){
+    if(st.idx<0||!st.ranges[st.idx])return;
+    const r=st.ranges[st.idx];
+    cm.replaceRange(fr.getValue?fr.getValue():fr.value,r.from,r.to);
+    doSearch();
+  }
+  function repAll(){
+    if(!st.ranges.length){doSearch()}
+    let n=0;
+    for(let i=st.ranges.length-1;i>=0;i--){const r=st.ranges[i];cm.replaceRange(fr.value,r.from,r.to);n++}
+    ui.toast(`已替换 ${n} 处`,'ok');doSearch();
+  }
+  fq.addEventListener('input',debounce(doSearch,150));
+  fq.addEventListener('keydown',e=>{
+    e.stopPropagation();
+    if(e.key==='Enter'){e.preventDefault();nav(e.shiftKey?-1:1)}
+    if(e.key==='F3'){e.preventDefault();nav(1)}
+    if(e.key==='Escape')closeFind();
+  });
+  fr.addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter'){e.preventDefault();repOne()}if(e.key==='Escape')closeFind()});
+  $$('.fbtn',fb).forEach(b=>b.onclick=()=>{
+    const a=b.dataset.f;
+    if(a==='up')nav(-1);if(a==='dn')nav(1);
+    if(a==='aa'||a==='w'||a==='re'){fstate[a]=!fstate[a];b.classList.toggle('on',fstate[a]);doSearch()}
+    if(a==='one')repOne();if(a==='all')repAll();
+    if(a==='x')closeFind();
+  });
+  /* ---- 格式化 ---- */
+  function fmt(){
+    if(!cm){ui.toast('纯文本模式不支持格式化','warn');return}
+    const mode=curMode(),v=getVal();
+    const pos=cm.indexFromPos(cm.getCursor());
+    const opt={indent_size:2,max_preserve_newlines:2,end_with_newline:true};
+    let out=v;
+    try{
+      if((mode==='htmlmixed'||mode==='xml')&&window.html_beautify)out=html_beautify(v,{...opt,indent_inner_html:true,wrap_line_length:120});
+      else if(mode==='css'&&window.css_beautify)out=css_beautify(v,opt);
+      else if(mode==='javascript'&&window.js_beautify)out=js_beautify(v,opt);
+      else if(mode==='application/json'){out=JSON.stringify(JSON.parse(v),null,2)+'\n'}
+      else{ui.toast('该语言暂不支持格式化','warn');return}
+    }catch(e){ui.toast('格式化失败：'+e.message,'err');return}
+    cm.setValue(out);
+    try{cm.setCursor(cm.posFromIndex(Math.min(pos,out.length)))}catch(e){}
+    ui.toast('已格式化','ok',1200);
+  }
+  /* ---- 保存 ---- */
+  async function save(){
+    let p=st.path;
+    if(!p){
+      const n=await ui.prompt('保存为（含扩展名）','untitled.'+edExtFor(curMode()),'保存到 '+(fs.norm(st.dir)||'/'));
+      if(!n)return;
+      p=joinPath(fs.norm(st.dir)||'/',n);
+    }
+    try{
+      await fs.writeFile(p,getVal());st.path=p;st.dir=dirName(p);
+      root._setTitle&&root._setTitle(baseName(p)+' — HTML编辑器');
+      $('.br-open',root).classList.toggle('hidden',extOf(p)!=='html'&&extOf(p)!=='htm');
+      ui.toast('已保存到 '+p,'ok');
+    }catch(e){ui.toast('保存失败：'+e.message,'err')}
+  }
+  /* ---- 工具栏 ---- */
+  const impInp=el('input');impInp.type='file';impInp.className='hidden';root.appendChild(impInp);
+  $$('[data-a]',root).forEach(b=>b.onclick=async()=>{
+    const a=b.dataset.a;
+    if(a==='run')runPrev();
+    if(a==='prev')refreshPrev();
+    if(a==='auto'){st.auto=!st.auto;b.classList.toggle('on',st.auto);if(st.auto)refreshPrev()}
+    if(a==='fmt')fmt();
+    if(a==='fold'&&cm){for(let i=0;i<cm.lineCount();i++)cm.foldCode({line:i,ch:0},null,'fold')}
+    if(a==='unfold'&&cm){for(let i=0;i<cm.lineCount();i++)cm.foldCode({line:i,ch:0},null,'unfold')}
+    if(a==='find')openFind(false);
+    if(a==='repl')openFind(true);
+    if(a==='undo')cm?cm.undo():document.execCommand('undo');
+    if(a==='redo')cm?cm.redo():document.execCommand('redo');
+    if(a==='import')impInp.click();
+    if(a==='export'){
+      const ext=edExtFor(curMode());
+      const u=URL.createObjectURL(new Blob([getVal()],{type:'text/plain'}));
+      const an=el('a');an.href=u;an.download='code.'+ext;an.click();setTimeout(()=>URL.revokeObjectURL(u),6000);
+    }
+    if(a==='save')save();
+    if(a==='clear'){if(await ui.confirm('清空全部编辑器内容？')){setVal('');refreshPrev()}}
+    if(a==='tab'){const u=URL.createObjectURL(new Blob([wrapForPrev(getVal(),curMode())],{type:'text/html'}));window.open(u,'_blank');setTimeout(()=>URL.revokeObjectURL(u),60000)}
+    if(a==='browser'){const u=URL.createObjectURL(new Blob([getVal()],{type:'text/html'}));prevBlobs.push(u);launchApp('browser',u)}
+  });
+  impInp.addEventListener('change',async()=>{
+    const f=impInp.files[0];if(!f)return;
+    setVal(await f.text());setMode(edModeFor(extOf(f.name)));refreshPrev();
+    ui.toast('已导入 '+f.name,'ok');
+  });
+  /* ---- 分割条 ---- */
+  const split=$('.ed-split',root),codeEl=$('.ed-code',root),mainEl=$('.ed-main',root);
+  split.addEventListener('pointerdown',e=>{
+    split.classList.add('on');split.setPointerCapture(e.pointerId);
+    const rect=mainEl.getBoundingClientRect();
+    const mv=ev=>{
+      const w=clamp(ev.clientX-rect.left,200,rect.width-120-6);
+      codeEl.style.flex='none';codeEl.style.width=w+'px';
+    };
+    const up=()=>{split.classList.remove('on');split.removeEventListener('pointermove',mv);split.removeEventListener('pointerup',up);cm&&cm.refresh()};
+    split.addEventListener('pointermove',mv);split.addEventListener('pointerup',up);
+  });
+  bus.on('resize',root._rz=()=>{cm&&cm.refresh()});
+  /* ---- 载入文件 ---- */
+  (async()=>{
+    if(st.path){
+      try{const t=await fs.readText(st.path);setVal(t);setMode(edModeFor(extOf(st.path)));if(extOf(st.path)==='html'||extOf(st.path)==='htm')$('.br-open',root).classList.remove('hidden')}
+      catch(e){ui.toast('读取失败：'+e.message,'err')}
+    }else setMode('htmlmixed');
+    updStatus();refreshPrev();
+    if(isMobile())$('.ed-prev',root).style.display='none';
+  })();
+  return{el:root,cleanup(){bus.off('resize',root._rz);if(cm){try{cm.toTextArea()}catch(e){}}prevBlobs.forEach(u=>URL.revokeObjectURL(u))}};
+}
+regApp('code',{name:'代码编辑器',icon:'appCode',color:APP_COLORS.code,kw:'html editor 代码 编辑 ide',launch:async path=>{
+  let p=null;
+  if(typeof path==='string'&&path){try{const s=await fs.stat(path);if(!s.isDirectory)p=path}catch(e){}}
+  const ed=buildEditor(p);
+  const w=wm.create({app:'code',title:(p?baseName(p)+' — ':'')+'HTML编辑器',icon:'appCode',type:'editor',w:1000,h:650,content:ed.el,onClose:ed.cleanup,minW:520,minH:360});
+  ed.el._setTitle=t=>w.setTitle(t);
+}});
+/* ================= 归档 / 压缩工具 ================= */
+async function gunzip(buf){
+  const ds=new DecompressionStream('gzip');
+  return await new Response(new Blob([buf]).stream().pipeThrough(ds)).arrayBuffer();
+}
+async function parseTar(buf){
+  const u8=new Uint8Array(buf),dec=new TextDecoder(),files=[];let off=0;
+  while(off+512<=u8.length){
+    const h=u8.subarray(off,off+512);
+    if(h.every(b=>b===0))break;
+    let name=dec.decode(h.subarray(0,100)).replace(/\0.*$/,'');
+    const prefix=dec.decode(h.subarray(345,500)).replace(/\0.*$/,'');
+    const sizeStr=dec.decode(h.subarray(124,136)).replace(/[^\d]/g,'');
+    const size=parseInt(sizeStr||'0',8);
+    const type=String.fromCharCode(h[156]);
+    off+=512;
+    const full=(prefix?prefix+'/':'')+name;
+    if(type==='L'&&size>0){name=dec.decode(u8.subarray(off,off+size)).replace(/\0.*$/,'')}
+    else if(type==='0'||type==='\0'){files.push({name:full.replace(/^\.\//,''),size,data:u8.slice(off,off+size).buffer})}
+    else if(type==='5'){files.push({name:full.replace(/\/$/,'').replace(/^\.\//,''),dir:true})}
+    off+=Math.ceil(size/512)*512;
+  }
+  return files;
+}
+function buildArchiver(path){
+  const st={path,entries:[]};
+  const root=el('div','zp');
+  root.innerHTML=`
+  <div class="tb">
+    <span style="font-size:12.5px;color:var(--mut);padding:0 6px" class="cnt"></span>
+    <span class="tsp"></span>
+    <button class="tbtn" data-a="here">${ICONS.export}<span>解压到当前目录</span></button>
+    <button class="tbtn" data-a="folder">${ICONS.folderOpen}<span>解压到文件夹</span></button>
+  </div>
+  <div class="prog" style="margin:8px 12px 0"><i></i></div>
+  <div class="zp-list"></div>
+  <div class="sb"><span class="hint">支持 zip / gz / tar / tar.gz / tgz / 7z（7z 需在线引擎）</span></div>`;
+  const listEl=$('.zp-list',root),bar=$('.prog i',root);
+  const kind=extOf(path);
+  function renderList(){
+    listEl.innerHTML='';
+    st.entries.slice(0,800).forEach(en=>{
+      const r=el('div','zp-it');
+      r.innerHTML=`<span style="display:contents">${ICONS[en.dir?'folder':fileIconName(en.name)]}</span><span class="p">${esc(en.name||'/')}</span><span class="s">${en.dir?'目录':fmtSize(en.size)}</span>`;
+      listEl.appendChild(r);
+    });
+    if(st.entries.length>800)listEl.appendChild(el('div','zp-it','<span class="p">… 其余 '+(st.entries.length-800)+' 项未显示</span>'));
+    $('.cnt',root).textContent=`${st.entries.length} 个条目 · ${kind.toUpperCase()}`;
+  }
+  async function load(){
+    try{
+      if(kind==='zip'){
+        if(typeof JSZip==='undefined')throw new Error('JSZip 未加载，请检查网络后刷新');
+        const zip=await JSZip.loadAsync(await fs.readFile(path));
+        zip.forEach((rel,f)=>st.entries.push({name:rel,dir:f.dir,size:f.dir?0:(f._data&&f._data.uncompressedSize)||0,zip:f}));
+      }else if(kind==='gz'&&!/\.tar\.gz$/.test(path)&&kind!=='tgz'){
+        const out=await gunzip(await fs.readBuffer(path));
+        st.entries.push({name:baseName(path).replace(/\.gz$/i,''),size:out.byteLength,gzData:out});
+      }else if(kind==='tar'||kind==='tgz'||/\.tar\.gz$/.test(path)){
+        let buf=await fs.readBuffer(path);
+        if(kind!=='tar')buf=await gunzip(buf);
+        st.entries=await parseTar(buf);
+      }else if(kind==='7z'){
+        st.entries=await load7z();
+      }else throw new Error('不支持的压缩格式 .'+kind);
+      renderList();
+    }catch(e){listEl.innerHTML=`<div style="padding:24px;color:var(--danger);font-size:13px">${ICONS.err} 读取失败：${esc(e.message)}</div>`}
+  }
+  async function load7z(){
+    const mod=await import('https://cdn.jsdelivr.net/npm/7z-wasm@1.2.0/7zz.es6.min.js');
+    const S=mod.default||mod;
+    await S.loadFS();
+    const fn='arc_'+Date.now()+'.7z';
+    S.FS.writeFile('/'+fn,new Uint8Array(await fs.readBuffer(path)));
+    S.callMain(['x','-y','/'+fn,'-o/out']);
+    const out=[];
+    const walk=d=>{
+      const node=S.FS.lookupPath(d).node;
+      const ents=S.FS.readdir(d);
+      for(const en of ents){if(en==='.'||en==='..')continue;const p=d==='/'?'/'+en:d+'/'+en;const stt=S.FS.stat(p);
+        if(S.FS.isDir(stt.mode))walk(p);else out.push({name:p.replace(/^\//,''),size:stt.size,memPath:p})}
+    };
+    walk('/out');
+    out._S=S;
+    st._S=S;st._out=out;
+    return out;
+  }
+  const setP=v=>bar.style.width=(v*100)+'%';
+  async function extract(toFolder){
+    const base=dirName(st.path);
+    const stem=baseName(st.path).replace(/\.(zip|gz|tar|tgz|7z)$/i,'').replace(/\.tar$/i,'');
+    const target=toFolder?joinPath(base,await uniqueName(base,stem)):base;
+    if(toFolder)await fs.mkdir(target).catch(()=>{});
+    let n=0;const total=st.entries.length||1;
+    const tick=ui.toast('正在解压…','info',120000);
+    try{
+      for(const en of st.entries){
+        if(en.dir){await fs.mkdir(joinPath(target,en.name)).catch(()=>{});continue}
+        const clean=en.name.replace(/^[\\/]+/,'');if(!clean||clean.includes('..'))continue;
+        let data;
+        if(en.zip)data=await en.zip.async('arraybuffer');
+        else if(en.gzData)data=en.gzData;
+        else if(en.memPath)data=Sread(st._S,en.memPath);
+        else if(en.data)data=en.data;
+        else continue;
+        await fs.writeFile(joinPath(target,clean),data);
+        n++;setP(n/total);
+      }
+      ui.toast(`解压完成：${n} 个文件 → ${target}`,'ok');
+    }catch(e){ui.toast('解压失败：'+e.message,'err')}
+    tick.remove();
+  }
+  function Sread(S,p){const buf=S.FS.readFile(p);return buf.buffer.slice(buf.byteOffset,buf.byteOffset+buf.byteLength)}
+  $$('[data-a]',root).forEach(b=>b.onclick=()=>extract(b.dataset.a==='folder'));
+  load();
+  return{el:root};
+}
+regApp('zip',{name:'压缩归档',icon:'appZip',color:APP_COLORS.zip,kw:'zip tar gz 7z 解压 压缩',launch:async path=>{
+  const z=buildArchiver(path);
+  wm.create({app:'zip',title:baseName(path)+' — 归档',icon:'appZip',w:620,h:460,content:z.el,minW:380});
+}});
+/* ================= 计算器 ================= */
+function buildCalc(){
+  const st={expr:'',last:null,tape:[]};
+  const root=el('div','calc');
+  root.innerHTML=`
+  <div class="calc-main">
+    <div class="c-disp"><div class="c-expr"></div><div class="c-num">0</div></div>
+    <div class="c-grid">
+      <button class="ck fn" data-k="C">C</button><button class="ck fn" data-k="(">(</button><button class="ck fn" data-k=")">)</button><button class="ck op" data-k="÷">÷</button>
+      <button class="ck" data-k="7">7</button><button class="ck" data-k="8">8</button><button class="ck" data-k="9">9</button><button class="ck op" data-k="×">×</button>
+      <button class="ck" data-k="4">4</button><button class="ck" data-k="5">5</button><button class="ck" data-k="6">6</button><button class="ck op" data-k="−">−</button>
+      <button class="ck" data-k="1">1</button><button class="ck" data-k="2">2</button><button class="ck" data-k="3">3</button><button class="ck op" data-k="+">+</button>
+      <button class="ck" data-k="0">0</button><button class="ck" data-k=".">.</button><button class="ck fn" data-k="%">%</button><button class="ck eq" data-k="=">=</button>
+    </div>
+  </div>
+  <div class="c-tape"><h4>计算带</h4><div class="tlist" style="display:flex;flex-direction:column;gap:4px"></div></div>`;
+  const numEl=$('.c-num',root),exprEl=$('.c-expr',root);
+  function paint(){numEl.textContent=st.expr||'0';exprEl.textContent=st.last||''}
+  function evalIt(){
+    const src=st.expr.replace(/×/g,'*').replace(/÷/g,'/').replace(/−/g,'-').replace(/%/g,'/100');
+    if(!/^[\d+\-*/()./\s]*$/.test(src))return'表达式有误';
+    try{const v=Function('"use strict";return('+src+')')();
+      if(typeof v!=='number'||!isFinite(v))return'无法计算';
+      const r=Math.round(v*1e12)/1e12;
+      st.tape.unshift({e:st.expr+' =',r});st.tape=st.tape.slice(0,30);
+      paintTape();st.last=st.expr+' =';st.expr=String(r);return null;
+    }catch(e){return'表达式有误'}
+  }
+  function paintTape(){const t=$('.tlist',root);t.innerHTML='';st.tape.forEach(it=>{const d=el('div','tp-it');d.innerHTML=`<span>${esc(it.e)}</span><b>${esc(String(it.r))}</b>`;d.onclick=()=>{st.expr=String(it.r);paint()};t.appendChild(d)})}
+  function press(k){
+    if(k==='C'){st.expr='';st.last='';paint();return}
+    if(k==='='){const err=evalIt();if(err){st.last=err}paint();return}
+    if(st.expr==='0'&&/\d/.test(k))st.expr='';
+    st.expr+=k;paint();
+  }
+  $$('.ck',root).forEach(b=>b.onclick=()=>{press(b.dataset.k);b.blur()});
+  root.tabIndex=0;
+  root.addEventListener('keydown',e=>{
+    const m={'*':'×','/':'÷','-':'−','Enter':'=','Backspace':'BS','Escape':'C'};
+    const k=m[e.key]||e.key;
+    if(k==='BS'){st.expr=st.expr.slice(0,-1);paint();e.preventDefault();return}
+    if(/^[\d+\-×÷().%]$/.test(k)||k==='='||k==='C'){press(k);e.preventDefault()}
+  });
+  paint();
+  return{el:root,focus:()=>root.focus()};
+}
+regApp('calc',{name:'计算器',icon:'appCalc',color:APP_COLORS.calc,kw:'calculator 计算',launch:()=>{
+  const c=buildCalc();
+  const w=wm.create({app:'calc',title:'计算器',icon:'appCalc',w:470,h:430,content:c.el,minW:320,noResize:false});
+  c.focus();
+}});
+/* ================= 画板 ================= */
+function buildPaint(){
+  const W=900,H=560;
+  const st={tool:'brush',color:'#212B22',size:6,stack:[]};
+  const root=el('div','pt');
+  root.innerHTML=`
+  <div class="tb">
+    <button class="tbtn on" data-t="brush" title="画笔">${ICONS.brush}</button>
+    <button class="tbtn" data-t="eraser" title="橡皮擦">${ICONS.eraser}</button>
+    <span class="tsep"></span>
+    <input type="range" min="1" max="40" value="6" class="sz" style="width:90px">
+    <span class="szv" style="font-size:11px;color:var(--mut);font-family:var(--font-m);width:26px">6</span>
+    <span class="tsep"></span>
+    <span class="pt-colors"></span>
+    <input type="color" class="cc" value="#212B22" style="width:30px;height:26px;border:none;background:none;padding:0">
+    <span class="tsp"></span>
+    <button class="tbtn" data-a="undo">${ICONS.undo}</button>
+    <button class="tbtn" data-a="clear">${ICONS.clear}</button>
+    <button class="tbtn" data-a="save">${ICONS.save}<span>存入图片</span></button>
+    <button class="tbtn" data-a="dl">${ICONS.download}</button>
+  </div>
+  <div class="pt-area"><canvas width="${W}" height="${H}"></canvas></div>
+  <div class="sb"><span class="tl">画笔 · 6px</span><span class="tsp"></span><span>${W} × ${H}</span></div>`;
+  const cv=$('canvas',root),cx=cv.getContext('2d');
+  cx.fillStyle='#fff';cx.fillRect(0,0,W,H);cx.lineCap='round';cx.lineJoin='round';
+  const palette=['#212B22','#C6473E','#D96B4A','#E9BE00','#7C9A3D','#4E9B62','#2B6E9E','#7C8794','#8E5BA6','#ffffff'];
+  const colorsEl=$('.pt-colors',root);
+  palette.forEach(c=>{
+    const b=el('span','swb'+(c===st.color?' on':''));b.style.background=c;
+    b.onclick=()=>{st.color=c;st.tool='brush';$$('.swb',colorsEl).forEach(x=>x.classList.remove('on'));b.classList.add('on');$$('[data-t]',root).forEach(x=>x.classList.toggle('on',x.dataset.t==='brush'))};
+    colorsEl.appendChild(b);
+  });
+  $('.cc',root).addEventListener('input',e=>{st.color=e.target.value;st.tool='brush'});
+  $('.sz',root).addEventListener('input',e=>{st.size=+e.target.value;$('.szv',root).textContent=st.size;$('.tl',root).textContent=`${st.tool==='brush'?'画笔':'橡皮'} · ${st.size}px`});
+  $$('[data-t]',root).forEach(b=>b.onclick=()=>{st.tool=b.dataset.t;$$('[data-t]',root).forEach(x=>x.classList.toggle('on',x===b));$('.tl',root).textContent=`${st.tool==='brush'?'画笔':'橡皮'} · ${st.size}px`});
+  function push(){st.stack.push(cv.toDataURL());if(st.stack.length>15)st.stack.shift()}
+  let drawing=null;
+  cv.addEventListener('pointerdown',e=>{
+    push();cv.setPointerCapture(e.pointerId);
+    const r=cv.getBoundingClientRect();
+    drawing={x:(e.clientX-r.left)*(W/r.width),y:(e.clientY-r.top)*(H/r.height)};
+    cx.beginPath();cx.moveTo(drawing.x,drawing.y);
+    cx.strokeStyle=st.tool==='eraser'?'#fff':st.color;
+    cx.lineWidth=st.tool==='eraser'?st.size*2.2:st.size;
+    cx.lineTo(drawing.x+0.01,drawing.y+0.01);cx.stroke();
+  });
+  cv.addEventListener('pointermove',e=>{
+    if(!drawing)return;
+    const r=cv.getBoundingClientRect();
+    const x=(e.clientX-r.left)*(W/r.width),y=(e.clientY-r.top)*(H/r.height);
+    cx.lineTo(x,y);cx.stroke();
+  });
+  const end=()=>drawing=null;
+  cv.addEventListener('pointerup',end);cv.addEventListener('pointercancel',end);
+  $$('[data-a]',root).forEach(b=>b.onclick=async()=>{
+    const a=b.dataset.a;
+    if(a==='undo'&&st.stack.length){const img=new Image();img.onload=()=>{cx.clearRect(0,0,W,H);cx.drawImage(img,0,0)};img.src=st.stack.pop()}
+    if(a==='clear'){push();cx.fillStyle='#fff';cx.fillRect(0,0,W,H)}
+    if(a==='save'){cv.toBlob(async bl=>{const n=await uniqueName('/图片','画作_'+new Date().toLocaleDateString('zh-CN').replace(/\//g,'-')+'.png');await fs.writeFile(joinPath('/图片',n),bl);ui.toast('已保存到 /图片/'+n,'ok')},'image/png')}
+    if(a==='dl'){cv.toBlob(bl=>{const u=URL.createObjectURL(bl);const an=el('a');an.href=u;an.download='画作.png';an.click();setTimeout(()=>URL.revokeObjectURL(u),6000)},'image/png')}
+  });
+  return{el:root};
+}
+regApp('paint',{name:'画板',icon:'appPaint',color:APP_COLORS.paint,kw:'paint draw 画图 绘图',launch:()=>{
+  const p=buildPaint();
+  wm.create({app:'paint',title:'画板',icon:'appPaint',w:860,h:600,content:p.el,minW:380});
+}});
+/* ================= 虚拟机（V86） ================= */
+const VM_CDN={wasm:'https://cdn.jsdelivr.net/npm/v86@0.5.319/build/v86.wasm',bios:'https://cdn.jsdelivr.net/gh/copy/v86@bbb2a5b4fd44e85d902792f9b93ec3e0d42e1b0f/bios/seabios.bin',vga:'https://cdn.jsdelivr.net/gh/copy/v86@bbb2a5b4fd44e85d902792f9b93ec3e0d42e1b0f/bios/vgabios.bin'};
+function buildVM(){
+  const st={emu:null,locked:false};
+  const root=el('div','vm');
+  root.innerHTML=`
+  <div class="tb" style="background:#151b20;border-color:#232a31">
+    <button class="tbtn" data-a="pick" style="color:#cfd6cd">${ICONS.disk}<span>选择镜像</span></button>
+    <span class="img-n" style="font-size:12px;color:#9aa39b;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+    <span class="tsp"></span>
+    <button class="tbtn" data-a="boot" style="color:#cfd6cd">${ICONS.power}<span>启动</span></button>
+    <button class="tbtn" data-a="stop" style="color:#cfd6cd" disabled>${ICONS.close}<span>停止</span></button>
+    <button class="tbtn" data-a="lock" style="color:#cfd6cd">${ICONS.lockM}<span>锁定鼠标</span></button>
+    <button class="tbtn" data-a="cad" style="color:#cfd6cd">Ctrl+Alt+Del</button>
+    <button class="tbtn" data-a="fs" style="color:#cfd6cd">${ICONS.expand}</button>
+  </div>
+  <div class="vm-screen">
+    <div id="vmsc_${uid()}" style="white-space: pre; font: 14px monospace; background:#0c0f12"><canvas style="display: none"></canvas></div>
+    <div class="vm-idle" style="position:absolute;inset:0;display:grid;place-items:center;color:#5f6b64;font-size:13px;pointer-events:none;text-align:center;padding:20px">
+      <div><div style="margin-bottom:10px;display:flex;justify-content:center;color:#39424b"><svg viewBox="0 0 24 24" width="46" height="46" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg></div>选择 .iso / .img / .bin 镜像后点击启动<br><span style="font-size:11px;color:#48524b">镜像需来自本地或虚拟文件系统，系统不会加载任何外部镜像地址</span></div>
+    </div>
+  </div>
+  <div class="vm-note">规则：.iso 挂载为光驱 · .img/.bin 挂载为软驱 · 其余挂载为硬盘。按 Esc 可解除鼠标锁定。</div>`;
+  const sc=$('[id^=vmsc_]',root);
+  const inp=el('input');inp.type='file';inp.className='hidden';inp.accept='.iso,.img,.bin,.fda';root.appendChild(inp);
+  let imgBuf=null,imgName='';
+  inp.addEventListener('change',async()=>{
+    const f=inp.files[0];if(!f)return;
+    imgName=f.name;$('.img-n',root).textContent=f.name+' ('+fmtSize(f.size)+')';
+    imgBuf=await f.arrayBuffer();
+    ui.toast('镜像已载入，可以启动','ok');
+  });
+  function devFor(name){
+    const e=extOf(name);
+    if(e==='iso')return{cdrom:{buffer:imgBuf}};
+    if(e==='img'||e==='fda'||e==='bin')return{fda:{buffer:imgBuf}};
+    return{hda:{buffer:imgBuf}};
+  }
+  $$('[data-a]',root).forEach(b=>b.onclick=async()=>{
+    const a=b.dataset.a;
+    if(a==='pick')inp.click();
+    if(a==='boot'){
+      if(!imgBuf){ui.toast('请先选择镜像文件','warn');return}
+      if(!window.V86){ui.toast('V86 引擎尚未加载完成（或加载失败），请稍候重试','err');return}
+      if(st.emu){try{st.emu.destroy()}catch(e){} st.emu=null}
+      $('.vm-idle',root).style.display='none';
+      try{
+        st.emu=new V86Starter({
+          wasm_path:VM_CDN.wasm,
+          memory_size:64*1024*1024,
+          vga_memory_size:8*1024*1024,
+          screen_container:sc,
+          bios:{url:VM_CDN.bios},
+          vga_bios:{url:VM_CDN.vga},
+          autostart:true,
+          ...devFor(imgName)
+        });
+        $$('[data-a=stop]',root).forEach(x=>x.disabled=false);
+        ui.toast('虚拟机已启动','ok');
+      }catch(e){ui.toast('启动失败：'+e.message,'err');$('.vm-idle',root).style.display='grid'}
+    }
+    if(a==='stop'&&st.emu){try{st.emu.stop()}catch(e){} ui.toast('已停止','ok')}
+    if(a==='lock'&&st.emu){
+      if(!st.locked){try{st.emu.lock_mouse()}catch(e){} st.locked=true;ui.toast('鼠标已锁定，按 Esc 释放','ok',2200)}
+      else{try{st.emu.mouse_unlock()}catch(e){} st.locked=false}
+    }
+    if(a==='cad'&&st.emu){try{st.emu.keyboard_send_scancodes([0x1d,0x38,0x53,0xd3,0xb8,0x9d])}catch(e){}}
+    if(a==='fs')root._win&&root._win.fullEl();
+  });
+  document.addEventListener('pointerlockchange',st._pl=()=>{if(!document.pointerLockElement)st.locked=false});
+  return{el:root,cleanup(){document.removeEventListener('pointerlockchange',st._pl);if(st.emu){try{st.emu.destroy()}catch(e){}}}};
+}
+regApp('vm',{name:'虚拟机',icon:'appVm',color:APP_COLORS.vm,kw:'v86 virtual machine 虚拟机',launch:()=>{
+  const v=buildVM();
+  const w=wm.create({app:'vm',title:'虚拟机 · V86',icon:'appVm',w:780,h:560,content:v.el,onClose:v.cleanup,minW:420});
+  v.el._win=w;
+}});
+/* ================= 设置 ================= */
+const SET_SECS=[['look','外观'],['desk','桌面'],['storage','存储'],['mounts','挂载'],['system','系统'],['about','关于']];
+function buildSettings(sec){
+  const root=el('div','set');
+  root.innerHTML=`<nav class="set-nav">${SET_SECS.map(([id,n])=>`<div class="side-it${id===(sec||'look')?' on':''}" data-s="${id}"><span style="display:contents">${ICONS[{look:'theme',desk:'grid',storage:'disk',mounts:'mount',system:'appSettings',about:'info'}[id]]}</span><span>${n}</span></div>`).join('')}</nav><div class="set-sec"></div>`;
+  const pane=$('.set-sec',root);
+  function card(t,d,body){return`<div class="set-card"><h4>${t}</h4>${d?`<div class="d">${d}</div>`:''}${body||''}</div>`}
+  function render(s){
+    $$('.side-it',root).forEach(b=>b.classList.toggle('on',b.dataset.s===s));
+    if(s==='look'){
+      const t=document.documentElement.dataset.theme;
+      pane.innerHTML=
+        card('主题模式','白墙柠檬（浅色）与爱琴夜（深色）。',`<div class="set-row"><span class="lb">深色模式</span><span class="switch${t==='dark'?' on':''}" data-sw="theme"></span></div>`)+
+        card('壁纸','内置四款手工壁纸，或上传自己的图片（保存到 /图片 并持久化）。',`<div class="wp-card">${WALLS.map(w=>`<div class="wp-th ${w.cls}" data-wp="${w.id}"><span>${w.name}</span></div>`).join('')}<button class="btn" data-a="wpup" style="height:68px">${ICONS.upload}<span>上传图片</span></button></div>`);
+      bind();
+    }
+    if(s==='desk'){
+      pane.innerHTML=
+        card('图标布局',`桌面图标可自由拖放，开启对齐后会丝滑吸附到网格。`,
+          `<div class="set-row"><span class="lb">网格对齐</span><span class="switch${store.get('snap',true)?' on':''}" data-sw="snap"></span></div>
+           <div class="set-row"><span class="lb">图标尺寸<small>调整桌面图标大小</small></span><input type="range" min="70" max="120" value="${store.get('icsz',88)}" data-r="icsz" style="width:140px"></div>`)+
+        card('显示',`控制文件系统中是否显示以 . 开头的隐藏条目。`,
+          `<div class="set-row"><span class="lb">显示隐藏文件</span><span class="switch${store.get('showHidden',false)?' on':''}" data-sw="showHidden"></span></div>`);
+      bind();
+    }
+    if(s==='storage'){
+      pane.innerHTML=card('存储空间','浏览器为该站点分配的真实持久化配额（OPFS）。',
+        `<div class="set-row"><span class="lb">已用 / 配额</span><span class="mono" style="font-family:var(--font-m);font-size:13px" id="stNum">…</span></div>
+         <div class="sbar"><i id="stBar" style="width:0;background:var(--acc)"></i></div>
+         <div class="set-row"><button class="btn" data-a="persist">${ICONS.disk}<span>请求持久化授权</span></button><button class="btn" data-a="zipbak">${ICONS.appZip}<span>备份为 Zip</span></button></div>`)+
+        card('占用分布','按根目录统计的真实数据构成。',`<div id="stTree" class="d">统计中…</div><div class="slegend" id="stLeg"></div>`)+
+        card('危险区','一键清空 OPFS 虚拟文件系统并恢复出厂设置。',`<button class="btn danger" data-a="reset">${ICONS.trash}<span>一键重置系统</span></button>`);
+      bind();fillStorage();
+    }
+    if(s==='mounts'){
+      const list=[...fs.mounts.entries()].map(([p,m])=>`<div class="set-row"><span class="lb">${ICONS.mount} /mnt/local/${esc(m.name)}<small>本地文件夹 · 与虚拟文件同等能力</small></span><button class="btn sm danger" data-un="${esc(p)}">卸载</button></div>`).join('')||'<div class="d">暂无挂载。挂载后，本地文件夹出现在 /mnt/local/ 下，享有与虚拟文件完全相同的能力。</div>';
+      const pend=(window._pendMounts||[]).map((p,i)=>`<div class="set-row"><span class="lb">${ICONS.warn} ${esc(p.path.split('/').pop())}<small>刷新后需要重新授权</small></span><button class="btn sm pri" data-re="${i}">重新授权</button></div>`).join('');
+      pane.innerHTML=card('本地文件夹挂载','通过 File System Access API 将电脑上的真实文件夹挂载进柠屿，与 OPFS 虚拟文件统一读写。',list+pend+`<div class="set-row" style="margin-top:6px"><button class="btn pri" data-a="mnt">${ICONS.mount}<span>挂载文件夹…</span></button></div>`);
+      bind();
+      $$('[data-un]',pane).forEach(b=>b.onclick=()=>fs.unmount(b.dataset.un).then(()=>render('mounts')));
+      $$('[data-re]',pane).forEach(b=>b.onclick=async()=>{const p=window._pendMounts[+b.dataset.re];if(await fs.reauth(p.handle)){window._pendMounts.splice(+b.dataset.re,1);render('mounts')}});
+    }
+    if(s==='system'){
+      const ck=document.cookie.match(/lemonisle_session=(\d+)/);
+      pane.innerHTML=
+        card('文件系统后端',`当前主后端与降级链路状态。`,
+          `<div class="d">主后端：<b>${fs.backend()==='opfs'?'OPFS（Origin Private File System）':'内存 + IndexedDB（降级）'}</b><br>降级链路：OPFS → IndexedDB → 内存<br>会话 Cookie：${ck?new Date(+ck[1]).toLocaleString():'无'}</div>`)+
+        card('行为',`一些影响全局交互的开关。`,
+          `<div class="set-row"><span class="lb">触摸设备优先<small>触屏上禁用原生拖拽、改用触摸拖动</small></span><span class="switch${isTouch()?' on':''}" style="opacity:.6;pointer-events:none"></span></div>`);
+      bind();
+    }
+    if(s==='about'){
+      pane.innerHTML=card('关于柠屿',``,
+        `<div style="display:flex;gap:14px;align-items:center"><span style="width:52px;height:52px;border-radius:14px;background:var(--acc);color:var(--acc-ink);display:grid;place-items:center;flex:0 0 auto">${ICONS.lemon.replace('<svg','<svg style="width:30px;height:30px"')}</span><div class="d"><b style="font-family:var(--font-d);font-size:16px;color:var(--ink)">柠屿 OS · Lemon Isle</b><br>版本 1.0 · 单文件 Web 桌面<br>存储：OPFS + IndexedDB + LocalStorage + Cookie<br>字体：Bricolage Grotesque / 站酷庆科黄油体 / 思源黑体 / JetBrains Mono<br>引擎：CodeMirror 5.65 · JSZip · js-beautify · V86 0.5.319</div></div>`);
+      bind();
+    }
+    function bind(){
+      $$('[data-sw]',pane).forEach(sw=>sw.onclick=async()=>{
+        const k=sw.dataset.sw;
+        if(k==='theme'){setTheme(document.documentElement.dataset.theme==='dark'?'light':'dark')}
+        else{store.set(k,!store.get(k,false));if(k==='snap'||k==='showHidden'){desk.render();bus.emit('fs-change','/')}}
+        render(s);
+      });
+      $$('[data-r]',pane).forEach(r=>r.oninput=()=>{store.set(r.dataset.r,+r.value);document.documentElement.style.setProperty('--icsz',r.value+'px');document.documentElement.style.setProperty('--icico',Math.round(r.value*0.59)+'px')});
+      $$('[data-wp]',pane).forEach(w=>w.onclick=()=>{setWallpaper({t:'css',id:w.dataset.wp});render(s)});
+      $$('[data-a]',pane).forEach(b=>b.onclick=async()=>{
+        const a=b.dataset.a;
+        if(a==='wpup')uploadWallpaper();
+        if(a==='mnt')mountLocalFolder();
+        if(a==='persist'){const ok=await fs.persist();ui.toast(ok?'已获得持久化授权':'浏览器拒绝了持久化请求','ok')}
+        if(a==='zipbak'){try{ui.toast('正在打包备份…','info',20000);const b=await fs.exportZip();const u=URL.createObjectURL(b);const an=el('a');an.href=u;an.download='柠屿备份.zip';an.click();setTimeout(()=>URL.revokeObjectURL(u),8000)}catch(e){ui.toast('备份失败：'+e.message,'err')}}
+        if(a==='reset'){
+          if(!await ui.confirm('将清空 OPFS 中的全部文件、桌面布局与设置，恢复到出厂状态。确定继续吗？','一键重置'))return;
+          try{await fs.resetAll()}catch(e){}
+          location.reload();
+        }
+      });
+    }
+  }
+  async function fillStorage(){
+    try{
+      const es=await fs.estimate();
+      $('#stNum').textContent=`${fmtSize(es.usage)} / ${fmtSize(es.quota)}`;
+      $('#stBar').style.width=(es.quota?Math.min(100,es.usage/es.quota*100):0).toFixed(2)+'%';
+      const list=await fs.readdir('/');
+      const rows=[];
+      for(const it of list){if(it.isDirectory){const t=await fs.treeSize('/'+it.name);rows.push({n:it.name+'/',s:t.size})}else rows.push({n:it.name,s:it.size})}
+      rows.sort((a,b)=>b.s-a.s);
+      const total=rows.reduce((a,b)=>a+b.s,0)||1;
+      const colors=['var(--acc)','var(--sea)','var(--olive)','var(--coral)','var(--slate)','var(--line2)'];
+      $('#stTree').innerHTML=rows.slice(0,6).map((r,i)=>`${esc(r.n)} — ${fmtSize(r.s)}（${(r.s/total*100).toFixed(1)}%）<br>`).join('')||'空';
+      $('#stLeg').innerHTML=rows.slice(0,6).map((r,i)=>`<span><i style="background:${colors[i%colors.length]}"></i>${esc(r.n)}</span>`).join('');
+    }catch(e){}
+  }
+  $$('.side-it',root).forEach(b=>b.onclick=()=>render(b.dataset.s));
+  render(sec||'look');
+  return{el:root};
+}
+regApp('settings',{name:'设置',icon:'appSettings',color:APP_COLORS.settings,kw:'settings 设置 主题 壁纸 存储',launch:sec=>{
+  const s=buildSettings(sec);
+  wm.create({app:'settings',title:'设置',icon:'appSettings',w:760,h:520,content:s.el,minW:420,single:false});
+}});
+/* ================= 启动 ================= */
+(async function boot(){
+  setTheme(store.get('theme','light'));
+  const icsz=store.get('icsz',88);
+  document.documentElement.style.setProperty('--icsz',icsz+'px');
+  document.documentElement.style.setProperty('--icico',Math.round(icsz*0.59)+'px');
+  await fs.ready;
+  await seedFS();
+  desk.load();
+  await desk.ensureDefaults();
+  await desk.render();
+  await applyWallpaper();
+  refreshStoragePill();
+  try{
+    const pending=await fs.restoreMounts();
+    window._pendMounts=pending||[];
+    if(window._pendMounts.length){
+      bus.emit('mounts-change');
+      setTimeout(async()=>{
+        const r=await ui.dialog({title:'本地挂载待授权',text:`检测到 ${window._pendMounts.length} 个之前挂载的本地文件夹。浏览器刷新后需要重新授权，是否现在处理？（也可稍后在 设置 → 挂载 中操作）`,buttons:[{t:'稍后',v:false},{t:'现在授权',v:true,pri:true}]});
+        if(r){for(const p of window._pendMounts){await fs.reauth(p.handle)}window._pendMounts=[]}
+      },800);
+    }
+  }catch(e){}
+  bus.on('fs-change',debounce(p=>{if(p==='/'||p==='')desk.render()},400));
+})();
+document.addEventListener('contextmenu',e=>{
+  if(e.target.closest('input,textarea,[contenteditable]'))return;
+  if(!e.target.closest('#desk')&&!e.target.closest('.ex-list')&&!e.target.closest('.lrow'))e.preventDefault();
+});
+</script>
+</body>
+</html>
