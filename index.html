@@ -387,11 +387,11 @@ body{
         <div class="logo-icon">W</div>
         <div class="logo-text">
           <h1>WEB OS GALLERY</h1>
-          <p>AI 模型 Web OS 作品集 — 51 件作品 · 9 个模型系列</p>
+          <p>AI 模型 Web OS 作品集 — 63 件作品 · 9 个模型系列</p>
         </div>
       </div>
       <div class="header-stats">
-        <div class="stat"><div class="stat-num">51</div><div class="stat-label">作品</div></div>
+        <div class="stat"><div class="stat-num">63</div><div class="stat-label">作品</div></div>
         <div class="stat"><div class="stat-num">9</div><div class="stat-label">模型</div></div>
         <div class="stat"><div class="stat-num">2026</div><div class="stat-label">年度</div></div>
       </div>
@@ -470,6 +470,12 @@ body{
 <script>
 // === 数据 ===
 const projects = [
+  {model:"Claude Fable 5.1",modelClass:"claude",name:"Folio OS",version:"v2.1.18.4",date:"2026.09.04",file:"Claude Fable 5.1 作品 2026.09.04 Folio OS v2.1.18.4.html",tags:["Web OS","桌面","印刷"]},
+  {model:"Claude Fable 5.1",modelClass:"claude",name:"IndigoXP",version:"v2.1.18.3",date:"2026.09.04",file:"Claude Fable 5.1 作品 2026.09.04 IndigoXP v2.1.18.3.html",tags:["Web OS","桌面","Indigo"]},
+  {model:"Claude Fable 5.1",modelClass:"claude",name:"墨屿 OS",version:"v2.1.18.3",date:"2026.09.04",file:"Claude Fable 5.1 作品 2026.09.04 墨屿 OS v2.1.18.3.html",tags:["Web OS","桌面","水墨"]},
+  {model:"Claude Fable 5.1",modelClass:"claude",name:"肥 OS",version:"v2.1.18.3",date:"2026.09.04",file:"Claude Fable 5.1 作品 2026.09.04 肥 OS v2.1.18.3.html",tags:["Web OS","桌面"]},
+  {model:"Claude Fable 5.1",modelClass:"claude",name:"Limoni OS",version:"v2.1.18.3",date:"2026.09.04",file:"Claude Fable 5.1 作品 2026.09.04 Limoni OS v2.1.18.3.html",tags:["Web OS","桌面","柠檬"]},
+  {model:"Claude Fable 5.1",modelClass:"claude",name:"AquaDesk",version:"v2.1.18.3",date:"2026.09.04",file:"Claude Fable 5.1 作品 2026.09.04 AquaDesk v2.1.18.3.html",tags:["Web OS","桌面"]},
   {model:"Claude Opus 5 Max",modelClass:"claude",name:"硯 OS",version:"v2.1.18.3",date:"2026.09.02",file:"Claude Opus 5 Max 作品 2026.09.02 硯 OS v2.1.18.3.html",tags:["Web OS","桌面","水墨"]},
   {model:"Claude Fable 5",modelClass:"claude",name:"墨渊 OS · InkAbyss",version:"v2.1.18.1",date:"2026.07.03",file:"Claude Fable 5 作品 2026.07.03 墨渊 OS · InkAbyss v2.1.18.1.html",tags:["Web OS","桌面","水墨"]},
   {model:"Claude Fable 5",modelClass:"claude",name:"AeroOS — 网页操作系统",version:"v2.1.18.1",date:"2026.07.02",file:"Claude Fable 5 作品 2026.07.02 AeroOS — 网页操作系统 v2.1.18.1.html",tags:["Web OS","桌面"]},
@@ -491,6 +497,10 @@ const projects = [
   {model:"Claude Sonnet 4.6",modelClass:"claude",name:"StormOS",version:"v2.1",date:"2026.05.02",file:"Claude Sonnet 4.6 作品 2026.05.02 StormOS v2.1.html",tags:["Web OS","桌面"]},
   {model:"Claude Sonnet 4.6",modelClass:"claude",name:"青丝 OS",version:"v特殊提示词",date:"2026.04.17",file:"Claude Sonnet 4.6 作品 2026.04.17 青丝 OS v特殊提示词.html",tags:["Web OS","桌面","中文"]},
   {model:"Claude Sonnet 4.6",modelClass:"claude",name:"VOLT OS",version:"v特殊提示词",date:"2026.04.20",file:"Claude Sonnet 4.6 作品 2026.04.20 VOLT OS v特殊提示词.html",tags:["Web OS","桌面"]},
+  {model:"GPT-6 Astra Max",modelClass:"gpt",name:"青屿 OS",version:"v2.1.18.4",date:"2026.09.05",file:"GPT-6 Astra Max 作品 2026.09.05 青屿 OS v2.1.18.4.html",tags:["Web OS","桌面"]},
+  {model:"GPT-6 Astra Max",modelClass:"gpt",name:"栖境 OS",version:"v2.1.18.4",date:"2026.09.05",file:"GPT-6 Astra Max 作品 2026.09.05 栖境 OS v2.1.18.4.html",tags:["Web OS","桌面"]},
+  {model:"GPT-6 Astra Max",modelClass:"gpt",name:"moss OS",version:"v2.1.18.4",date:"2026.09.05",file:"GPT-6 Astra Max 作品 2026.09.05 moss OS v2.1.18.4.html",tags:["Web OS","桌面"]},
+  {model:"GPT-6 Astra Max",modelClass:"gpt",name:"Tideline OS",version:"v2.1.18.4",date:"2026.09.05",file:"GPT-6 Astra Max 作品 2026.09.05 Tideline OS v2.1.18.4.html",tags:["Web OS","桌面"]},
   {model:"GPT-5.6 Sol X-High",modelClass:"gpt",name:"砚台 OS",version:"v2.1.18.2",date:"2026.07.10",file:"GPT-5.6 Sol X-High 作品 2026.07.10 砚台 OS v2.1.18.2.html",tags:["Web OS","桌面","水墨"]},
   {model:"GPT-5.5 X-High",modelClass:"gpt",name:"Obsidian VFS Web OS",version:"v2.1.13",date:"2026.06.04",file:"GPT-5.5 X-High 作品 2026.06.04 Obsidian VFS Web OS v2.1.13.html",tags:["Web OS","桌面"]},
   {model:"GPT-5.5 X-High",modelClass:"gpt",name:"Noctilux Web OS",version:"v2.1.11",date:"2026.05.29",file:"GPT-5.5 X-High 作品 2026.05.29 Noctilux Web OS v2.1.11.html",tags:["Web OS","桌面"]},
@@ -499,6 +509,8 @@ const projects = [
   {model:"GPT-5.5 High",modelClass:"gpt",name:"Aster FS - Web OS",version:"v2.1.2",date:"2026.05.05",file:"GPT-5.5 High 作品 2026.05.05 Aster FS - Web OS v2.1.2.html",tags:["Web OS","文件系统"]},
   {model:"GPT-5.4 High",modelClass:"gpt",name:"Noir Grid OS",version:"v2.1.7",date:"2026.05.27",file:"GPT-5.4 High 作品 2026.05.27 Noir Grid OS v2.1.7.html",tags:["Web OS","桌面"]},
   {model:"GPT-5.2",modelClass:"gpt",name:"Kintsugi OS",version:"v1",date:"2026.01.14",file:"GPT-5.2 作品 2026.01.14 Kintsugi OS v1.html",tags:["Web OS","桌面"]},
+  {model:"Qwen 3.8 Max",modelClass:"qwen",name:"莫问 OS",version:"v2.1.18.4",date:"2026.09.04",file:"Qwen 3.8 Max 作品 2026.09.04 莫问 OS v2.1.18.4.html",tags:["Web OS","桌面"]},
+  {model:"Qwen 3.8 Max",modelClass:"qwen",name:"柠屿 OS",version:"v2.1.18.3",date:"2026.09.04",file:"Qwen 3.8 Max 作品 2026.09.04 柠屿 OS v2.1.18.3.html",tags:["Web OS","桌面","柠檬"]},
   {model:"Qwen 3.7 Max",modelClass:"qwen",name:"AeroOS · 玻璃花园",version:"v2.1.18.1",date:"2026.07.01",file:"Qwen 3.7 Max 作品 2026.07.01 AeroOS · 玻璃花园 v2.1.18.1.html",tags:["Web OS","桌面"]},
   {model:"Qwen 3.7 Max x GLM-5.2",modelClass:"collab",name:"羽笺 · 白鸽 OS",version:"v特殊提示词",date:"2026.06.23",file:"Qwen 3.7 Max x GLM-5.2 作品 2026.06.23 羽笺 · 白鸽 OS v特殊提示词.html",tags:["Web OS","桌面"]},
   {model:"GPT-5.2 x Gemini 3 Pro",modelClass:"collab",name:"NOCTUA WebOS",version:"v1",date:"2026.01.14",file:"GPT-5.2 x Gemini 3 Pro 作品 2026.01.14 NOCTUA WebOS v1.html",tags:["Web OS","协作"]},
