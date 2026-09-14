@@ -558,6 +558,19 @@ function renderCards() {
     return matchFilter && matchSearch;
   });
 
+  // 修复：按单一系列筛选时，合作作品(collab)按日期插入到该系列作品中的正确位置，
+  // 而不是停留在数据数组里的原始位置（否则如 GLM 系列会把几个月前的合作作品排在最前面）。
+  if (currentFilter !== 'all') {
+    const solo = filtered.filter(p => p.modelClass !== 'collab');
+    filtered.filter(p => p.modelClass === 'collab').forEach(c => {
+      let idx = solo.findIndex(p => p.date < c.date);
+      if (idx === -1) idx = solo.length;
+      solo.splice(idx, 0, c);
+    });
+    filtered.length = 0;
+    filtered.push(...solo);
+  }
+
   if (filtered.length === 0) {
     grid.innerHTML = '';
     empty.style.display = 'block';
