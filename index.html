@@ -56,19 +56,7 @@ body{
 }
 .header-inner{max-width:1400px;margin:0 auto}
 .header-top{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:20px}
-.logo-area{display:flex;align-items:center;gap:16px}
-.logo-icon{
-  width:48px;height:48px;border-radius:12px;
-  background:linear-gradient(135deg,var(--accent),var(--accent2));
-  display:flex;align-items:center;justify-content:center;
-  font-family:var(--font-display);font-size:18px;font-weight:900;color:#fff;
-  box-shadow:0 0 24px var(--glow);
-  animation:logoPulse 3s ease-in-out infinite;
-}
-@keyframes logoPulse{
-  0%,100%{box-shadow:0 0 24px var(--glow)}
-  50%{box-shadow:0 0 40px var(--glow),0 0 60px rgba(0,229,255,.08)}
-}
+.logo-area{display:flex;align-items:center}
 .logo-text h1{
   font-family:var(--font-display);font-size:22px;font-weight:700;
   letter-spacing:2px;
@@ -120,19 +108,16 @@ body{
   font-family:var(--font-body);cursor:pointer;transition:all .25s;
   white-space:nowrap;
 }
-.filter-btn:hover{border-color:var(--border-hi);color:var(--text);background:var(--bg3)}
-.filter-btn[data-filter="Claude"]:hover{border-color:rgba(232,160,80,.4);color:#e8a050;background:rgba(232,160,80,.08);box-shadow:0 0 12px rgba(232,160,80,.15)}
-.filter-btn[data-filter="GPT"]:hover{border-color:rgba(16,163,127,.4);color:#10a37f;background:rgba(16,163,127,.08);box-shadow:0 0 12px rgba(16,163,127,.15)}
-.filter-btn[data-filter="Qwen"]:hover{border-color:rgba(129,140,248,.4);color:#818cf8;background:rgba(129,140,248,.08);box-shadow:0 0 12px rgba(129,140,248,.15)}
-.filter-btn[data-filter="Gemini"]:hover{border-color:rgba(96,165,250,.4);color:#60a5fa;background:rgba(96,165,250,.08);box-shadow:0 0 12px rgba(96,165,250,.15)}
-.filter-btn[data-filter="DeepSeek"]:hover{border-color:rgba(91,118,252,.4);color:#5b76fc;background:rgba(91,118,252,.08);box-shadow:0 0 12px rgba(91,118,252,.15)}
-.filter-btn[data-filter="GLM"]:hover{border-color:rgba(156,163,175,.4);color:#9ca3af;background:rgba(156,163,175,.08);box-shadow:0 0 12px rgba(156,163,175,.15)}
-.filter-btn[data-filter="Kimi"]:hover{border-color:rgba(23,131,255,.4);color:#1783ff;background:rgba(23,131,255,.08);box-shadow:0 0 12px rgba(23,131,255,.15)}
-.filter-btn[data-filter="未知"]:hover{border-color:rgba(184,164,212,.4);color:#b8a4d4;background:rgba(184,164,212,.08);box-shadow:0 0 12px rgba(184,164,212,.15)}
-.filter-btn.active{
-  border-color:var(--accent);color:var(--accent);
-  background:rgba(0,229,255,.08);box-shadow:0 0 12px var(--glow);
-}
+/* hover 与选中态共用同一套配色：移上去什么样，点上去就什么样 */
+.filter-btn:hover,.filter-btn.active{border-color:var(--border-hi);color:var(--text);background:var(--bg3)}
+.filter-btn[data-filter="Claude"]:hover,.filter-btn[data-filter="Claude"].active{border-color:rgba(232,160,80,.4);color:#e8a050;background:rgba(232,160,80,.08);box-shadow:0 0 12px rgba(232,160,80,.15)}
+.filter-btn[data-filter="GPT"]:hover,.filter-btn[data-filter="GPT"].active{border-color:rgba(16,163,127,.4);color:#10a37f;background:rgba(16,163,127,.08);box-shadow:0 0 12px rgba(16,163,127,.15)}
+.filter-btn[data-filter="Qwen"]:hover,.filter-btn[data-filter="Qwen"].active{border-color:rgba(129,140,248,.4);color:#818cf8;background:rgba(129,140,248,.08);box-shadow:0 0 12px rgba(129,140,248,.15)}
+.filter-btn[data-filter="Gemini"]:hover,.filter-btn[data-filter="Gemini"].active{border-color:rgba(96,165,250,.4);color:#60a5fa;background:rgba(96,165,250,.08);box-shadow:0 0 12px rgba(96,165,250,.15)}
+.filter-btn[data-filter="DeepSeek"]:hover,.filter-btn[data-filter="DeepSeek"].active{border-color:rgba(91,118,252,.4);color:#5b76fc;background:rgba(91,118,252,.08);box-shadow:0 0 12px rgba(91,118,252,.15)}
+.filter-btn[data-filter="GLM"]:hover,.filter-btn[data-filter="GLM"].active{border-color:rgba(156,163,175,.4);color:#9ca3af;background:rgba(156,163,175,.08);box-shadow:0 0 12px rgba(156,163,175,.15)}
+.filter-btn[data-filter="Kimi"]:hover,.filter-btn[data-filter="Kimi"].active{border-color:rgba(23,131,255,.4);color:#1783ff;background:rgba(23,131,255,.08);box-shadow:0 0 12px rgba(23,131,255,.15)}
+.filter-btn[data-filter="未知"]:hover,.filter-btn[data-filter="未知"].active{border-color:rgba(184,164,212,.4);color:#b8a4d4;background:rgba(184,164,212,.08);box-shadow:0 0 12px rgba(184,164,212,.15)}
 .mode-toggle{
   display:flex;border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;
 }
@@ -384,7 +369,6 @@ body{
   <div class="header-inner">
     <div class="header-top">
       <div class="logo-area">
-        <div class="logo-icon">W</div>
         <div class="logo-text">
           <h1>WEB OS GALLERY</h1>
           <p>AI 模型 Web OS 作品集 — 71 件作品 · 9 个模型系列</p>
