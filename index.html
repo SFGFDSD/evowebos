@@ -18,7 +18,7 @@
   --radius:12px;--radius-sm:8px;
   --font-display:'Orbitron',sans-serif;
   --font-body:'Noto Sans SC',sans-serif;
-  --font-mono:'JetBrains Mono',monospace;
+  --font-mono:'JetBrains Mono','Noto Sans SC','PingFang SC','Microsoft YaHei',monospace;
 }
 html{scroll-behavior:smooth}
 body{
@@ -127,7 +127,7 @@ body{
 .filter-btn[data-filter="Gemini"]:hover{border-color:rgba(96,165,250,.4);color:#60a5fa;background:rgba(96,165,250,.08);box-shadow:0 0 12px rgba(96,165,250,.15)}
 .filter-btn[data-filter="DeepSeek"]:hover{border-color:rgba(91,118,252,.4);color:#5b76fc;background:rgba(91,118,252,.08);box-shadow:0 0 12px rgba(91,118,252,.15)}
 .filter-btn[data-filter="GLM"]:hover{border-color:rgba(156,163,175,.4);color:#9ca3af;background:rgba(156,163,175,.08);box-shadow:0 0 12px rgba(156,163,175,.15)}
-.filter-btn[data-filter="Kimi"]:hover{border-color:rgba(180,186,208,.4);color:#b4bad0;background:rgba(22,22,30,.55);box-shadow:0 0 14px rgba(180,190,220,.08),inset 0 0 0 1px rgba(180,186,208,.05)}
+.filter-btn[data-filter="Kimi"]:hover{border-color:rgba(23,131,255,.4);color:#1783ff;background:rgba(23,131,255,.08);box-shadow:0 0 12px rgba(23,131,255,.15)}
 .filter-btn[data-filter="未知"]:hover{border-color:rgba(184,164,212,.4);color:#b8a4d4;background:rgba(184,164,212,.08);box-shadow:0 0 12px rgba(184,164,212,.15)}
 .filter-btn.active{
   border-color:var(--accent);color:var(--accent);
@@ -197,8 +197,8 @@ body{
 .model-gemini{background:rgba(66,133,244,.15);color:#60a5fa;border:1px solid rgba(66,133,244,.25)}
 .model-deepseek{background:rgba(77,107,253,.12);color:#5b76fc;border:1px solid rgba(77,107,253,.25)}
 .model-glm{background:rgba(107,114,128,.12);color:#9ca3af;border:1px solid rgba(107,114,128,.25)}
-.model-collab{background:rgba(196,181,155,.12);color:#c4b59b;border:1px solid rgba(196,181,155,.22)}
-.model-kimi{background:rgba(18,18,26,.92);color:#b4bad0;border:1px solid rgba(180,186,208,.22);box-shadow:inset 0 0 0 1px rgba(180,186,208,.03),0 0 10px rgba(180,190,220,.05)}
+.model-collab{background:rgba(45,212,191,.15);color:#2dd4bf;border:1px solid rgba(45,212,191,.25)}
+.model-kimi{background:rgba(23,131,255,.15);color:#1783ff;border:1px solid rgba(23,131,255,.25)}
 .model-unknown{background:rgba(184,164,212,.15);color:#b8a4d4;border:1px solid rgba(184,164,212,.25)}
 
 .card-date{
@@ -387,11 +387,11 @@ body{
         <div class="logo-icon">W</div>
         <div class="logo-text">
           <h1>WEB OS GALLERY</h1>
-          <p>AI 模型 Web OS 作品集 — 68 件作品 · 9 个模型系列</p>
+          <p>AI 模型 Web OS 作品集 — 71 件作品 · 9 个模型系列</p>
         </div>
       </div>
       <div class="header-stats">
-        <div class="stat"><div class="stat-num">68</div><div class="stat-label">作品</div></div>
+        <div class="stat"><div class="stat-num">71</div><div class="stat-label">作品</div></div>
         <div class="stat"><div class="stat-num">9</div><div class="stat-label">模型</div></div>
         <div class="stat"><div class="stat-num">2026</div><div class="stat-label">年度</div></div>
       </div>
@@ -470,6 +470,8 @@ body{
 <script>
 // === 数据 ===
 const projects = [
+  {model:"Claude Opus 5.5 Low",modelClass:"claude",name:"砚 OS",version:"v2.1.18.6",date:"2026.09.23",file:"Claude Opus 5.5 Low 作品 2026.09.23 砚 OS v2.1.18.6.html",tags:["Web OS","桌面","水墨"]},
+  {model:"Claude Fable 5",modelClass:"claude",name:"松墨 OS",version:"v2.1.18.6",date:"2026.09.22",file:"Claude Fable 5 作品 2026.09.22 松墨 OS v2.1.18.6.html",tags:["Web OS","桌面","水墨"]},
   {model:"Claude Opus 5 Max",modelClass:"claude",name:"URUSHI OS",version:"v2.1.18.5",date:"2026.09.14",file:"Claude Opus 5 Max 作品 2026.09.14 URUSHI OS v2.1.18.5.html",tags:["Web OS","桌面","漆艺"]},
   {model:"Claude Fable 5.1",modelClass:"claude",name:"Folio OS",version:"v2.1.18.4",date:"2026.09.04",file:"Claude Fable 5.1 作品 2026.09.04 Folio OS v2.1.18.4.html",tags:["Web OS","桌面","印刷"]},
   {model:"Claude Fable 5.1",modelClass:"claude",name:"IndigoXP",version:"v2.1.18.3",date:"2026.09.04",file:"Claude Fable 5.1 作品 2026.09.04 IndigoXP v2.1.18.3.html",tags:["Web OS","桌面","Indigo"]},
@@ -536,8 +538,9 @@ const projects = [
   {model:"Kimi k3",modelClass:"kimi",name:"墨屿 InkIsle OS",version:"v2.1.18.2",date:"2026.07.17",file:"Kimi k3 作品 2026.07.17 墨屿 InkIsle OS v2.1.18.2.html",tags:["Web OS","桌面"]},
   {model:"Kimi k3",modelClass:"kimi",name:"琥珀OS · AmberOS",version:"v2.1.18.2",date:"2026.07.17",file:"Kimi k3 作品 2026.07.17 琥珀OS · AmberOS v2.1.18.2.html",tags:["Web OS","桌面"]},
   {model:"Kimi k3",modelClass:"kimi",name:"琥珀OS · AMBER OS",version:"v2.1.18.2",date:"2026.07.17",file:"Kimi k3 作品 2026.07.17 琥珀OS · AMBER OS v2.1.18.2.html",tags:["Web OS","桌面"]},
-  {model:"未知模型",modelClass:"unknown",name:"墨岚 OS",version:"v2.1.18.3",date:"2026.09.03",file:"未知模型 作品 2026.09.03 墨岚 OS v2.1.18.3.html",tags:["Web OS","桌面"]},
-  {model:"未知模型",modelClass:"unknown",name:"砚 OS",version:"v2.1.18.3",date:"2026.09.03",file:"未知模型 作品 2026.09.03 砚 OS v2.1.18.3.html",tags:["Web OS","桌面","水墨"]}
+  {model:"未知模型 x 未知模型",modelClass:"collab",name:"青屿 OS",version:"v2.1.18.6",date:"2026.09.23",file:"未知模型 x 未知模型 作品 2026.09.23 青屿 OS v2.1.18.6.html",tags:["Web OS","桌面","GPT"]},
+  {model:"未知模型",modelClass:"unknown",name:"墨岚 OS",version:"v2.1.18.3",date:"2026.09.03",file:"未知模型 作品 2026.09.03 墨岚 OS v2.1.18.3.html",tags:["Web OS","桌面","Kimi"]},
+  {model:"未知模型",modelClass:"unknown",name:"砚 OS",version:"v2.1.18.3",date:"2026.09.03",file:"未知模型 作品 2026.09.03 砚 OS v2.1.18.3.html",tags:["Web OS","桌面","水墨","Claude"]}
 ];
 
 // === 状态 ===
