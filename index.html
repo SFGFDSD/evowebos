@@ -561,6 +561,12 @@ function renderCards() {
     });
     filtered.length = 0;
     filtered.push(...solo);
+  } else {
+    // 首页(全部)：合作作品(collab)沉底放到最后，不新增筛选项
+    const soloAll = filtered.filter(p => p.modelClass !== 'collab');
+    const collabAll = filtered.filter(p => p.modelClass === 'collab').sort((a, b) => b.date.localeCompare(a.date));
+    filtered.length = 0;
+    filtered.push(...soloAll, ...collabAll);
   }
 
   if (filtered.length === 0) {
