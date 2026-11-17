@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN" data-theme="dark">
+<html lang="zh-CN" data-theme="dark" data-skin="classic">
 
   <head>
     <meta charset="UTF-8">
@@ -20,8 +20,9 @@
       rel="stylesheet">
     <script>
       try {
-        var p = JSON.parse(localStorage.getItem('evo.pref') || '{}');
-        if (p.theme) document.documentElement.dataset.theme = p.theme
+        var p = JSON.parse(localStorage.getItem('evo.sfgfdsd/evowebos.pref') || localStorage.getItem('evo.pref') || '{}');
+        if (p.theme) document.documentElement.dataset.theme = p.theme;
+        document.documentElement.dataset.skin = p.skin || 'classic'
       } catch (e) {}
 
     </script>
@@ -1119,19 +1120,6 @@
         opacity: 1
       }
 
-      .card .mono {
-        position: absolute;
-        right: -6px;
-        bottom: -26px;
-        font-size: 96px;
-        font-weight: 800;
-        color: var(--vc);
-        opacity: .06;
-        line-height: 1;
-        pointer-events: none;
-        letter-spacing: -.05em
-      }
-
       .card .top {
         display: flex;
         align-items: flex-start;
@@ -1310,11 +1298,6 @@
       .grid.dense .card h3 {
         font-size: 15.5px;
         margin-top: 9px
-      }
-
-      .grid.dense .mono {
-        font-size: 72px;
-        bottom: -20px
       }
 
       .gh {
@@ -2388,14 +2371,11 @@
         padding-right: 0
       }
 
+      /* 对比/收藏按钮不再占用标题行右上角，改到卡片底部信息行（时间回到右上角原位） */
       .card .tools {
-        position: absolute;
-        right: -4px;
-        top: -4px;
-        padding: 4px;
-        border-radius: 10px;
-        background: color-mix(in srgb, var(--bg2) 88%, transparent);
-        backdrop-filter: blur(6px)
+        position: static;
+        margin-left: 0;
+        flex: none
       }
 
       .ctab table {
@@ -2422,11 +2402,228 @@
         }
       }
 
+
+
+      /* “全部”筛选胶囊：两处目标按钮均不做合成层/滤镜处理，避免缩放或过渡中出现栅格化边缘。 */
+      #shl button[data-sv="all"], #side .ch[data-co="all"] {
+        text-rendering: optimizeLegibility;
+        -webkit-font-smoothing: antialiased;
+        transform: none !important;
+        filter: none !important;
+        will-change: auto !important;
+        box-shadow: none !important;
+        transition: color .18s ease, border-color .18s ease, background-color .18s ease !important;
+      }
+      #shl button[data-sv="all"].on {
+        background-color: var(--bg3);
+        border-color: var(--ln2);
+      }
+      #side .ch[data-co="all"].on {
+        box-shadow: none !important;
+      }
+
+      /* ===== 可切换外观：经典主题复刻 5780c8b 旧版美学；新版主题保留现有设计 ===== */
+      .card .legacy-date{display:none}
+      :root[data-skin="classic"] {
+        --bg:#0a0a0f;--bg1:#0a0a0f;--bg2:#12121a;--bg3:#1a1a28;--bg4:#222236;
+        --ln:#2a2a40;--ln2:#3d3d5c;--tx:#e8e8f0;--tx2:#8888a8;--tx3:#676781;--tx4:#55556e;
+        --ac:#00e5ff;--ac2:#7c3aed;--acbg:rgba(0,229,255,.08);--warn:#fbbf24;--bad:#f43f5e;
+        --r:12px;--sh:0 16px 46px -18px rgba(0,0,0,.72);
+        --card-bg:rgba(18,18,28,.92);--card-hover:rgba(26,26,42,.98);
+        --glow:rgba(0,229,255,.15);--glow2:rgba(124,58,237,.15);
+        --font-display:'Orbitron','Noto Sans SC',sans-serif;
+        color-scheme:dark;
+      }
+      :root[data-skin="classic"][data-theme="light"] {
+        --bg:#f5f5fa;--bg1:#f5f5fa;--bg2:#fff;--bg3:#f0eff8;--bg4:#e7e5f1;
+        --ln:#dedbea;--ln2:#c9c5dc;--tx:#202031;--tx2:#5d5b77;--tx3:#77758d;--tx4:#9996ac;
+        --ac:#007f9e;--ac2:#7042bd;--acbg:rgba(0,127,158,.08);--warn:#a86900;--bad:#c3284a;
+        --glow:rgba(0,127,158,.16);--glow2:rgba(112,66,189,.12);
+        --sh:0 16px 40px -18px rgba(32,24,70,.22);--card-bg:rgba(255,255,255,.94);--card-hover:#fff;
+        color-scheme:light;
+      }
+      :root[data-skin="classic"] body {
+        font-family:'Noto Sans SC',-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+        line-height:1.6;overflow-x:hidden;-webkit-font-smoothing:antialiased;
+      }
+      :root[data-skin="classic"] body::before {
+        background:radial-gradient(ellipse 80% 50% at 20% 10%,rgba(0,229,255,.06),transparent),
+          radial-gradient(ellipse 60% 40% at 80% 90%,rgba(124,58,237,.06),transparent),
+          radial-gradient(ellipse 50% 50% at 50% 50%,rgba(244,63,94,.025),transparent);
+        opacity:1;
+      }
+      :root[data-skin="classic"] body::after {
+        content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+        background-image:linear-gradient(rgba(255,255,255,.012) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.012) 1px,transparent 1px);
+        background-size:60px 60px;mask-image:radial-gradient(ellipse 70% 60% at 50% 40%,black,transparent);
+      }
+      :root[data-skin="classic"][data-theme="light"] body::before{opacity:.5}
+      :root[data-skin="classic"] .hd {
+        max-width:none;margin:0;padding:42px max(40px,calc((100vw - 1400px)/2)) 28px;align-items:center;gap:24px;
+        border-bottom:1px solid var(--ln);background:linear-gradient(180deg,rgba(10,10,15,.96),rgba(10,10,15,.72));
+        backdrop-filter:blur(20px);
+      }
+      :root[data-skin="classic"][data-theme="light"] .hd{background:linear-gradient(180deg,rgba(245,245,250,.97),rgba(245,245,250,.84))}
+      :root[data-skin="classic"] .logo{gap:0}
+      :root[data-skin="classic"] .logo .mk{display:none}
+      :root[data-skin="classic"] .logo h1{margin:0;font-size:22px;font-weight:700;letter-spacing:2px;line-height:1.25;background:linear-gradient(135deg,var(--ac),#a78bfa);-webkit-background-clip:text;background-clip:text;color:transparent}
+      :root[data-skin="classic"] .logo h1 b{background:none;-webkit-background-clip:initial;background-clip:initial;color:inherit;-webkit-text-fill-color:inherit}
+      :root[data-skin="classic"] .logo p{margin:4px 0 0;font-size:12px;color:var(--tx2);letter-spacing:.04em}
+      :root[data-skin="classic"] .kpis{gap:24px}
+      :root[data-skin="classic"] .kp .v{font-family:var(--font-display);font-size:24px;color:var(--ac);line-height:1.15}
+      :root[data-skin="classic"] .kp .l{font-size:11px;color:var(--tx4);letter-spacing:.08em;text-transform:uppercase}
+      :root[data-skin="classic"] .src{background:var(--bg2);border-color:var(--ln2);border-radius:99px}
+      :root[data-skin="classic"] .tb{position:relative;top:auto;z-index:2;max-width:1400px;margin:0 auto;border:0;border-bottom:1px solid var(--ln);border-top:1px solid var(--ln);background:rgba(12,12,18,.82);backdrop-filter:blur(12px)}
+      :root[data-skin="classic"][data-theme="light"] .tb{background:rgba(255,255,255,.88)}
+      :root[data-skin="classic"] .tbi{padding:15px 24px;gap:12px}
+      :root[data-skin="classic"] .search input{height:40px;border-radius:8px;background:var(--bg3);border-color:var(--ln);font-size:14px}
+      :root[data-skin="classic"] .search input:focus{border-color:var(--ac);box-shadow:0 0 0 3px rgba(0,229,255,.12)}
+      :root[data-skin="classic"] .btn,:root[data-skin="classic"] .ib,:root[data-skin="classic"] select{border-radius:8px}
+      :root[data-skin="classic"] .wrap{max-width:1640px;padding:28px 40px 60px;grid-template-columns:228px minmax(0,1fr);gap:24px}
+      :root[data-skin="classic"] .side{top:18px;scrollbar-width:thin}
+      :root[data-skin="classic"] .fs{border-color:var(--ln);padding:12px 0 14px}
+      :root[data-skin="classic"] .ch{height:auto;min-height:31px;padding:6px 13px;border:1px solid var(--ln2);border-radius:20px;background:transparent;font-size:13px;line-height:1.3;transition:color .2s,border-color .2s,background .2s}
+      :root[data-skin="classic"] .ch:hover{border-color:var(--ln2);background:var(--bg3);color:var(--tx)}
+      :root[data-skin="classic"] .ch.on{box-shadow:none}
+      :root[data-skin="classic"] .ch[data-co="all"].on{border-color:var(--ln2);color:var(--tx);background:var(--bg3);box-shadow:none}
+      :root[data-skin="classic"] .shl{gap:8px;margin-bottom:14px}
+      /* 顶部筛选胶囊：完全对齐 5780c8b 旧版 .filter-btn（无计数、同高、同描边，悬停/选中用品牌色+微光） */
+      :root[data-skin="classic"] .shl button{
+        gap:0;padding:8px 16px;border:1px solid var(--ln);border-radius:20px;
+        background:transparent;color:var(--tx2);font-size:13px;line-height:normal;font-weight:400;
+        box-shadow:none;
+        transition:color .25s,border-color .25s,background-color .25s,box-shadow .25s
+      }
+      :root[data-skin="classic"] .shl button b{display:none}
+      :root[data-skin="classic"] .shl button:hover,
+      :root[data-skin="classic"] .shl button.on{
+        border-color:color-mix(in srgb,var(--c,var(--tx)) 40%,transparent);
+        color:var(--c,var(--tx));
+        background:color-mix(in srgb,var(--c,var(--tx)) 8%,transparent);
+        box-shadow:0 0 12px color-mix(in srgb,var(--c,var(--tx)) 15%,transparent)
+      }
+      :root[data-skin="classic"] .shl button[data-sv="mimo"]:hover,
+      :root[data-skin="classic"] .shl button[data-sv="mimo"].on{
+        border-color:color-mix(in srgb,#ff6900 50%,transparent);
+        background:color-mix(in srgb,#ff6900 10%,transparent);
+        box-shadow:0 0 12px color-mix(in srgb,#ff6900 18%,transparent)
+      }
+      :root[data-skin="classic"] .shl button[data-sv="all"]:hover,
+      :root[data-skin="classic"] .shl button[data-sv="all"].on{border-color:var(--ln2);color:var(--tx);background:var(--bg3);box-shadow:none}
+      :root[data-skin="classic"] .share{height:5px;border-radius:3px;background:var(--bg3);gap:1px}
+      :root[data-skin="classic"] .strip{height:74px;background:var(--bg2);border-color:var(--ln);border-radius:12px}
+      :root[data-skin="classic"] .grid{grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:20px}
+      :root[data-skin="classic"] .grid.dense{grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px}
+      :root[data-skin="classic"] .card{min-height:190px;padding:24px;background:var(--card-bg);border:1px solid var(--ln);border-radius:12px;transition:all .35s cubic-bezier(.4,0,.2,1);}
+      :root[data-skin="classic"] .card::before{background:linear-gradient(135deg,transparent 60%,var(--glow));opacity:0;transition:opacity .35s}
+      :root[data-skin="classic"] .card::after{display:none}
+      :root[data-skin="classic"] .card:hover,:root[data-skin="classic"] .card:focus-visible{border-color:var(--ln2);transform:translateY(-4px);box-shadow:0 12px 40px rgba(0,0,0,.4),0 0 20px var(--glow)}
+      :root[data-skin="classic"] .card:hover::before,:root[data-skin="classic"] .card:focus-visible::before{opacity:1}
+      :root[data-skin="classic"] .card:active{border-color:var(--ac);transform:translateY(-2px) scale(.995);box-shadow:0 12px 40px rgba(0,0,0,.45),0 0 28px var(--glow),0 0 52px var(--glow2)}
+      :root[data-skin="classic"] .card:active::before{opacity:1}
+      @keyframes classicCardPulse{
+        0%{transform:scale(.995);box-shadow:0 0 0 rgba(0,0,0,0)}
+        18%,46%{transform:translateY(-3px);box-shadow:0 12px 40px rgba(0,0,0,.45),0 0 28px var(--glow),0 0 52px var(--glow2)}
+        100%{transform:translateY(0);box-shadow:0 0 0 rgba(0,0,0,0)}
+      }
+      @keyframes classicCardPulseSurface{0%,100%{opacity:0}18%,52%{opacity:1}}
+      :root[data-skin="classic"] #res .card.click-glow{border-color:var(--ac);animation:classicCardPulse .9s cubic-bezier(.2,.8,.2,1) both}
+      :root[data-skin="classic"] #res .card.click-glow::before{opacity:1;animation:classicCardPulseSurface .9s ease-out both}
+      @media(prefers-reduced-motion:reduce){
+        :root[data-skin="classic"] #res .card.click-glow{animation:none;box-shadow:0 0 24px var(--glow),0 0 44px var(--glow2)}
+        :root[data-skin="classic"] #res .card.click-glow::before{animation:none;opacity:1}
+      }
+      :root[data-skin="classic"] .card .top{min-height:28px;padding-right:0}
+      :root[data-skin="classic"] .card .legacy-date{display:block;position:static;margin-left:auto;align-self:center;font-size:11px;line-height:1.4;color:var(--tx4);white-space:nowrap}
+      :root[data-skin="classic"] .card .modern-date,:root[data-skin="classic"] .card .date-sep{display:none}
+      :root[data-skin="classic"] .grid.dense .card .legacy-date{display:none}
+      :root[data-skin="classic"] .grid.dense .card .modern-date,:root[data-skin="classic"] .grid.dense .card .date-sep{display:inline}
+      :root[data-skin="classic"] .badge{padding:4px 10px;border-radius:4px;font-size:11px;font-weight:500;letter-spacing:.5px}
+      :root[data-skin="classic"] .card h3{margin:16px 0 6px;font-size:18px;font-weight:700;line-height:1.3;letter-spacing:0;background:linear-gradient(135deg,var(--tx),var(--tx2));-webkit-background-clip:text;background-clip:text;color:transparent}
+      :root[data-skin="classic"] .card .sub{font-size:12px;color:var(--tx3)}
+      :root[data-skin="classic"] .card .sub .v{color:var(--tx3)}
+      :root[data-skin="classic"] .card .meta{margin-top:16px;padding-top:14px;border-top:1px solid var(--ln);font-size:11.5px;color:var(--tx3);gap:10px;line-height:1.4}
+      :root[data-skin="classic"] .card .meta>span{font-family:'Noto Sans SC',sans-serif;font-size:11.5px;line-height:1.4}
+      :root[data-skin="classic"] .card .meta .go{opacity:1;transform:none;color:var(--ac);font-weight:500}
+      :root[data-skin="classic"] .card .pal{display:none!important}
+      :root[data-skin="classic"] .card .meta .tools{background:none;border:0;padding:0;backdrop-filter:none;margin-left:8px}
+      :root[data-skin="classic"] .tbtn{border-radius:6px;background:var(--bg2)}
+      :root[data-skin="classic"] .gh{margin:22px 0 10px;border-color:var(--ln)}
+      :root[data-skin="classic"] .tw{border-color:var(--ln);border-radius:10px;background:var(--bg2)}
+      :root[data-skin="classic"] .tlm .items{border-left-color:var(--ln2)}
+      :root[data-skin="classic"] .tli{border-color:var(--ln);border-radius:8px;background:var(--bg2)}
+      :root[data-skin="classic"] .settings-overlay{--bg1:#12121a}
+
+      /* Settings is the only place for sync status/errors; nothing is inserted over the gallery. */
+      .settings-overlay[hidden]{display:none!important}
+      .settings-overlay{position:fixed;inset:0;z-index:110;display:grid;place-items:center;padding:22px;background:rgba(0,0,0,.68);backdrop-filter:blur(8px);}
+      .settings-dialog{width:min(680px,100%);max-height:min(88vh,820px);overflow:auto;background:var(--bg1);border:1px solid var(--ln2);border-radius:18px;box-shadow:0 30px 90px rgba(0,0,0,.55);outline:none}
+      .settings-head{position:sticky;top:0;z-index:2;display:flex;align-items:center;justify-content:space-between;padding:20px 24px 16px;background:var(--bg1);border-bottom:1px solid var(--ln)}
+      .settings-kicker{font:11px/1.4 var(--mono);letter-spacing:.16em;color:var(--ac);margin-bottom:4px}
+      .settings-head h2{margin:0;font-size:22px;letter-spacing:.02em}
+      .settings-head p{margin:3px 0 0;color:var(--tx3);font-size:12.5px}
+      .settings-body{padding:4px 24px 22px}
+      .settings-section{padding:18px 0;border-bottom:1px solid var(--ln)}
+      .settings-section-head h3{margin:0;font-size:14px}
+      .settings-section-head p,.settings-note{margin:5px 0 12px;color:var(--tx3);font-size:12px;line-height:1.55}
+      .skin-picker{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+      .skin-choice{position:relative;display:grid;grid-template-columns:62px 1fr;gap:10px;align-items:center;padding:11px;border:1px solid var(--ln2);border-radius:12px;background:var(--bg2);cursor:pointer;transition:border-color .18s,background .18s}
+      .skin-choice:hover{border-color:var(--ac)}
+      .skin-choice:has(input:checked){border-color:var(--ac);background:var(--acbg);box-shadow:0 0 0 1px color-mix(in srgb,var(--ac) 28%,transparent)}
+      .skin-choice input{position:absolute;opacity:0;pointer-events:none}
+      .skin-swatch{height:42px;border-radius:8px;border:1px solid var(--ln2);padding:5px;display:flex;align-items:center;gap:4px;overflow:hidden}
+      .skin-swatch i{height:22px;flex:1;border-radius:4px}
+      .classic-swatch{background:#0a0a0f}.classic-swatch i:nth-child(1){background:#00e5ff}.classic-swatch i:nth-child(2){background:#7c3aed}.classic-swatch i:nth-child(3){background:#2a2a40}
+      .modern-swatch{background:#07080c}.modern-swatch i:nth-child(1){background:#22d3ee}.modern-swatch i:nth-child(2){background:#818cf8}.modern-swatch i:nth-child(3){background:#1e2330}
+      .skin-choice-copy{display:flex;flex-direction:column;gap:3px;min-width:0}.skin-choice-copy b{font-size:13px}.skin-choice-copy small{font-size:11px;color:var(--tx3);line-height:1.4}
+      .settings-toggle-row{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--ln);border-radius:11px;background:var(--bg2);cursor:pointer}
+      .settings-toggle-row>span{display:flex;flex-direction:column;gap:3px;flex:1}.settings-toggle-row b{font-size:13px}.settings-toggle-row small{font-size:11.5px;color:var(--tx3)}
+      .settings-toggle-row input{position:absolute;opacity:0;pointer-events:none}
+      .toggle-ui{width:40px;height:23px;border-radius:99px;background:var(--bg4);border:1px solid var(--ln2);position:relative;transition:.18s;flex:none}
+      .toggle-ui::after{content:"";position:absolute;left:2px;top:2px;width:17px;height:17px;border-radius:50%;background:var(--tx3);transition:.18s}
+      .settings-toggle-row input:checked+.toggle-ui{background:color-mix(in srgb,var(--ac) 28%,var(--bg3));border-color:var(--ac)}
+      .settings-toggle-row input:checked+.toggle-ui::after{left:19px;background:var(--ac)}
+      .settings-sync-actions{display:flex;align-items:center;gap:12px;margin-top:12px;flex-wrap:wrap}
+      .settings-sync-count{font-size:12px;color:var(--tx3)}
+      .settings-note{margin:10px 0}
+      .settings-sync-message{display:flex;align-items:flex-start;gap:10px;padding:12px;border:1px solid var(--ln2);border-radius:11px;background:var(--bg2);color:var(--tx2);font-size:12px;line-height:1.55}
+      .settings-sync-message[data-kind="quota"],.settings-sync-message[data-kind="error"]{border-color:color-mix(in srgb,var(--warn) 42%,var(--ln2));background:color-mix(in srgb,var(--warn) 8%,var(--bg2))}
+      .settings-sync-message[data-kind="success"]{border-color:color-mix(in srgb,var(--ok) 35%,var(--ln2))}
+      .settings-sync-message .sync-notice-mark{display:grid;place-items:center;line-height:1;color:var(--ac)}
+      .settings-sync-message[data-kind="quota"] .sync-notice-mark,.settings-sync-message[data-kind="error"] .sync-notice-mark{color:var(--warn)}
+      .settings-sync-message[data-kind="success"] .sync-notice-mark{color:var(--ok)}
+      .settings-sync-message .sync-notice-text{flex:1}
+      .settings-status-actions{margin-top:7px;justify-content:flex-end}
+      .sync-progress{padding:11px 0 3px;gap:8px;align-items:center;color:var(--tx3);font-size:11.5px}
+      .sync-progress[hidden]{display:none!important}.sync-progress:not([hidden]){display:flex}
+      .settings-footnote{padding-top:14px;color:var(--tx4);font-size:11.5px}
+      @media(max-width:1000px){
+        :root[data-skin="classic"] .hd{padding:28px 24px 22px}
+        /* At this breakpoint the filter sidebar becomes a fixed drawer and leaves the grid flow. */
+        :root[data-skin="classic"] .wrap{padding:22px 24px 52px;grid-template-columns:minmax(0,1fr)}
+        :root[data-skin="classic"] .wrap > main{min-width:0;width:100%}
+        :root[data-skin="classic"] .tbi{padding:13px 24px}
+      }
+      @media(max-width:768px){
+        .settings-overlay{padding:10px;align-items:end}
+        .settings-dialog{max-height:92vh;border-radius:16px 16px 10px 10px}
+        .settings-head{padding:16px 18px 13px}.settings-body{padding:0 18px 18px}
+        .skin-picker{grid-template-columns:1fr}
+        :root[data-skin="classic"] .hd{padding:24px 20px 20px;align-items:flex-start}
+        :root[data-skin="classic"] .wrap{grid-template-columns:1fr;padding:18px 20px 52px}
+        :root[data-skin="classic"] .tbi{padding:12px 20px}
+      }
+      @media(max-width:600px){
+        :root[data-skin="classic"] .hd{padding:20px 16px 16px}
+        :root[data-skin="classic"] .wrap{padding:15px 16px 42px}
+        :root[data-skin="classic"] .grid{grid-template-columns:1fr;gap:14px}
+        :root[data-skin="classic"] .card{min-height:174px;padding:19px}
+      }
     </style>
   </head>
 
   <body>
-    <!-- 作品清单在线由 GitHub API 同步；入口内嵌完整清单与统计快照，离线或 API 限流时也可直接显示。 -->
+    <!-- 默认使用入口内嵌完整清单与统计快照；用户可在设置中选择是否检查入口之外的新作品。 -->
     <header class="hd">
       <div class="logo">
         <div class="mk">
@@ -2445,6 +2642,7 @@
       <div class="hacts">
         <button class="src" id="src" title="数据来源"><i></i><span>内置清单</span></button>
         <button class="ib" id="theme" title="切换明暗主题"></button>
+        <button class="ib" id="settings" title="设置" aria-label="设置"></button>
         <button class="ib" id="help" title="快捷键 (?)"></button>
         <a class="ib" id="gh" target="_blank" rel="noopener" title="GitHub 仓库"></a>
       </div>
@@ -2463,21 +2661,6 @@
         <div style="flex:1"></div>
         <button class="btn sm" id="rand" title="在当前结果中随机打开一件"></button>
         <div class="seg" id="mode" title="打开方式"></div>
-      </div>
-      <div class="sync-progress" id="syncProgress" hidden>
-        <span class="sync-indicator" aria-hidden="true"></span>
-        <span class="sync-progress-text" id="syncProgressText" role="status" aria-live="polite">正在同步…</span>
-        <div class="sync-progress-track" id="syncProgressBar" role="progressbar" aria-label="作品清单同步进度" aria-valuemin="0"
-          aria-valuemax="100"><i id="syncProgressFill"></i></div>
-        <span class="sync-progress-count" id="syncProgressCount" aria-live="off"></span>
-      </div>
-      <div class="sync-notice" id="syncNotice" hidden>
-        <div class="sync-notice-box">
-          <span class="sync-notice-mark" aria-hidden="true">!</span>
-          <span class="sync-notice-text" id="syncNoticeText" role="status" aria-live="polite"></span>
-        </div>
-        <button class="btn sm" id="syncNoticeRetry" type="button">重试同步</button>
-        <button class="ib sm" id="syncNoticeClose" type="button" title="关闭提示" aria-label="关闭提示">×</button>
       </div>
     </div>
     <div class="wrap">
@@ -2500,6 +2683,60 @@
     <div class="menu" id="menu"></div>
     <div class="toasts" id="toasts"></div>
     <div class="tip" id="tip"></div>
+
+    <div class="settings-overlay" id="settingsOverlay" hidden>
+      <section class="settings-dialog" role="dialog" aria-modal="true" aria-labelledby="settingsTitle" tabindex="-1">
+        <header class="settings-head">
+          <div><div class="settings-kicker">PREFERENCES</div><h2 id="settingsTitle">设置</h2><p>外观与新作品检查</p></div>
+          <button class="ib" id="closeSettings" type="button" aria-label="关闭设置" title="关闭">×</button>
+        </header>
+        <div class="settings-body">
+          <section class="settings-section">
+            <div class="settings-section-head"><h3>界面风格</h3><p>默认恢复旧版的青蓝霓虹与大卡片；新版主题随时可切换。</p></div>
+            <div class="skin-picker" id="skinPicker">
+              <label class="skin-choice" data-skin-choice="classic">
+                <input type="radio" name="skin" value="classic">
+                <span class="skin-swatch classic-swatch"><i></i><i></i><i></i></span>
+                <span class="skin-choice-copy"><b>经典旧版</b><small>青蓝与紫色、宽松卡片、干净留白</small></span>
+              </label>
+              <label class="skin-choice" data-skin-choice="modern">
+                <input type="radio" name="skin" value="modern">
+                <span class="skin-swatch modern-swatch"><i></i><i></i><i></i></span>
+                <span class="skin-choice-copy"><b>新版主题</b><small>当前深色玻璃风格与卡片色彩条</small></span>
+              </label>
+            </div>
+          </section>
+          <section class="settings-section">
+            <div class="settings-section-head"><h3>作品清单</h3><p>默认只显示入口内嵌清单，不会在启动时请求 GitHub；可手动检查，或开启自动检查后在启动时获取仓库文件清单并补入新作品。</p></div>
+            <label class="settings-toggle-row" for="autoCheck">
+              <span><b>启动时自动检查新作品</b><small>仅同步根目录清单并分析新条目；已内嵌作品不逐个 HEAD 或重新抓取</small></span>
+              <input id="autoCheck" type="checkbox">
+              <i class="toggle-ui" aria-hidden="true"></i>
+            </label>
+            <div class="settings-sync-actions">
+              <button class="btn pri" id="syncNewNow" type="button">立即检查新作品</button>
+              <span class="settings-sync-count" id="settingsSyncCount"></span>
+            </div>
+            <p class="settings-note">限流或离线时，内嵌作品仍可正常查看。检查结果和错误说明只显示在本设置页。</p>
+            <div class="settings-sync-message" id="syncNotice" data-kind="info">
+              <span class="sync-notice-mark" aria-hidden="true">i</span>
+              <span class="sync-notice-text" id="syncNoticeText" role="status" aria-live="polite">默认只使用入口内嵌清单，不会在启动时请求 GitHub；可手动检查，或开启自动检查。</span>
+            </div>
+            <div class="settings-sync-actions settings-status-actions">
+              <button class="btn sm" id="syncNoticeRetry" type="button" hidden>重试检查</button>
+              <button class="btn sm ghost" id="syncNoticeClose" type="button">清除状态</button>
+            </div>
+            <div class="sync-progress" id="syncProgress" hidden>
+              <span class="sync-indicator" aria-hidden="true"></span>
+              <span class="sync-progress-text" id="syncProgressText" role="status" aria-live="polite">正在检查…</span>
+              <div class="sync-progress-track" id="syncProgressBar" role="progressbar" aria-label="新作品检查进度" aria-valuemin="0" aria-valuemax="100"><i id="syncProgressFill"></i></div>
+              <span class="sync-progress-count" id="syncProgressCount" aria-live="off"></span>
+            </div>
+          </section>
+          <div class="settings-footnote">时间线、列表、筛选、统计与收藏等功能保持不变。</div>
+        </div>
+      </section>
+    </div>
 
     <script>
       /* ===== 作品代码分析器（页面与 tools/gen-stats.mjs 共用同一份） ===== */
@@ -2781,16 +3018,13 @@
         ["Claude Sonnet 5.5 High 作品 2026.11.12 晨光 OS v2.1.19.2.html", 285692, 1794714124, null],
         ["Claude Sonnet 5.5 High 作品 2026.11.13 栖云台 v2.1.19.2.html", 280969, 1794714124, null],
         ["Claude Sonnet 5.5 High 作品 2026.11.14 天枢机 v2.1.19.2.html", 339193, 1794714124, null],
-        ["Gemini 4 Krypton 作品 2026.11.14 玄渊 OS v2.1.19.2.html", 415147, 1794660938, null]
+        ["Gemini 4 Krypton 作品 2026.11.14 玄渊 OS v2.1.19.2.html", 415147, 1794660938, null],
+        ["Qwen 4 Max 作品 2026.11.16 提瓦特 OS v2.1.19.2.html", 248063, 1794802476, 0],
+        ["Qwen 4 Max 作品 2026.11.16 琥珀 OS v2.1.19.2.html", 234197, 1794800098, 1],
+        ["GLM-5.3 Flash 作品 2026.11.16 LACQUERDESK OS v2.1.19.2.html", 247018, 1794799129, null],
+        ["Claude Fable 5.2 Max 作品 2026.11.15 墨砚 OS v2.1.19.2.html", 252777, 1794738726, null]
       ];
       const SNAPMAP = new Map(SNAP.map(x => [x[0], x]));
-      // 兼容旧浏览器缓存与分享链接里的旧名；两者实际指向同一件被重命名的作品。
-      const LEGACY_RENAMES = new Map([
-        ['Gemini 4 Carbon 作品 2026.11.06 云境 OS v2.1.19.2.html',
-          'Gemini 4 Hydrogen 作品 2026.11.06 云境 OS v2.1.19.2.html'
-        ]
-      ]);
-      const canonicalFile = f => LEGACY_RENAMES.get(f) || f;
       const CFG = (() => {
         // 部署在 xxx.github.io/仓库名/ 时自动识别仓库；其他情况用默认值
         let owner = 'SFGFDSD',
@@ -2827,8 +3061,6 @@
       };
       // 内置清单只属于 SFGFDSD/evowebos；部署到别的仓库时不用它当作品列表
       const HOME = (CFG.owner + '/' + CFG.repo).toLowerCase() === 'sfgfdsd/evowebos';
-      // 页面和作品在同一个网站上（GitHub Pages）时，可以直接问网站某个文件在不在
-      const SAME_ORIGIN = /^https?:$/.test(location.protocol);
       let LIST_STATE = 'ok'; // ok | loading | failed：作品列表为空时显示哪种提示
 
       /* ================= 厂商与配色（全部沿用原入口页的颜色） ================= */
@@ -3028,21 +3260,25 @@
       const S = JSON.parse(JSON.stringify(DEF));
       const PREF = Object.assign({
         theme: 'dark',
+        skin: 'classic',
+        autoCheck: false,
         mode: 'tab',
         res: 'fit',
         cres: '1440x900',
         clay: 'auto',
         col: {}
       }, LS.get('pref', {}));
+      if (!['classic', 'modern'].includes(PREF.skin)) PREF.skin = 'classic';
+      PREF.autoCheck = !!PREF.autoCheck;
       const savePref = () => LS.set('pref', PREF);
       const favRaw = LS.get('fav', []);
-      let FAV = new Set((Array.isArray(favRaw) ? favRaw : []).map(canonicalFile));
+      let FAV = new Set((Array.isArray(favRaw) ? favRaw : []).map(f => f));
       if (JSON.stringify([...FAV]) !== JSON.stringify(favRaw)) LS.set('fav', [...FAV]);
       const recentRaw = LS.get('recent', []),
         recentByFile = new Map();
       for (const r of Array.isArray(recentRaw) ? recentRaw : []) {
         if (!r || typeof r.f !== 'string') continue;
-        const f = canonicalFile(r.f);
+        const f = r.f;
         if (!recentByFile.has(f)) recentByFile.set(f, {
           ...r,
           f
@@ -3052,7 +3288,7 @@
       if (JSON.stringify(RECENT) !== JSON.stringify(recentRaw)) LS.set('recent', RECENT);
       let SEEN = new Set(RECENT.map(r => r.f));
       const cmpRaw = LS.get('cmp', []);
-      let CMP = [...new Set((Array.isArray(cmpRaw) ? cmpRaw : []).map(canonicalFile))].slice(0, 4);
+      let CMP = [...new Set((Array.isArray(cmpRaw) ? cmpRaw : []).map(f => f))].slice(0, 4);
       if (JSON.stringify(CMP) !== JSON.stringify(cmpRaw)) LS.set('cmp', CMP);
 
       /* ================= 工具 ================= */
@@ -3124,6 +3360,7 @@
         filter: '<path d="M3 5h18l-7 8v6l-4 2v-8z"/>',
         car: '<path d="m6 9 6 6 6-6"/>',
         info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5h.01"/>',
+        settings: '<path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"/><circle cx="12" cy="12" r="3"/>',
         table: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 4v16"/>',
         empty: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5M8.5 11h5"/>'
       };
@@ -3144,25 +3381,25 @@
         const out = new Map();
         for (const row of Array.isArray(list) ? list : []) {
           if (!Array.isArray(row) || typeof row[0] !== 'string') continue;
-          const f = canonicalFile(row[0]),
-            item = [f, row[1] ?? null, row[2] ?? null];
-          if (!out.has(f) || f === row[0]) out.set(f, item);
+          const f = row[0];
+          if (!RE_FILE.test(f) || f.includes('/')) continue;
+          const item = [f, row[1] ?? null, row[2] ?? null];
+          if (!out.has(f)) out.set(f, item);
         }
-        // 页面启动时先以当前入口快照补齐旧缓存，并让快照中的字节数/提交时间覆盖旧值。
-        if (includeSnapshot && HOME)
-          for (const row of SNAP) out.set(row[0], row);
+        if (includeSnapshot && HOME) for (const row of SNAP) out.set(row[0], row);
         return [...out.values()];
       }
 
+      let API_ERR = '';
       function setWorks(list, srcState, label, includeSnapshot = false) {
         list = normalizeList(list, includeSnapshot);
         const arr = [];
-        for (const [f, s, u] of list) {
-          const w = parseFile(f, s);
+        for (const [f, size, u] of list) {
+          const w = parseFile(f, size);
           if (!w) continue;
-          const sn = SNAPMAP.get(f);
-          w.u = (sn && sn[2]) ?? u ?? UTIME[f] ?? null;
-          w.r = sn ? sn[3] : null;
+          const snap = SNAPMAP.get(f);
+          w.u = (snap && snap[2]) ?? u ?? UTIME[f] ?? null;
+          w.r = snap ? snap[3] : null;
           arr.push(w);
         }
         W = arr;
@@ -3170,308 +3407,140 @@
         attachStats();
         CMP = CMP.filter(f => BY.has(f));
         setSrc(srcState, label.replace(/\d+ 件/, `${arr.length} 件`));
+        updateSettingsCount();
       }
-      let API_ERR = ''; // GitHub API 上次失败的原因（额度用完 / 网络），显示在状态灯和空状态里，方便判断
-      function setSrc(state, label, why) {
+
+      function setSrc(state, label) {
         const el = $('#src');
+        if (!el) return;
         el.className = 'src ' + state;
         el.querySelector('span').textContent = label;
-        el.title = (why ? why + '\n' : '') + ({
-          live: '已从 GitHub API 实时读取仓库文件清单',
-          cache: '临时使用浏览器清单缓存，并补入当前入口内嵌快照；缓存可能未经过本次网络确认',
-          off: 'GitHub API/站点不可用，使用当前内嵌快照与可用缓存；不会因为空缓存而把快照清空',
-          check: 'GitHub API 暂不可用。已合并入口快照与本地缓存并向站点逐项核对：HTTP 404 才移除，网络/服务器错误保留为未确认。快照和缓存之外的新文件需等 API 恢复后发现',
-          busy: '正在同步；下方会显示阶段和逐项进度',
-          snap: '使用此入口内嵌的当前作品清单'
-        } [state] || '');
+        el.title = '点击打开设置；外观和新作品检查都在设置中';
       }
-      let SYNCING = false,
-        SYNC_UI_TIMER = 0;
+      let SYNCING = false, SYNC_UI_TIMER = 0;
 
       function paintSyncProgress(message, done = null, total = null) {
-        const box = $('#syncProgress');
-        if (!box) return;
-        clearTimeout(SYNC_UI_TIMER);
-        box.hidden = false;
-        box.classList.remove('done');
+        const box = $('#syncProgress'); if (!box) return;
+        clearTimeout(SYNC_UI_TIMER); box.hidden = false; box.classList.remove('done');
         $('#syncProgressText').textContent = message;
-        const bar = $('#syncProgressBar'),
-          fill = $('#syncProgressFill'),
-          count = $('#syncProgressCount');
+        const bar = $('#syncProgressBar'), fill = $('#syncProgressFill'), count = $('#syncProgressCount');
         const determinate = Number.isFinite(done) && Number.isFinite(total) && total > 0;
         box.classList.toggle('indeterminate', !determinate);
         if (determinate) {
           const pct = Math.max(0, Math.min(100, Math.round(done / total * 100)));
-          bar.setAttribute('aria-valuenow', pct);
-          fill.style.width = pct + '%';
+          bar.setAttribute('aria-valuenow', pct); fill.style.width = pct + '%';
           count.textContent = `${done}/${total} · ${pct}%`;
         } else {
-          bar.removeAttribute('aria-valuenow');
-          fill.style.width = '34%';
-          count.textContent = '连接中…';
+          bar.removeAttribute('aria-valuenow'); fill.style.width = '34%'; count.textContent = '连接中…';
         }
       }
 
       function finishSyncProgress(message) {
-        const box = $('#syncProgress');
-        if (!box) return;
-        clearTimeout(SYNC_UI_TIMER);
-        box.hidden = false;
-        box.classList.remove('indeterminate');
-        box.classList.add('done');
+        const box = $('#syncProgress'); if (!box) return;
+        clearTimeout(SYNC_UI_TIMER); box.hidden = false; box.classList.remove('indeterminate'); box.classList.add('done');
         $('#syncProgressText').textContent = message;
-        $('#syncProgressBar').setAttribute('aria-valuenow', 100);
-        $('#syncProgressFill').style.width = '100%';
+        $('#syncProgressBar').setAttribute('aria-valuenow', 100); $('#syncProgressFill').style.width = '100%';
         $('#syncProgressCount').textContent = '完成';
-        SYNC_UI_TIMER = setTimeout(() => {
-          box.hidden = true;
-          box.classList.remove('done');
-        }, 2800);
+        SYNC_UI_TIMER = setTimeout(() => { box.hidden = true; box.classList.remove('done'); }, 2800);
       }
 
       function showSyncNotice(limitResetAt = 0) {
-        const box = $('#syncNotice'),
-          text = $('#syncNoticeText');
-        if (!box || !text || !API_ERR) return;
+        if (!API_ERR) return;
         const quota = /额度已用尽|rate.?limit|secondary rate limit/i.test(API_ERR);
-        box.dataset.kind = quota ? 'quota' : 'network';
         const resetDate = limitResetAt ? new Date(limitResetAt) : null;
-        const reset = resetDate ?
-          `${String(resetDate.getHours()).padStart(2, '0')}:${String(resetDate.getMinutes()).padStart(2, '0')}` : '';
-        text.textContent = quota ?
-          `GitHub API 每小时额度已用尽（未认证请求按共享出口 IP 每小时 60 次${reset ? `，预计 ${reset} 左右重置（本地时间）` : ''}）。当前入口备用清单显示 ${W.length} 件作品；无需清缓存。限额恢复后点“重试同步”即可再次检查，新文件可能会等额度恢复后出现。` :
-          `GitHub API 同步未成功（${API_ERR}）。现在已用入口备用清单显示 ${W.length} 件作品；无需依赖旧缓存，可稍后点“重试同步”。`;
-        box.hidden = false;
+        const reset = resetDate ? `${String(resetDate.getHours()).padStart(2, '0')}:${String(resetDate.getMinutes()).padStart(2, '0')}` : '';
+        const message = quota
+          ? `GitHub API 额度已用尽（匿名请求通常按共享出口 IP 每小时 60 次${reset ? `；预计 ${reset} 左右恢复（本地时间）` : ''}）。页面继续使用入口内嵌清单 ${SNAP.length} 件；已有作品没有逐项重查，无需清缓存。稍后可在这里手动重试。`
+          : `GitHub 新作品检查失败：${API_ERR}。页面仍使用入口内嵌清单 ${SNAP.length} 件；无需清缓存。可稍后在设置内重试。`;
+        setSettingsStatus(message, quota ? 'quota' : 'error', true);
       }
-      async function syncTree(force) {
-        const cache = LS.get('tree', null);
-        if (SYNCING) return;
-        // 60 秒内的缓存先用于快速首屏，但会叠加当前入口快照，避免漏卡/旧重命名。
-        if (!force && cache && Array.isArray(cache.list) && cache.list.length && cache.etag && Date.now() - (cache
-            .at || 0) < 60e3) {
-          LIST_STATE = 'ok';
-          setWorks(cache.list, 'cache', `缓存 + 内嵌清单 · ${cache.list.length} 件`, true);
-          render();
-          fillUploadTimes();
-          return;
-        }
-        SYNCING = true;
-        API_ERR = '';
-        $('#syncNotice').hidden = true;
+
+      // 默认不调用 GitHub API。手动/启用自动检查时只筛出未内嵌的新 HTML，不 HEAD 重查已内嵌文件。
+      async function syncTree(force = false) {
+        if (SYNCING || (!force && !PREF.autoCheck)) return;
+        SYNCING = true; API_ERR = '';
+        $('#syncNoticeRetry').hidden = true;
+        setSettingsStatus('正在检查 GitHub 清单中的未内嵌新作品…', 'info');
         $('#src').setAttribute('aria-busy', 'true');
-        setSrc('busy', '同步中…');
-        paintSyncProgress('正在请求 GitHub 仓库目录…');
+        setSrc('busy', '检查新作品…');
+        paintSyncProgress('检查 GitHub 清单中的未内嵌新作品…');
         let limitResetAt = 0;
         try {
-          const h = {
-            Accept: 'application/vnd.github+json'
-          };
-          if (cache && cache.etag && !force) h['If-None-Match'] = cache.etag;
+          const headers = { Accept: 'application/vnd.github+json' };
+          const etag = LS.get('newScanEtag', null);
+          if (!force && etag) headers['If-None-Match'] = etag;
           let r;
           try {
             r = await fetch(`https://api.github.com/repos/${CFG.owner}/${CFG.repo}/git/trees/HEAD?recursive=1`, {
-              headers: h,
-              cache: 'no-store'
+              headers, cache: 'no-store'
             });
           } catch (e) {
-            API_ERR = '连不上 GitHub API（离线、网络或代理拦截）';
-            throw e;
+            API_ERR = '连不上 GitHub API（离线、网络或代理拦截）'; throw e;
           }
           if (!r.ok && r.status !== 304) {
             const rem = r.headers.get('X-RateLimit-Remaining');
             const rsHeader = +r.headers.get('X-RateLimit-Reset');
             const retryAfterRaw = r.headers.get('Retry-After');
             const retryAfterSeconds = Number(retryAfterRaw);
-            const retryAfterAt = retryAfterRaw ?
-              (Number.isFinite(retryAfterSeconds) ? Date.now() / 1000 + retryAfterSeconds : Date.parse(
-                retryAfterRaw) / 1000) :
-              0;
+            const retryAfterAt = retryAfterRaw
+              ? (Number.isFinite(retryAfterSeconds) ? Date.now() / 1000 + retryAfterSeconds : Date.parse(retryAfterRaw) / 1000)
+              : 0;
             let apiMessage = '';
-            try {
-              apiMessage = (await r.clone().json()).message || '';
-            } catch (e) {}
+            try { apiMessage = (await r.clone().json()).message || ''; } catch (e) { }
             const limited = r.status === 429 || (r.status === 403 &&
               (rem === '0' || /rate.?limit|secondary rate limit|abuse detection/i.test(apiMessage)));
             if (limited) {
               const rs = rsHeader || (retryAfterAt > 0 ? retryAfterAt : 0);
               limitResetAt = rs ? rs * 1000 : 0;
               const t = limitResetAt ? new Date(limitResetAt) : null;
-              API_ERR =
-                `GitHub API 额度已用尽（未认证请求通常按共享出口 IP 每小时 60 次计数）${t ? `，预计 ${String(t.getHours()).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')} 重置` : ''}`;
+              API_ERR = `GitHub API 额度已用尽（未认证请求通常按共享出口 IP 每小时 60 次计数）${t ? `，预计 ${String(t.getHours()).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')} 重置` : ''}`;
             } else if (r.status === 404) API_ERR = `GitHub 上找不到仓库 ${CFG.owner}/${CFG.repo}（HTTP 404，仓库名不对或是私有仓库）`;
             else API_ERR = `GitHub API 返回 HTTP ${r.status}${apiMessage ? `：${apiMessage}` : ''}`;
             throw new Error(API_ERR);
           }
-          API_ERR = '';
-          LIST_STATE = 'ok';
-          if (r.status === 304 && cache) {
-            cache.at = Date.now();
-            LS.set('tree', cache);
-            setWorks(cache.list, 'live', `GitHub 已确认 · ${cache.list.length} 件`);
+
+          const cachedNew = (LS.get('newWorks', []) || []).filter(x => Array.isArray(x) && typeof x[0] === 'string' && !SNAPMAP.has(x[0]));
+          if (r.status === 304) {
+            API_ERR = '';
+            const combined = [...SNAP, ...cachedNew.map(x => [x[0], x[1] ?? null, x[2] ?? null])];
+            setWorks(combined, 'snap', `内嵌清单 · ${combined.length} 件`);
             render();
-            fillUploadTimes();
+            const message = `检查完成：GitHub 清单自上次检查后未变化。内嵌作品 ${SNAP.length} 件未逐项重查；保留本机已发现的 ${cachedNew.length} 件新作品。`;
+            setSettingsStatus(message, 'success', true);
             return;
           }
           if (!r.ok) throw new Error('HTTP ' + r.status);
           const j = await r.json();
-          const list = (j.tree || []).filter(t => t.type === 'blob' && !t.path.includes('/') && RE_FILE.test(t.path))
+          const tree = (j.tree || [])
+            .filter(t => t.type === 'blob' && !t.path.includes('/') && RE_FILE.test(t.path))
             .map(t => [t.path, t.size]);
-          if (!list.length) {
-            LIST_STATE = 'empty';
-            LS.set('tree', {
-              etag: r.headers.get('ETag'),
-              at: Date.now(),
-              list
-            });
-            setWorks([], 'live', 'GitHub 实时 · 0 件');
-            render();
-            return;
-          }
-          LS.set('tree', {
-            etag: r.headers.get('ETag'),
-            at: Date.now(),
-            list
-          });
-          const before = new Set(W.map(w => w.file));
-          setWorks(list, 'live', `GitHub 实时 · ${list.length} 件`);
-          const added = list.filter(x => !before.has(x[0])).length;
-          if (added && before.size) toast(`同步完成：发现 ${added} 件新作品`);
+          const newWorks = tree.filter(x => !SNAPMAP.has(x[0]));
+          const priorNames = new Set(cachedNew.map(x => x[0]));
+          LS.set('newWorks', newWorks);
+          const responseEtag = r.headers.get('ETag');
+          if (responseEtag) LS.set('newScanEtag', responseEtag);
+          const combined = [...SNAP, ...newWorks.map(x => [x[0], x[1], null])];
+          setWorks(combined, 'live', newWorks.length ? `发现新作品 · ${newWorks.length} 件` : `内嵌清单 · ${SNAP.length} 件`);
           render();
-          fillUploadTimes();
+          const newlyFound = newWorks.filter(x => !priorNames.has(x[0])).length;
+          const message = newWorks.length
+            ? `检查完成：入口内嵌 ${SNAP.length} 件未重新核对；发现 ${newWorks.length} 件尚未内嵌作品${newlyFound ? `，其中 ${newlyFound} 件是本次新发现` : ''}。它们只在本机暂存显示；要成为稳定清单，需把统计与顺序写进入口快照。`
+            : `检查完成：未发现入口快照之外的新作品。内嵌的 ${SNAP.length} 件未逐项重查。`;
+          setSettingsStatus(message, 'success', true);
+          API_ERR = '';
         } catch (e) {
-          if (!API_ERR) API_ERR = `GitHub API 同步失败${e?.message ? `：${e.message}` : ''}`;
-          console.warn('GitHub 同步失败', e);
-          await fallbackList(cache);
+          if (!API_ERR) API_ERR = `GitHub 新作品检查失败${e?.message ? `：${e.message}` : ''}`;
+          console.warn('GitHub 新作品检查失败', e);
+          setSrc('snap', `内嵌清单 · ${W.length} 件`);
         } finally {
-          SYNCING = false;
-          $('#src').removeAttribute('aria-busy');
+          SYNCING = false; $('#src').removeAttribute('aria-busy');
           if (API_ERR) showSyncNotice(limitResetAt);
-          else $('#syncNotice').hidden = true;
-          finishSyncProgress(`同步结束 · ${$('#src').querySelector('span').textContent}`);
+          finishSyncProgress(API_ERR ? '检查失败 · 已保留内嵌清单' : `检查完成 · ${$('#src').querySelector('span').textContent}`);
         }
-      }
-      // API 不可用时，以入口当前快照 + 仓库专属缓存为候选清单。
-      async function fallbackList(cache) {
-        const cand = new Map();
-        const add = (f, s, u) => {
-          if (typeof f !== 'string' || !RE_FILE.test(f) || f.includes('/')) return;
-          const name = canonicalFile(f),
-            row = [name, s ?? null, u ?? null];
-          if (!cand.has(name) || name === f) cand.set(name, row);
-        };
-        if (cache && Array.isArray(cache.list)) cache.list.forEach(x => add(x[0], x[1], x[2]));
-        if (HOME)
-          for (const row of SNAP) cand.set(row[0], row); // 快照覆盖缓存中的旧大小/时间，并补齐漏项
-        let list = [...cand.values()];
-        if (SAME_ORIGIN && list.length) {
-          setSrc('busy', `核对 0/${list.length}`);
-          paintSyncProgress('逐项核对站点文件', 0, list.length);
-          const ok = new Array(list.length).fill(null);
-          let i = 0,
-            done = 0;
-          const one = async () => {
-            while (i < list.length) {
-              const k = i++;
-              try {
-                const r = await fetch(URLF(list[k][0]), {
-                  method: 'HEAD',
-                  cache: 'no-store'
-                });
-                ok[k] = r.ok ? true : r.status === 404 ? false : null;
-              } catch (e) {
-                ok[k] = null;
-              }
-              done++;
-              setSrc('busy', `核对 ${done}/${list.length}`);
-              paintSyncProgress('逐项核对站点文件', done, list.length);
-            }
-          };
-          await Promise.all(Array.from({
-            length: Math.min(8, list.length)
-          }, one));
-          if (ok.every(v => v === null)) {
-            // 站点也不可达：保留内嵌快照与缓存候选，不把无缓存的隐私窗口变成空列表。
-            LIST_STATE = list.length ? 'ok' : 'failed';
-            const fallbackLabel = /额度已用尽|rate.?limit|secondary rate limit/i.test(API_ERR) ?
-              `API 限流 · 备用清单 ${list.length} 件` : `离线 · 备用清单 ${list.length} 件`;
-            setWorks(list, 'off', fallbackLabel);
-            setSrc('off', $('#src span').textContent, API_ERR);
-            render();
-            return;
-          }
-          list = list.filter((x, k) => ok[k] !== false);
-          if (list.length) LS.set('tree', {
-            etag: null,
-            at: Date.now(),
-            list
-          });
-        }
-        const state = SAME_ORIGIN ? 'check' : 'off';
-        LIST_STATE = list.length ? 'ok' : 'failed';
-        const quotaHit = /额度已用尽|rate.?limit|secondary rate limit/i.test(API_ERR);
-        const finalLabel = quotaHit ? `API 限流 · 备用清单 ${list.length} 件` :
-          `${state === 'check' ? '已核对候选' : '备用清单'} · ${list.length} 件`;
-        setWorks(list, state, finalLabel);
-        setSrc(state, $('#src span').textContent, API_ERR);
-        render();
       }
 
-      /* ================= 上传时间（同一天的作品按它排先后） ================= */
-      let UTIME = LS.get('utime', {}); // 文件名 -> 上传时间（秒），从提交记录读出，永久缓存
-      async function fillUploadTimes() {
-        const miss = new Set(W.filter(w => w.u == null).map(w => w.file));
-        if (!miss.size) return;
-        try {
-          const h = {
-            Accept: 'application/vnd.github+json'
-          };
-          const cl = LS.get('commits', null);
-          if (cl && cl.etag) h['If-None-Match'] = cl.etag;
-          const r = await fetch(`https://api.github.com/repos/${CFG.owner}/${CFG.repo}/commits?per_page=30`, {
-            headers: h,
-            cache: 'no-store'
-          });
-          let list;
-          if (r.status === 304 && cl) list = cl.list;
-          else if (r.ok) {
-            list = (await r.json()).map(c => [c.sha, Date.parse(c.commit.committer.date) / 1000]);
-            LS.set('commits', {
-              etag: r.headers.get('ETag'),
-              list
-            });
-          } else return;
-          const seen = LS.get('cdone', []);
-          let calls = 0;
-          for (const [sha, t] of list) { // 从新到旧
-            if (!miss.size || calls >= 8) break;
-            if (seen.includes(sha)) continue;
-            const d = await fetch(`https://api.github.com/repos/${CFG.owner}/${CFG.repo}/commits/${sha}`, {
-              headers: {
-                Accept: 'application/vnd.github+json'
-              },
-              cache: 'force-cache'
-            });
-            calls++;
-            if (!d.ok) break;
-            for (const f of (await d.json()).files || []) {
-              if ((f.status === 'added' || f.status === 'renamed') && !(f.filename in UTIME)) UTIME[f.filename] = t;
-              miss.delete(f.filename);
-            }
-            seen.push(sha);
-          }
-          LS.set('utime', UTIME);
-          LS.set('cdone', seen.slice(-300));
-          let changed = false;
-          for (const w of W)
-            if (w.u == null && UTIME[w.file] != null) {
-              w.u = UTIME[w.file];
-              changed = true;
-            }
-          if (changed) render();
-        } catch (e) {
-          console.warn('读取上传时间失败', e);
-        }
-      }
+      // 已嵌入快照已包含提交时间；只保留既有本地缓存作兜底，不再逐个调用 Commit API。
+      const UTIME = LS.get('utime', {});
 
       /* ================= 筛选 ================= */
       const SZ_BUCKETS = [
@@ -4076,14 +4145,13 @@
         const c = vc(w.cls);
         const st = w.st;
         return `<a class="card" href="${URLF(w.file)}" target="_blank" rel="noopener" data-f="${esc(w.file)}" style="--vc:${c};animation-delay:${Math.min(i, 24) * 18}ms">
-    <div class="mono">${esc(w.mono)}</div>
-    <div class="top">${badge(w)}<div class="tools${FAV.has(w.file) || CMP.includes(w.file) ? ' keep' : ''}">
-      <button class="tbtn cmp${CMP.includes(w.file) ? ' on' : ''}" data-a="cmp" title="加入对比 (最多 4 件)">${ic('cmp')}</button>
-      <button class="tbtn${FAV.has(w.file) ? ' on' : ''}" data-a="fav" title="收藏">${ic('star')}</button></div></div>
+    <div class="top">${badge(w)}<span class="legacy-date num">${w.date}</span></div>
     <h3>${esc(w.name)}</h3>
-    <div class="sub"><span class="v num">${esc(w.ver)}</span><span>·</span><span class="num">${w.date}</span></div>
+    <div class="sub"><span class="v num">${esc(w.ver)}</span><span class="date-sep">·</span><span class="modern-date num">${w.date}</span></div>
     ${FULL ? '/*PAL*/' : ''}
-    <div class="meta"><span class="num" title="文件大小">${fmtKB(w.size)}</span>${FULL ? '/*LN*/' : ''}<span>${rel(w.dn)}</span>${SEEN.has(w.file) ? '<span title="看过">· 看过</span>' : ''}<span class="go">打开 ${ic('r', 2.4).replace('<svg', '<svg width="13" height="13"')}</span></div>
+    <div class="meta"><span class="num" title="文件大小">${fmtKB(w.size)}</span>${FULL ? '/*LN*/' : ''}<span>${rel(w.dn)}</span>${SEEN.has(w.file) ? '<span title="看过">· 看过</span>' : ''}<div class="tools${FAV.has(w.file) || CMP.includes(w.file) ? ' keep' : ''}">
+      <button class="tbtn cmp${CMP.includes(w.file) ? ' on' : ''}" data-a="cmp" title="加入对比 (最多 4 件)">${ic('cmp')}</button>
+      <button class="tbtn${FAV.has(w.file) ? ' on' : ''}" data-a="fav" title="收藏">${ic('star')}</button></div><span class="go">打开 ${ic('r', 2.4).replace('<svg', '<svg width="13" height="13"')}</span></div>
   </a>`
           .replace('/*PAL*/', st && st.p.length ?
             `<div class="pal" title="作品主色">${st.p.map(h => `<i style="background:#${h}"></i>`).join('')}</div>` :
@@ -4104,10 +4172,10 @@
         firstRender = false;
         if (!W.length && S.view !== 'dash') {
           const msg = {
-            loading: ['正在从 GitHub 读取作品清单…', `仓库 ${esc(CFG.owner)}/${esc(CFG.repo)}`],
+            loading: ['正在检查入口之外的新作品…', `仓库 ${esc(CFG.owner)}/${esc(CFG.repo)}`],
             empty: ['这个仓库里还没有作品',
               `按「模型 作品 YYYY.MM.DD 名称 v版本.html」命名上传到 ${esc(CFG.owner)}/${esc(CFG.repo)} 根目录，刷新就会出现`],
-            failed: ['暂时读不到作品清单', esc(API_ERR || 'GitHub API 暂不可用（离线或超出每小时 60 次限额）') + '，稍后再试']
+            failed: ['暂时读不到作品清单', '打开“设置”查看同步详情并重试。']
           } [LIST_STATE] || ['还没有作品', ''];
           el.innerHTML =
             `<div class="empty">${ic('empty', 1.5)}<div style="font-size:15px;color:var(--tx2);margin-bottom:6px">${msg[0]}</div><div>${msg[1]}</div>${LIST_STATE === 'failed' ? '<div style="margin-top:14px"><button class="btn sm" data-resync>重试</button></div>' : ''}</div>`;
@@ -4305,6 +4373,18 @@
 
       /* ================= 事件 ================= */
       function bind() {
+        const cardGlowTimers = new WeakMap();
+        const pulseCardGlow = card => {
+          const previous = cardGlowTimers.get(card);
+          if (previous) clearTimeout(previous);
+          card.classList.remove('click-glow');
+          void card.offsetWidth;
+          card.classList.add('click-glow');
+          cardGlowTimers.set(card, setTimeout(() => {
+            card.classList.remove('click-glow');
+            cardGlowTimers.delete(card);
+          }, 950));
+        };
         // 工具栏
         $('#sort').innerHTML = SORTS.map(([k, l]) => `<option value="${k}">${l}</option>`).join('');
         $('#grp').innerHTML = [
@@ -4325,6 +4405,8 @@
           `<button data-mode="win" title="在页内窗口中打开">${ic('win')}<span>窗口</span></button><button data-mode="tab" title="在新标签页打开">${ic('tab')}<span>新标签</span></button>`;
         $('#rand').innerHTML = ic('dice') + '<span>随机一件</span>';
         $('#theme').innerHTML = ic(PREF.theme === 'light' ? 'moon' : 'sun');
+        $('#settings').innerHTML = ic('settings');
+        $('#syncNewNow').innerHTML = ic('reload') + '立即检查新作品';
         $('#help').innerHTML = ic('key');
         $('#mfb').innerHTML = ic('filter');
         renderFavShortcut();
@@ -4382,10 +4464,28 @@
           applyTheme();
         };
         $('#help').onclick = e => showHelp(e.currentTarget);
-        $('#src').onclick = () => syncTree(true);
+        $('#settings').onclick = openSettings;
+        $('#src').onclick = openSettings;
+        $('#closeSettings').onclick = closeSettings;
+        $('#settingsOverlay').addEventListener('click', e => {
+          if (e.target === $('#settingsOverlay')) closeSettings();
+        });
+        document.querySelectorAll('input[name="skin"]').forEach(input => input.addEventListener('change', e => {
+          PREF.skin = e.target.value === 'modern' ? 'modern' : 'classic';
+          savePref(); applySkin(); drawFavicon();
+        }));
+        $('#autoCheck').addEventListener('change', e => {
+          PREF.autoCheck = !!e.target.checked; savePref();
+          if (PREF.autoCheck) syncTree(true);
+        });
+        $('#syncNewNow').onclick = () => syncTree(true);
         $('#syncNoticeRetry').onclick = () => syncTree(true);
         $('#syncNoticeClose').onclick = () => {
-          $('#syncNotice').hidden = true;
+          LS.set('scanStatus', null);
+          setSettingsStatus(PREF.autoCheck
+            ? `启动时自动检查新作品已开启。入口内嵌 ${SNAP.length} 件；本次清单检查完成后会在这里显示结果。`
+            : `自动检查新作品已关闭。仅显示入口内嵌清单 ${SNAP.length} 件；可手动检查。`, 'info');
+          $('#syncNoticeRetry').hidden = true;
         };
         $('#mfb').onclick = () => $('#side').classList.add('on');
         $('#mfav').onclick = () => {
@@ -4505,8 +4605,7 @@
             return update();
           }
           if (e.target.closest('[data-resync]')) {
-            LIST_STATE = 'loading';
-            render();
+            openSettings();
             return syncTree(true);
           }
           if (e.target.closest('[data-acall]')) {
@@ -4571,6 +4670,7 @@
             else renderSide();
             return;
           }
+          if (host.matches('.card')) pulseCardGlow(host);
           if (e.ctrlKey || e.metaKey || e.shiftKey || e.button === 1) {
             markSeen(f);
             return;
@@ -4613,6 +4713,10 @@
         // 快捷键
         document.addEventListener('keydown', e => {
           const inField = /INPUT|SELECT|TEXTAREA/.test(document.activeElement?.tagName);
+          if (!$('#settingsOverlay').hidden) {
+            if (e.key === 'Escape') { e.preventDefault(); closeSettings(); }
+            return;
+          }
           if (VW.open) return viewerKey(e);
           if (CV.open) {
             if (e.key === 'Escape') closeCompare();
@@ -4661,8 +4765,45 @@
 
       function applyTheme() {
         document.documentElement.dataset.theme = PREF.theme;
+        applySkin();
         $('#theme').innerHTML = ic(PREF.theme === 'light' ? 'moon' : 'sun');
         drawFavicon();
+      }
+      function applySkin() {
+        document.documentElement.dataset.skin = PREF.skin === 'modern' ? 'modern' : 'classic';
+        document.querySelectorAll('input[name="skin"]').forEach(x => x.checked = x.value === document.documentElement.dataset.skin);
+        const auto = $('#autoCheck'); if (auto) auto.checked = !!PREF.autoCheck;
+      }
+      function openSettings() {
+        const box = $('#settingsOverlay'); if (!box) return;
+        applySkin(); updateSettingsCount();
+        if (SYNCING) setSettingsStatus('正在检查 GitHub 清单中的未内嵌新作品…', 'info');
+        else restoreSettingsStatus();
+        box.hidden = false; document.body.style.overflow = 'hidden'; $('.settings-dialog')?.focus();
+      }
+      function closeSettings() {
+        const box = $('#settingsOverlay'); if (!box) return;
+        box.hidden = true; document.body.style.overflow = '';
+        $('#settings').focus();
+      }
+      function updateSettingsCount() {
+        const el = $('#settingsSyncCount'); if (!el) return;
+        const embedded = HOME ? SNAP.length : 0, extras = Math.max(0, W.length - embedded);
+        el.textContent = extras ? `内嵌 ${embedded} 件 · 已发现新作品 ${extras} 件` : `内嵌作品 ${embedded} 件`;
+      }
+      function setSettingsStatus(message, kind = 'info', persist = false) {
+        const box = $('#syncNotice'), text = $('#syncNoticeText'); if (!box || !text) return;
+        box.dataset.kind = kind; text.textContent = message; box.hidden = false;
+        const retry = $('#syncNoticeRetry');
+        if (retry) retry.hidden = kind !== 'quota' && kind !== 'error';
+        if (persist) LS.set('scanStatus', { message, kind, at: Date.now() });
+      }
+      function restoreSettingsStatus() {
+        const v = LS.get('scanStatus', null);
+        if (v && typeof v.message === 'string') setSettingsStatus(v.message, v.kind || 'info');
+        else setSettingsStatus(PREF.autoCheck
+          ? `启动时自动检查新作品已开启。入口内嵌 ${SNAP.length} 件；本次清单检查完成后会在这里显示结果。`
+          : `自动检查新作品已关闭。仅显示入口内嵌清单 ${SNAP.length} 件；可手动检查。`, 'info');
       }
       // 标签页图标 = 左上角标志：同样的锥形渐变边框（from 210deg）、圆角、底色和显示器图标
       function drawFavicon() {
@@ -7250,7 +7391,11 @@
           "kf": 6,
           "s": 415147,
           "u": 1794660938
-        }
+        },
+        "Qwen 4 Max 作品 2026.11.16 提瓦特 OS v2.1.19.2.html": {"l":3087,"c":16.4,"j":82.9,"t":"提瓦特 OS · Teyvat Web OS","p":["d3bc8e","000000","ffffff","e06c5f","8a6d3b","151b30"],"x":["fonts.googleapis.com","fonts.gstatic.com","cdn.jsdelivr.net"],"f":["opfs","idb","ls","canvas","zip","drag","touch","clip","fs"],"fn":814,"kf":11,"s":248063,"u":1794802476},
+        "Qwen 4 Max 作品 2026.11.16 琥珀 OS v2.1.19.2.html": {"l":3334,"c":15.8,"j":83.6,"t":"琥珀 OS · AMBER","p":["f5a623","ffffff","14100a","c47b12","e8e4da","a8a49a"],"x":["fonts.googleapis.com"],"f":["opfs","idb","ls","canvas","zip","drag","touch","clip","fs"],"fn":700,"kf":10,"s":234197,"u":1794800098},
+        "GLM-5.3 Flash 作品 2026.11.16 LACQUERDESK OS v2.1.19.2.html": {"l":3771,"c":12.7,"j":86.1,"t":"曜砚 · LACQUERDESK OS","p":["000000","e2a63c","e2532f","e8dcc9","a13312","e2bb7c"],"x":["cdn.jsdelivr.net","fonts.googleapis.com","unpkg.com"],"f":["opfs","idb","ls","canvas","zip","drag","touch","clip","fs"],"fn":667,"kf":7,"s":247018,"u":1794799129},
+        "Claude Fable 5.2 Max 作品 2026.11.15 墨砚 OS v2.1.19.2.html": {"l":1220,"c":15.1,"j":84.2,"t":"墨砚 OS","p":["000000","ffffff","e2492f","a8884a","5c94b8","ece6d6"],"x":["fonts.googleapis.com","fonts.gstatic.com","cdn.jsdelivr.net"],"f":["opfs","idb","ls","audio","canvas","worker","zip","drag","touch","clip","fs"],"fn":932,"kf":12,"s":252777,"u":1794738726}
       };
       const TAGS_SNAP = {
         "Claude Fable 5 作品 2026.06.13 BLOODTHORN OS v2.1.17.1.html": ["血棘"],
@@ -7323,7 +7468,11 @@
         "Claude Sonnet 5.5 High 作品 2026.11.12 晨光 OS v2.1.19.2.html": ["Web OS", "桌面"],
         "Claude Sonnet 5.5 High 作品 2026.11.13 栖云台 v2.1.19.2.html": ["Web OS", "桌面"],
         "Claude Sonnet 5.5 High 作品 2026.11.14 天枢机 v2.1.19.2.html": ["Web OS", "桌面"],
-        "Gemini 4 Krypton 作品 2026.11.14 玄渊 OS v2.1.19.2.html": ["Web OS", "桌面"]
+        "Gemini 4 Krypton 作品 2026.11.14 玄渊 OS v2.1.19.2.html": ["Web OS", "桌面"],
+        "Qwen 4 Max 作品 2026.11.16 提瓦特 OS v2.1.19.2.html": ["Web OS", "桌面"],
+        "Qwen 4 Max 作品 2026.11.16 琥珀 OS v2.1.19.2.html": ["Web OS", "桌面"],
+        "GLM-5.3 Flash 作品 2026.11.16 LACQUERDESK OS v2.1.19.2.html": ["Web OS", "桌面"],
+        "Claude Fable 5.2 Max 作品 2026.11.15 墨砚 OS v2.1.19.2.html": ["Web OS", "桌面"]
       };
       const TAGS = Object.assign({}, TAGS_SNAP);
       let LOCAL = LS.get('stats2', {});
@@ -7765,23 +7914,19 @@
         buildViewer();
         const h = readHash();
         $('#q').value = S.q;
-        const cache = LS.get('tree', null);
-        if (cache && Array.isArray(cache.list) && cache.list.length) setWorks(cache.list, 'cache',
-          `缓存 + 内嵌清单 · ${cache.list.length} 件`, true);
-        else if (HOME) setWorks(SNAP, 'snap', `内置清单 · ${SNAP.length} 件`);
-        else {
-          LIST_STATE = 'loading';
-          setWorks([], 'busy', '正在读取仓库…');
-        }
+        const localNew = (LS.get('newWorks', []) || []).filter(x => Array.isArray(x) && typeof x[0] === 'string' && !SNAPMAP.has(x[0]));
+        const base = HOME ? SNAP : [];
+        const combined = [...base, ...localNew.map(x => [x[0], x[1] ?? null, x[2] ?? null])];
+        LIST_STATE = combined.length ? 'ok' : 'empty';
+        setWorks(combined, 'snap', `入口内嵌清单 · ${combined.length} 件`);
         render();
+        updateSettingsCount();
+        restoreSettingsStatus();
         if (h.cmp) {
-          const c = h.cmp.split('~').map(canonicalFile).filter(f => BY.has(f)).slice(0, 4);
-          if (c.length >= 2) {
-            CMP = c;
-            openCompare();
-          }
-        } else if (h.open && BY.has(canonicalFile(h.open))) openViewer(canonicalFile(h.open));
-        syncTree();
+          const c = h.cmp.split('~').filter(f => BY.has(f)).slice(0, 4);
+          if (c.length >= 2) { CMP = c; openCompare(); }
+        } else if (h.open && BY.has(h.open)) openViewer(h.open);
+        if (PREF.autoCheck) setTimeout(() => syncTree(false), 0);
       }
       init();
 
