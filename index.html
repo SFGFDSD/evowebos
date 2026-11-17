@@ -3952,9 +3952,16 @@
           const m = countBy('ser', w => w.series);
           const all = [...new Set(W.map(w => w.series))];
           const cls = s => W.find(w => w.series === s)?.cls;
-          let list = all.filter(s => m.get(s) || S.ser.includes(s)).sort((a, b) => VORDER.concat('collab').indexOf(cls(
-              a)) - VORDER.concat('collab').indexOf(cls(b)) || (m.get(b) || 0) - (m.get(a) || 0) || coll.compare(a,
-            b));
+          // 最靠前的完整文件名排列。
+          const firstFile = new Map();
+          for (const w of W) {
+            const first = firstFile.get(w.series);
+            if (first == null || w.file < first) firstFile.set(w.series, w.file);
+          }
+          let list = all.filter(s => m.get(s) || S.ser.includes(s)).sort((a, b) => {
+            const x = firstFile.get(a), y = firstFile.get(b);
+            return x < y ? -1 : x > y ? 1 : 0;
+          });
           const lim = 10,
             more = list.length > lim && !serAll;
           const show = more ? list.slice(0, lim).concat(list.slice(lim).filter(s => S.ser.includes(s))) : list;
