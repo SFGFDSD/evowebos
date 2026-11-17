@@ -2515,6 +2515,7 @@
       :root[data-skin="classic"] .shl button[data-sv="glm"]:hover,:root[data-skin="classic"] .shl button[data-sv="glm"].on{border-color:rgba(156,163,175,.4);color:#9ca3af;background:rgba(156,163,175,.08);box-shadow:0 0 12px rgba(156,163,175,.15)}
       :root[data-skin="classic"] .shl button[data-sv="kimi"]:hover,:root[data-skin="classic"] .shl button[data-sv="kimi"].on{border-color:rgba(23,131,255,.4);color:#1783ff;background:rgba(23,131,255,.08);box-shadow:0 0 12px rgba(23,131,255,.15)}
       :root[data-skin="classic"] .shl button[data-sv="mimo"]:hover,:root[data-skin="classic"] .shl button[data-sv="mimo"].on{border-color:rgba(255,105,0,.5);color:#ff8a33;background:rgba(255,105,0,.10);box-shadow:0 0 12px rgba(255,105,0,.18)}
+      :root[data-skin="classic"] .shl button[data-sv="hy"]:hover,:root[data-skin="classic"] .shl button[data-sv="hy"].on{border-color:rgba(168,223,244,.4);color:#a8dff4;background:rgba(168,223,244,.08);box-shadow:0 0 12px rgba(168,223,244,.15)}
       :root[data-skin="classic"] .shl button[data-sv="unknown"]:hover,:root[data-skin="classic"] .shl button[data-sv="unknown"].on{border-color:rgba(184,164,212,.4);color:#b8a4d4;background:rgba(184,164,212,.08);box-shadow:0 0 12px rgba(184,164,212,.15)}
       :root[data-skin="classic"] .share{height:5px;border-radius:3px;background:var(--bg3);gap:1px}
       :root[data-skin="classic"] .strip{height:74px;background:var(--bg2);border-color:var(--ln);border-radius:12px}
@@ -2557,6 +2558,7 @@
       :root[data-skin="classic"] .card[data-vendor="collab"] .badge{background:rgba(45,212,191,.15);color:#2dd4bf;border:1px solid rgba(45,212,191,.25)}
       :root[data-skin="classic"] .card[data-vendor="kimi"] .badge{background:rgba(23,131,255,.15);color:#1783ff;border:1px solid rgba(23,131,255,.25)}
       :root[data-skin="classic"] .card[data-vendor="mimo"] .badge{background:rgba(255,105,0,.15);color:#ff8a33;border:1px solid rgba(255,105,0,.32)}
+      :root[data-skin="classic"] .card[data-vendor="hy"] .badge{background:rgba(168,223,244,.15);color:#a8dff4;border:1px solid rgba(168,223,244,.25)}
       :root[data-skin="classic"] .card[data-vendor="unknown"] .badge{background:rgba(184,164,212,.15);color:#b8a4d4;border:1px solid rgba(184,164,212,.25)}
       :root[data-skin="classic"] .card h3{margin:16px 0 6px;font-size:18px;font-weight:700;line-height:1.3;letter-spacing:0;background:linear-gradient(135deg,var(--tx),var(--tx2));-webkit-background-clip:text;background-clip:text;color:transparent}
       :root[data-skin="classic"] .card .sub{font-size:12px;color:var(--tx3)}
@@ -3044,7 +3046,8 @@
         ["Qwen 4 Max 作品 2026.11.16 提瓦特 OS v2.1.19.2.html", 248063, 1794802476, 0],
         ["Qwen 4 Max 作品 2026.11.16 琥珀 OS v2.1.19.2.html", 234197, 1794800098, 1],
         ["GLM-5.3 Flash 作品 2026.11.16 LACQUERDESK OS v2.1.19.2.html", 247018, 1794799129, null],
-        ["Claude Fable 5.2 Max 作品 2026.11.15 墨砚 OS v2.1.19.2.html", 252777, 1794738726, null]
+        ["Claude Fable 5.2 Max 作品 2026.11.15 墨砚 OS v2.1.19.2.html", 252777, 1794738726, null],
+        ["Hy4 作品 2026.11.14 Celadon OS v2.1.19.2.html", 280607, null, null]
       ];
       const SNAPMAP = new Map(SNAP.map(x => [x[0], x]));
       const CFG = (() => {
@@ -3128,6 +3131,11 @@
           n: 'MiMo',
           c: '#ff8a33',
           re: /^mimo/i
+        },
+        hy: {
+          n: 'Hy',
+          c: '#a8dff4',
+          re: /^hy(?=\d|\b)/i
         },
         unknown: {
           n: '未知模型',
@@ -7610,7 +7618,8 @@
         "Qwen 4 Max 作品 2026.11.16 提瓦特 OS v2.1.19.2.html": {"l":3087,"c":16.4,"j":82.9,"t":"提瓦特 OS · Teyvat Web OS","p":["d3bc8e","000000","ffffff","e06c5f","8a6d3b","151b30"],"x":["fonts.googleapis.com","fonts.gstatic.com","cdn.jsdelivr.net"],"f":["opfs","idb","ls","canvas","zip","drag","touch","clip","fs"],"fn":814,"kf":11,"s":248063,"u":1794802476},
         "Qwen 4 Max 作品 2026.11.16 琥珀 OS v2.1.19.2.html": {"l":3334,"c":15.8,"j":83.6,"t":"琥珀 OS · AMBER","p":["f5a623","ffffff","14100a","c47b12","e8e4da","a8a49a"],"x":["fonts.googleapis.com"],"f":["opfs","idb","ls","canvas","zip","drag","touch","clip","fs"],"fn":700,"kf":10,"s":234197,"u":1794800098},
         "GLM-5.3 Flash 作品 2026.11.16 LACQUERDESK OS v2.1.19.2.html": {"l":3771,"c":12.7,"j":86.1,"t":"曜砚 · LACQUERDESK OS","p":["000000","e2a63c","e2532f","e8dcc9","a13312","e2bb7c"],"x":["cdn.jsdelivr.net","fonts.googleapis.com","unpkg.com"],"f":["opfs","idb","ls","canvas","zip","drag","touch","clip","fs"],"fn":667,"kf":7,"s":247018,"u":1794799129},
-        "Claude Fable 5.2 Max 作品 2026.11.15 墨砚 OS v2.1.19.2.html": {"l":1220,"c":15.1,"j":84.2,"t":"墨砚 OS","p":["000000","ffffff","e2492f","a8884a","5c94b8","ece6d6"],"x":["fonts.googleapis.com","fonts.gstatic.com","cdn.jsdelivr.net"],"f":["opfs","idb","ls","audio","canvas","worker","zip","drag","touch","clip","fs"],"fn":932,"kf":12,"s":252777,"u":1794738726}
+        "Claude Fable 5.2 Max 作品 2026.11.15 墨砚 OS v2.1.19.2.html": {"l":1220,"c":15.1,"j":84.2,"t":"墨砚 OS","p":["000000","ffffff","e2492f","a8884a","5c94b8","ece6d6"],"x":["fonts.googleapis.com","fonts.gstatic.com","cdn.jsdelivr.net"],"f":["opfs","idb","ls","audio","canvas","worker","zip","drag","touch","clip","fs"],"fn":932,"kf":12,"s":252777,"u":1794738726},
+        "Hy4 作品 2026.11.14 Celadon OS v2.1.19.2.html": {"l":3924,"c":17,"j":82.4,"t":"Celadon OS · 青瓷","p":["000000","d8a657","ffffff","9c6b1f","a7b8ac","1c2a23"],"x":["fonts.googleapis.com","fonts.gstatic.com","cdn.jsdelivr.net"],"f":["opfs","idb","ls","canvas","zip","drag","touch","clip","fs"],"fn":698,"kf":9,"s":280607,"u":null}
       };
       const TAGS_SNAP = {
         "Claude Fable 5 作品 2026.06.13 BLOODTHORN OS v2.1.17.1.html": ["血棘"],
@@ -7687,7 +7696,8 @@
         "Qwen 4 Max 作品 2026.11.16 提瓦特 OS v2.1.19.2.html": ["Web OS", "桌面"],
         "Qwen 4 Max 作品 2026.11.16 琥珀 OS v2.1.19.2.html": ["Web OS", "桌面"],
         "GLM-5.3 Flash 作品 2026.11.16 LACQUERDESK OS v2.1.19.2.html": ["Web OS", "桌面"],
-        "Claude Fable 5.2 Max 作品 2026.11.15 墨砚 OS v2.1.19.2.html": ["Web OS", "桌面"]
+        "Claude Fable 5.2 Max 作品 2026.11.15 墨砚 OS v2.1.19.2.html": ["Web OS", "桌面"],
+        "Hy4 作品 2026.11.14 Celadon OS v2.1.19.2.html": ["Web OS", "桌面", "青瓷"]
       };
       const TAGS = Object.assign({}, TAGS_SNAP);
       let LOCAL = LS.get('stats2', {});
