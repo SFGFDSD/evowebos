@@ -2875,7 +2875,7 @@
       'use strict';
       /* ================= 配置 ================= */
       const FULL = true;
-      // [文件名, 字节数, GitHub 提交时间(秒), 同日同厂商的已确认顺序号]；历史时间保留既有来源，ZIP 修改时间绝不伪装成上传时间。
+      // [文件名, 字节数, GitHub 提交时间(秒), 已确认顺序号, 是否跨厂商排序]；历史时间保留既有来源。
       const SNAP = [
         ["Claude Fable 5.2 xHigh 作品 2026.11.11 土俵 OS v2.1.19.2.html", 206375, 1794384320, null],
         ["Claude Fable 5 作品 2026.06.09 琥珀 OS · AMBER v2.1.12.html", 171087, 1781766718, 66],
@@ -3047,7 +3047,14 @@
         ["Qwen 4 Max 作品 2026.11.16 琥珀 OS v2.1.19.2.html", 234197, 1794800098, 1],
         ["GLM-5.3 Flash 作品 2026.11.16 LACQUERDESK OS v2.1.19.2.html", 247018, 1794799129, null],
         ["Claude Fable 5.2 Max 作品 2026.11.15 墨砚 OS v2.1.19.2.html", 252777, 1794738726, null],
-        ["Hy4 作品 2026.11.14 Celadon OS v2.1.19.2.html", 280607, null, null]
+        ["Hy4 作品 2026.11.14 Celadon OS v2.1.19.2.html", 280607, null, null],
+        ["Qwen 3.8 Max 作品 2026.11.18 砚 OS v2.1.19.2.html", 411570, null, 0, true],
+        ["GPT-6.2 Sol Max 作品 2026.11.18 岚屿 OS v2.1.19.2.html", 284911, null, 1, true],
+        ["GPT-6.2 Astra Max 作品 2026.11.18 叠构 OS v2.1.19.2.html", 224857, null, 2, true],
+        ["GPT-6.2 Sol Max 作品 2026.11.18 溺层 OS v2.1.19.2.html", 260477, null, 3, true],
+        ["GPT-6.2 Astra Max 作品 2026.11.18 AeroOS v2.1.19.2.html", 230181, null, 4, true],
+        ["GPT-6.2 Astra Max 作品 2026.11.18 Lunar OS v2.1.19.2.html", 226141, null, 5, true],
+        ["GPT-6.2 Astra Max 作品 2026.11.18 STRATA OS v2.1.19.2.html", 210612, null, 6, true]
       ];
       const SNAPMAP = new Map(SNAP.map(x => [x[0], x]));
       const CFG = (() => {
@@ -3429,6 +3436,7 @@
           const sn = SNAPMAP.get(f);
           w.u = (sn && sn[2]) ?? u ?? UTIME[f] ?? null;
           w.r = sn ? sn[3] : null;
+          w.globalOrder = !!(sn && sn[4]);
           arr.push(w);
         }
         W = arr;
@@ -3845,7 +3853,7 @@
         // 同一天：同厂商内已确认的顺序号 r → GitHub 提交时间 u（新的在前）→ 稳定兜底顺序 → 名称
         const ut = w => w.u == null ? Infinity : w.u;
         const byDate = (a, b) => b.dn - a.dn ||
-          (a.r != null && b.r != null && a.cls === b.cls ? a.r - b.r : 0) ||
+          (a.r != null && b.r != null && (a.cls === b.cls || (a.globalOrder && b.globalOrder)) ? a.r - b.r : 0) ||
           (ut(a) === ut(b) ? 0 : ut(b) > ut(a) ? 1 : -1) ||
           (a.r ?? 1e9) - (b.r ?? 1e9) || (a.collab - b.collab) || coll.compare(a.name, b.name);
         const num = (f, dir) => (a, b) => {
@@ -7619,7 +7627,14 @@
         "Qwen 4 Max 作品 2026.11.16 琥珀 OS v2.1.19.2.html": {"l":3334,"c":15.8,"j":83.6,"t":"琥珀 OS · AMBER","p":["f5a623","ffffff","14100a","c47b12","e8e4da","a8a49a"],"x":["fonts.googleapis.com"],"f":["opfs","idb","ls","canvas","zip","drag","touch","clip","fs"],"fn":700,"kf":10,"s":234197,"u":1794800098},
         "GLM-5.3 Flash 作品 2026.11.16 LACQUERDESK OS v2.1.19.2.html": {"l":3771,"c":12.7,"j":86.1,"t":"曜砚 · LACQUERDESK OS","p":["000000","e2a63c","e2532f","e8dcc9","a13312","e2bb7c"],"x":["cdn.jsdelivr.net","fonts.googleapis.com","unpkg.com"],"f":["opfs","idb","ls","canvas","zip","drag","touch","clip","fs"],"fn":667,"kf":7,"s":247018,"u":1794799129},
         "Claude Fable 5.2 Max 作品 2026.11.15 墨砚 OS v2.1.19.2.html": {"l":1220,"c":15.1,"j":84.2,"t":"墨砚 OS","p":["000000","ffffff","e2492f","a8884a","5c94b8","ece6d6"],"x":["fonts.googleapis.com","fonts.gstatic.com","cdn.jsdelivr.net"],"f":["opfs","idb","ls","audio","canvas","worker","zip","drag","touch","clip","fs"],"fn":932,"kf":12,"s":252777,"u":1794738726},
-        "Hy4 作品 2026.11.14 Celadon OS v2.1.19.2.html": {"l":3924,"c":17,"j":82.4,"t":"Celadon OS · 青瓷","p":["000000","d8a657","ffffff","9c6b1f","a7b8ac","1c2a23"],"x":["fonts.googleapis.com","fonts.gstatic.com","cdn.jsdelivr.net"],"f":["opfs","idb","ls","canvas","zip","drag","touch","clip","fs"],"fn":698,"kf":9,"s":280607,"u":null}
+        "Hy4 作品 2026.11.14 Celadon OS v2.1.19.2.html": {"l":3924,"c":17,"j":82.4,"t":"Celadon OS · 青瓷","p":["000000","d8a657","ffffff","9c6b1f","a7b8ac","1c2a23"],"x":["fonts.googleapis.com","fonts.gstatic.com","cdn.jsdelivr.net"],"f":["opfs","idb","ls","canvas","zip","drag","touch","clip","fs"],"fn":698,"kf":9,"s":280607,"u":null},
+        "Qwen 3.8 Max 作品 2026.11.18 砚 OS v2.1.19.2.html": {"l":6875,"c":16.6,"j":82.9,"t":"砚 OS · INKSTONE — 浏览器桌面环境","p":["000000","ffffff","f2b544","e2705a","3fc7b0","1a2229"],"x":["fonts.googleapis.com","fonts.gstatic.com","unpkg.com","cdn.jsdelivr.net"],"f":["opfs","idb","ls","canvas","zip","drag","touch","clip","fs"],"fn":1218,"kf":12,"s":411570,"u":null},
+        "GPT-6.2 Sol Max 作品 2026.11.18 岚屿 OS v2.1.19.2.html": {"l":883,"c":14.6,"j":83.8,"t":"岚屿 OS · 本地工作空间","p":["000000","84e3b5","192320","daf3e6","ae3241","e2a862"],"x":["cdn.jsdelivr.net","fonts.googleapis.com","fonts.gstatic.com"],"f":["opfs","idb","ls","canvas","worker","zip","drag","touch","clip","fs"],"fn":1070,"kf":4,"s":284911,"u":null},
+        "GPT-6.2 Astra Max 作品 2026.11.18 叠构 OS v2.1.19.2.html": {"l":752,"c":18.3,"j":79.3,"t":"叠构 STRATA OS · 个人工作空间","p":["e6ed65","252824","4c581b","f0f1e8","000000","9d4940"],"x":["images.pexels.com","fonts.googleapis.com","cdn.jsdelivr.net"],"f":["opfs","idb","ls","canvas","worker","zip","wasm","drag","touch","clip","fs"],"fn":876,"kf":8,"s":224857,"u":null},
+        "GPT-6.2 Sol Max 作品 2026.11.18 溺层 OS v2.1.19.2.html": {"l":2858,"c":15.1,"j":83.7,"t":"溺层 OS | 第七水文站","p":["111915","d8ad6c","b2bcad","eeeeee","435146","89601c"],"x":["cdn.jsdelivr.net","fonts.googleapis.com","fonts.gstatic.com"],"f":["opfs","idb","ls","canvas","worker","zip","drag","touch","clip","fs"],"fn":917,"kf":4,"s":260477,"u":null},
+        "GPT-6.2 Astra Max 作品 2026.11.18 AeroOS v2.1.19.2.html": {"l":600,"c":18.5,"j":79.2,"t":"AeroOS | 极光工作空间","p":["ffffff","07121b","0d354d","2693b0","4faec7","65d9ef"],"x":["images.pexels.com","cdn.jsdelivr.net"],"f":["opfs","idb","ls","canvas","worker","zip","drag","touch","clip","fs"],"fn":833,"kf":5,"s":230181,"u":null},
+        "GPT-6.2 Astra Max 作品 2026.11.18 Lunar OS v2.1.19.2.html": {"l":627,"c":16.6,"j":81.7,"t":"Lunar OS · 个人工作空间","p":["16242a","287e67","000000","b34b4d","65bea6","d6a083"],"x":["fonts.googleapis.com","fonts.gstatic.com","cdn.jsdelivr.net"],"f":["opfs","idb","ls","canvas","worker","zip","wasm","drag","touch","clip","fs"],"fn":744,"kf":4,"s":226141,"u":null},
+        "GPT-6.2 Astra Max 作品 2026.11.18 STRATA OS v2.1.19.2.html": {"l":542,"c":18.5,"j":80.4,"t":"叠屿 STRATA OS | 本地工作空间","p":["000000","13291d","2a7050","a34945","642e32","df9584"],"x":["fonts.googleapis.com","cdn.jsdelivr.net"],"f":["opfs","idb","ls","canvas","worker","zip","drag","touch","clip","fs"],"fn":761,"kf":4,"s":210612,"u":null}
       };
       const TAGS_SNAP = {
         "Claude Fable 5 作品 2026.06.13 BLOODTHORN OS v2.1.17.1.html": ["血棘"],
@@ -7697,7 +7712,14 @@
         "Qwen 4 Max 作品 2026.11.16 琥珀 OS v2.1.19.2.html": ["Web OS", "桌面"],
         "GLM-5.3 Flash 作品 2026.11.16 LACQUERDESK OS v2.1.19.2.html": ["Web OS", "桌面"],
         "Claude Fable 5.2 Max 作品 2026.11.15 墨砚 OS v2.1.19.2.html": ["Web OS", "桌面"],
-        "Hy4 作品 2026.11.14 Celadon OS v2.1.19.2.html": ["Web OS", "桌面", "青瓷"]
+        "Hy4 作品 2026.11.14 Celadon OS v2.1.19.2.html": ["Web OS", "桌面", "青瓷"],
+        "Qwen 3.8 Max 作品 2026.11.18 砚 OS v2.1.19.2.html": ["Web OS", "桌面"],
+        "GPT-6.2 Sol Max 作品 2026.11.18 岚屿 OS v2.1.19.2.html": ["Web OS", "桌面"],
+        "GPT-6.2 Astra Max 作品 2026.11.18 叠构 OS v2.1.19.2.html": ["Web OS", "桌面"],
+        "GPT-6.2 Sol Max 作品 2026.11.18 溺层 OS v2.1.19.2.html": ["Web OS", "桌面"],
+        "GPT-6.2 Astra Max 作品 2026.11.18 AeroOS v2.1.19.2.html": ["Web OS", "桌面"],
+        "GPT-6.2 Astra Max 作品 2026.11.18 Lunar OS v2.1.19.2.html": ["Web OS", "桌面"],
+        "GPT-6.2 Astra Max 作品 2026.11.18 STRATA OS v2.1.19.2.html": ["Web OS", "桌面"]
       };
       const TAGS = Object.assign({}, TAGS_SNAP);
       let LOCAL = LS.get('stats2', {});
